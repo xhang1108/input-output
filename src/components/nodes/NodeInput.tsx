@@ -7,17 +7,30 @@ import { Input } from '@/components/ui/input';
 
 interface NodeInputProps {
     id: string;
-    data: { label?: string; value?: number };
+    data: { label?: string; value?: number; rawExpression?: string };
 }
 
 export function NodeInput({ id, data }: NodeInputProps) {
-    const { updateNodeData } = useReactFlow();
-    const [value, setValue] = useState(data.value || 0);
+    const { updateNodeData, setNodes } = useReactFlow();
+    const [value, setValue] = useState(data.rawExpression ?? data.value ?? 0);
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newVal = Number(e.target.value);
+        const newVal = e.target.value;
         setValue(newVal);
-        updateNodeData(id, { value: newVal });
+
+        // Try to parse as number for immediate value if possible, else just store string
+        const numVal = parseFloat(newVal);
+        updateNodeData(id, {
+            rawExpression: newVal,
+            value: isNaN(numVal) ? 0 : numVal // Optional: keep value sync if numeric
+        });
+    };
+
+    const onFocus = () => {
+        setNodes((nodes) => nodes.map((n) => ({
+            ...n,
+            selected: n.id === id,
+        })));
     };
 
     return (
@@ -30,10 +43,12 @@ export function NodeInput({ id, data }: NodeInputProps) {
             </div>
 
             <Input
-                type="number"
+                type="text"
                 value={value}
                 onChange={onChange}
-                className="w-24 h-8 font-mono text-sm nodrag [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                onFocus={onFocus}
+                className="w-32 h-8 font-mono text-sm nodrag"
+                placeholder="2x + 5..."
             />
 
             <Handle

@@ -12,7 +12,7 @@ import {
 
 interface NodeUnaryProps {
     id: string;
-    data: { operation?: string };
+    data: { operation?: string; result?: number; error?: string };
 }
 
 const operations = [
@@ -52,6 +52,19 @@ export function NodeUnary({ id, data }: NodeUnaryProps) {
                     ))}
                 </SelectContent>
             </Select>
+
+            {/* Result Display */}
+            <div className="mt-2 pt-2 border-t border-purple-200 flex justify-center">
+                {data.error ? (
+                    <span className="text-red-500 text-xs font-bold">⚠️ Error</span>
+                ) : (
+                    <span className="text-zinc-600 font-mono font-bold text-sm">
+                        {(typeof data.result === 'number' && !isNaN(data.result))
+                            ? Number.isInteger(data.result) ? data.result : data.result.toFixed(2)
+                            : '...'}
+                    </span>
+                )}
+            </div>
 
             <Handle
                 type="target"

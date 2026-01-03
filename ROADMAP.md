@@ -74,6 +74,11 @@ This roadmap outlines the step-by-step plan to build **Calctopus**, a high-perfo
 - [ ] **Local Persistence**
     - [ ] `localStorage` auto-save to prevent data loss on refresh.
     - [ ] Export graph as Image/PNG.
+- [ ] **Data Flow & Simulation (Houdini-style)**
+    - [ ] **Vector & Matrix Math**: Handle `[x, y, z]` or `[r, g, b]` data types.
+    - [ ] **Spreadsheet Processing**: Operations on arrays/lists (e.g. `map`, `reduce`).
+    - [ ] **Time/Simulation**: Introduce global `t` variable for animation and physics.
+    - [ ] **Visualizers**: Graph mapper, histograms, and data plotting nodes.
 - [ ] **UI/UX 2.0**
     - [ ] Mini-map for navigating large complex graphs.
     - [ ] Customizable grid backgrounds (Dots, Lines, Crosses).

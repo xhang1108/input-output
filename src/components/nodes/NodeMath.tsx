@@ -12,7 +12,7 @@ import {
 
 interface NodeMathProps {
     id: string;
-    data: { operation?: string };
+    data: { operation?: string; result?: number; error?: string };
 }
 
 const operations = [
@@ -20,6 +20,8 @@ const operations = [
     { value: 'sub', label: '−' },
     { value: 'mul', label: '×' },
     { value: 'div', label: '÷' },
+    { value: 'pow', label: '^' },
+    { value: 'mod', label: '%' },
 ];
 
 export function NodeMath({ id, data }: NodeMathProps) {
@@ -62,6 +64,19 @@ export function NodeMath({ id, data }: NodeMathProps) {
                     ))}
                 </SelectContent>
             </Select>
+
+            {/* Result Display */}
+            <div className="absolute -bottom-8 bg-zinc-100 rounded px-2 py-0.5 border border-zinc-300 shadow-sm whitespace-nowrap z-10">
+                {data.error ? (
+                    <span className="text-red-500 text-xs text-center font-bold">⚠️ Error</span>
+                ) : (
+                    <span className="text-zinc-600 font-mono font-bold text-xs">
+                        {(typeof data.result === 'number' && !isNaN(data.result))
+                            ? Number.isInteger(data.result) ? data.result : data.result.toFixed(2)
+                            : '...'}
+                    </span>
+                )}
+            </div>
 
             <Handle
                 type="source"
