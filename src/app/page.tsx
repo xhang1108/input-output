@@ -1,12 +1,9 @@
 'use client';
 
-import { ReactFlowProvider } from '@xyflow/react';
-import { GraphEditor } from '@/components/GraphEditor';
+import { Body } from '@/components/Body';
 
 export default function Home() {
   return (
-    <ReactFlowProvider>
-      <GraphEditor />
-    </ReactFlowProvider>
+    <Body />
   );
 }

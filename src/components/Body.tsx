@@ -5,16 +5,18 @@ import {
     Background,
     Controls,
     MiniMap,
+    Panel,
     addEdge,
     useNodesState,
     useEdgesState,
+    useReactFlow,
+    ReactFlowProvider,
+    SelectionMode,
     type Node,
     type Edge,
     type Connection,
     type NodeTypes,
     type EdgeTypes,
-    SelectionMode,
-    useReactFlow,
     useNodes,
     useEdges,
 } from '@xyflow/react';
@@ -23,12 +25,16 @@ import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
-import { useGraphEvaluation } from '../hooks/useGraphEvaluation';
-import { useGraphOperations } from '../hooks/useGraphOperations';
-import { Save, Plus, Calculator, Hash, Monitor } from 'lucide-react';
+import { useBrain } from '../nerves/useBrain';
+import { useHand } from '../nerves/useHand';
+import { useEar } from '../nerves/useEar';
+import { useEye } from '../nerves/useEye';
+import { useMemory } from '../nerves/useMemory';
+import { useMouth } from '../nerves/useMouth';
+import { Skin } from './Skin';
+import { Plus, Calculator, Hash, Monitor, Sigma } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { NodeInput } from './nodes/NodeInput';
 import { NodeMath } from './nodes/NodeMath';
@@ -37,7 +43,7 @@ import { NodeOutput } from './nodes/NodeOutput';
 import { NodeSolver } from './nodes/NodeSolver';
 import { NodeGroup } from './nodes/NodeGroup';
 import { CustomEdge } from './edges/CustomEdge';
-import { Sigma, Group, Layers } from 'lucide-react';
+import { Group, Layers } from 'lucide-react';
 
 const nodeTypes: NodeTypes = {
     inputNode: NodeInput,
@@ -86,7 +92,7 @@ const defaultEdges: Edge[] = [
     { id: 'e3', source: 'math-1', target: 'output-1', type: 'customEdge' },
 ];
 
-export function GraphEditor() {
+export function Body() {
     const [nodes, setNodes, onNodesChange] = useNodesState(defaultNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(defaultEdges);
 
@@ -163,35 +169,49 @@ export function GraphEditor() {
     const storeNodes = useNodes();
     const storeEdges = useEdges();
 
-    // --- new engine integration ---
-    const { nodeResults } = useGraphEvaluation(storeNodes, storeEdges);
+    // --- Brain Integration ---
+    const { thoughts } = useBrain(storeNodes, storeEdges);
 
-    // Sync Result back to Nodes
+    // --- Hand Integration ---
+    const { memories } = useMemory();
+    const { hands } = useHand(memories, setNodes, setEdges);
+
+
+    // --- Eye Integration ---
+    const { eyes } = useEye();
+
+    // --- Mouth Integration ---
+    const { mouth } = useMouth();
+
+    // --- React Flow Utils ---
+    const { screenToFlowPosition, fitView, getNodes, getEdges } = useReactFlow();
+
+    // Sync Thoughts back to Nodes
     useEffect(() => {
-        if (Object.keys(nodeResults).length === 0) return;
+        if (Object.keys(thoughts).length === 0) return;
 
         setNodes((nds) => nds.map((node) => {
-            const result = nodeResults[node.id];
+            const thought = thoughts[node.id];
 
-            // Only update if result exists and changed (value or error or ast)
-            if (result && (
-                node.data.result !== result.value ||
-                node.data.error !== result.error ||
-                JSON.stringify(node.data.ast) !== JSON.stringify(result.ast) // Simple deep check for AST
+            // Only update if thought exists and changed (value or error or ast)
+            if (thought && (
+                node.data.result !== thought.value ||
+                node.data.error !== thought.error ||
+                JSON.stringify(node.data.ast) !== JSON.stringify(thought.ast) // Simple deep check for AST
             )) {
                 return {
                     ...node,
                     data: {
                         ...node.data,
-                        result: result.value,
-                        error: result.error,
-                        ast: result.ast
+                        result: thought.value,
+                        error: thought.error,
+                        ast: thought.ast
                     }
                 };
             }
             return node;
         }));
-    }, [nodeResults, setNodes]);
+    }, [thoughts, setNodes]);
 
     // Add node
     const addNode = useCallback(
@@ -200,19 +220,16 @@ export function GraphEditor() {
             const newNode: Node = {
                 id,
                 type,
-                position: { x: 300, y: 300 },
-                data:
-                    type === 'inputNode'
-                        ? { label: 'Value', value: 0 }
-                        : type === 'mathNode'
-                            ? { operation: 'add' }
-                            : type === 'unaryNode'
-                                ? { operation: 'sqrt' }
-                                : type === 'solverNode'
-                                    ? { targetVar: 'x' }
-                                    : { value: 0 },
+                position: {
+                    x: Math.random() * 400 + 100,
+                    y: Math.random() * 400 + 100,
+                },
+                data: {
+                    label: `New ${type.replace('Node', '')}`,
+                    value: 0,
+                },
             };
-            setNodes((nds) => [...nds, newNode]);
+            setNodes((nds) => nds.concat(newNode));
         },
         [setNodes]
     );
@@ -424,212 +441,38 @@ export function GraphEditor() {
 
     }, [nodes, edges, setNodes, setEdges]);
 
-    // Blender-style Keyboard Shortcuts
+
+
+
+
+    // Auto-Save (Savor)
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            mouth.savor();
+        }, 1000); // Debounce 1s
+        return () => clearTimeout(timeout);
+    }, [nodes, edges, mouth]);
+
+    // Auto-Load (Eat) on Mount
+    useEffect(() => {
+        mouth.eat();
+    }, []); // Run once on mount
+
+    // Listens for keyboard shortcuts and mouse movements
+    useEar({
+        hands,
+        eyes,
+        memories,
+        setNodes,
+        onOpenMenu: (pos) => setMenuPosition(pos),
+    });
+
     const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
-    const mousePosRef = useRef({ x: 0, y: 0 });
-    const { screenToFlowPosition, fitView, getNodes } = useReactFlow();
-
-    // Duplication & Placement Logic
-    const [placingNodeIds, setPlacingNodeIds] = useState<Set<string> | null>(null);
-    // Note: clipboard logic moved to useGraphOperations, local state removed to prevent conflict.
-
-    const placementRef = useRef<{
-        startMousePos: { x: number, y: number },
-        nodeOffsets: Record<string, { x: number, y: number }>
-    } | null>(null);
-
-    // Track mouse for Shift+A menu location
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            mousePosRef.current = { x: e.clientX, y: e.clientY };
-        };
-        window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, []);
-
-    // Operations
-    const {
-        handleSelectAll,
-        handleFocusSelected,
-        handleDelete,
-        handleCopy,
-        handleCut,
-        handlePaste,
-        handleDuplicate
-    } = useGraphOperations();
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Escape: Blur Input (Exit Typing Mode)
-            if (e.code === 'Escape') {
-                if (document.activeElement instanceof HTMLElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
-                    document.activeElement.blur();
-                    e.preventDefault();
-                    return;
-                }
-            }
-
-            // Global Ignore for Inputs
-            if (e.target instanceof HTMLElement && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-                return;
-            }
-
-            // Shift + A: Open Add Menu
-            if (e.shiftKey && e.code === 'KeyA') {
-                e.preventDefault();
-                setMenuPosition({ x: mousePosRef.current.x, y: mousePosRef.current.y });
-                return;
-            }
-
-            // A: Select All
-            if (e.code === 'KeyA' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault();
-                handleSelectAll();
-                return;
-            }
-
-            // Period (.): Focus Selected
-            if (e.key === '.' || e.code === 'Period') {
-                e.preventDefault();
-                handleFocusSelected();
-                return;
-            }
-
-            // Delete / Backspace / X
-            if ((e.code === 'KeyX' && !e.ctrlKey) || e.code === 'Delete' || e.code === 'Backspace') {
-                e.preventDefault();
-                handleDelete();
-                return;
-            }
-
-            // Ctrl + C: Copy
-            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC') {
-                e.preventDefault();
-                handleCopy();
-                return;
-            }
-
-            // Ctrl + X: Cut
-            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyX') {
-                e.preventDefault();
-                handleCut();
-                return;
-            }
-
-            // Ctrl + V: Paste
-            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV') {
-                e.preventDefault();
-                handlePaste(mousePosRef.current);
-                return;
-            }
-
-            // Shift + D: Duplicate
-            if (e.shiftKey && e.code === 'KeyD') {
-                e.preventDefault();
-                handleDuplicate(mousePosRef.current);
-                return;
-            }
-
-            // G: Grab (Locally Managed Interactive Logic)
-            if (e.code === 'KeyG') {
-                e.preventDefault();
-                const currentNodes = getNodes();
-                let targetNodes = currentNodes.filter(n => n.selected);
-
-                // Hover Fallback
-                if (targetNodes.length === 0) {
-                    const mouseFlowPos = screenToFlowPosition({ x: mousePosRef.current.x, y: mousePosRef.current.y });
-                    for (let i = currentNodes.length - 1; i >= 0; i--) {
-                        const n = currentNodes[i];
-                        const w = n.measured?.width ?? n.width ?? 200;
-                        const h = n.measured?.height ?? n.height ?? 50;
-                        if (mouseFlowPos.x >= n.position.x && mouseFlowPos.x <= n.position.x + w &&
-                            mouseFlowPos.y >= n.position.y && mouseFlowPos.y <= n.position.y + h) {
-                            targetNodes = [{ ...n, selected: true }];
-                            setNodes(nds => nds.map(node => node.id === n.id ? { ...node, selected: true } : node));
-                            break;
-                        }
-                    }
-                }
-
-                if (targetNodes.length === 0) return;
-
-                const movingIds = new Set<string>();
-                const nodeOffsets: Record<string, { x: number, y: number }> = {};
-                targetNodes.forEach(node => {
-                    movingIds.add(node.id);
-                    nodeOffsets[node.id] = { x: node.position.x, y: node.position.y };
-                });
-
-                setPlacingNodeIds(movingIds);
-                placementRef.current = {
-                    startMousePos: mousePosRef.current,
-                    nodeOffsets: nodeOffsets
-                };
-                toast.success('Grab mode: Move mouse to place, Click to confirm.');
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [
-        handleSelectAll, handleFocusSelected, handleDelete,
-        handleCopy, handleCut, handlePaste, handleDuplicate,
-        getNodes, setNodes, screenToFlowPosition
-    ]);
-
-    const closeMenu = () => setMenuPosition(null);
-
-
 
     // Context-Aware Connect Logic
     const connectionStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null } | null>(null);
     const [pendingConnection, setPendingConnection] = useState<{ source: string; sourceHandle: string | null } | null>(null);
 
-    // Handle Placement Movement
-    useEffect(() => {
-        if (!placingNodeIds) return;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!placementRef.current) return;
-
-            const currentFlowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-            const startFlowPos = screenToFlowPosition(placementRef.current.startMousePos);
-
-            const dx = currentFlowPos.x - startFlowPos.x;
-            const dy = currentFlowPos.y - startFlowPos.y;
-
-            setNodes(nds => nds.map(n => {
-                if (placingNodeIds.has(n.id)) {
-                    const originalPos = placementRef.current!.nodeOffsets[n.id];
-                    if (originalPos) {
-                        return {
-                            ...n,
-                            position: {
-                                x: originalPos.x + dx,
-                                y: originalPos.y + dy
-                            }
-                        };
-                    }
-                }
-                return n;
-            }));
-        };
-
-        const handleMouseDown = (e: MouseEvent) => {
-            // Commit placement
-            e.stopPropagation(); // Stop React Flow from starting a selection box
-            setPlacingNodeIds(null);
-            placementRef.current = null;
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mousedown', handleMouseDown, { capture: true }); // Capture phase to beat React Flow component listeners
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mousedown', handleMouseDown, { capture: true });
-        };
-    }, [placingNodeIds, screenToFlowPosition, setNodes]);
 
     const onConnectStart = useCallback((_: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
         connectionStartRef.current = params;
@@ -714,7 +557,7 @@ export function GraphEditor() {
         if (newEdgesToAdd.length > 0) {
             setEdges(eds => [...eds, ...newEdgesToAdd]);
         }
-        closeMenu();
+        setMenuPosition(null);
     };
 
     // Auto-Insert Logic
@@ -786,6 +629,8 @@ export function GraphEditor() {
         }
     }, [nodes, edges, setEdges]);
 
+
+
     // Helper for math
     function distanceToSegment(x: number, y: number, x1: number, y1: number, x2: number, y2: number) {
         const A = x - x1;
@@ -821,7 +666,7 @@ export function GraphEditor() {
     // Without 'screenToFlowPosition', placing exactly at cursor is hard if zoomed/panned.
     // Strategy: We will just spawn at the click location but in "Screen" space it might be wrong.
     return (
-        <div className="h-screen w-screen bg-zinc-900 relative" onClick={closeMenu}>
+        <div className="h-screen w-screen bg-zinc-900 relative" onClick={() => setMenuPosition(null)}>
 
             {/* Context Menu (Blender Style) */}
             {menuPosition && (
@@ -849,130 +694,7 @@ export function GraphEditor() {
                 </div>
             )}
 
-            {/* Top Controls */}
-            <div className="absolute top-4 right-4 z-50 flex gap-2">
-                <Button
-                    onClick={handleSave}
-                    variant="outline"
-                    className="rounded-full"
-                >
-                    <Save className="w-4 h-4" />
-                    Save
-                </Button>
-            </div>
 
-            {/* Viewport Info */}
-            <div className="absolute bottom-4 left-4 z-50 bg-zinc-800/90 text-white text-xs px-3 py-2 rounded-lg font-mono backdrop-blur-md border border-zinc-700">
-                <div className="flex items-center gap-4">
-                    <span><strong>Nodes:</strong> {nodes.length}</span>
-                    <span><strong>Edges:</strong> {edges.length}</span>
-                    <span className="text-zinc-500">Shift+A to Add • Middle Mouse to Pan</span>
-                </div>
-            </div>
-
-            {/* Floating Toolbar (Optional now, given Shift+A, but kept for discovery) */}
-            <TooltipProvider>
-                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-50 flex gap-1 bg-zinc-800 p-2 rounded-2xl shadow-xl border border-zinc-700">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                onClick={() => addNode('inputNode')}
-                                variant="ghost"
-                                size="icon"
-                                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl"
-                            >
-                                <Hash className="w-5 h-5 text-blue-500" />
-                                <span className="text-[10px] text-gray-400 font-bold mt-1">IN</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add Input Node</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                onClick={() => addNode('mathNode')}
-                                variant="ghost"
-                                size="icon"
-                                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl"
-                            >
-                                <Plus className="w-5 h-5 text-orange-500" />
-                                <span className="text-[10px] text-gray-400 font-bold mt-1">MATH</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add Math Node</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                onClick={() => addNode('unaryNode')}
-                                variant="ghost"
-                                size="icon"
-                                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl"
-                            >
-                                <Calculator className="w-5 h-5 text-purple-500" />
-                                <span className="text-[10px] text-gray-400 font-bold mt-1">TRIG</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add Trig Node</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                onClick={() => addNode('solverNode')}
-                                variant="ghost"
-                                size="icon"
-                                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl"
-                            >
-                                <Sigma className="w-5 h-5 text-indigo-500" />
-                                <span className="text-[10px] text-gray-400 font-bold mt-1">SOLVE</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add Solver Node</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                onClick={handleGroupSelection}
-                                variant="ghost"
-                                size="icon"
-                                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl"
-                            >
-                                <Layers className="w-5 h-5 text-pink-500" />
-                                <span className="text-[10px] text-gray-400 font-bold mt-1">GROUP</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Group Selected Nodes</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                onClick={handleUngroup}
-                                variant="ghost"
-                                size="icon"
-                                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl"
-                            >
-                                <Group className="w-5 h-5 text-red-400" />
-                                <span className="text-[10px] text-gray-400 font-bold mt-1">UNGROUP</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Ungroup Selected Group</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                onClick={() => addNode('outputNode')}
-                                variant="ghost"
-                                size="icon"
-                                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl"
-                            >
-                                <Monitor className="w-5 h-5 text-green-500" />
-                                <span className="text-[10px] text-gray-400 font-bold mt-1">OUT</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add Output Node</TooltipContent>
-                    </Tooltip>
-                </div>
-            </TooltipProvider>
 
             {/* React Flow */}
             <ReactFlow

@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-import { Providers } from "@/components/Providers";
+import { Soul } from "@/components/Soul";
 
 export const metadata: Metadata = {
   title: "Calctopus",
@@ -30,7 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <Providers>{children}</Providers>
+        <Soul>{children}</Soul>
       </body>
     </html>
   );

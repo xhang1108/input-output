@@ -5,7 +5,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useExpressionFormatter } from '@/hooks/useExpressionFormatter';
+import { useSpeech } from '../../nerves/useSpeech';
 
 interface NodeOutputData {
     value?: number;
@@ -20,7 +20,7 @@ export function NodeOutput({ id, data }: NodeProps) {
     const outputData = data as NodeOutputData;
     const [isSymbolic, setIsSymbolic] = useState(false);
 
-    const { formatExpression } = useExpressionFormatter();
+    const { speak } = useSpeech();
 
     let displayValue = '—';
 
@@ -47,7 +47,7 @@ export function NodeOutput({ id, data }: NodeProps) {
     }
 
     // Use the hook to get the formatted expression
-    const formula = formatExpression(id, isSymbolic);
+    const formula = speak(id, isSymbolic);
 
     return (
         <div className="bg-zinc-200 border-2 border-green-500 rounded-xl p-4 shadow-[0_0_15px_rgba(34,197,94,0.3)] min-w-[200px] group transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:border-green-400 relative">

@@ -27,11 +27,11 @@ function getSourceNode(
     return nodes.find(n => n.id === connection.source) || null;
 }
 
-export function useExpressionFormatter() {
+export function useSpeech() {
     const nodes = useNodes();
     const edges = useEdges();
 
-    const formatExpression = useCallback((startNodeId: string, isSymbolic: boolean): string => {
+    const speak = useCallback((startNodeId: string, isSymbolic: boolean): string => {
 
         function resolveNodeAST(nodeId: string, currentPath: Set<string>): math.MathNode {
             if (currentPath.has(nodeId)) {
@@ -41,7 +41,7 @@ export function useExpressionFormatter() {
                 const label = node?.data?.label || 'Self';
                 return new math.SymbolNode(`↺ ${label}`);
             }
-            
+
             // Create new path for this branch (recursion stack)
             const nextPath = new Set(currentPath);
             nextPath.add(nodeId);
@@ -72,6 +72,10 @@ export function useExpressionFormatter() {
 
             try {
                 // Transform local AST symbols into resolved sub-trees
+                if (!localAST || typeof localAST.transform !== 'function') {
+                    return new math.SymbolNode('?');
+                }
+
                 return localAST.transform((child) => {
                     if ((child as any).isSymbolNode) {
                         const symbol = child as math.SymbolNode;
@@ -120,5 +124,5 @@ export function useExpressionFormatter() {
 
     }, [nodes, edges]);
 
-    return { formatExpression };
+    return { speak };
 }

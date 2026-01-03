@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
-import { evaluateGraph, EvaluationResult, GraphNode } from '../engine/evaluate';
+import { Brain, Thoughts, Concept, NeuralConnection } from '../engine/Brain';
 
 // Helper to generate a hash/fingerprint of the graph that only changes
 // when calculation-relevant data changes.
 // Strictly ignores: position, selected, dragging, width, height, etc.
-const generateGraphHash = (nodes: Node[], edges: Edge[]) => {
+const sensePatterns = (nodes: Node[], edges: Edge[]) => {
     // 1. Nodes Fingerprint: ID + Type + Data Content
     // We sort by ID to ensure order doesn't affect hash if array order shuffles (though usually stable)
     const sortedNodes = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
@@ -25,13 +25,13 @@ const generateGraphHash = (nodes: Node[], edges: Edge[]) => {
     return `${nodesHash}::${edgesHash}`;
 };
 
-export const useGraphEvaluation = (nodes: Node[], edges: Edge[]) => {
-    const [nodeResults, setNodeResults] = useState<EvaluationResult>({});
+export const useBrain = (nodes: Node[], edges: Edge[]) => {
+    const [thoughts, setThoughts] = useState<Thoughts>({});
     const previousHash = useRef<string>('');
 
     useEffect(() => {
         // 1. Generate Hash immediately to check if we need to schedule a run
-        const currentHash = generateGraphHash(nodes, edges);
+        const currentHash = sensePatterns(nodes, edges);
 
         // If nothing relevant changed, do nothing.
         if (currentHash === previousHash.current) {
@@ -44,26 +44,26 @@ export const useGraphEvaluation = (nodes: Node[], edges: Edge[]) => {
             previousHash.current = currentHash;
 
             // 3. Prepare Data
-            const engineNodes: GraphNode[] = nodes.map(n => ({
+            const concepts: Concept[] = nodes.map(n => ({
                 id: n.id,
                 type: n.type,
                 data: n.data,
             }));
 
-            const engineEdges = edges.map(e => ({
+            const connections: NeuralConnection[] = edges.map(e => ({
                 source: e.source,
                 target: e.target,
                 sourceHandle: e.sourceHandle,
                 targetHandle: e.targetHandle
             }));
 
-            // 4. Execute Engine
-            // console.time('GraphEvaluation'); // Optional: keep for debugging
-            const results = evaluateGraph(engineNodes, engineEdges);
-            // console.timeEnd('GraphEvaluation');
+            // 4. Brain Thinking
+            // console.time('Brain Thinking'); // Optional: keep for debugging
+            const results = Brain.think(concepts, connections);
+            // console.timeEnd('Brain Thinking');
 
             // 5. Update State
-            setNodeResults(results);
+            setThoughts(results);
 
         }, 50); // <--- 50ms Delay
 
@@ -72,5 +72,5 @@ export const useGraphEvaluation = (nodes: Node[], edges: Edge[]) => {
 
     }, [nodes, edges]);
 
-    return { nodeResults };
+    return { thoughts };
 };

@@ -1,26 +1,24 @@
 import * as math from 'mathjs';
 
-export interface GraphNode {
+export interface Concept {
     id: string;
     type?: string;
     data: Record<string, any>;
 }
 
-export interface GraphEdge {
+export interface NeuralConnection {
     source: string;
     target: string;
     sourceHandle?: string | null;
     targetHandle?: string | null;
 }
 
-export type EvaluationResult = Record<string, { value: any; error?: string; ast?: any }>;
+export type Thoughts = Record<string, { value: any; error?: string; ast?: any }>;
 
 // Helper to create local AST
 function createLocalAST(type: string, data: any): any {
     try {
         if (type === 'inputNode') {
-            // For input, the AST is just the symbol or value. 
-            // Formatter handles logic, but we can provide base.
             const val = data.value ?? 0;
             return math.parse(String(val));
         }
@@ -53,29 +51,23 @@ function createLocalAST(type: string, data: any): any {
             return math.parse('x');
         }
     } catch (e) {
-        return null; // Fallback
+        return null;
     }
     return null;
 }
 
-export function evaluateGraph(nodes: GraphNode[], edges: GraphEdge[]): EvaluationResult {
-    // -------------------------------------------------------------------------
-    // Step A: Build Graph (Adjacency List & In-Degree)
-    // -------------------------------------------------------------------------
+function think(concepts: Concept[], connections: NeuralConnection[]): Thoughts {
     const adjList = new Map<string, string[]>();
     const inDegree = new Map<string, number>();
-    const nodeMap = new Map<string, GraphNode>();
+    const nodeMap = new Map<string, Concept>();
 
-    // Initialize structures for all nodes (including isolated ones)
-    for (const node of nodes) {
+    for (const node of concepts) {
         adjList.set(node.id, []);
         inDegree.set(node.id, 0);
         nodeMap.set(node.id, node);
     }
 
-    // Populate adjacency list and in-degrees based on edges
-    for (const edge of edges) {
-        // Only consider edges where both nodes exist
+    for (const edge of connections) {
         if (!nodeMap.has(edge.source) || !nodeMap.has(edge.target)) {
             continue;
         }
@@ -84,13 +76,9 @@ export function evaluateGraph(nodes: GraphNode[], edges: GraphEdge[]): Evaluatio
         inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
     }
 
-    // -------------------------------------------------------------------------
-    // Step B: Topological Sort (Kahn's Algorithm)
-    // -------------------------------------------------------------------------
     const queue: string[] = [];
     const sortedOrder: string[] = [];
 
-    // Enqueue all nodes with in-degree 0 (start nodes & isolated nodes)
     inDegree.forEach((deg, id) => {
         if (deg === 0) {
             queue.push(id);
@@ -110,24 +98,14 @@ export function evaluateGraph(nodes: GraphNode[], edges: GraphEdge[]): Evaluatio
         }
     }
 
-    // Cycle Detection: If sortedOrder length != nodes count, there is a cycle.
-    // However, we still want to compute what we can.
-    // We will process the sorted nodes. Nodes involved in a cycle won't be in sortedOrder.
-    // We mark missing nodes as errors later.
+    const thoughts: Thoughts = {};
 
-    const results: EvaluationResult = {};
-
-    // Helper to get input value from upstream
-    // We need to look at edges to find who feeds into 'targetNode'
     const getInputs = (targetNodeId: string): Record<string, any> => {
         const inputValues: Record<string, any> = {};
-        const incomingEdges = edges.filter(e => e.target === targetNodeId);
+        const incomingEdges = connections.filter(e => e.target === targetNodeId);
 
         for (const edge of incomingEdges) {
-            const sourceVal = results[edge.source]?.value;
-            // Key by handle id (e.g., 'a', 'b') or generic 'input'
-            // If strictly following military spec, we might need robust handle mapping.
-            // For now, map by targetHandle if present.
+            const sourceVal = thoughts[edge.source]?.value;
             if (edge.targetHandle) {
                 inputValues[edge.targetHandle] = sourceVal;
             }
@@ -135,22 +113,17 @@ export function evaluateGraph(nodes: GraphNode[], edges: GraphEdge[]): Evaluatio
         return inputValues;
     };
 
-    // -------------------------------------------------------------------------
-    // Step C: Execution Loop
-    // -------------------------------------------------------------------------
     for (const nodeId of sortedOrder) {
         const node = nodeMap.get(nodeId);
         if (!node) continue;
 
         try {
-            // Generate AST for formatters
             const ast = createLocalAST(node.type || 'default', node.data);
 
             switch (node.type) {
                 case 'inputNode': {
-                    // Direct value passthrough
                     const val = node.data.value;
-                    results[nodeId] = {
+                    thoughts[nodeId] = {
                         value: typeof val === 'string' ? parseFloat(val) : val,
                         ast
                     };
@@ -172,14 +145,11 @@ export function evaluateGraph(nodes: GraphNode[], edges: GraphEdge[]): Evaluatio
                         case 'mod': val = a % b; break;
                         default: val = 0;
                     }
-                    results[nodeId] = { value: val, ast };
+                    thoughts[nodeId] = { value: val, ast };
                     break;
                 }
-                // Placeholder extensions for future types
                 case 'unaryNode': {
-                    // Example implementation if needed
                     const inputs = getInputs(nodeId);
-                    // Assuming 'input' handle or first available
                     const x = Number(Object.values(inputs)[0] ?? 0);
                     const op = node.data.operation || 'sqrt';
                     let val = 0;
@@ -187,44 +157,47 @@ export function evaluateGraph(nodes: GraphNode[], edges: GraphEdge[]): Evaluatio
                         case 'sqrt': val = Math.sqrt(x); break;
                         case 'sin': val = Math.sin(x); break;
                         case 'cos': val = Math.cos(x); break;
+                        case 'tan': val = Math.tan(x); break;
+                        case 'abs': val = Math.abs(x); break;
+                        case 'log': val = Math.log(x); break;
+                        case 'round': val = Math.round(x); break;
                         default: val = x;
                     }
-                    results[nodeId] = { value: val, ast };
+                    thoughts[nodeId] = { value: val, ast };
                     break;
                 }
                 case 'outputNode': {
                     const inputs = getInputs(nodeId);
                     const val = Object.values(inputs)[0] ?? 0;
-                    results[nodeId] = { value: val, ast };
+                    thoughts[nodeId] = { value: val, ast };
                     break;
                 }
                 default: {
-                    // Unknown or passthrough
-                    results[nodeId] = { value: node.data.value, ast };
+                    thoughts[nodeId] = { value: node.data.value, ast };
                     break;
                 }
             }
         } catch (err) {
-            results[nodeId] = {
+            thoughts[nodeId] = {
                 value: NaN,
                 error: (err as Error).message
             };
         }
     }
 
-    // Handle Cycle / Unprocessed Nodes
     const processedSet = new Set(sortedOrder);
-    for (const node of nodes) {
+    for (const node of concepts) {
         if (!processedSet.has(node.id)) {
-            results[node.id] = {
+            thoughts[node.id] = {
                 value: NaN,
                 error: 'Cycle detected or dependency missing'
             };
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Step D: Return Results
-    // -------------------------------------------------------------------------
-    return results;
+    return thoughts;
 }
+
+export const Brain = {
+    think
+};
