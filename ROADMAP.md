@@ -1,93 +1,89 @@
-# Calctopus Development Roadmap
+# 🗺️ Calctopus Roadmap
 
-This roadmap outlines the step-by-step plan to build **Calctopus**, a high-performance node-based calculator.
+This roadmap outlines the past achievements and future ambitions for **Calctopus**, the high-performance node-based calculator.
 
-## 📅 Phase 1: Project Initialization & Infrastructure (SvelteKit Unified)
-**Goal:** specific single SvelteKit project for both frontend and backend to simplify deployment and schema sharing.
+## ✅ Phase 1: Foundation (Completed)
+**Goal:** Establish a robust React/Next.js architecture with specific "Black Magic" stability features.
 
-- [x] **SvelteKit Setup**
-    - [x] Initialize SvelteKit project (Vite-based).
-    - [x] Configure **Cloudflare Adapter** (`adapter-cloudflare`) for edge deployment.
-    - [x] Set up `svelte.config.js` and `vite.config.js`.
-- [x] **Styling & Icons**
-    - [x] Install & Configure **UnoCSS** (Attributify mode).
-    - [x] Install **Lucide Svelte**.
-- [x] **Database & ORM**
-    - [x] Configure **Drizzle ORM** with **Cloudflare D1** within the SvelteKit environment.
-    - [x] Define shared schema (`graphs` table).
-
-## 🧩 Phase 2: Core Frontend Engine (The "Brain")
-**Goal:** A working node-based interface using Svelte 5's fine-grained reactivity.
-
-- [x] **Svelte Flow Integration**
-    - [x] Install & setup `@xyflow/svelte` (Svelte Flow).
-    - [x] Create a basic canvas.
-- [x] **Node Architecture**
-    - [x] Create specialized node components: Input, Math Ops (Add, Sub, Mul, Div), Output.
-- [x] **Logic Engine ($derived.by)**
-    - [x] Integrate **Math.js** (replaced with native JS for stability).
-    - [x] **Reactivity:** unique implementation using **`$derived.by`** to manage the dependency graph.
-    - [x] Ensure the "Domino Effect": changing an upstream node automatically triggers updates in specific downstream nodes via Svelte's dependency tracking system.
-
-## 💾 Phase 3: Backend & Persistence
-**Goal:** Leverage SvelteKit API routes for saving/loading graphs.
-
-- [x] **Database Schema**
-    - [x] Define `graphs` table (id, data, created_at) in Drizzle.
-- [x] **API Implementation (SvelteKit Actions/Endpoints)**
-    - [x] `POST /api/save` (or Form Action): Validates JSON, generates **NanoID**, writes to D1.
-    - [x] `GET /load/[id]` (Page Load Function): Fetches graph data on the server side (SSR) or API.
-- [x] **User Feedback**
-    - [x] Add **Svelte Sonner** for toast notifications on save/load actions.
-
-## 🎨 Phase 4: UI/UX & Mobile Polish
-**Goal:** Professional design with specific mobile usage optimizations.
-
-- [x] **Responsive Design**
-    - [x] Optimizing Svelte Flow controls for touch/trackpad.
-    - [x] Mobile-friendly sidebar/toolbar.
-- [x] **Mobile Input Handling (Virtual Keyboard)**
-    - [x] Implement "Virtual Keyboard Avoidance": Ensure the active node is not obscured when the keyboard opens.
-    - [x] Use `visualViewport` API or reactive canvas resizing to adjust layout dynamically during input.
-- [x] **Visual Polish**
-    - [x] UnoCSS styling for a premium "Dark Mode" aesthetic.
-    - [x] Smooth animations for node connections.
-
-## 🚀 Phase 5: Deployment (MVP Complete)
-**Goal:** Stable deployment for user access.
-
-- [x] **Adapter Migration**
-    - [x] Switch to `@sveltejs/adapter-node` for maximum stability with Svelte 5.
-- [x] **Production Verification**
-    - [x] Verify local production build (`npm run build` + `node build`).
-    - [x] Ensure correct rendering of graph engine in production environment.
+- [x] **Core Architecture**
+    - [x] Migration from SvelteKit to **Next.js 14+**.
+    - [x] Integration of **React Flow** for the graph engine.
+    - [x] **"Brain-Body" Separation:** Decoupled calculation logic (`Brain.ts`) from rendering (`Body.tsx`).
+- [x] **Basic Node System**
+    - [x] **Math Nodes:** Add, Subtract, Multiply, Divide.
+    - [x] **Input/Output:** Raw inputs and real-time result visualization.
+    - [x] **Unary Ops:** Negation.
+- [x] **Interactions & UX**
+    - [x] **Blender-style Detachment:** Drag from input to disconnect/reconnect.
+    - [x] **Mobile Optimization:** Touch controls and virtual keyboard avoidance.
+    - [x] **Toast Notifications:** Integration with `sonner`.
+- [x] **Persistence ("The Mouth")**
+    - [x] **Auto-Save:** Robust LocalStorage synchronization.
+    - [x] **Import/Export:** JSON file support.
 
 ---
 
-## 🔮 Phase 6: Future Enhancements (Planned)
-**Goal:** Advanced mathematical capabilities and enhanced user experience.
+## 🚧 Phase 2: Logic & Control (Current Focus)
+**Goal:** Transform Calctopus from a calculator into a visual programming language.
 
-- [ ] **Advanced Mathematical Nodes**
-    - [ ] Trigonometry (`sin`, `cos`, `tan`).
-    - [ ] Powers and Roots (`^`, `sqrt`).
-    - [ ] Logic Gates (`if/else`, `>`, `<`).
-- [ ] **Local Persistence**
-    - [ ] `localStorage` auto-save to prevent data loss on refresh.
-    - [ ] Export graph as Image/PNG.
-- [ ] **Data Flow & Simulation (Houdini-style)**
-    - [ ] **Vector & Matrix Math**: Handle `[x, y, z]` or `[r, g, b]` data types.
-    - [ ] **Spreadsheet Processing**: Operations on arrays/lists (e.g. `map`, `reduce`).
-    - [ ] **Time/Simulation**: Introduce global `t` variable for animation and physics.
-    - [ ] **Visualizers**: Graph mapper, histograms, and data plotting nodes.
-- [ ] **UI/UX 2.0**
-    - [ ] Mini-map for navigating large complex graphs.
-    - [ ] Customizable grid backgrounds (Dots, Lines, Crosses).
-    - [ ] Color-coded nodes (Blue for inputs, Green for math, Red for output).
+- [ ] **Comparison Nodes**
+    - [ ] Greater Than (`>`), Less Than (`<`).
+    - [ ] Equals (`=`), Not Equals (`!=`).
+    - [ ] Greater/Less or Equal (`>=`, `<=`).
+- [ ] **Boolean Logic**
+    - [ ] `AND`, `OR`, `NOT`, `XOR` gates.
+    - [ ] Boolean Input Node (Checkbox/Switch).
+- [ ] **Control Flow**
+    - [ ] **If/Else Node:** Routes values based on a boolean input.
+    - [ ] **Switch Node:** Selects one of specific inputs based on an index.
+    - [ ] **Clamp/Min/Max:** Restrict values to ranges.
+- [ ] **Sequential Logic (Memory)** (Requires Engine Upgrade)
+    - [ ] **Feedback Loops:** Allow connections to cycle back (A -> B -> A).
+    - [ ] **Delay Node / Register:** Holds a value from the "previous frame" to prevent infinite recursion.
+    - [ ] **Flip-Flops / Latches:** Standard memory units.
 
-## 🛠️ Maintenance & Compatibility
-**Goal:** Ensure long-term stability and eventual migration back to Cloudflare.
+## 🎨 Phase 3: Visuals & Polish
+**Goal:** Enhance the user interface and provide better tools for managing large graphs.
 
-- [ ] **Periodic Checks**
-    - [ ] Check `@xyflow/svelte` changelogs for Svelte 5 hydration fixes (monthly).
-    - [ ] Check `@sveltejs/adapter-cloudflare` for compatibility updates.
-    - [ ] **Experiment:** Try switching back to Clouflare adapter (`npm i -D @sveltejs/adapter-cloudflare`) to test if "blank screen" issue is resolved.
+- [ ] **Export & Sharing**
+    - [ ] **Export as Image:** Download graph as high-res PNG/SVG (Snapshot).
+    - [ ] **Clipboard Image:** "Copy Image" button.
+- [ ] **Navigation Aids**
+    - [ ] **Minimap:** Small overview map for large graphs.
+    - [ ] **Auto-Layout:** Button to automatically organize nodes nicely (using `dagre` or `elk`).
+- [ ] **Customization**
+    - [ ] **Background Patterns:** Toggle between Dots, Lines, Crosses.
+    - [ ] **Theme Accents:** Allow changing the primary "glow" color.
+- [ ] **Organization**
+    - [ ] **Grouping:** Frame/Group nodes together with a label.
+    - [ ] **Comments:** Sticky notes to annotate parts of the graph.
+
+## 🧮 Phase 4: Advanced Mathematics
+**Goal:** Support engineering and scientific workflows.
+
+- [ ] **Scientific Functions**
+    - [ ] Trigonometry: `sin`, `cos`, `tan` (and their arc variants).
+    - [ ] Exponential: `Power (x^y)`, `Root`, `Log`, `Ln`.
+    - [ ] Constants: `π`, `e`, `φ`.
+- [ ] **Utilities**
+    - [ ] **Random Number:** Generate random values (with seed option).
+    - [ ] **Round/Floor/Ceil:** Precision controls.
+    - [ ] **Modulo:** Remainder calculation.
+
+## 📊 Phase 5: Data Structures (The "Spreadsheet" Upgrade)
+**Goal:** Move beyond single scalars to handle collections of data.
+
+- [ ] **Array Support**
+    - [ ] **Array Input:** Enter `[1, 2, 3]`.
+    - [ ] **Aggregators:** `Sum`, `Average`, `Median` of an array.
+    - [ ] **Array Math:** Add scalar to array, or add two arrays.
+- [ ] **Matrix Operations**
+    - [ ] Dot Product, Cross Product.
+    - [ ] Transpose, Invert.
+
+## ☁️ Phase 6: Cloud & Collaboration (Long Term)
+**Goal:** Enable sharing and persistent online storage.
+
+- [ ] **Shareable Links:** Generate a read-only URL for a graph.
+- [ ] **User Accounts:** Save graphs to the cloud (Supabase/Firebase).
+- [ ] **Templates:** Community gallery of useful calculators.

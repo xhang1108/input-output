@@ -33,7 +33,7 @@ import { useEye } from '../nerves/useEye';
 import { useMemory } from '../nerves/useMemory';
 import { useMouth } from '../nerves/useMouth';
 import { Skin } from './Skin';
-import { Plus, Calculator, Hash, Monitor, Sigma } from 'lucide-react';
+import { Plus, Calculator, Hash, Monitor, Sigma, Save, Download, Trash } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
@@ -222,10 +222,15 @@ export function Body() {
             const thought = thoughts[node.id];
 
             // Only update if thought exists and changed (value or error or ast)
+            // AND ensure we overwrite "dehydrated" ASTs (from JSON load) with fresh real ASTs (with methods)
+            const isDehydrated = node.data.ast && typeof (node.data.ast as any).transform !== 'function';
+            const astChanged = JSON.stringify(node.data.ast) !== JSON.stringify(thought.ast);
+
             if (thought && (
                 node.data.result !== thought.value ||
                 node.data.error !== thought.error ||
-                JSON.stringify(node.data.ast) !== JSON.stringify(thought.ast) // Simple deep check for AST
+                astChanged ||
+                isDehydrated
             )) {
                 return {
                     ...node,
@@ -263,9 +268,10 @@ export function Body() {
     );
 
     // Save (placeholder)
+    // Save / Load / Reset
     const handleSave = () => {
-        toast.success('Graph saved!');
-        console.log({ nodes, edges });
+        mouth.savor();
+        toast.success('Session saved manually');
     };
 
     // Group Selection Logic
@@ -626,7 +632,7 @@ export function Body() {
                 let newNodeInput = 'a'; // Default math input
                 if (node.type === 'unaryNode' || node.type === 'outputNode' || node.type === 'solverNode') newNodeInput = 'input';
 
-                let newNodeOutput = 'source'; // Default output generic? 
+                let newNodeOutput = 'source'; // Default output generic?
                 // Wait, nodes don't usually have named output handles unless custom.
                 // Our NodeMath/NodeInput use Position.Right without ID => default handle (null).
                 // If we defined id="result" in node types, we must use it.
@@ -750,6 +756,17 @@ export function Body() {
             >
                 <Background color="#333" gap={20} size={1} />
                 <Controls showInteractive={false} />
+                <Panel position="top-right" className="flex gap-2 p-2 bg-zinc-800/80 backdrop-blur rounded-lg border border-zinc-700 m-4">
+                    <Button variant="ghost" size="icon" onClick={handleSave} className="text-zinc-400 hover:text-green-400 hover:bg-zinc-700" title="Save Session">
+                        <Save className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => mouth.spit()} className="text-zinc-400 hover:text-blue-400 hover:bg-zinc-700" title="Export JSON">
+                        <Download className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => { mouth.diet(); window.location.reload(); }} className="text-zinc-400 hover:text-red-400 hover:bg-zinc-700" title="Clear & Reset">
+                        <Trash className="w-5 h-5" />
+                    </Button>
+                </Panel>
                 <MiniMap
                     nodeColor="#888"
                     maskColor="rgba(0,0,0,0.6)"

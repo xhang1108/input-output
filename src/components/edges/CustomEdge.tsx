@@ -18,6 +18,8 @@ export function CustomEdge({
     targetPosition,
     style = {},
     markerEnd,
+    source,
+    target,
 }: EdgeProps) {
     const { getNode } = useReactFlow();
 
@@ -32,14 +34,7 @@ export function CustomEdge({
     });
 
     // 3. Determine Flow Type (Formula vs Value)
-    // We get the source node to see if it's carrying a raw expression formula
-    // Note: arguments[0].source is the safest way to get the source ID from EdgeProps in some versions,
-    // but here we can just parse the ID or use the internal node lookup.
-
-    // Attempt to get source node ID from the edge ID (standard React Flow behavior) or props
-    // Edge IDs are typically "source->target" or "xy-edge__source-target"
-    const sourceId = id.split('->')[0] || id.split('__')[1]?.split('-')[0];
-    const sourceNode = getNode(sourceId);
+    const sourceNode = getNode(source);
 
     const isFormula = useMemo(() => {
         if (!sourceNode) return false;
