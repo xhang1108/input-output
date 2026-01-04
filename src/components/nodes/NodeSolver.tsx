@@ -5,6 +5,9 @@ import { useState, useEffect } from 'react';
 import { Sigma } from 'lucide-react';
 import nerdamer from 'nerdamer';
 import 'nerdamer/Solve'; // Extend nerdamer with solve function
+import { NodeShell } from './NodeShell';
+import { TargetHandle } from '../handles/TargetHandle';
+import { SourceHandle } from '../handles/SourceHandle';
 
 interface NodeSolverProps {
     id: string;
@@ -17,7 +20,7 @@ interface NodeSolverProps {
     };
 }
 
-export function NodeSolver({ id, data }: NodeSolverProps) {
+export function NodeSolver({ id, data, selected }: NodeSolverProps & { selected?: boolean }) {
     const { updateNodeData } = useReactFlow();
     const [targetVar, setTargetVar] = useState(data.targetVar || 'x');
     const [solution, setSolution] = useState<string>('?');
@@ -63,13 +66,15 @@ export function NodeSolver({ id, data }: NodeSolverProps) {
     }, [data.inheritedAST, targetVar, updateNodeData, id]);
 
     return (
-        <div className="bg-zinc-900 border-2 border-indigo-500 rounded-xl p-4 shadow-lg min-w-[200px]">
+        <NodeShell
+            selected={selected}
+            className="bg-zinc-900 border-2 border-indigo-500 rounded-xl p-4 shadow-lg min-w-[200px]"
+        >
             {/* Inputs */}
-            <Handle
-                type="target"
+            <TargetHandle
+                nodeId={id}
                 position={Position.Left}
                 id="eq"
-                className="!w-3 !h-3 !bg-indigo-500 !border-2 !border-zinc-900"
             />
 
             <div className="flex items-center gap-2 mb-3 border-b border-zinc-800 pb-2">
@@ -100,11 +105,10 @@ export function NodeSolver({ id, data }: NodeSolverProps) {
             </div>
 
             {/* Output (The solved value) */}
-            <Handle
-                type="source"
+            <SourceHandle
                 position={Position.Right}
-                className="!w-3 !h-3 !bg-indigo-500 !border-2 !border-zinc-900"
+                color="indigo"
             />
-        </div>
+        </NodeShell>
     );
 }

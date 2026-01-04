@@ -108,6 +108,8 @@ function think(concepts: Concept[], connections: NeuralConnection[]): Thoughts {
             const sourceVal = thoughts[edge.source]?.value;
             if (edge.targetHandle) {
                 inputValues[edge.targetHandle] = sourceVal;
+            } else {
+                inputValues['default'] = sourceVal;
             }
         }
         return inputValues;

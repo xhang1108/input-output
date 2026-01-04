@@ -4,13 +4,15 @@ import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { useState } from 'react';
 import { Box } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { NodeShell } from './NodeShell';
+import { SourceHandle } from '../handles/SourceHandle';
 
 interface NodeInputProps {
     id: string;
     data: { label?: string; value?: number; rawExpression?: string };
 }
 
-export function NodeInput({ id, data }: NodeInputProps) {
+export function NodeInput({ id, data, selected }: NodeInputProps & { selected?: boolean }) {
     const { updateNodeData, setNodes } = useReactFlow();
     const [value, setValue] = useState(data.rawExpression ?? data.value ?? 0);
 
@@ -34,7 +36,10 @@ export function NodeInput({ id, data }: NodeInputProps) {
     };
 
     return (
-        <div className="bg-zinc-200 border border-zinc-300 rounded-xl p-3 shadow-lg hover:shadow-xl hover:border-blue-400 transition-all group">
+        <NodeShell
+            selected={selected}
+            className="bg-zinc-200 border border-zinc-300 rounded-xl p-3 shadow-lg hover:shadow-xl hover:border-blue-400"
+        >
             <div className="flex items-center gap-2 mb-2">
                 <Box className="w-3 h-3 text-blue-500" />
                 <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">
@@ -51,11 +56,10 @@ export function NodeInput({ id, data }: NodeInputProps) {
                 placeholder="2x + 5..."
             />
 
-            <Handle
-                type="source"
+            <SourceHandle
                 position={Position.Right}
-                className="!w-3 !h-3 !bg-blue-500 !border-2 !border-zinc-200"
+                color="blue"
             />
-        </div>
+        </NodeShell>
     );
 }

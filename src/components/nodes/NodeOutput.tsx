@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useSpeech } from '../../nerves/useSpeech';
+import { NodeShell } from './NodeShell';
+import { TargetHandle } from '../handles/TargetHandle';
 
 interface NodeOutputData {
     value?: number;
@@ -16,7 +18,7 @@ interface NodeOutputData {
     [key: string]: unknown;
 }
 
-export function NodeOutput({ id, data }: NodeProps) {
+export function NodeOutput({ id, data, selected }: NodeProps) {
     const outputData = data as NodeOutputData;
     const [isSymbolic, setIsSymbolic] = useState(false);
 
@@ -50,11 +52,13 @@ export function NodeOutput({ id, data }: NodeProps) {
     const formula = speak(id, isSymbolic);
 
     return (
-        <div className="bg-zinc-200 border-2 border-green-500 rounded-xl p-4 shadow-[0_0_15px_rgba(34,197,94,0.3)] min-w-[200px] group transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:border-green-400 relative">
-            <Handle
-                type="target"
+        <NodeShell
+            selected={selected}
+            className="bg-zinc-200 border-2 border-green-500 rounded-xl p-4 shadow-[0_0_15px_rgba(34,197,94,0.3)] min-w-[200px] hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:border-green-400 relative"
+        >
+            <TargetHandle
+                nodeId={id}
                 position={Position.Left}
-                className="!w-3 !h-3 !bg-green-500 !border-2 !border-zinc-200"
             />
 
             <div className="flex flex-col items-center gap-3">
@@ -80,6 +84,6 @@ export function NodeOutput({ id, data }: NodeProps) {
                     {displayValue}
                 </div>
             </div>
-        </div>
+        </NodeShell>
     );
 }

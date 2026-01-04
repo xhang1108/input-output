@@ -2,6 +2,9 @@
 
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { useState } from 'react';
+import { NodeShell } from './NodeShell';
+import { TargetHandle } from '../handles/TargetHandle';
+import { SourceHandle } from '../handles/SourceHandle';
 import {
     Select,
     SelectContent,
@@ -25,7 +28,7 @@ const operations = [
     { value: 'round', label: 'round' },
 ];
 
-export function NodeUnary({ id, data }: NodeUnaryProps) {
+export function NodeUnary({ id, data, selected }: NodeUnaryProps & { selected?: boolean }) {
     const { updateNodeData } = useReactFlow();
     const [op, setOp] = useState(data.operation || 'sqrt');
 
@@ -35,7 +38,10 @@ export function NodeUnary({ id, data }: NodeUnaryProps) {
     };
 
     return (
-        <div className="bg-zinc-200 border-2 border-purple-500 rounded-lg p-3 shadow-md min-w-[120px]">
+        <NodeShell
+            selected={selected}
+            className="bg-zinc-200 border-2 border-purple-500 rounded-lg p-3 shadow-md min-w-[120px]"
+        >
             <div className="text-xs text-purple-500 mb-2 font-bold uppercase tracking-wider">
                 Trig / Math
             </div>
@@ -66,17 +72,15 @@ export function NodeUnary({ id, data }: NodeUnaryProps) {
                 )}
             </div>
 
-            <Handle
-                type="target"
+            <TargetHandle
+                nodeId={id}
                 position={Position.Left}
                 id="in"
-                className="!w-2 !h-2 !bg-purple-500 !border-2 !border-zinc-200"
             />
-            <Handle
-                type="source"
+            <SourceHandle
                 position={Position.Right}
-                className="!w-3 !h-3 !bg-purple-500 !border-2 !border-zinc-200"
+                color="purple"
             />
-        </div>
+        </NodeShell>
     );
 }

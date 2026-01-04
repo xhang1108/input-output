@@ -2,6 +2,9 @@
 
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { useState } from 'react';
+import { NodeShell } from './NodeShell';
+import { TargetHandle } from '../handles/TargetHandle';
+import { SourceHandle } from '../handles/SourceHandle';
 import {
     Select,
     SelectContent,
@@ -24,7 +27,7 @@ const operations = [
     { value: 'mod', label: '%' },
 ];
 
-export function NodeMath({ id, data }: NodeMathProps) {
+export function NodeMath({ id, data, selected }: NodeMathProps & { selected?: boolean }) {
     const { updateNodeData } = useReactFlow();
     const [op, setOp] = useState(data.operation || 'add');
 
@@ -36,21 +39,23 @@ export function NodeMath({ id, data }: NodeMathProps) {
     const currentLabel = operations.find((o) => o.value === op)?.label || '+';
 
     return (
-        <div className="bg-zinc-200 border-2 border-orange-400 rounded-full w-[80px] h-[80px] shadow-lg flex flex-col items-center justify-center relative group hover:border-orange-500 transition-all">
-            <Handle
-                type="target"
+        <NodeShell
+            selected={selected}
+            className="bg-zinc-200 border-2 border-orange-400 rounded-full w-[80px] h-[80px] shadow-lg flex flex-col items-center justify-center relative hover:border-orange-500"
+        >
+            <TargetHandle
+                nodeId={id}
                 position={Position.Left}
                 id="a"
                 style={{ top: '30%' }}
-                className="!w-2 !h-2 !bg-orange-500 !border-2 !border-zinc-200"
             />
-            <Handle
-                type="target"
+            <TargetHandle
+                nodeId={id}
                 position={Position.Left}
                 id="b"
                 style={{ top: '70%' }}
-                className="!w-2 !h-2 !bg-orange-500 !border-2 !border-zinc-200"
             />
+
 
             <Select value={op} onValueChange={onSelect}>
                 <SelectTrigger className="w-12 h-12 border-none bg-transparent text-3xl font-bold text-orange-500 justify-center nodrag [&>svg]:hidden">
@@ -78,11 +83,10 @@ export function NodeMath({ id, data }: NodeMathProps) {
                 )}
             </div>
 
-            <Handle
-                type="source"
+            <SourceHandle
                 position={Position.Right}
-                className="!w-3 !h-3 !bg-orange-500 !border-2 !border-zinc-200"
+                color="orange"
             />
-        </div>
+        </NodeShell>
     );
 }

@@ -7,6 +7,7 @@ import {
     MiniMap,
     Panel,
     addEdge,
+    reconnectEdge,
     useNodesState,
     useEdgesState,
     useReactFlow,
@@ -164,6 +165,33 @@ export function Body() {
         },
         [wouldCreateCycle, nodes, setEdges]
     );
+
+    // Handle edge reconnection (Blender-style: drag from handle to detach and reconnect)
+    const onReconnect = useCallback(
+        (oldEdge: Edge, newConnection: Connection) => {
+            edgeReconnectSuccessful.current = true;
+            // Check for cycle with the new connection
+            if (wouldCreateCycle(newConnection.source!, newConnection.target!)) {
+                toast.error('⚠️ Loop detected! This reconnection would create a cycle.');
+                return;
+            }
+            setEdges((eds) => reconnectEdge(oldEdge, newConnection, eds));
+        },
+        [wouldCreateCycle, setEdges]
+    );
+
+    const edgeReconnectSuccessful = useRef(true);
+
+    const onReconnectStart = useCallback(() => {
+        edgeReconnectSuccessful.current = false;
+    }, []);
+
+    const onReconnectEnd = useCallback((_: MouseEvent | TouchEvent, edge: Edge) => {
+        if (!edgeReconnectSuccessful.current) {
+            setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+        }
+        edgeReconnectSuccessful.current = true;
+    }, [setEdges]);
 
     // Use store state for evaluation to catch deep data changes from NodeInput
     const storeNodes = useNodes();
@@ -703,8 +731,11 @@ export function Body() {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onReconnect={onReconnect}
                 onConnectStart={onConnectStart}
                 onConnectEnd={onConnectEnd}
+                onReconnectStart={onReconnectStart}
+                onReconnectEnd={onReconnectEnd}
                 onNodeDragStop={onNodeDragStop}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}

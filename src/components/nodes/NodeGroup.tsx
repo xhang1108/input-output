@@ -1,23 +1,31 @@
 'use client';
 
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Box, Layers } from 'lucide-react';
+import { NodeShell } from './NodeShell';
+import { TargetHandle } from '../handles/TargetHandle';
+import { SourceHandle } from '../handles/SourceHandle';
 
 interface NodeGroupProps {
+    id: string;
     data: {
         label?: string;
         inputs?: { id: string; label: string }[];
         outputs?: { id: string; label: string }[];
         subNetwork?: any; // Storing the internal graph
     };
+    selected?: boolean;
 }
 
-export function NodeGroup({ data }: NodeGroupProps) {
+export function NodeGroup({ id, data, selected }: NodeGroupProps) {
     const inputs = data.inputs || [];
     const outputs = data.outputs || [];
 
     return (
-        <div className="bg-zinc-950 border-2 border-indigo-500/50 rounded-lg shadow-xl min-w-[200px] flex flex-col overflow-hidden">
+        <NodeShell
+            selected={selected}
+            className="bg-zinc-950 border-2 border-indigo-500/50 rounded-lg shadow-xl min-w-[200px] flex flex-col overflow-hidden"
+        >
             {/* Header */}
             <div className="bg-indigo-900/20 p-2 border-b border-indigo-500/30 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-indigo-400" />
@@ -31,11 +39,11 @@ export function NodeGroup({ data }: NodeGroupProps) {
                 <div className="flex flex-col gap-3 relative">
                     {inputs.map((input, i) => (
                         <div key={input.id} className="relative flex items-center h-6">
-                            <Handle
-                                type="target"
+                            <TargetHandle
+                                nodeId={id}
                                 position={Position.Left}
                                 id={input.id}
-                                className="!w-2.5 !h-2.5 !bg-indigo-500 !border-2 !border-zinc-900 !-left-3"
+                                className="!-left-3"
                                 style={{ top: '50%' }}
                             />
                             <span className="text-[10px] text-zinc-400 font-mono ml-1">
@@ -53,11 +61,11 @@ export function NodeGroup({ data }: NodeGroupProps) {
                             <span className="text-[10px] text-zinc-400 font-mono mr-1">
                                 {output.label}
                             </span>
-                            <Handle
-                                type="source"
+                            <SourceHandle
                                 position={Position.Right}
                                 id={output.id}
-                                className="!w-2.5 !h-2.5 !bg-indigo-500 !border-2 !border-zinc-900 !-right-3"
+                                color="indigo"
+                                className="!-right-3"
                                 style={{ top: '50%' }}
                             />
                         </div>
@@ -71,6 +79,6 @@ export function NodeGroup({ data }: NodeGroupProps) {
                     Composite Node
                 </div>
             </div>
-        </div>
+        </NodeShell>
     );
 }
