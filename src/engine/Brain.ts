@@ -25,30 +25,30 @@ function createLocalAST(type: string, data: any): any {
         if (type === 'mathNode') {
             const op = data.operation || 'add';
             switch (op) {
-                case 'add': return math.parse('a + b');
-                case 'sub': return math.parse('a - b');
-                case 'mul': return math.parse('a * b');
-                case 'div': return math.parse('a / b');
-                case 'pow': return math.parse('a ^ b');
-                case 'mod': return math.parse('a % b');
-                default: return math.parse('a + b');
+                case 'add': return math.parse('inputA + inputB');
+                case 'sub': return math.parse('inputA - inputB');
+                case 'mul': return math.parse('inputA * inputB');
+                case 'div': return math.parse('inputA / inputB');
+                case 'pow': return math.parse('inputA ^ inputB');
+                case 'mod': return math.parse('inputA % inputB');
+                default: return math.parse('inputA + inputB');
             }
         }
         if (type === 'unaryNode') {
             const op = data.operation || 'sqrt';
             switch (op) {
-                case 'sin': return math.parse('sin(x)');
-                case 'cos': return math.parse('cos(x)');
-                case 'tan': return math.parse('tan(x)');
-                case 'sqrt': return math.parse('sqrt(x)');
-                case 'abs': return math.parse('abs(x)');
-                case 'log': return math.parse('log(x, e)');
-                case 'round': return math.parse('round(x)');
-                default: return math.parse('x');
+                case 'sin': return math.parse('sin(inputA)');
+                case 'cos': return math.parse('cos(inputA)');
+                case 'tan': return math.parse('tan(inputA)');
+                case 'sqrt': return math.parse('sqrt(inputA)');
+                case 'abs': return math.parse('abs(inputA)');
+                case 'log': return math.parse('log(inputA, e)');
+                case 'round': return math.parse('round(inputA)');
+                default: return math.parse('inputA');
             }
         }
         if (type === 'outputNode') {
-            return math.parse('x');
+            return math.parse('inputA');
         }
     } catch (e) {
         return null;
@@ -133,8 +133,8 @@ function think(concepts: Concept[], connections: NeuralConnection[]): Thoughts {
                 }
                 case 'mathNode': {
                     const inputs = getInputs(nodeId);
-                    const a = Number(inputs['a'] ?? 0);
-                    const b = Number(inputs['b'] ?? 0);
+                    const a = Number(inputs['inputA'] ?? 0);
+                    const b = Number(inputs['inputB'] ?? 0);
                     const op = node.data.operation || 'add';
 
                     let val = 0;

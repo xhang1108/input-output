@@ -25,8 +25,44 @@ export const useMouth = () => {
                 const flow = JSON.parse(saved);
                 if (flow.nodes && flow.edges) {
                     setNodes(flow.nodes);
-                    setEdges(flow.edges);
-                    toast.success('Restored previous session');
+
+                    // Migration: Fix legacy edges (a/b/in/eq -> inputA/inputB)
+                    // Skip migration for 'groupNode' as they have dynamic handles (e.g. input-0)
+                    let duplicateCount = 0;
+                    const tempEdges = flow.edges.map((e: any) => {
+                        const targetNode = flow.nodes.find((n: any) => n.id === e.target);
+                        if (targetNode?.type === 'groupNode') {
+                            return e; // Preserve group node handles precisely
+                        }
+
+                        let newHandle = e.targetHandle;
+                        // Handle legacy or missing handle IDs
+                        if (!newHandle || newHandle === 'a' || newHandle === 'in' || newHandle === 'eq') newHandle = 'inputA';
+                        if (newHandle === 'b') newHandle = 'inputB';
+                        return { ...e, targetHandle: newHandle };
+                    });
+
+                    // Deduplicate: Ensure only one edge per target handle
+                    const uniqueEdges: any[] = [];
+                    const seenTargets = new Set<string>();
+
+                    for (const edge of tempEdges) {
+                        const key = `${edge.target}:${edge.targetHandle}`;
+                        if (!seenTargets.has(key)) {
+                            seenTargets.add(key);
+                            uniqueEdges.push(edge);
+                        } else {
+                            duplicateCount++;
+                        }
+                    }
+
+                    setEdges(uniqueEdges);
+                    if (duplicateCount > 0) {
+                        toast.success(`Restored session (cleaned ${duplicateCount} duplicate wires)`);
+                        console.log(`[useMouth] Cleaned ${duplicateCount} duplicate edges during migration.`);
+                    } else {
+                        toast.success('Restored previous session');
+                    }
                 }
             } catch (e) {
                 console.error('Failed to eat saved graph', e);

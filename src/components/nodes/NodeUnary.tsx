@@ -75,7 +75,7 @@ export function NodeUnary({ id, data, selected }: NodeUnaryProps & { selected?: 
             <TargetHandle
                 nodeId={id}
                 position={Position.Left}
-                id="in"
+                id="inputA"
             />
             <SourceHandle
                 position={Position.Right}

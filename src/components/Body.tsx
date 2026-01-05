@@ -44,7 +44,7 @@ import { NodeOutput } from './nodes/NodeOutput';
 import { NodeSolver } from './nodes/NodeSolver';
 import { NodeGroup } from './nodes/NodeGroup';
 import { CustomEdge } from './edges/CustomEdge';
-import { Group, Layers } from 'lucide-react';
+import { Group, Layers, Ungroup } from 'lucide-react';
 
 const nodeTypes: NodeTypes = {
     inputNode: NodeInput,
@@ -88,9 +88,9 @@ const defaultNodes: Node[] = [
 ];
 
 const defaultEdges: Edge[] = [
-    { id: 'e1', source: 'input-a', target: 'math-1', targetHandle: 'a', type: 'customEdge' },
-    { id: 'e2', source: 'input-b', target: 'math-1', targetHandle: 'b', type: 'customEdge' },
-    { id: 'e3', source: 'math-1', target: 'output-1', type: 'customEdge' },
+    { id: 'e1', source: 'input-a', target: 'math-1', targetHandle: 'inputA', type: 'customEdge' },
+    { id: 'e2', source: 'input-b', target: 'math-1', targetHandle: 'inputB', type: 'customEdge' },
+    { id: 'e3', source: 'math-1', target: 'output-1', targetHandle: 'inputA', type: 'customEdge' },
 ];
 
 export function Body() {
@@ -175,15 +175,30 @@ export function Body() {
                 toast.error('⚠️ Loop detected! This reconnection would create a cycle.');
                 return;
             }
-            setEdges((eds) => reconnectEdge(oldEdge, newConnection, eds));
+
+            // Enforce "one edge per input handle" during reconnection
+            setEdges((eds) => {
+                // Remove any *other* edge that is already connected to the *new* target handle
+                // (We don't remove oldEdge here; reconnectEdge handles that update)
+                const conflictingEdgesRemoved = eds.filter(e => {
+                    const isConflicting = e.target === newConnection.target && e.targetHandle === newConnection.targetHandle;
+                    // Don't filter out the edge being reconnected! ReactFlow needs it in the array to update it.
+                    const isOldEdge = e.id === oldEdge.id;
+                    return !isConflicting || isOldEdge;
+                });
+
+                return reconnectEdge(oldEdge, newConnection, conflictingEdgesRemoved);
+            });
         },
         [wouldCreateCycle, setEdges]
     );
 
     const edgeReconnectSuccessful = useRef(true);
+    const isReconnecting = useRef(false);
 
     const onReconnectStart = useCallback(() => {
         edgeReconnectSuccessful.current = false;
+        isReconnecting.current = true;
     }, []);
 
     const onReconnectEnd = useCallback((_: MouseEvent | TouchEvent, edge: Edge) => {
@@ -514,27 +529,33 @@ export function Body() {
 
     const onConnectEnd = useCallback((event: any) => {
         const targetIsPane = event.target.classList.contains('react-flow__pane');
+        const isReconnect = isReconnecting.current;
+        const startParams = connectionStartRef.current;
 
-        if (targetIsPane && connectionStartRef.current) {
-            // Dropped in void, open menu
-            const { clientX, clientY } = event instanceof TouchEvent ? event.touches[0] : event;
-            setMenuPosition({ x: clientX, y: clientY });
+        if (targetIsPane && startParams) {
+            // Check if we are dragging from a Source (Output) or Target (Input)
+            // If Source: We want to create a new node (Open Menu)
+            // If Target: We are disconnecting/deleting an edge (Do NOT Open Menu)
+            if (!isReconnect && startParams.handleType === 'source') {
+                const { clientX, clientY } = event instanceof TouchEvent ? event.touches[0] : event;
+                setMenuPosition({ x: clientX, y: clientY });
 
-            // Store pending connection (assuming source was the start)
-            // Note: handleType 'source' means we started dragging from a source handle. 
-            // If 'target', we started from a target handle (backwards connection). 
-            // For simplicity, we assume source dragging for now, or check handleType.
-            if (connectionStartRef.current.handleType === 'source') {
                 setPendingConnection({
-                    source: connectionStartRef.current.nodeId!,
-                    sourceHandle: connectionStartRef.current.handleId
+                    source: startParams.nodeId!,
+                    sourceHandle: startParams.handleId
                 });
             } else {
-                // Determine logic for backwards connection if needed
                 setPendingConnection(null);
             }
         }
-        // If not pane (valid connection or dropped on node), onConnect handles it or it's cancelled
+        connectionStartRef.current = null;
+        isReconnecting.current = false;
+    }, []);
+
+    // Right Click Menu
+    const onContextMenu = useCallback((event: React.MouseEvent) => {
+        event.preventDefault();
+        setMenuPosition({ x: event.clientX, y: event.clientY });
     }, []);
 
     // Helper to add node at menu position
@@ -570,12 +591,13 @@ export function Body() {
             // UnaryNode: 'input' (implied or 'a'?) Let's check NodeUnary.tsx later. Defaulting to 'a' or null often works if single target.
             // React Flow edges need accurate matching.
 
-            // Heuristic for now: everything connects to 'a' except inputNode (no target)
-            // Actually MathNode handles are 'a' and 'b'. Unary is likely 'input'.
-            // Let's guess 'a' for now for math, 'input' for unary/output.
-            if (type === 'mathNode') targetHandle = 'a';
-            else if (type === 'unaryNode' || type === 'outputNode') targetHandle = 'input';
-            else targetHandle = null; // Fallback for other nodes or if no specific target handle is known
+            // Heuristic for now: everything connects to 'inputA' except inputNode (no target)
+            // Updated to match standardized handle IDs
+            if (type === 'mathNode') targetHandle = 'inputA';
+            else if (type === 'unaryNode' || type === 'outputNode' || type === 'solverNode') targetHandle = 'inputA';
+            else targetHandle = 'inputA'; // Fallback
+
+            // Note: If connecting to 'inputB' specifically, we'd need more logic, but 'inputA' is safe default.
 
             newEdgesToAdd.push({
                 id: nanoid(6),
@@ -629,14 +651,31 @@ export function Body() {
                 // Source -> Node: use edge.sourceHandle -> NodeInput (generic or 'a')
                 // Node -> Target: use NodeOutput (generic) -> edge.targetHandle
 
-                let newNodeInput = 'a'; // Default math input
-                if (node.type === 'unaryNode' || node.type === 'outputNode' || node.type === 'solverNode') newNodeInput = 'input';
+                let newNodeInput = 'inputA';
 
-                let newNodeOutput = 'source'; // Default output generic?
-                // Wait, nodes don't usually have named output handles unless custom.
-                // Our NodeMath/NodeInput use Position.Right without ID => default handle (null).
-                // If we defined id="result" in node types, we must use it.
-                // Let's check NodeMath: <Handle type="source" ... /> (No ID) => ID is null.
+                // Smart Port Selection & Full Occupancy Check
+                if (node.type === 'mathNode') {
+                    const isInputAOccupied = edges.some(e => e.target === node.id && e.targetHandle === 'inputA');
+                    const isInputBOccupied = edges.some(e => e.target === node.id && e.targetHandle === 'inputB');
+
+                    if (isInputAOccupied) {
+                        if (isInputBOccupied) {
+                            // Both ports full: Abort Auto-Insert
+                            continue;
+                        }
+                        newNodeInput = 'inputB';
+                    }
+                } else {
+                    // For single-input nodes (Unary, Output, Solver), abort if inputA is occupied
+                    const isInputAOccupied = edges.some(e => e.target === node.id && e.targetHandle === 'inputA');
+                    if (isInputAOccupied) {
+                        continue;
+                    }
+                }
+
+                let newNodeOutput = null; // Default output (null for generic source handle)
+
+
 
                 const newEdge1: Edge = {
                     id: nanoid(6),
@@ -650,13 +689,23 @@ export function Body() {
                 const newEdge2: Edge = {
                     id: nanoid(6),
                     source: node.id,
-                    sourceHandle: null, // Default source handle
+                    sourceHandle: newNodeOutput, // Default source handle
                     target: edge.target,
                     targetHandle: edge.targetHandle,
                     type: 'customEdge'
                 };
 
-                setEdges(eds => eds.filter(e => e.id !== edge.id).concat([newEdge1, newEdge2]));
+                // Update edges:
+                // 1. Remove the edge we split (edge.id)
+                // 2. Remove any PRE-EXISTING edge to the inserted node's input (newNodeInput)
+                //    This prevents the "double connection" bug when inserting a node that already has a wire.
+                setEdges(eds => {
+                    return eds
+                        .filter(e => e.id !== edge.id) // Remove split edge
+                        .filter(e => !(e.target === node.id && e.targetHandle === newNodeInput)) // Remove old input to inserted node
+                        .concat([newEdge1, newEdge2]);
+                });
+
                 toast.success('Auto-inserted node!');
                 break; // One insertion at a time
             }
@@ -696,11 +745,13 @@ export function Body() {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // Actually, let's just use the clientX/Y mapped to current viewport if possible.
-    // Without 'screenToFlowPosition', placing exactly at cursor is hard if zoomed/panned.
-    // Strategy: We will just spawn at the click location but in "Screen" space it might be wrong.
+    const onPaneClick = useCallback(() => setMenuPosition(null), []);
+
     return (
-        <div className="h-screen w-screen bg-zinc-900 relative" onClick={() => setMenuPosition(null)}>
+        <div
+            className="h-screen w-screen bg-zinc-900 relative"
+            onContextMenu={onContextMenu}
+        >
 
             {/* Context Menu (Blender Style) */}
             {menuPosition && (
@@ -743,6 +794,7 @@ export function Body() {
                 onReconnectStart={onReconnectStart}
                 onReconnectEnd={onReconnectEnd}
                 onNodeDragStop={onNodeDragStop}
+                onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
                 defaultEdgeOptions={{ type: 'customEdge' }}
@@ -763,6 +815,14 @@ export function Body() {
                     <Button variant="ghost" size="icon" onClick={() => mouth.spit()} className="text-zinc-400 hover:text-blue-400 hover:bg-zinc-700" title="Export JSON">
                         <Download className="w-5 h-5" />
                     </Button>
+                    <div className="w-px h-6 bg-zinc-700 mx-1 self-center" />
+                    <Button variant="ghost" size="icon" onClick={handleGroupSelection} className="text-zinc-400 hover:text-purple-400 hover:bg-zinc-700" title="Group Selected">
+                        <Group className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={handleUngroup} className="text-zinc-400 hover:text-pink-400 hover:bg-zinc-700" title="Ungroup">
+                        <Ungroup className="w-5 h-5" />
+                    </Button>
+                    <div className="w-px h-6 bg-zinc-700 mx-1 self-center" />
                     <Button variant="ghost" size="icon" onClick={() => { mouth.diet(); window.location.reload(); }} className="text-zinc-400 hover:text-red-400 hover:bg-zinc-700" title="Clear & Reset">
                         <Trash className="w-5 h-5" />
                     </Button>

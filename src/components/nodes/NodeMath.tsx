@@ -46,13 +46,13 @@ export function NodeMath({ id, data, selected }: NodeMathProps & { selected?: bo
             <TargetHandle
                 nodeId={id}
                 position={Position.Left}
-                id="a"
+                id="inputA"
                 style={{ top: '30%' }}
             />
             <TargetHandle
                 nodeId={id}
                 position={Position.Left}
-                id="b"
+                id="inputB"
                 style={{ top: '70%' }}
             />
 

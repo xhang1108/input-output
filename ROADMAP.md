@@ -3,87 +3,84 @@
 This roadmap outlines the past achievements and future ambitions for **Calctopus**, the high-performance node-based calculator.
 
 ## ✅ Phase 1: Foundation (Completed)
-**Goal:** Establish a robust React/Next.js architecture with specific "Black Magic" stability features.
+**Goal:** Establish a robust Next.js/React Flow architecture.
 
 - [x] **Core Architecture**
-    - [x] Migration from SvelteKit to **Next.js 14+**.
-    - [x] Integration of **React Flow** for the graph engine.
-    - [x] **"Brain-Body" Separation:** Decoupled calculation logic (`Brain.ts`) from rendering (`Body.tsx`).
-- [x] **Basic Node System**
-    - [x] **Math Nodes:** Add, Subtract, Multiply, Divide.
-    - [x] **Input/Output:** Raw inputs and real-time result visualization.
-    - [x] **Unary Ops:** Negation.
-- [x] **Interactions & UX**
-    - [x] **Blender-style Detachment:** Drag from input to disconnect/reconnect.
-    - [x] **Mobile Optimization:** Touch controls and virtual keyboard avoidance.
-    - [x] **Toast Notifications:** Integration with `sonner`.
-- [x] **Persistence ("The Mouth")**
-    - [x] **Auto-Save:** Robust LocalStorage synchronization.
-    - [x] **Import/Export:** JSON file support.
+    - [x] Next.js 14+ / React Flow Integration.
+    - [x] **Separation of Concerns:** `Brain.ts` (Pure Logic) vs `Body.tsx` (React Render).
+- [x] **Interaction Model**
+    - [x] **Blender Detachment:** `onReconnect` logic for dragging input edges.
+    - [x] **Nerves System:** Custom hooks (`useBrain`, `useHand`, `useEar`) for event handling.
+- [x] **Persistence**
+    - [x] `localStorage` sync via `useMouth`.
 
 ---
 
 ## 🚧 Phase 2: Logic & Control (Current Focus)
-**Goal:** Transform Calctopus from a calculator into a visual programming language.
+**Goal:** Transform Calctopus into a Visual Programming Language (VPL).
 
-- [ ] **Comparison Nodes**
-    - [ ] Greater Than (`>`), Less Than (`<`).
-    - [ ] Equals (`=`), Not Equals (`!=`).
-    - [ ] Greater/Less or Equal (`>=`, `<=`).
-- [ ] **Boolean Logic**
-    - [ ] `AND`, `OR`, `NOT`, `XOR` gates.
-    - [ ] Boolean Input Node (Checkbox/Switch).
-- [ ] **Control Flow**
-    - [ ] **If/Else Node:** Routes values based on a boolean input.
-    - [ ] **Switch Node:** Selects one of specific inputs based on an index.
-    - [ ] **Clamp/Min/Max:** Restrict values to ranges.
-- [ ] **Sequential Logic (Memory)** (Requires Engine Upgrade)
-    - [ ] **Feedback Loops:** Allow connections to cycle back (A -> B -> A).
-    - [ ] **Delay Node / Register:** Holds a value from the "previous frame" to prevent infinite recursion.
-    - [ ] **Flip-Flops / Latches:** Standard memory units.
+- [ ] **Engine Refactor: Type Safety**
+    - [ ] **Brain.ts:** Remove aggressive `Number()` casting in `think()` to allow `boolean` and `object` types to propagate.
+    - [ ] **Thoughts Interface:** Update `Thoughts` record to support `value: number | boolean`.
+    - [ ] **Error Handling:** Add explicit "Type Mismatch" errors when `MathNode` receives a boolean.
+- [ ] **Logic Nodes Implementation**
+    - [ ] **Component:** Create `src/components/nodes/NodeLogic.tsx`.
+    - [ ] **Props:** `operation: 'AND' | 'OR' | 'XOR' | 'NAND'`.
+    - [ ] **Ghost Inputs:** Logic nodes must treat unconnected inputs as `false` (0) rather than `NaN`.
+- [ ] **Comparison Operations**
+    - [ ] **Component:** Create `src/components/nodes/NodeCompare.tsx` (Separate from MathNode for clarity).
+    - [ ] **Ops:** `>`, `<`, `=`, `!=`, `>=`, `<=`.
+    - [ ] **Visual Feedback:** Implement a small LED indicator on the node body showing the current boolean state (Green=True, Red=False).
+- [ ] **Control Flow (Switch/If)**
+    - [ ] **Implementation:** Create `NodeSwitch.tsx`.
+    - [ ] **Data Logic:** If the switch is "Off", the output should propagate a special `Signal.NO_VALUE` or `null` which downstream nodes must handle (or ignore).
 
 ## 🎨 Phase 3: Visuals & Polish
-**Goal:** Enhance the user interface and provide better tools for managing large graphs.
+**Goal:** Enhance the user interface and graph management tools.
 
-- [ ] **Export & Sharing**
-    - [ ] **Export as Image:** Download graph as high-res PNG/SVG (Snapshot).
-    - [ ] **Clipboard Image:** "Copy Image" button.
-- [ ] **Navigation Aids**
-    - [ ] **Minimap:** Small overview map for large graphs.
-    - [ ] **Auto-Layout:** Button to automatically organize nodes nicely (using `dagre` or `elk`).
-- [ ] **Customization**
-    - [ ] **Background Patterns:** Toggle between Dots, Lines, Crosses.
-    - [ ] **Theme Accents:** Allow changing the primary "glow" color.
-- [ ] **Organization**
-    - [ ] **Grouping:** Frame/Group nodes together with a label.
-    - [ ] **Comments:** Sticky notes to annotate parts of the graph.
+- [ ] **Graph Layout Engine**
+    - [ ] **Library:** Integrate `elkjs` (Eclipse Layout Kernel) via a new `useLayout` hook.
+    - [ ] **Strategy:** Use `elk.layered` algorithm which respects ports (unlike `dagre`), ensuring inputs stay on the left.
+    - [ ] **UI:** Add "Auto Layout" button in the Panel.
+- [ ] **Navigation & A11y**
+    - [ ] **Minimap:** Add `<Minimap />` from `@xyflow/react` with custom `nodeColor` prop mapped to node types (e.g., Math=Orange, Input=Blue).
+    - [ ] **Keyboard:** Ensure `useEar` handles Focus Management so users can Tab between nodes.
 
 ## 🧮 Phase 4: Advanced Mathematics
-**Goal:** Support engineering and scientific workflows.
+**Goal:** Support engineering workflows.
 
 - [ ] **Scientific Functions**
-    - [ ] Trigonometry: `sin`, `cos`, `tan` (and their arc variants).
-    - [ ] Exponential: `Power (x^y)`, `Root`, `Log`, `Ln`.
-    - [ ] Constants: `π`, `e`, `φ`.
-- [ ] **Utilities**
-    - [ ] **Random Number:** Generate random values (with seed option).
-    - [ ] **Round/Floor/Ceil:** Precision controls.
-    - [ ] **Modulo:** Remainder calculation.
+    - [ ] **Library:** Leverage `mathjs` for all heavy lifting.
+    - [ ] **Node:** Expand `NodeUnary.tsx` to include `sin`, `cos`, `log`, `exp`.
+    - [ ] **UI:** Add a dropdown to select the function, updating the node label dynamically.
+- [ ] **Custom Functions (Subgraphs)**
+    - [ ] **Architecture:** Define a `MacroNode` type that holds a nested `nodes` and `edges` state.
+    - [ ] **Execution:** `Brain.ts` needs to recursively call a `think()` sub-routine for these nodes.
 
 ## 📊 Phase 5: Data Structures (The "Spreadsheet" Upgrade)
-**Goal:** Move beyond single scalars to handle collections of data.
+**Goal:** Handle collections of data (Arrays/Matrices).
 
-- [ ] **Array Support**
-    - [ ] **Array Input:** Enter `[1, 2, 3]`.
-    - [ ] **Aggregators:** `Sum`, `Average`, `Median` of an array.
-    - [ ] **Array Math:** Add scalar to array, or add two arrays.
-- [ ] **Matrix Operations**
-    - [ ] Dot Product, Cross Product.
-    - [ ] Transpose, Invert.
+- [ ] **Matrix Engine Support**
+    - [ ] **MathJS:** Switch internal operations from native JS (`a + b`) to `math.add(a, b)` to support matrix addition automatically.
+    - [ ] **Type Guard:** Update `CustomEdge.tsx` to detect `Array` values and render a "Double Line" or "Thick Wire" style.
+- [ ] **UI Visualization**
+    - [ ] **Output Node:** If `value` is Array, render a small HTML `<table>` or grid instead of a single number.
+    - [ ] **Spreadsheet Node:** A new input node allowing CSV-style data entry.
 
-## ☁️ Phase 6: Cloud & Collaboration (Long Term)
-**Goal:** Enable sharing and persistent online storage.
+## 🛠️ Phase 6: Engineering Health
+**Goal:** Maintain stability at scale.
 
-- [ ] **Shareable Links:** Generate a read-only URL for a graph.
-- [ ] **User Accounts:** Save graphs to the cloud (Supabase/Firebase).
-- [ ] **Templates:** Community gallery of useful calculators.
+- [ ] **Testing Strategy**
+    - [ ] **Unit:** Add `vitest` to test `Brain.think()` with various graph topologies (Cyclic, Disconnected, Type Errors).
+    - [ ] **E2E:** Playwright tests to verify "Drag from Handle" works on canvas.
+- [ ] **Performance (Web Workers)**
+    - [ ] **Refactor:** Move `Brain.think()` into a `brain.worker.ts`.
+    - [ ] **Comms:** Use `postMessage` to send `nodes/edges` and receive `thoughts`, keeping the UI thread unblocked.
+
+## ☁️ Phase 7: Cloud & Community
+**Goal:** Sharing and Storage.
+
+- [ ] **Serialization**
+    - [ ] **Compression:** Use `lz-string` to compress the JSON graph before encoding into the URL hash for easy sharing.
+- [ ] **Backend**
+    - [ ] **Supabase:** Simple `graphs` table with `id`, `user_id`, and `json_data` columns.

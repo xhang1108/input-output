@@ -74,7 +74,7 @@ export function NodeSolver({ id, data, selected }: NodeSolverProps & { selected?
             <TargetHandle
                 nodeId={id}
                 position={Position.Left}
-                id="eq"
+                id="inputA"
             />
 
             <div className="flex items-center gap-2 mb-3 border-b border-zinc-800 pb-2">

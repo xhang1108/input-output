@@ -59,6 +59,7 @@ export function NodeOutput({ id, data, selected }: NodeProps) {
             <TargetHandle
                 nodeId={id}
                 position={Position.Left}
+                id="inputA"
             />
 
             <div className="flex flex-col items-center gap-3">
