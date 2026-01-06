@@ -79,6 +79,16 @@ export function useSpeech() {
                 return localAST.transform((child) => {
                     if ((child as any).isSymbolNode) {
                         const symbol = child as math.SymbolNode;
+
+                        // Ignore standard math functions so they aren't replaced by "?"
+                        const reservedFunctions = new Set([
+                            'sqrt', 'sin', 'cos', 'tan', 'abs', 'log', 'round',
+                            'exp', 'floor', 'ceil', 'min', 'max'
+                        ]);
+                        if (reservedFunctions.has(symbol.name)) {
+                            return symbol;
+                        }
+
                         const sourceNode = getSourceNode(nodeId, symbol.name, nodes, edges, node.type);
 
                         if (sourceNode) {

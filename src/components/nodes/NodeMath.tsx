@@ -71,17 +71,21 @@ export function NodeMath({ id, data, selected }: NodeMathProps & { selected?: bo
             </Select>
 
             {/* Result Display */}
-            <div className="absolute -bottom-8 bg-zinc-100 rounded px-2 py-0.5 border border-zinc-300 shadow-sm whitespace-nowrap z-10">
-                {data.error ? (
-                    <span className="text-red-500 text-xs text-center font-bold">⚠️ Error</span>
-                ) : (
-                    <span className="text-zinc-600 font-mono font-bold text-xs">
-                        {(typeof data.result === 'number' && !isNaN(data.result))
-                            ? Number.isInteger(data.result) ? data.result : data.result.toFixed(2)
-                            : '...'}
-                    </span>
-                )}
-            </div>
+            {data.error ? (
+                <span className="text-red-500 text-xs text-center font-bold">⚠️ Error</span>
+            ) : (
+                <span className="text-zinc-600 font-mono font-bold text-xs">
+                    {(() => {
+                        const val = data.result as any;
+                        if (typeof val === 'number' && !isNaN(val)) {
+                            return Number.isInteger(val) ? val : val.toFixed(2);
+                        } else if (val && val.toFixed) {
+                            return val.toFixed(2).replace(/\.?0+$/, '');
+                        }
+                        return '...';
+                    })()}
+                </span>
+            )}
 
             <SourceHandle
                 position={Position.Right}

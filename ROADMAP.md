@@ -13,27 +13,35 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [x] **Nerves System:** Custom hooks (`useBrain`, `useHand`, `useEar`) for event handling.
 - [x] **Persistence**
     - [x] `localStorage` sync via `useMouth`.
+- [ ] **Performance & Optimization**
+    - [x] **Engine Debounce:** Optimize `useBrain` to skip hash calculation during drag frames.
+    - [ ] **Edge Rendering:** Refactor `CustomEdge` to use `edge.data.isFormula` instead of expensive `getNode()` lookups for styling.
 
 ---
 
 ## 🚧 Phase 2: Logic & Control (Current Focus)
 **Goal:** Transform Calctopus into a Visual Programming Language (VPL).
 
-- [ ] **Engine Refactor: Type Safety**
-    - [ ] **Brain.ts:** Remove aggressive `Number()` casting in `think()` to allow `boolean` and `object` types to propagate.
-    - [ ] **Thoughts Interface:** Update `Thoughts` record to support `value: number | boolean`.
-    - [ ] **Error Handling:** Add explicit "Type Mismatch" errors when `MathNode` receives a boolean.
-- [ ] **Logic Nodes Implementation**
-    - [ ] **Component:** Create `src/components/nodes/NodeLogic.tsx`.
-    - [ ] **Props:** `operation: 'AND' | 'OR' | 'XOR' | 'NAND'`.
-    - [ ] **Ghost Inputs:** Logic nodes must treat unconnected inputs as `false` (0) rather than `NaN`.
-- [ ] **Comparison Operations**
-    - [ ] **Component:** Create `src/components/nodes/NodeCompare.tsx` (Separate from MathNode for clarity).
-    - [ ] **Ops:** `>`, `<`, `=`, `!=`, `>=`, `<=`.
-    - [ ] **Visual Feedback:** Implement a small LED indicator on the node body showing the current boolean state (Green=True, Red=False).
+- [x] **Engine Refactor: Type Safety & Precision**
+    - [x] **BigNumber:** Upgraded engine to use `mathjs` BigNumber for arbitrary precision.
+    - [x] **Brain.ts:** Refactored `think()` to handle object-based values (BigNumber).
+- [x] **Logic Nodes Implementation**
+    - [x] **Component:** Create `src/components/nodes/NodeLogic.tsx`.
+    - [x] **Ops:** AND, OR, XOR, NAND.
+    - [x] **Ghost Inputs:** Logic nodes handle empty inputs as `false`.
+- [x] **Comparison Operations**
+    - [x] **Component:** Create `src/components/nodes/NodeCompare.tsx`.
+    - [x] **Ops:** `>`, `<`, `=`, `!=`, `>=`, `<=`.
+    - [x] **Visual Feedback:** LED indicator (Green=True, Red=False).
 - [ ] **Control Flow (Switch/If)**
     - [ ] **Implementation:** Create `NodeSwitch.tsx`.
-    - [ ] **Data Logic:** If the switch is "Off", the output should propagate a special `Signal.NO_VALUE` or `null` which downstream nodes must handle (or ignore).
+    - [ ] **Data Logic:** If the switch is "Off", the output should propagate a special `Signal.NO_VALUE` or `null`.
+
+## 🐛 Known Issues / Polish
+- [ ] **Sticky Placement:** `Shift+D` (Duplicate) and `Ctrl+V` (Paste) should attach nodes to the mouse cursor for immediate placement. Currently, they paste at the cursor but do not "stick" for dragging.
+- [ ] **Keyboard Shortcuts Audit:**
+    - [ ] 1. Verify operation of all existing shortcuts.
+    - [ ] 2. Implement new shortcuts for improved workflow.
 
 ## 🎨 Phase 3: Visuals & Polish
 **Goal:** Enhance the user interface and graph management tools.

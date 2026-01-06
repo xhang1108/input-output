@@ -34,17 +34,20 @@ export function CustomEdge({
     });
 
     // 3. Determine Flow Type (Formula vs Value)
-    const sourceNode = getNode(source);
+    // Optimization: Removed dynamic node lookup during drag to improve performance.
+    // The previous `getNode(source)` call on every frame was causing significant lag.
+    // TODO: Pass 'isFormula' via edge.data from Body.tsx if needed.
+    const isFormula = false;
 
+    /*
+    const sourceNode = getNode(source);
     const isFormula = useMemo(() => {
         if (!sourceNode) return false;
-
         const data = sourceNode.data as { rawExpression?: string, value?: number };
         const expr = data.rawExpression || '';
-
-        // Heuristic: It's a formula if it contains letters (variables) or is a long expression
         return /[a-df-z]/i.test(expr) || expr.length > 5;
     }, [sourceNode]);
+    */
 
     // 4. Dynamic Styles
     const edgeStyle = {

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { useReactFlow, useStoreApi, type Node, type Edge, type XYPosition } from '@xyflow/react';
 import { toast } from 'sonner';
 import {
@@ -128,7 +128,7 @@ export const useHand = (
                 id: n.id,
                 type: n.type,
                 position: { ...n.position },
-                data: structuredClone(n.data),
+                data: JSON.parse(JSON.stringify(n.data)),
             }));
 
             setClipboard(cleanNodes as Node[]);
@@ -140,11 +140,12 @@ export const useHand = (
         const selected = getSelectedNodes();
         if (selected.length > 0) {
             // Sanitize: Only copy essential data
+            // structuredClone fails on BigNumber (complex objects), so we use JSON serialization which is safer for clipboard
             const cleanNodes = selected.map(n => ({
                 id: n.id,
                 type: n.type,
                 position: { ...n.position },
-                data: structuredClone(n.data),
+                data: JSON.parse(JSON.stringify(n.data)),
             }));
             setClipboard(cleanNodes as Node[]);
             _removeNodes(selected);
@@ -169,10 +170,8 @@ export const useHand = (
 
         toast.success(`Pasted ${newNodes.length} node(s)`);
 
-        // FUTURE: If we want "Drop and Drag" behavior, we might need a way to tell the engine "Start dragging these IDs".
-        // React Flow doesn't plainly support "Start Dragging Programmatically" easily without internal access or custom events.
-        // Return IDs so the caller (Ear) can immediately grab them if desired
-        return newNodes.map(n => n.id);
+        // Return the actual node objects so the caller can handle them immediately (interaction)
+        return newNodes;
 
     }, [clipboard, screenToFlowPosition, _spawnNodes]);
 
@@ -197,21 +196,23 @@ export const useHand = (
 
         toast.success(`Duplicated ${selectedNodes.length} node(s)`);
 
+        return newNodes;
+
     }, [getSelectedNodes, screenToFlowPosition, _spawnNodes]);
 
 
     // Expose "hands" object
-    const hands = {
+    // Memoize this to prevent useEar from re-binding listeners constantly
+    const hands = useMemo(() => ({
         grabAll,
-
         discard,
         copy,
         cut,
         paste,
         duplicate,
         deselectAll,
-        createNode // Exposed wrapper
-    };
+        createNode
+    }), [grabAll, discard, copy, cut, paste, duplicate, deselectAll, createNode]);
 
     return {
         hands

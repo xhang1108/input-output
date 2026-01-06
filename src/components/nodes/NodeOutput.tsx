@@ -31,6 +31,9 @@ export function NodeOutput({ id, data, selected }: NodeProps) {
         const val = outputData.result as any;
         if (typeof val === 'number' && !isNaN(val)) {
             displayValue = val.toFixed(2).replace(/\.?0+$/, '');
+        } else if (val && val.toFixed && typeof val.toFixed === 'function') {
+            // BigNumber or similar
+            displayValue = val.toFixed(2).replace(/\.?0+$/, '');
         } else {
             displayValue = String(val);
         }
@@ -38,10 +41,15 @@ export function NodeOutput({ id, data, selected }: NodeProps) {
         const val = outputData.value as any;
         if (Array.isArray(val) || (val.isMatrix)) { // Simple check
             const arr = val.toArray ? val.toArray() : val;
-            displayValue = JSON.stringify(arr, (k, v) =>
-                typeof v === 'number' ? Number(v.toFixed(2)) : v
-            ).replace(/,/g, ', ');
+            displayValue = JSON.stringify(arr, (k, v) => {
+                if (typeof v === 'number') return Number(v.toFixed(2));
+                if (v && v.toFixed) return v.toFixed(2);
+                return v;
+            }).replace(/,/g, ', ');
         } else if (typeof val === 'number' && !isNaN(val)) {
+            displayValue = val.toFixed(2).replace(/\.?0+$/, '');
+        } else if (val && val.toFixed && typeof val.toFixed === 'function') {
+            // BigNumber or similar
             displayValue = val.toFixed(2).replace(/\.?0+$/, '');
         } else {
             displayValue = String(val);

@@ -70,6 +70,15 @@ if (edge.targetHandle) {
 ```
 **Rule:** *If a node has only one input, don't rely on it having a specific ID.*
 
+### 4. BigNumber Precision (The "0.1 + 0.2" Fix)
+**Problem:** Native JavaScript `Number` is floating-point, leading to errors like `0.1 + 0.2 = 0.30000000000000004`.
+**The Fix (`Brain.ts`):**
+We configured `mathjs` to use `BigNumber` globally.
+- **Inputs:** All parsing uses `math.bignumber()`.
+- **Ops:** We use `math.add()`, `math.subtract()`, etc. instead of native operators.
+- **Display:** UI components (`NodeOutput`, `NodeMath`) check for `.toFixed()` capability (Duck Typing) to format both primitive Numbers and BigNumbers.
+
+
 ---
 
 ## 💾 Persistence Architecture

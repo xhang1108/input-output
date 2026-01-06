@@ -65,9 +65,15 @@ export function NodeUnary({ id, data, selected }: NodeUnaryProps & { selected?: 
                     <span className="text-red-500 text-xs font-bold">⚠️ Error</span>
                 ) : (
                     <span className="text-zinc-600 font-mono font-bold text-sm">
-                        {(typeof data.result === 'number' && !isNaN(data.result))
-                            ? Number.isInteger(data.result) ? data.result : data.result.toFixed(2)
-                            : '...'}
+                        {(() => {
+                            const val = data.result as any;
+                            if (typeof val === 'number' && !isNaN(val)) {
+                                return Number.isInteger(val) ? val : val.toFixed(2);
+                            } else if (val && val.toFixed) {
+                                return val.toFixed(2).replace(/\.?0+$/, '');
+                            }
+                            return '...';
+                        })()}
                     </span>
                 )}
             </div>

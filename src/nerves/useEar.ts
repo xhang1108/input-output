@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { toast } from 'sonner';
 
@@ -18,8 +18,8 @@ interface Hands {
     discard: () => void;
     copy: () => void;
     cut: () => void;
-    paste: (position: { x: number; y: number }) => void;
-    duplicate: (position: { x: number; y: number }) => void;
+    paste: (position: { x: number; y: number }) => any[] | undefined;
+    duplicate: (position: { x: number; y: number }) => any[] | undefined;
 }
 
 interface UseEarProps {
@@ -49,6 +49,34 @@ export const useEar = ({ hands, eyes, memories, setNodes, onOpenMenu }: UseEarPr
         startMousePos: { x: number, y: number },
         nodeOffsets: Record<string, { x: number, y: number }>
     } | null>(null);
+
+    // --- Placement Helper ---
+    const startPlacing = (nodeIds: string[]) => {
+        if (!nodeIds || nodeIds.length === 0) return;
+
+        const currentNodes = getNodes();
+        const nodesToMove = currentNodes.filter(n => nodeIds.includes(n.id));
+
+        if (nodesToMove.length === 0) return;
+
+        // Select the new nodes
+        setNodes((nds: any[]) => nds.map(node => ({
+            ...node,
+            selected: nodeIds.includes(node.id)
+        })));
+
+        // Capture initial offsets
+        const nodeOffsets: Record<string, { x: number, y: number }> = {};
+        nodesToMove.forEach(node => {
+            nodeOffsets[node.id] = { x: node.position.x, y: node.position.y };
+        });
+
+        setPlacingNodeIds(new Set(nodeIds));
+        placementRef.current = {
+            startMousePos: mousePosRef.current,
+            nodeOffsets: nodeOffsets
+        };
+    };
 
     // --- Keyboard Listening ---
     useEffect(() => {
@@ -113,16 +141,16 @@ export const useEar = ({ hands, eyes, memories, setNodes, onOpenMenu }: UseEarPr
             // Ctrl + V: Paste
             if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV') {
                 e.preventDefault();
-                // Focusing/Blurring issues were a red herring, but keeping focus management clean is good.
-                // Reverting to standard behavior: Just paste.
-                hands.paste(mousePosRef.current);
+                const newNodes = hands.paste(mousePosRef.current);
+                if (newNodes) startPlacing(newNodes);
                 return;
             }
 
             // Shift + D: Duplicate
             if (e.shiftKey && e.code === 'KeyD') {
                 e.preventDefault();
-                hands.duplicate(mousePosRef.current);
+                const newNodes = hands.duplicate(mousePosRef.current);
+                if (newNodes) startPlacing(newNodes);
                 return;
             }
 
@@ -157,35 +185,25 @@ export const useEar = ({ hands, eyes, memories, setNodes, onOpenMenu }: UseEarPr
                         if (mouseFlowPos.x >= n.position.x && mouseFlowPos.x <= n.position.x + w &&
                             mouseFlowPos.y >= n.position.y && mouseFlowPos.y <= n.position.y + h) {
                             targetNodes = [{ ...n, selected: true }];
+                            // Optimization: No need to set selected state in global store for temporary grab unless clicked
+                            // But for simplicity, let's select it
                             setNodes((nds: any[]) => nds.map(node => node.id === n.id ? { ...node, selected: true } : node));
                             break;
                         }
                     }
                 }
 
-                if (targetNodes.length === 0) return;
-
-                const movingIds = new Set<string>();
-                const nodeOffsets: Record<string, { x: number, y: number }> = {};
-                currentNodes.forEach(node => {
-                    if (movingIds.has(node.id)) {
-                        nodeOffsets[node.id] = { x: node.position.x, y: node.position.y };
-                    }
-                });
-
-                setPlacingNodeIds(movingIds);
-                placementRef.current = {
-                    startMousePos: mousePosRef.current,
-                    nodeOffsets: nodeOffsets
-                };
-                toast.success('Paste & Grab: Move to place, Click to drop.');
+                if (targetNodes.length > 0) {
+                    startPlacing(targetNodes.map(n => n.id));
+                    toast.success('Grabbed');
+                }
             }
             return;
         }
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [hands, eyes, getNodes, setNodes, screenToFlowPosition, onOpenMenu]);
+    }, [hands, eyes, getNodes, setNodes, screenToFlowPosition, onOpenMenu, startPlacing]);
 
 
     // --- Placement Movement Effect (The "Hand" acting on "Ear" input) ---
@@ -220,16 +238,23 @@ export const useEar = ({ hands, eyes, memories, setNodes, onOpenMenu }: UseEarPr
 
         const handleMouseDown = (e: MouseEvent) => {
             // Commit placement
-            e.stopPropagation(); // Stop React Flow from starting a selection box
+            e.stopPropagation();
+            e.preventDefault();
             setPlacingNodeIds(null);
             placementRef.current = null;
         };
 
         window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mousedown', handleMouseDown, { capture: true });
+
+        // Safety: Delay attaching mousedown to prevent instant drops if event is leaking
+        const timer = setTimeout(() => {
+            window.addEventListener('mousedown', handleMouseDown, { capture: true });
+        }, 100);
+
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mousedown', handleMouseDown, { capture: true });
+            clearTimeout(timer);
         };
     }, [placingNodeIds, screenToFlowPosition, setNodes]);
 

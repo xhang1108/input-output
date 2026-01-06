@@ -30,16 +30,19 @@ export const useBrain = (nodes: Node[], edges: Edge[]) => {
     const previousHash = useRef<string>('');
 
     useEffect(() => {
-        // 1. Generate Hash immediately to check if we need to schedule a run
-        const currentHash = sensePatterns(nodes, edges);
-
-        // If nothing relevant changed, do nothing.
-        if (currentHash === previousHash.current) {
-            return;
-        }
-
-        // 2. Debounce: Wait 50ms before running the heavy engine
+        // Debounce: Wait 50ms before checking hash and running engine.
+        // This prevents 'sensePatterns' (JSON stringify) from running on every drag frame.
         const handler = setTimeout(() => {
+            // 1. Generate Hash
+            // console.log('[Brain] 🕵️ Checking patterns...'); // Uncomment to see check frequency
+            const currentHash = sensePatterns(nodes, edges);
+
+            // If nothing relevant changed, do nothing.
+            if (currentHash === previousHash.current) {
+                console.log('[Brain] 💤 Same pattern, skipping calculation.');
+                return;
+            }
+
             // Update hash reference
             previousHash.current = currentHash;
 
@@ -58,16 +61,16 @@ export const useBrain = (nodes: Node[], edges: Edge[]) => {
             }));
 
             // 4. Brain Thinking
-            // console.time('Brain Thinking'); // Optional: keep for debugging
+            console.time('[Brain] ⚡ Thinking');
             const results = Brain.think(concepts, connections);
-            // console.timeEnd('Brain Thinking');
+            console.timeEnd('[Brain] ⚡ Thinking');
 
             // 5. Update State
             setThoughts(results);
 
-        }, 50); // <--- 50ms Delay
+        }, 50);
 
-        // Cleanup: If user types again within 50ms, cancel the previous timer
+        // Cleanup: If user drags/types again within 50ms, cancel the previous timer
         return () => clearTimeout(handler);
 
     }, [nodes, edges]);

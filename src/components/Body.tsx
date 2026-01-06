@@ -40,16 +40,20 @@ import { Button } from '@/components/ui/button';
 import { NodeInput } from './nodes/NodeInput';
 import { NodeMath } from './nodes/NodeMath';
 import { NodeUnary } from './nodes/NodeUnary';
+import { NodeLogic } from './nodes/NodeLogic';
+import { NodeCompare } from './nodes/NodeCompare';
 import { NodeOutput } from './nodes/NodeOutput';
 import { NodeSolver } from './nodes/NodeSolver';
 import { NodeGroup } from './nodes/NodeGroup';
 import { CustomEdge } from './edges/CustomEdge';
-import { Group, Layers, Ungroup } from 'lucide-react';
+import { Group, Layers, Ungroup, ToggleRight, Scale } from 'lucide-react';
 
 const nodeTypes: NodeTypes = {
     inputNode: NodeInput,
     mathNode: NodeMath,
     unaryNode: NodeUnary,
+    logicNode: NodeLogic,
+    compareNode: NodeCompare,
     outputNode: NodeOutput,
     solverNode: NodeSolver,
     groupNode: NodeGroup,
@@ -594,7 +598,7 @@ export function Body() {
             // Heuristic for now: everything connects to 'inputA' except inputNode (no target)
             // Updated to match standardized handle IDs
             if (type === 'mathNode') targetHandle = 'inputA';
-            else if (type === 'unaryNode' || type === 'outputNode' || type === 'solverNode') targetHandle = 'inputA';
+            else if (type === 'unaryNode' || type === 'outputNode' || type === 'solverNode' || type === 'logicNode' || type === 'compareNode') targetHandle = 'inputA';
             else targetHandle = 'inputA'; // Fallback
 
             // Note: If connecting to 'inputB' specifically, we'd need more logic, but 'inputA' is safe default.
@@ -769,6 +773,12 @@ export function Body() {
                     </button>
                     <button onClick={() => addNodeAtCursor('unaryNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
                         <Calculator className="w-4 h-4 text-purple-500" /> Function
+                    </button>
+                    <button onClick={() => addNodeAtCursor('logicNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                        <ToggleRight className="w-4 h-4 text-indigo-400" /> Logic
+                    </button>
+                    <button onClick={() => addNodeAtCursor('compareNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                        <Scale className="w-4 h-4 text-teal-400" /> Compare
                     </button>
                     <button onClick={() => addNodeAtCursor('solverNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
                         <Sigma className="w-4 h-4 text-indigo-500" /> Solver
