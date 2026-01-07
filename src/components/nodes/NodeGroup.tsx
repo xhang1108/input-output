@@ -1,6 +1,7 @@
 'use client';
 
 import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { memo } from 'react';
 import { Box, Layers } from 'lucide-react';
 import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
@@ -17,7 +18,7 @@ interface NodeGroupProps {
     selected?: boolean;
 }
 
-export function NodeGroup({ id, data, selected }: NodeGroupProps) {
+export const NodeGroup = memo(({ id, data, selected }: NodeGroupProps) => {
     const inputs = data.inputs || [];
     const outputs = data.outputs || [];
 
@@ -81,4 +82,8 @@ export function NodeGroup({ id, data, selected }: NodeGroupProps) {
             </div>
         </NodeShell>
     );
-}
+}, (prev, next) => (
+    prev.id === next.id &&
+    prev.selected === next.selected &&
+    prev.data === next.data
+));

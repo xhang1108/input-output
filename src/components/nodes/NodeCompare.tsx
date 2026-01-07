@@ -1,8 +1,10 @@
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
+import { useAppStore } from '@/store/useAppStore';
+import { pullValue } from '@/engine/Brain';
 
 const operations = [
     { value: 'gt', label: '>' },
@@ -14,34 +16,41 @@ const operations = [
 ];
 
 export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
-    const { updateNodeData } = useReactFlow();
+    const { updateNodeData, getNodes, getEdges } = useReactFlow();
+    const { triggerLogicUpdate, logicVersion } = useAppStore();
     const operation = (data.operation as string) || 'eq';
-    const rawResult = data.result as any;
-    const error = data.error as string | undefined;
+    const [result, setResult] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Unified Pull Logic for Preview
+    useEffect(() => {
+        const nodes = getNodes();
+        const edges = getEdges();
+        try {
+            const pullResult = pullValue(id, nodes, edges);
+            setResult(pullResult.val);
+            setError(null);
+        } catch (e: any) {
+            setError(e.message || 'Error');
+        }
+    }, [logicVersion, id, getNodes, getEdges]);
 
     // Helper to get boolean state from result
-    let isTrue = false;
-    let isFalse = false;
-    if (rawResult !== undefined) {
-        // Handle BigNumber or primitive
-        const num = typeof rawResult === 'object' && rawResult.toNumber ? rawResult.toNumber() : Number(rawResult);
-        if (num === 1) isTrue = true;
-        if (num === 0) isFalse = true;
-    }
-
+    const isTrue = result === 1;
+    const isFalse = result === 0;
     const isError = !!error;
 
     return (
-        <div className="bg-zinc-900 border-2 border-teal-500/50 rounded-xl shadow-lg min-w-[140px]">
+        <div className="bg-white border-2 border-teal-500 rounded-xl shadow-lg min-w-[140px] hover:border-teal-400">
             {/* Header */}
-            <div className="bg-teal-500/20 px-4 py-2 border-b border-teal-500/30 flex items-center justify-between rounded-t-[10px]">
-                <div className="text-teal-400 font-bold text-xs uppercase tracking-wider">COMPARE</div>
+            <div className="bg-teal-50 px-4 py-2 border-b border-teal-100 flex items-center justify-between rounded-t-[10px]">
+                <div className="text-teal-600 font-bold text-xs uppercase tracking-wider">COMPARE</div>
 
                 {/* LED Indicator */}
-                <div className={`w-3 h-3 rounded-full shadow-[0_0_10px_currentColor] transition-colors duration-300 ${isError ? 'bg-red-500 text-red-500' :
+                <div className={`w-3 h-3 rounded-full shadow-sm transition-colors duration-300 ${isError ? 'bg-red-500 text-red-500' :
                     isTrue ? 'bg-green-500 text-green-500' :
-                        isFalse ? 'bg-red-900/50 text-red-900 border border-red-700/50' :
-                            'bg-zinc-700 text-zinc-700'
+                        isFalse ? 'bg-red-100 border border-red-300' :
+                            'bg-zinc-300 text-zinc-300'
                     }`} />
             </div>
 
@@ -56,7 +65,7 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
                             isConnectable={isConnectable}
                             className="!-left-[17px]"
                         />
-                        <span className="text-zinc-500 text-xs ml-2">A</span>
+                        <span className="text-zinc-600 text-xs ml-2 font-bold">A</span>
                     </div>
 
                     <div className="flex items-center justify-between relative h-5">
@@ -67,7 +76,7 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
                             isConnectable={isConnectable}
                             className="!-left-[17px]"
                         />
-                        <span className="text-zinc-500 text-xs ml-2">B</span>
+                        <span className="text-zinc-600 text-xs ml-2 font-bold">B</span>
                     </div>
                 </div>
 
@@ -77,14 +86,15 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
                         defaultValue={operation}
                         onValueChange={(val) => {
                             updateNodeData(id, { operation: val });
+                            triggerLogicUpdate();
                         }}
                     >
-                        <SelectTrigger className="h-7 bg-zinc-800 border-zinc-700 text-xs text-teal-300 font-bold">
+                        <SelectTrigger className="h-7 bg-zinc-50 border-zinc-200 text-xs text-teal-700 font-bold">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-zinc-800 border-zinc-700">
+                        <SelectContent className="bg-white border-zinc-200">
                             {operations.map(op => (
-                                <SelectItem key={op.value} value={op.value} className="text-teal-300 text-xs font-bold">
+                                <SelectItem key={op.value} value={op.value} className="text-teal-700 text-xs font-bold focus:bg-teal-50 focus:text-teal-900">
                                     {op.label}
                                 </SelectItem>
                             ))}
@@ -94,8 +104,8 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
             </div>
 
             {/* Output */}
-            <div className="bg-zinc-950/50 p-2 flex items-center justify-end relative h-8 rounded-b-[10px]">
-                <span className={`font-mono text-xl mr-2 transition-colors duration-300 ${isTrue ? 'text-green-400' : 'text-zinc-600'
+            <div className="bg-zinc-50 p-2 flex items-center justify-end relative h-8 rounded-b-[10px] border-t border-zinc-100">
+                <span className={`font-mono text-lg mr-2 font-bold transition-colors duration-300 ${isTrue ? 'text-green-600' : 'text-zinc-400'
                     }`}>
                     {isTrue ? 'TRUE' : isFalse ? 'FALSE' : '-'}
                 </span>
@@ -110,12 +120,16 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
 
             {/* Error Display */}
             {error && (
-                <div className="absolute bottom-full left-0 w-full bg-red-500/90 text-white text-[10px] p-1 text-center truncate">
+                <div className="absolute bottom-full left-0 w-full bg-red-500/90 text-white text-[10px] p-1 text-center truncate rounded-t">
                     {error}
                 </div>
             )}
         </div>
     );
-});
+}, (prev, next) => (
+    prev.id === next.id &&
+    prev.selected === next.selected &&
+    prev.data === next.data
+));
 
 NodeCompare.displayName = 'NodeCompare';

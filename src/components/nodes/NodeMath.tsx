@@ -1,10 +1,11 @@
 'use client';
 
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { useState } from 'react';
+import { useState, memo, useEffect } from 'react';
 import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
+import { pullValue } from '@/engine/Brain';
 import {
     Select,
     SelectContent,
@@ -12,6 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useAppStore } from '@/store/useAppStore';
 
 interface NodeMathProps {
     id: string;
@@ -27,13 +29,30 @@ const operations = [
     { value: 'mod', label: '%' },
 ];
 
-export function NodeMath({ id, data, selected }: NodeMathProps & { selected?: boolean }) {
-    const { updateNodeData } = useReactFlow();
+export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected?: boolean }) => {
+    const { updateNodeData, getNodes, getEdges } = useReactFlow();
+    const { triggerLogicUpdate, logicVersion } = useAppStore();
     const [op, setOp] = useState(data.operation || 'add');
+    const [result, setResult] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Unified Pull Logic for Preview
+    useEffect(() => {
+        const nodes = getNodes();
+        const edges = getEdges();
+        try {
+            const pullResult = pullValue(id, nodes, edges);
+            setResult(pullResult.val);
+            setError(null);
+        } catch (e) {
+            setError('Error');
+        }
+    }, [logicVersion, id, getNodes, getEdges]);
 
     const onSelect = (value: string) => {
         setOp(value);
         updateNodeData(id, { operation: value });
+        triggerLogicUpdate();
     };
 
     const currentLabel = operations.find((o) => o.value === op)?.label || '+';
@@ -41,7 +60,7 @@ export function NodeMath({ id, data, selected }: NodeMathProps & { selected?: bo
     return (
         <NodeShell
             selected={selected}
-            className="bg-zinc-200 border-2 border-orange-400 rounded-full w-[80px] h-[80px] shadow-lg flex flex-col items-center justify-center relative hover:border-orange-500"
+            className="bg-white border-2 border-orange-400 rounded-full w-[80px] h-[80px] shadow-lg flex flex-col items-center justify-center relative hover:border-orange-500"
         >
             <TargetHandle
                 nodeId={id}
@@ -71,16 +90,17 @@ export function NodeMath({ id, data, selected }: NodeMathProps & { selected?: bo
             </Select>
 
             {/* Result Display */}
-            {data.error ? (
+            {error ? (
                 <span className="text-red-500 text-xs text-center font-bold">⚠️ Error</span>
             ) : (
                 <span className="text-zinc-600 font-mono font-bold text-xs">
                     {(() => {
-                        const val = data.result as any;
-                        if (typeof val === 'number' && !isNaN(val)) {
-                            return Number.isInteger(val) ? val : val.toFixed(2);
-                        } else if (val && val.toFixed) {
-                            return val.toFixed(2).replace(/\.?0+$/, '');
+                        if (result === null) return '...';
+                        if (typeof result === 'number' && !isNaN(result)) {
+                            return result.toLocaleString('en-US', {
+                                maximumFractionDigits: 2,
+                                useGrouping: true
+                            });
                         }
                         return '...';
                     })()}
@@ -93,4 +113,8 @@ export function NodeMath({ id, data, selected }: NodeMathProps & { selected?: bo
             />
         </NodeShell>
     );
-}
+}, (prev, next) => (
+    prev.id === next.id &&
+    prev.selected === next.selected &&
+    prev.data === next.data
+));

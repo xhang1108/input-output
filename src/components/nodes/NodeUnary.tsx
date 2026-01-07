@@ -1,10 +1,11 @@
 'use client';
 
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { useState } from 'react';
+import { useState, memo, useEffect } from 'react';
 import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
+import { pullValue } from '@/engine/Brain';
 import {
     Select,
     SelectContent,
@@ -12,6 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useAppStore } from '@/store/useAppStore';
 
 interface NodeUnaryProps {
     id: string;
@@ -28,13 +30,30 @@ const operations = [
     { value: 'round', label: 'round' },
 ];
 
-export function NodeUnary({ id, data, selected }: NodeUnaryProps & { selected?: boolean }) {
-    const { updateNodeData } = useReactFlow();
+export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { selected?: boolean }) => {
+    const { updateNodeData, getNodes, getEdges } = useReactFlow();
+    const { triggerLogicUpdate, logicVersion } = useAppStore();
     const [op, setOp] = useState(data.operation || 'sqrt');
+    const [result, setResult] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Unified Pull Logic for Preview
+    useEffect(() => {
+        const nodes = getNodes();
+        const edges = getEdges();
+        try {
+            const pullResult = pullValue(id, nodes, edges);
+            setResult(pullResult.val);
+            setError(null);
+        } catch (e) {
+            setError('Error');
+        }
+    }, [logicVersion, id, getNodes, getEdges]);
 
     const onSelect = (value: string) => {
         setOp(value);
         updateNodeData(id, { operation: value });
+        triggerLogicUpdate();
     };
 
     return (
@@ -61,16 +80,17 @@ export function NodeUnary({ id, data, selected }: NodeUnaryProps & { selected?: 
 
             {/* Result Display */}
             <div className="mt-2 pt-2 border-t border-purple-200 flex justify-center">
-                {data.error ? (
+                {error ? (
                     <span className="text-red-500 text-xs font-bold">⚠️ Error</span>
                 ) : (
                     <span className="text-zinc-600 font-mono font-bold text-sm">
                         {(() => {
-                            const val = data.result as any;
-                            if (typeof val === 'number' && !isNaN(val)) {
-                                return Number.isInteger(val) ? val : val.toFixed(2);
-                            } else if (val && val.toFixed) {
-                                return val.toFixed(2).replace(/\.?0+$/, '');
+                            if (result === null) return '...';
+                            if (typeof result === 'number' && !isNaN(result)) {
+                                return result.toLocaleString('en-US', {
+                                    maximumFractionDigits: 2,
+                                    useGrouping: true
+                                });
                             }
                             return '...';
                         })()}
@@ -89,4 +109,8 @@ export function NodeUnary({ id, data, selected }: NodeUnaryProps & { selected?: 
             />
         </NodeShell>
     );
-}
+}, (prev, next) => (
+    prev.id === next.id &&
+    prev.selected === next.selected &&
+    prev.data === next.data
+));

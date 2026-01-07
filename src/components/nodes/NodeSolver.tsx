@@ -1,13 +1,13 @@
 'use client';
 
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Sigma } from 'lucide-react';
-import nerdamer from 'nerdamer';
-import 'nerdamer/Solve'; // Extend nerdamer with solve function
 import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
+import { useAppStore } from '@/store/useAppStore';
+import { pullValue } from '@/engine/Brain';
 
 interface NodeSolverProps {
     id: string;
@@ -20,50 +20,33 @@ interface NodeSolverProps {
     };
 }
 
-export function NodeSolver({ id, data, selected }: NodeSolverProps & { selected?: boolean }) {
-    const { updateNodeData } = useReactFlow();
+export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { selected?: boolean }) => {
+    const { updateNodeData, getNodes, getEdges } = useReactFlow();
+    const { triggerLogicUpdate, logicVersion } = useAppStore();
     const [targetVar, setTargetVar] = useState(data.targetVar || 'x');
-    const [solution, setSolution] = useState<string>('?');
+    const [solution, setSolution] = useState<number | string>('?');
+    const [error, setError] = useState<string | null>(null);
 
-    // Handle solving
+    // Unified Pull Logic
     useEffect(() => {
-        if (!data.inheritedAST) {
-            setSolution('Waiting for input...');
-            return;
-        }
+        const nodes = getNodes();
+        const edges = getEdges();
 
         try {
-            // 1. Get LHS expression string
-            const lhs = data.inheritedAST.toString();
+            const pullResult = pullValue(id, nodes, edges);
+            // We store the number for formatting, but Brain.ts might give a non-number in some edge cases
+            setSolution(pullResult.val);
+            setError(null);
 
-            // 2. Get RHS (default to 0 if not connected)
-            // Note: In a real implementation, we'd need a second input handle for RHS, 
-            // but for MVP let's assume LHS = 0 or LHS = Constant.
-            // Or better: LHS - RHS = 0.
-            // For now, let's assume the input IS the equation expression (e.g. "2x - 10").
-
-            // 3. Solve
-            // nerdamer.solve(equation, variable)
-            const result = (nerdamer as any).solve(lhs, targetVar);
-
-            // Result is an array of solutions (e.g. [5])
-            const sol = result.toString();
-            setSolution(sol);
-
-            // Update node data with the first numeric solution if possible
-            // nerdamer returns parsing string like "[5]". We need to extract.
-            const cleanSol = sol.replace(/[\[\]]/g, '');
-            const num = Number(cleanSol);
-
-            if (!isNaN(num)) {
-                updateNodeData(id, { value: num });
+            // If the solved value differs from current data, update it
+            if (pullResult.val !== data.value) {
+                updateNodeData(id, { value: pullResult.val });
             }
-
-        } catch (e) {
-            console.error(e);
+        } catch (e: any) {
+            setError(e.message || 'Error');
             setSolution('Error');
         }
-    }, [data.inheritedAST, targetVar, updateNodeData, id]);
+    }, [logicVersion, id, getNodes, getEdges, updateNodeData, data.value]);
 
     return (
         <NodeShell
@@ -98,8 +81,10 @@ export function NodeSolver({ id, data, selected }: NodeSolverProps & { selected?
 
                 <div className="bg-zinc-950 rounded p-2 text-center">
                     <div className="text-[10px] text-zinc-500 mb-1">SOLUTION</div>
-                    <div className="text-xl font-mono text-indigo-400 font-bold">
-                        {solution}
+                    <div className="text-xl font-mono text-indigo-400 font-bold tabular-nums">
+                        {typeof solution === 'number'
+                            ? solution.toLocaleString('en-US', { maximumFractionDigits: 10 })
+                            : solution}
                     </div>
                 </div>
             </div>
@@ -111,4 +96,8 @@ export function NodeSolver({ id, data, selected }: NodeSolverProps & { selected?
             />
         </NodeShell>
     );
-}
+}, (prev, next) => (
+    prev.id === next.id &&
+    prev.selected === next.selected &&
+    prev.data === next.data
+));

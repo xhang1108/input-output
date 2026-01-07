@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { toast } from 'sonner';
 
@@ -94,12 +94,12 @@ export const useMouth = () => {
         toast.info('Cleared local save');
     }, []);
 
-    const mouth = {
+    const mouth = useMemo(() => ({
         savor,
         eat,
         spit,
         diet
-    };
+    }), [savor, eat, spit, diet]);
 
     return {
         mouth

@@ -6,9 +6,9 @@ import {
     useReactFlow,
     type EdgeProps,
 } from '@xyflow/react';
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 
-export function CustomEdge({
+export const CustomEdge = memo(({
     id,
     sourceX,
     sourceY,
@@ -20,7 +20,7 @@ export function CustomEdge({
     markerEnd,
     source,
     target,
-}: EdgeProps) {
+}: EdgeProps) => {
     const { getNode } = useReactFlow();
 
     // 1. Calculate Path
@@ -66,4 +66,4 @@ export function CustomEdge({
             className={isFormula ? "animate-pulse" : ""}
         />
     );
-}
+});

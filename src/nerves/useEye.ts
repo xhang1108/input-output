@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useReactFlow, type Node } from '@xyflow/react';
 
 export const useEye = () => {
@@ -14,9 +14,9 @@ export const useEye = () => {
         }
     }, [fitView]);
 
-    const eyes = {
+    const eyes = useMemo(() => ({
         focus
-    };
+    }), [focus]);
 
     return {
         eyes

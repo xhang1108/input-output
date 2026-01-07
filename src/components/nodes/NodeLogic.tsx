@@ -1,30 +1,41 @@
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
+import { useAppStore } from '@/store/useAppStore';
+import { pullValue } from '@/engine/Brain';
 
 export const NodeLogic = memo(({ id, data, isConnectable }: NodeProps) => {
-    const { updateNodeData } = useReactFlow();
+    const { updateNodeData, getNodes, getEdges } = useReactFlow();
+    const { triggerLogicUpdate, logicVersion } = useAppStore();
     const operation = (data.operation as string) || 'AND';
-    const rawResult = data.result as any;
-    const error = data.error as string | undefined;
+    const [result, setResult] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Unified Pull Logic for Preview
+    useEffect(() => {
+        const nodes = getNodes();
+        const edges = getEdges();
+        try {
+            const pullResult = pullValue(id, nodes, edges);
+            setResult(pullResult.val);
+            setError(null);
+        } catch (e: any) {
+            setError(e.message || 'Error');
+        }
+    }, [logicVersion, id, getNodes, getEdges]);
 
     // Helper to get boolean state from result (0 = false, 1 = true)
-    let isTrue = false;
-    let isFalse = false;
-    if (rawResult !== undefined) {
-        // Handle BigNumber or primitive
-        const num = typeof rawResult === 'object' && rawResult.toNumber ? rawResult.toNumber() : Number(rawResult);
-        if (num === 1) isTrue = true;
-        if (num === 0) isFalse = true;
-    }
+    const isTrue = result === 1;
+    const isFalse = result === 0;
+
 
     return (
-        <div className="bg-zinc-900 border-2 border-indigo-500/50 rounded-xl shadow-lg min-w-[140px]">
+        <div className="bg-white border-2 border-indigo-500 rounded-xl shadow-lg min-w-[140px] hover:border-indigo-400">
             {/* Header */}
-            <div className="bg-indigo-500/20 px-4 py-2 border-b border-indigo-500/30 flex items-center justify-between rounded-t-[10px]">
-                <div className="text-indigo-400 font-bold text-xs uppercase tracking-wider">LOGIC</div>
+            <div className="bg-indigo-50 px-4 py-2 border-b border-indigo-100 flex items-center justify-between rounded-t-[10px]">
+                <div className="text-indigo-600 font-bold text-xs uppercase tracking-wider">LOGIC</div>
             </div>
 
             {/* Inputs */}
@@ -38,7 +49,7 @@ export const NodeLogic = memo(({ id, data, isConnectable }: NodeProps) => {
                             isConnectable={isConnectable}
                             className="!-left-[13px]"
                         />
-                        <span className="text-zinc-500 text-xs ml-2">A</span>
+                        <span className="text-zinc-600 text-xs ml-2 font-bold">A</span>
                     </div>
 
                     <div className="flex items-center justify-between relative h-5">
@@ -49,7 +60,7 @@ export const NodeLogic = memo(({ id, data, isConnectable }: NodeProps) => {
                             isConnectable={isConnectable}
                             className="!-left-[13px]"
                         />
-                        <span className="text-zinc-500 text-xs ml-2">B</span>
+                        <span className="text-zinc-600 text-xs ml-2 font-bold">B</span>
                     </div>
                 </div>
 
@@ -59,23 +70,24 @@ export const NodeLogic = memo(({ id, data, isConnectable }: NodeProps) => {
                         defaultValue={operation}
                         onValueChange={(val) => {
                             updateNodeData(id, { operation: val });
+                            triggerLogicUpdate();
                         }}
                     >
-                        <SelectTrigger className="h-7 bg-zinc-800 border-zinc-700 text-xs text-indigo-300">
+                        <SelectTrigger className="h-7 bg-zinc-50 border-zinc-200 text-xs text-indigo-700 font-bold">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-zinc-800 border-zinc-700">
-                            <SelectItem value="AND" className="text-indigo-300 text-xs">AND</SelectItem>
-                            <SelectItem value="OR" className="text-indigo-300 text-xs">OR</SelectItem>
-                            <SelectItem value="XOR" className="text-indigo-300 text-xs">XOR</SelectItem>
-                            <SelectItem value="NAND" className="text-indigo-300 text-xs">NAND</SelectItem>
+                        <SelectContent className="bg-white border-zinc-200">
+                            <SelectItem value="AND" className="text-indigo-700 text-xs font-bold focus:bg-indigo-50">AND</SelectItem>
+                            <SelectItem value="OR" className="text-indigo-700 text-xs font-bold focus:bg-indigo-50">OR</SelectItem>
+                            <SelectItem value="XOR" className="text-indigo-700 text-xs font-bold focus:bg-indigo-50">XOR</SelectItem>
+                            <SelectItem value="NAND" className="text-indigo-700 text-xs font-bold focus:bg-indigo-50">NAND</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
 
-            <div className="bg-zinc-950/50 p-2 flex items-center justify-end relative h-8 z-10 rounded-b-[10px]">
-                <span className="text-indigo-400 font-mono text-xl mr-2">
+            <div className="bg-zinc-50 p-2 flex items-center justify-end relative h-8 z-10 rounded-b-[10px] border-t border-zinc-100">
+                <span className={`font-mono text-lg mr-2 font-bold ${isTrue ? 'text-indigo-600' : 'text-zinc-400'}`}>
                     {isFalse ? 'False' : isTrue ? 'True' : '-'}
                 </span>
                 <SourceHandle
@@ -89,12 +101,16 @@ export const NodeLogic = memo(({ id, data, isConnectable }: NodeProps) => {
 
             {/* Error Display */}
             {error && (
-                <div className="absolute bottom-full left-0 w-full bg-red-500/90 text-white text-[10px] p-1 text-center truncate">
+                <div className="absolute bottom-full left-0 w-full bg-red-500/90 text-white text-[10px] p-1 text-center truncate rounded-t">
                     {error}
                 </div>
             )}
         </div>
     );
-});
+}, (prev, next) => (
+    prev.id === next.id &&
+    prev.selected === next.selected &&
+    prev.data === next.data
+));
 
 NodeLogic.displayName = 'NodeLogic';

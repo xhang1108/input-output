@@ -2,6 +2,7 @@ import { Panel, useReactFlow } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Save, Monitor, MousePointer2 } from 'lucide-react';
+import { memo } from 'react';
 
 interface SkinProps {
     mouth: {
@@ -12,7 +13,7 @@ interface SkinProps {
     };
 }
 
-export const Skin = ({ mouth, eyes }: SkinProps) => {
+export const Skin = memo(({ mouth, eyes }: SkinProps) => {
     return (
         <>
             {/* Top Right: Actions */}
@@ -51,4 +52,4 @@ export const Skin = ({ mouth, eyes }: SkinProps) => {
             </Panel>
         </>
     );
-};
+});

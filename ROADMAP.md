@@ -19,12 +19,20 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
 
 ---
 
-## 🚧 Phase 2: Logic & Control (Current Focus)
-**Goal:** Transform Calctopus into a Visual Programming Language (VPL).
+## 🚧 Phase 2: Hybrid Pull Architecture (Current Focus)
+**Goal:** Implementation of "Push Signal, Pull Data" Engine.
 
-- [x] **Engine Refactor: Type Safety & Precision**
-    - [x] **BigNumber:** Upgraded engine to use `mathjs` BigNumber for arbitrary precision.
-    - [x] **Brain.ts:** Refactored `think()` to handle object-based values (BigNumber).
+- [ ] **Core Engine Rewrite**
+    - [ ] **PullEngine.ts:** Implement recursive `getValue` with cycle detection.
+    - [ ] **Payload Standard:** Define `{ formula, scope, display, val }` structure.
+    - [ ] **Safety:** Implement `FALLBACK_PAYLOAD` (Zero) and `try-catch` error handling.
+- [ ] **Node Architecture v2**
+    - [ ] **Smart Result Node:** The only node that triggers calculation (via `math.evaluate`).
+    - [ ] **Lazy Intermediates:** Math/Logic nodes only calculate when pulled by a Result node.
+    - [ ] **Scoped Flow:** Wires carry variable tables (`scope`), not just numbers.
+- [ ] **Migration**
+    - [ ] Deprecate `Brain.think()` (Monolithic Push).
+    - [ ] Verify `ResultNode` handles Cycles gracefully without crashing.
 - [x] **Logic Nodes Implementation**
     - [x] **Component:** Create `src/components/nodes/NodeLogic.tsx`.
     - [x] **Ops:** AND, OR, XOR, NAND.
@@ -92,3 +100,15 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [ ] **Compression:** Use `lz-string` to compress the JSON graph before encoding into the URL hash for easy sharing.
 - [ ] **Backend**
     - [ ] **Supabase:** Simple `graphs` table with `id`, `user_id`, and `json_data` columns.
+
+## 🔮 Phase 8: Symbolic & Constraint Intelligence
+**Goal:** Transform Calctopus from a Calculator to a Computational Engine.
+
+- [ ] **Omni-directional Nodes (Constraint Solver)**
+    - [ ] **Concept:** Nodes with no fixed inputs/outputs. Ports adapt based on data flow.
+    - [ ] **Implementation:** Input `PV = nRT`. The node exposes 5 ports. Connect any 4 variables, and the 5th becomes the output.
+    - [ ] **Dynamic Solving:** Real-time re-balancing of the equation tree based on what is known vs. unknown.
+- [ ] **Symbolic Data Flow**
+    - [ ] **Expression Propagation:** Wire carries `Symbol("x")` or `Expression("sin(x^2)")` instead of just numbers.
+    - [ ] **Computer Algebra System (CAS):** Nodes calculate symbolic derivatives, integrals, or simplifications.
+    - [ ] **Visual Proofs:** Show the step-by-step transformation of a formula as it passes through the graph.

@@ -1,318 +1,262 @@
-import { create, all, type BigNumber } from 'mathjs';
+import { Node, Edge } from '@xyflow/react';
+import * as math from 'mathjs';
+import nerdamer from 'nerdamer';
+import 'nerdamer/Solve';
 
-// Create a configured instance
-const math = create(all);
-math.config({
-    number: 'BigNumber',
-    precision: 64
-});
+// --- Types ---
 
-export interface Concept {
-    id: string;
-    type?: string;
-    data: Record<string, any>;
+export interface NodePayload {
+    formula: string;    // Safe ID formula for MathJS (e.g. "node_a + node_b")
+    scope: Record<string, number>; // Variable values (e.g. { node_a: 10, node_b: 20 })
+    display: string;    // Human-readable formula (e.g. "Rent + Tax")
+    val: number;        // Preview value for this node
 }
 
-export interface NeuralConnection {
-    source: string;
-    target: string;
-    sourceHandle?: string | null;
-    targetHandle?: string | null;
-}
+// --- Constants ---
 
-export type Thoughts = Record<string, { value: any; error?: string; ast?: any }>;
+export const FALLBACK_PAYLOAD: NodePayload = {
+    formula: "0",
+    scope: {},
+    display: "0",
+    val: 0
+};
 
-// Helper to create local AST
-function createLocalAST(type: string, data: any): any {
-    try {
-        if (type === 'inputNode') {
-            const val = data.value ?? 0;
-            return math.parse(String(val));
-        }
-        if (type === 'mathNode') {
-            const op = data.operation || 'add';
-            switch (op) {
-                case 'add': return math.parse('inputA + inputB');
-                case 'sub': return math.parse('inputA - inputB');
-                case 'mul': return math.parse('inputA * inputB');
-                case 'div': return math.parse('inputA / inputB');
-                case 'pow': return math.parse('inputA ^ inputB');
-                case 'mod': return math.parse('inputA % inputB');
-                default: return math.parse('inputA + inputB');
-            }
-        }
-        if (type === 'unaryNode') {
-            const op = data.operation || 'sqrt';
-            switch (op) {
-                case 'sin': return math.parse('sin(inputA)');
-                case 'cos': return math.parse('cos(inputA)');
-                case 'tan': return math.parse('tan(inputA)');
-                case 'sqrt': return math.parse('sqrt(inputA)');
-                case 'abs': return math.parse('abs(inputA)');
-                case 'log': return math.parse('log(inputA, e)');
-                case 'round': return math.parse('round(inputA)');
-                default: return math.parse('inputA');
-            }
-        }
-        if (type === 'outputNode') {
-            return math.parse('inputA');
-        }
-        if (type === 'compareNode') {
-            const op = data.operation || 'eq';
-            switch (op) {
-                case 'gt': return math.parse('inputA > inputB');
-                case 'lt': return math.parse('inputA < inputB');
-                case 'eq': return math.parse('inputA == inputB');
-                case 'neq': return math.parse('inputA != inputB');
-                case 'gte': return math.parse('inputA >= inputB');
-                case 'lte': return math.parse('inputA <= inputB');
-                default: return math.parse('inputA == inputB');
-            }
-        }
-        if (type === 'logicNode') {
-            const op = data.operation || 'AND';
-            switch (op) {
-                case 'AND': return math.parse('inputA and inputB'); // MathJS supports 'and'
-                case 'OR': return math.parse('inputA or inputB');   // MathJS supports 'or'
-                case 'XOR': return math.parse('inputA xor inputB'); // MathJS supports 'xor'
-                case 'NAND': return math.parse('not (inputA and inputB)');
-                default: return math.parse('inputA and inputB');
-            }
-        }
-    } catch (e) {
-        return null;
+// --- Helpers ---
+
+/**
+ * Cleans a label to be a safe variable name for display.
+ * e.g. "Rent Cost" -> "RentCost"
+ */
+export const toSafeVar = (label: string): string => {
+    return label.replace(/[^a-zA-Z0-9]/g, '');
+};
+
+/**
+ * Core Recursive Function: Pulls value from a node.
+ * @param nodeId The ID of the node to pull from.
+ * @param nodes All nodes in the graph.
+ * @param edges All edges in the graph.
+ * @param visited Set of visited node IDs for Cycle Detection.
+ */
+export const pullValue = (
+    nodeId: string,
+    nodes: Node[],
+    edges: Edge[],
+    visited: Set<string> = new Set()
+): NodePayload => {
+
+    // 1. Cycle Detection
+    if (visited.has(nodeId)) {
+        throw new Error(`Cycle detected at node ${nodeId}`);
     }
-    return null;
-}
+    const newVisited = new Set(visited);
+    newVisited.add(nodeId);
 
-// Config is now done at the top level with the instance creation
+    // 2. Find Node
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return FALLBACK_PAYLOAD;
 
-function think(concepts: Concept[], connections: NeuralConnection[]): Thoughts {
-    const adjList = new Map<string, string[]>();
-    const inDegree = new Map<string, number>();
-    const nodeMap = new Map<string, Concept>();
+    // 3. Node Logic Switch
+    switch (node.type) {
+        case 'inputNode': {
+            const val = Number(node.data.value) || 0;
+            // Use node ID as variable name in scope to ensure uniqueness
+            // Use label for display
+            // Clean ID to be safe for MathJS (usually IDs are safe, but better safe than sorry if we used UUIDs with dashes)
+            // Actually MathJS handles many chars, but safeVar is better.
+            // Our nanoid(8) might have dashes? nanoid default has -_.
+            // Let's assume we treat ID as the key.
+            // Namespace variables to avoid MathJS collisions (e.g. 'sin', 'pi', or leading numbers)
+            const safeId = 'v_' + node.id.replace(/-/g, '_');
 
-    for (const node of concepts) {
-        adjList.set(node.id, []);
-        inDegree.set(node.id, 0);
-        nodeMap.set(node.id, node);
-    }
-
-    for (const edge of connections) {
-        if (!nodeMap.has(edge.source) || !nodeMap.has(edge.target)) {
-            continue;
-        }
-
-        adjList.get(edge.source)?.push(edge.target);
-        inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
-    }
-
-    const queue: string[] = [];
-    const sortedOrder: string[] = [];
-
-    inDegree.forEach((deg, id) => {
-        if (deg === 0) {
-            queue.push(id);
-        }
-    });
-
-    while (queue.length > 0) {
-        const u = queue.shift()!;
-        sortedOrder.push(u);
-
-        const neighbors = adjList.get(u) || [];
-        for (const v of neighbors) {
-            inDegree.set(v, (inDegree.get(v) || 0) - 1);
-            if (inDegree.get(v) === 0) {
-                queue.push(v);
-            }
-        }
-    }
-
-    const thoughts: Thoughts = {};
-
-    const getInputs = (targetNodeId: string): Record<string, any> => {
-        const inputValues: Record<string, any> = {};
-        const incomingEdges = connections.filter(e => e.target === targetNodeId);
-
-        for (const edge of incomingEdges) {
-            const sourceVal = thoughts[edge.source]?.value;
-            if (edge.targetHandle) {
-                inputValues[edge.targetHandle] = sourceVal;
-            } else {
-                inputValues['default'] = sourceVal;
-            }
-        }
-        return inputValues;
-    };
-
-    // Helper: Safely convert anything to BigNumber
-    const toBig = (val: any): BigNumber => {
-        if (val === undefined || val === null || isNaN(Number(val)) && typeof val !== 'object') return math.bignumber(0);
-        try {
-            return math.bignumber(val);
-        } catch {
-            return math.bignumber(0);
-        }
-    };
-
-    for (const nodeId of sortedOrder) {
-        const node = nodeMap.get(nodeId);
-        if (!node) continue;
-
-        try {
-            const ast = createLocalAST(node.type || 'default', node.data);
-
-            switch (node.type) {
-                case 'inputNode': {
-                    const val = node.data.value;
-                    thoughts[nodeId] = {
-                        value: toBig(val),
-                        ast
-                    };
-                    break;
-                }
-                case 'mathNode': {
-                    const inputs = getInputs(nodeId);
-                    const a = toBig(inputs['inputA']);
-                    const b = toBig(inputs['inputB']);
-                    const op = node.data.operation || 'add';
-
-                    let val: any = toBig(0);
-                    switch (op) {
-                        case 'add': val = math.add(a, b); break;
-                        case 'sub': val = math.subtract(a, b); break;
-                        case 'mul': val = math.multiply(a, b); break;
-                        case 'div':
-                            // math.divide throws on div by zero usually, or returns Infinity.
-                            // Handle if needed, but mathjs handles it predictably.
-                            val = math.divide(a, b);
-                            break;
-                        case 'pow': val = math.pow(a, b); break;
-                        case 'mod': val = math.mod(a, b); break;
-                        default: val = toBig(0);
-                    }
-                    thoughts[nodeId] = { value: val, ast };
-                    break;
-                }
-                case 'unaryNode': {
-                    const inputs = getInputs(nodeId);
-                    const x = toBig(Object.values(inputs)[0]);
-                    const op = node.data.operation || 'sqrt';
-                    let val: any = toBig(0);
-
-                    // Most math functions in mathjs handle BigNumber automatically if configured
-                    switch (op) {
-                        case 'sqrt': val = math.sqrt(x); break;
-                        case 'sin': val = math.sin(x); break;
-                        case 'cos': val = math.cos(x); break;
-                        case 'tan': val = math.tan(x); break;
-                        case 'abs': val = math.abs(x); break;
-                        case 'log': val = math.log(x, math.e); break;
-                        case 'round': val = math.round(x); break;
-                        default: val = x;
-                    }
-                    thoughts[nodeId] = { value: val, ast };
-                    break;
-                }
-                case 'outputNode': {
-                    const inputs = getInputs(nodeId);
-                    const val = toBig(Object.values(inputs)[0]);
-                    thoughts[nodeId] = { value: val, ast };
-                    break;
-                }
-                case 'compareNode': {
-                    const inputs = getInputs(nodeId);
-                    const a = toBig(inputs['inputA']);
-                    const b = toBig(inputs['inputB']);
-                    const op = node.data.operation || 'eq';
-                    const EPSILON = toBig(1e-10); // Still good to have a small epsilon even with BigNumbers if needed? 
-                    // Actually BigNumber equality is exact.
-                    // But if we generated numbers via distinct paths (like .1 + .2), they should be exact now.
-                    // Let's stick to exact comparison for now unless fuzzy is requested for BigNumber.
-                    // User asked for "0.1 + 0.2 equals 0.3", BigNumber guarantees this exactness.
-                    // So we can use math.compare which returns 1, 0, -1
-
-                    const cmp = math.compare(a, b) as number; // returns 1, 0, -1
-
-                    let result = false;
-                    switch (op) {
-                        case 'gt': result = cmp > 0; break;
-                        case 'lt': result = cmp < 0; break;
-                        case 'eq': result = cmp === 0; break;
-                        case 'neq': result = cmp !== 0; break;
-                        case 'gte': result = cmp >= 0; break;
-                        case 'lte': result = cmp <= 0; break;
-                        default: result = false;
-                    }
-
-                    thoughts[nodeId] = {
-                        value: result ? toBig(1) : toBig(0),
-                        ast
-                    };
-                    break;
-                }
-                case 'logicNode': {
-                    const inputs = getInputs(nodeId);
-                    const valA = toBig(inputs['inputA']);
-                    const valB = toBig(inputs['inputB']);
-
-                    // Logic: Non-zero is True
-                    const a = !math.equal(valA, 0);
-                    const b = !math.equal(valB, 0);
-                    const op = node.data.operation || 'AND';
-
-                    let result = false;
-                    switch (op) {
-                        case 'AND': result = a && b; break;
-                        case 'OR': result = a || b; break;
-                        case 'XOR': result = a !== b; break;
-                        case 'NAND': result = !(a && b); break;
-                        default: result = false;
-                    }
-
-                    thoughts[nodeId] = {
-                        value: result ? toBig(1) : toBig(0),
-                        ast
-                    };
-                    break;
-                }
-                default: {
-                    thoughts[nodeId] = { value: toBig(node.data.value), ast };
-                    break;
-                }
-            }
-        } catch (err) {
-            // 🪤 THE TRAP: Catch ephemeral bugs
-            const inputs = getInputs(nodeId);
-            console.group(`🚨 Brain Freeze: Node [${nodeId}] crashed`);
-            console.error('Type:', node.type);
-            console.error('Message:', (err as Error).message);
-            console.table(inputs); // Show exactly what it ate before dying
-            console.error('Raw Data:', node.data);
-            console.error('Stack:', (err as Error).stack);
-            console.groupEnd();
-
-            thoughts[nodeId] = {
-                value: NaN,
-                error: (err as Error).message
+            return {
+                formula: safeId,
+                scope: { [safeId]: val },
+                display: node.data.label ? String(node.data.label) : `${val}`,
+                val: val
             };
         }
-    }
 
-    const processedSet = new Set(sortedOrder);
-    for (const node of concepts) {
-        if (!processedSet.has(node.id)) {
-            thoughts[node.id] = {
-                value: NaN,
-                error: 'Cycle detected or dependency missing'
+        case 'mathNode': {
+            // Pull Inputs
+            // MathNode expects inputs on handles 'inputA' and 'inputB' (or 'a' and 'b' depending on version, let's standardize on standardized 'inputA'/'inputB')
+            // Wait, previous conversations said we standardized to 'inputA', 'inputB' for MathNode? 
+            // Checking Body.tsx defaultEdges: targetHandle: 'inputA'
+            // Checking Brain.ts (old): it used 'a' and 'b' in some places?
+            // Let's look for edges targeting this node's 'inputA' and 'inputB'.
+
+            // Standardize handles: 'inputA', 'inputB'
+            const edgeA = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputA' || e.targetHandle === 'a'));
+            const edgeB = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputB' || e.targetHandle === 'b'));
+
+            const payloadA = edgeA ? pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const payloadB = edgeB ? pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+
+            const op = (node.data.operation as string) || 'add';
+            let calculatedVal = 0;
+            let symbol = '+';
+
+            switch (op) {
+                case 'add': calculatedVal = Number(payloadA.val) + Number(payloadB.val); symbol = '+'; break;
+                case 'sub': calculatedVal = Number(payloadA.val) - Number(payloadB.val); symbol = '-'; break;
+                case 'mul': calculatedVal = Number(payloadA.val) * Number(payloadB.val); symbol = '*'; break;
+                case 'div': {
+                    const valA = Number(payloadA.val);
+                    const valB = Number(payloadB.val);
+                    calculatedVal = valB === 0 ? Infinity : valA / valB;
+                    symbol = '/';
+                    break;
+                }
+                case 'pow': calculatedVal = Math.pow(Number(payloadA.val), Number(payloadB.val)); symbol = '^'; break;
+                case 'mod': calculatedVal = Number(payloadA.val) % Number(payloadB.val); symbol = '%'; break;
+            }
+
+            // Final safety filter
+            if (isNaN(calculatedVal)) calculatedVal = 0;
+
+            return {
+                formula: `(${payloadA.formula} ${symbol} ${payloadB.formula})`,
+                scope: { ...payloadA.scope, ...payloadB.scope },
+                display: `(${payloadA.display} ${symbol} ${payloadB.display})`,
+                val: calculatedVal
             };
         }
+
+        case 'unaryNode': {
+            const edge = edges.find(e => e.target === nodeId && (e.targetHandle === 'input' || e.targetHandle === 'inputA'));
+            const payload = edge ? pullValue(edge.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+
+            const op = (node.data.operation as string) || 'sqrt';
+            let val = 0;
+            let funcName = op;
+
+            const inputVal = Number(payload.val);
+            switch (op) {
+                case 'sqrt': val = Math.sqrt(inputVal); funcName = 'sqrt'; break;
+                case 'sin': val = Math.sin(inputVal); funcName = 'sin'; break;
+                case 'cos': val = Math.cos(inputVal); funcName = 'cos'; break;
+                case 'tan': val = Math.tan(inputVal); funcName = 'tan'; break;
+                case 'abs': val = Math.abs(inputVal); funcName = 'abs'; break;
+                case 'log': val = Math.log(inputVal); funcName = 'log'; break;
+                case 'round': val = Math.round(inputVal); funcName = 'round'; break;
+            }
+
+            return {
+                formula: `${funcName}(${payload.formula})`,
+                scope: { ...payload.scope },
+                display: `${funcName}(${payload.display})`,
+                val: val
+            };
+        }
+
+        case 'compareNode': {
+            const edgeA = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputA'));
+            const edgeB = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputB'));
+
+            const pA = edgeA ? pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pB = edgeB ? pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+
+            const op = (node.data.operation as string) || 'eq';
+            let bool = false;
+            let sym = '==';
+
+            switch (op) {
+                case 'gt': bool = pA.val > pB.val; sym = '>'; break;
+                case 'lt': bool = pA.val < pB.val; sym = '<'; break;
+                case 'eq': bool = pA.val === pB.val; sym = '=='; break;
+                case 'neq': bool = pA.val !== pB.val; sym = '!='; break;
+                case 'gte': bool = pA.val >= pB.val; sym = '>='; break;
+                case 'lte': bool = pA.val <= pB.val; sym = '<='; break;
+            }
+
+            const val = bool ? 1 : 0;
+
+            return {
+                // Determine formula representation for comparison?
+                // MathJS supports comparison.
+                formula: `(${pA.formula} ${sym} ${pB.formula})`,
+                scope: { ...pA.scope, ...pB.scope },
+                display: `(${pA.display} ${sym} ${pB.display})`,
+                val: val
+            };
+        }
+
+        case 'solverNode': {
+            const edge = edges.find(e => e.target === nodeId && (e.targetHandle === 'input' || e.targetHandle === 'inputA'));
+            const payload = edge ? pullValue(edge.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+
+            const targetVar = (node.data.targetVar as string) || 'x';
+            let solvedVal = 0;
+            let solutionStr = '?';
+
+            try {
+                // We use nerdamer to solve the expression assuming LHS = 0
+                // So if input is "x - 5", it solves for x - 5 = 0 -> x = 5.
+                const result = (nerdamer as any).solve(payload.formula, targetVar);
+                const sol = result.toString();
+                solutionStr = sol;
+
+                // Extract first numeric solution
+                const cleanSol = sol.replace(/[\[\]]/g, '');
+                // Handle multiple solutions by taking the first one
+                const firstSol = cleanSol.split(',')[0];
+                const num = Number(firstSol);
+                if (!isNaN(num)) solvedVal = num;
+            } catch (e) {
+                console.error("Solver failed:", e);
+                solutionStr = "Error";
+            }
+
+            return {
+                formula: `${solvedVal}`, // We return the CONCRETE solved value as the formula for downstream nodes
+                scope: {}, // Constant value has no variables
+                display: solutionStr,
+                val: solvedVal
+            };
+        }
+
+        case 'logicNode': {
+            const edgeA = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputA'));
+            const edgeB = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputB'));
+
+            const pA = edgeA ? pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pB = edgeB ? pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+
+            const op = (node.data.operation as string) || 'AND';
+            let res = 0;
+            let sym = 'and'; // mathjs operator
+
+            // Inputs are treated as truthy/falsy
+            const valA = pA.val !== 0;
+            const valB = pB.val !== 0;
+
+            switch (op) {
+                case 'AND': res = (valA && valB) ? 1 : 0; sym = 'and'; break;
+                case 'OR': res = (valA || valB) ? 1 : 0; sym = 'or'; break;
+                case 'XOR': res = (valA !== valB) ? 1 : 0; sym = 'xor'; break;
+                case 'NAND': res = !(valA && valB) ? 1 : 0; sym = 'and'; break; // Special case for formula
+            }
+
+            // MathJS formula construction for NAND is complex (not(a and b))
+            let formulaStr = `(${pA.formula} ${sym} ${pB.formula})`;
+            let displayStr = `(${pA.display} ${sym.toUpperCase()} ${pB.display})`;
+
+            if (op === 'NAND') {
+                formulaStr = `not(${pA.formula} and ${pB.formula})`;
+                displayStr = `NAND(${pA.display}, ${pB.display})`;
+            }
+
+            return {
+                formula: formulaStr,
+                scope: { ...pA.scope, ...pB.scope },
+                display: displayStr,
+                val: res
+            };
+        }
+
+
+        // Placeholder for other nodes
+        default:
+            return FALLBACK_PAYLOAD;
     }
-
-    return thoughts;
-}
-
-export const Brain = {
-    think
 };

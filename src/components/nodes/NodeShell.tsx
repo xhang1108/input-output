@@ -12,7 +12,7 @@ export function NodeShell({ children, selected, className }: NodeShellProps) {
         <div className={cn(
             // Base logic: Merge incoming className first, then apply selection ring
             // We use 'group' here so children can use group-hover if needed
-            "transition-all group",
+            "group",
             className,
             // The critical fix: Always apply ring if selected
             selected && "ring-2 ring-blue-500 ring-offset-2"

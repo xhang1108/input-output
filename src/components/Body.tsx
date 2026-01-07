@@ -11,8 +11,6 @@ import {
     useNodesState,
     useEdgesState,
     useReactFlow,
-    ReactFlowProvider,
-    SelectionMode,
     type Node,
     type Edge,
     type Connection,
@@ -20,13 +18,14 @@ import {
     type EdgeTypes,
     useNodes,
     useEdges,
+    type NodeChange,
+    type EdgeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
-import { useBrain } from '../nerves/useBrain';
 import { useHand } from '../nerves/useHand';
 import { useEar } from '../nerves/useEar';
 import { useEye } from '../nerves/useEye';
@@ -47,6 +46,7 @@ import { NodeSolver } from './nodes/NodeSolver';
 import { NodeGroup } from './nodes/NodeGroup';
 import { CustomEdge } from './edges/CustomEdge';
 import { Group, Layers, Ungroup, ToggleRight, Scale } from 'lucide-react';
+import { useAppStore } from '@/store/useAppStore';
 
 const nodeTypes: NodeTypes = {
     inputNode: NodeInput,
@@ -97,15 +97,53 @@ const defaultEdges: Edge[] = [
     { id: 'e3', source: 'math-1', target: 'output-1', targetHandle: 'inputA', type: 'customEdge' },
 ];
 
+// --- Performance Stabilization Helpers ---
+const nodeColor = (n: Node) => {
+    if (n.type === 'inputNode') return '#3b82f6'; // blue-500
+    if (n.type === 'outputNode') return '#22c55e'; // green-500
+    if (n.type === 'mathNode') return '#f97316'; // orange-500
+    return '#71717a'; // zinc-500
+};
+
+const defaultEdgeOptions = {
+    type: 'customEdge',
+    animated: true,
+};
+
 export function Body() {
+    const { screenToFlowPosition, fitView, getNodes, getEdges } = useReactFlow();
+    const { displayMode, toggleDisplayMode, triggerLogicUpdate, logicVersion } = useAppStore();
+
     const [nodes, setNodes, onNodesChange] = useNodesState(defaultNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(defaultEdges);
 
-    // Cycle Detection
+    // Logic-Aware Change Handlers
+    const onNodesChangeWrapped = useCallback((changes: NodeChange[]) => {
+        onNodesChange(changes);
+        // Performance optimization: Only trigger logic update if the change is NOT purely visual/interactve (drag, select, resize)
+        const isLogical = changes.some(c => c.type !== 'position' && c.type !== 'select' && c.type !== 'dimensions');
+        if (isLogical) setTimeout(() => triggerLogicUpdate(), 0);
+    }, [onNodesChange, triggerLogicUpdate]);
+
+    const onEdgesChangeWrapped = useCallback((changes: EdgeChange[]) => {
+        onEdgesChange(changes);
+        const isLogical = changes.some(c => c.type === 'add' || c.type === 'remove' || c.type === 'replace');
+        if (isLogical) setTimeout(() => triggerLogicUpdate(), 0);
+    }, [onEdgesChange, triggerLogicUpdate]);
+
+    // Context-Aware Connect Refs
+    const connectionStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null } | null>(null);
+    const connectionMadeRef = useRef(false);
+    const connectEndTimestampRef = useRef(0);
+    const interactionLockRef = useRef(false); // Prevents overlapping events (e.g. drop vs click)
+    const [pendingConnection, setPendingConnection] = useState<{ source: string; sourceHandle: string | null } | null>(null);
+
+    // Cycle Detection (Stable - uses getEdges helper)
     const wouldCreateCycle = useCallback(
         (sourceId: string, targetId: string): boolean => {
+            const currentEdges = getEdges();
             const successors = new Map<string, string[]>();
-            edges.forEach((e) => {
+            currentEdges.forEach((e) => {
                 if (!successors.has(e.source)) successors.set(e.source, []);
                 successors.get(e.source)!.push(e.target);
             });
@@ -122,7 +160,7 @@ export function Body() {
             }
             return false;
         },
-        [edges]
+        [getEdges]
     );
 
     // Toast debounce ref to avoid spam
@@ -141,33 +179,32 @@ export function Body() {
 
 
 
-    // Handle new connection
+    // Handle new connection (Stable)
     const onConnect = useCallback(
         (params: Connection) => {
-            // 1. Check for cycle and show toast ONCE on drop
+            connectionMadeRef.current = true;
             if (wouldCreateCycle(params.source!, params.target!)) {
                 toast.error('⚠️ Loop detected! This connection would create a cycle.');
                 return;
             }
 
-            // 2. Auto-replace logic
             setEdges((eds) => {
-                const targetNode = nodes.find((n) => n.id === params.target);
+                const currentNodes = getNodes();
+                const targetNode = currentNodes.find((n) => n.id === params.target);
                 const isOutputNode = targetNode?.type === 'outputNode';
 
                 const filtered = eds.filter(
                     (e) => {
                         const isSameTargetHandle = e.target === params.target && e.targetHandle === params.targetHandle;
-                        // For output nodes, any connection to it replaces the existing one
                         const isOutputNodeConflict = isOutputNode && e.target === params.target;
-
                         return !(isSameTargetHandle || isOutputNodeConflict);
                     }
                 );
                 return addEdge({ ...params, type: 'customEdge' }, filtered);
             });
+            setTimeout(() => triggerLogicUpdate(), 0);
         },
-        [wouldCreateCycle, nodes, setEdges]
+        [wouldCreateCycle, getNodes, setEdges, triggerLogicUpdate]
     );
 
     // Handle edge reconnection (Blender-style: drag from handle to detach and reconnect)
@@ -193,8 +230,9 @@ export function Body() {
 
                 return reconnectEdge(oldEdge, newConnection, conflictingEdgesRemoved);
             });
+            setTimeout(() => triggerLogicUpdate(), 0);
         },
-        [wouldCreateCycle, setEdges]
+        [wouldCreateCycle, setEdges, triggerLogicUpdate]
     );
 
     const edgeReconnectSuccessful = useRef(true);
@@ -208,17 +246,12 @@ export function Body() {
     const onReconnectEnd = useCallback((_: MouseEvent | TouchEvent, edge: Edge) => {
         if (!edgeReconnectSuccessful.current) {
             setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+            setTimeout(() => triggerLogicUpdate(), 0);
         }
         edgeReconnectSuccessful.current = true;
-    }, [setEdges]);
+    }, [setEdges, triggerLogicUpdate]);
 
     // Use store state for evaluation to catch deep data changes from NodeInput
-    const storeNodes = useNodes();
-    const storeEdges = useEdges();
-
-    // --- Brain Integration ---
-    const { thoughts } = useBrain(storeNodes, storeEdges);
-
     // --- Hand Integration ---
     const { memories } = useMemory();
     const { hands } = useHand(memories, setNodes, setEdges);
@@ -231,41 +264,9 @@ export function Body() {
     const { mouth } = useMouth();
 
     // --- React Flow Utils ---
-    const { screenToFlowPosition, fitView, getNodes, getEdges } = useReactFlow();
+    // (Already declared above at top of component)
 
-    // Sync Thoughts back to Nodes
-    useEffect(() => {
-        if (Object.keys(thoughts).length === 0) return;
-
-        setNodes((nds) => nds.map((node) => {
-            const thought = thoughts[node.id];
-
-            // Only update if thought exists and changed (value or error or ast)
-            // AND ensure we overwrite "dehydrated" ASTs (from JSON load) with fresh real ASTs (with methods)
-            const isDehydrated = node.data.ast && typeof (node.data.ast as any).transform !== 'function';
-            const astChanged = JSON.stringify(node.data.ast) !== JSON.stringify(thought.ast);
-
-            if (thought && (
-                node.data.result !== thought.value ||
-                node.data.error !== thought.error ||
-                astChanged ||
-                isDehydrated
-            )) {
-                return {
-                    ...node,
-                    data: {
-                        ...node.data,
-                        result: thought.value,
-                        error: thought.error,
-                        ast: thought.ast
-                    }
-                };
-            }
-            return node;
-        }));
-    }, [thoughts, setNodes]);
-
-    // Add node
+    // --- Hand Integration ---
     const addNode = useCallback(
         (type: string) => {
             const id = nanoid(8);
@@ -498,18 +499,26 @@ export function Body() {
 
 
 
-    // Auto-Save (Savor)
+    // Better Auto-Save (Only savior logicVersion or structural-esque changes)
+    // We avoid resetting the effect on every frame by checking the state outside the dependency array
+    // Or just debouncing the mouth.savor call inside a stable event listener.
+    // For now, let's just use logicVersion to trigger major saves, but nodes/edges for lazy saves.
     useEffect(() => {
+        // We only reset the timeout if nodes/edges refs change, but wait...
+        // Let's use logicVersion as the primary trigger for saving data, 
+        // but for position saving, we use the existing debounce but maybe more aggressively filtered.
         const timeout = setTimeout(() => {
             mouth.savor();
-        }, 1000); // Debounce 1s
+        }, 2000);
         return () => clearTimeout(timeout);
-    }, [nodes, edges, mouth]);
+    }, [logicVersion, mouth]); // Much more stable during drag! Positions will save once dragging stops.
 
     // Auto-Load (Eat) on Mount
     useEffect(() => {
         mouth.eat();
-    }, []); // Run once on mount
+        // Force a calculation cycle immediately after loading to prevent "0" display pop-in
+        triggerLogicUpdate();
+    }, [mouth, triggerLogicUpdate]); // Added dependencies for stability
 
     // Listens for keyboard shortcuts and mouse movements
     useEar({
@@ -522,32 +531,41 @@ export function Body() {
 
     const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
-    // Context-Aware Connect Logic
-    const connectionStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null } | null>(null);
-    const [pendingConnection, setPendingConnection] = useState<{ source: string; sourceHandle: string | null } | null>(null);
-
-
     const onConnectStart = useCallback((_: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
         connectionStartRef.current = params;
+        connectionMadeRef.current = false;
     }, []);
 
+    // NOTE: onConnect is defined above at line 147
+
     const onConnectEnd = useCallback((event: any) => {
-        const targetIsPane = event.target.classList.contains('react-flow__pane');
         const isReconnect = isReconnecting.current;
         const startParams = connectionStartRef.current;
+        const connected = connectionMadeRef.current;
 
-        if (targetIsPane && startParams) {
-            // Check if we are dragging from a Source (Output) or Target (Input)
-            // If Source: We want to create a new node (Open Menu)
-            // If Target: We are disconnecting/deleting an edge (Do NOT Open Menu)
-            if (!isReconnect && startParams.handleType === 'source') {
-                const { clientX, clientY } = event instanceof TouchEvent ? event.touches[0] : event;
-                setMenuPosition({ x: clientX, y: clientY });
+        // Record timestamp to prevent onPaneClick from firing immediately after
+        const now = Date.now();
+        connectEndTimestampRef.current = now;
 
-                setPendingConnection({
-                    source: startParams.nodeId!,
-                    sourceHandle: startParams.handleId
-                });
+        if (startParams && !connected && !isReconnect) {
+            // If dragging from Source: Open Menu to add node
+            // If dragging from Target (Input) and dropping in void: Just cancel (do nothing)
+            // But checking handleType='source' might be strict. Let's rely on the fact that
+            // "Dragging new wire" usually means we want to connect something.
+
+            // Allow menu for Source handles primarily
+            if (startParams.handleType === 'source') {
+                // Ensure we get coordinates correctly
+                const clientX = (event instanceof TouchEvent) ? event.changedTouches[0]?.clientX : event.clientX;
+                const clientY = (event instanceof TouchEvent) ? event.changedTouches[0]?.clientY : event.clientY;
+
+                if (clientX !== undefined && clientY !== undefined) {
+                    setMenuPosition({ x: clientX, y: clientY });
+                    setPendingConnection({
+                        source: startParams.nodeId!,
+                        sourceHandle: startParams.handleId
+                    });
+                }
             } else {
                 setPendingConnection(null);
             }
@@ -557,13 +575,25 @@ export function Body() {
     }, []);
 
     // Right Click Menu
-    const onContextMenu = useCallback((event: React.MouseEvent) => {
+    const onContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
         event.preventDefault();
-        setMenuPosition({ x: event.clientX, y: event.clientY });
+        // Check if clientX exists (MouseEvent)
+        if ('clientX' in event) {
+            setMenuPosition({ x: event.clientX, y: event.clientY });
+        }
     }, []);
 
-    // Helper to add node at menu position
-    const addNodeAtCursor = (type: string) => {
+
+
+    const onPaneClick = useCallback(() => {
+        // Prevent closing menu if we just finished a connection drag (within 300ms)
+        if (Date.now() - connectEndTimestampRef.current < 300) return;
+        setMenuPosition(null);
+        setPendingConnection(null);
+    }, []);
+
+    // Helper to add node at menu position (Stable)
+    const addNodeAtCursor = useCallback((type: string) => {
         if (!menuPosition) return;
 
         const position = screenToFlowPosition({ x: menuPosition.x, y: menuPosition.y });
@@ -580,50 +610,39 @@ export function Body() {
                             : { value: 0 }
         };
 
-        // Auto-connect if pending
-        const newEdgesToAdd: Edge[] = [];
+        // If there was a pending connection, create it!
         if (pendingConnection) {
-            // We need to know which handle of the NEW node to connect TO.
-            // Simplified: Connect to 'a' handle for math nodes, or 'target' for single-input nodes.
-            // Ideally we check node definitions.
-            let targetHandle: string | null = 'a'; // Default for mathNode
-            if (type === 'unaryNode') targetHandle = 'input'; // If unary has specific handle id
-            if (type === 'outputNode') targetHandle = 'input'; // Generic
+            // Heuristic target handle matching standardized IDs
+            let targetHandle = 'inputA';
+            if (type === 'mathNode' || type === 'logicNode' || type === 'compareNode') targetHandle = 'inputA';
+            else if (type === 'unaryNode' || type === 'outputNode' || type === 'solverNode') targetHandle = 'inputA';
 
-            // Check definitions in node components to be precise:
-            // MathNode: 'a', 'b'
-            // UnaryNode: 'input' (implied or 'a'?) Let's check NodeUnary.tsx later. Defaulting to 'a' or null often works if single target.
-            // React Flow edges need accurate matching.
-
-            // Heuristic for now: everything connects to 'inputA' except inputNode (no target)
-            // Updated to match standardized handle IDs
-            if (type === 'mathNode') targetHandle = 'inputA';
-            else if (type === 'unaryNode' || type === 'outputNode' || type === 'solverNode' || type === 'logicNode' || type === 'compareNode') targetHandle = 'inputA';
-            else targetHandle = 'inputA'; // Fallback
-
-            // Note: If connecting to 'inputB' specifically, we'd need more logic, but 'inputA' is safe default.
-
-            newEdgesToAdd.push({
+            setEdges((eds) => addEdge({
                 id: nanoid(6),
                 source: pendingConnection.source,
                 sourceHandle: pendingConnection.sourceHandle,
                 target: id,
                 targetHandle: targetHandle,
-                type: 'customEdge'
-            });
-            setPendingConnection(null);
+                type: 'customEdge',
+            }, eds));
         }
-        setNodes(nds => [...nds, newNode]);
-        if (newEdgesToAdd.length > 0) {
-            setEdges(eds => [...eds, ...newEdgesToAdd]);
-        }
-        setMenuPosition(null);
-    };
 
-    // Auto-Insert Logic
+        setNodes((nds) => nds.concat(newNode));
+        setMenuPosition(null);
+        setPendingConnection(null);
+        triggerLogicUpdate();
+    }, [menuPosition, screenToFlowPosition, pendingConnection, setEdges, setNodes, triggerLogicUpdate]);
+
+    // Auto-Insert Logic (Stable)
     const onNodeDragStop = useCallback((_: any, node: Node) => {
+        // Input Nodes cannot be inserted into wires (they have no inputs)
+        if (node.type === 'inputNode') return;
+
+        const currentNodes = getNodes();
+        const currentEdges = getEdges();
+
         // Find visible edges
-        const candidateEdges = edges.filter(e => e.source !== node.id && e.target !== node.id);
+        const candidateEdges = currentEdges.filter(e => e.source !== node.id && e.target !== node.id);
 
         const w = node.measured?.width || node.width || 150;
         const h = node.measured?.height || node.height || 50;
@@ -633,8 +652,8 @@ export function Body() {
         const threshold = 30; // pixels
 
         for (const edge of candidateEdges) {
-            const sourceNode = nodes.find(n => n.id === edge.source);
-            const targetNode = nodes.find(n => n.id === edge.target);
+            const sourceNode = currentNodes.find(n => n.id === edge.source);
+            const targetNode = currentNodes.find(n => n.id === edge.target);
             if (!sourceNode || !targetNode) continue;
 
             const sx = sourceNode.position.x + (sourceNode.measured?.width || 150) / 2;
@@ -659,8 +678,8 @@ export function Body() {
 
                 // Smart Port Selection & Full Occupancy Check
                 if (node.type === 'mathNode') {
-                    const isInputAOccupied = edges.some(e => e.target === node.id && e.targetHandle === 'inputA');
-                    const isInputBOccupied = edges.some(e => e.target === node.id && e.targetHandle === 'inputB');
+                    const isInputAOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputA');
+                    const isInputBOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputB');
 
                     if (isInputAOccupied) {
                         if (isInputBOccupied) {
@@ -671,7 +690,7 @@ export function Body() {
                     }
                 } else {
                     // For single-input nodes (Unary, Output, Solver), abort if inputA is occupied
-                    const isInputAOccupied = edges.some(e => e.target === node.id && e.targetHandle === 'inputA');
+                    const isInputAOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputA');
                     if (isInputAOccupied) {
                         continue;
                     }
@@ -714,7 +733,7 @@ export function Body() {
                 break; // One insertion at a time
             }
         }
-    }, [nodes, edges, setEdges]);
+    }, [getNodes, getEdges, setEdges]);
 
 
 
@@ -749,7 +768,7 @@ export function Body() {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    const onPaneClick = useCallback(() => setMenuPosition(null), []);
+
 
     return (
         <div
@@ -790,59 +809,72 @@ export function Body() {
             )}
 
 
-
             {/* React Flow */}
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onReconnect={onReconnect}
-                onConnectStart={onConnectStart}
-                onConnectEnd={onConnectEnd}
-                onReconnectStart={onReconnectStart}
-                onReconnectEnd={onReconnectEnd}
-                onNodeDragStop={onNodeDragStop}
-                onPaneClick={onPaneClick}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                defaultEdgeOptions={{ type: 'customEdge' }}
-                isValidConnection={isValidConnection}
-                fitView
-                panOnDrag={[1, 2]} // Middle or Right click to pan
-                panOnScroll={true}
-                selectionOnDrag={true} // Left click to select
-                selectionMode={SelectionMode.Partial}
-                style={{ background: '#18181b' }}
-            >
-                <Background color="#333" gap={20} size={1} />
-                <Controls showInteractive={false} />
-                <Panel position="top-right" className="flex gap-2 p-2 bg-zinc-800/80 backdrop-blur rounded-lg border border-zinc-700 m-4">
-                    <Button variant="ghost" size="icon" onClick={handleSave} className="text-zinc-400 hover:text-green-400 hover:bg-zinc-700" title="Save Session">
-                        <Save className="w-5 h-5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => mouth.spit()} className="text-zinc-400 hover:text-blue-400 hover:bg-zinc-700" title="Export JSON">
-                        <Download className="w-5 h-5" />
-                    </Button>
-                    <div className="w-px h-6 bg-zinc-700 mx-1 self-center" />
-                    <Button variant="ghost" size="icon" onClick={handleGroupSelection} className="text-zinc-400 hover:text-purple-400 hover:bg-zinc-700" title="Group Selected">
-                        <Group className="w-5 h-5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={handleUngroup} className="text-zinc-400 hover:text-pink-400 hover:bg-zinc-700" title="Ungroup">
-                        <Ungroup className="w-5 h-5" />
-                    </Button>
-                    <div className="w-px h-6 bg-zinc-700 mx-1 self-center" />
-                    <Button variant="ghost" size="icon" onClick={() => { mouth.diet(); window.location.reload(); }} className="text-zinc-400 hover:text-red-400 hover:bg-zinc-700" title="Clear & Reset">
-                        <Trash className="w-5 h-5" />
-                    </Button>
-                </Panel>
-                <MiniMap
-                    nodeColor="#888"
-                    maskColor="rgba(0,0,0,0.6)"
-                    className="!bg-zinc-800 !border-zinc-700 rounded-lg"
-                />
-            </ReactFlow>
+            <div className="w-screen h-screen bg-zinc-950 text-white overflow-hidden select-none">
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChangeWrapped}
+                    onEdgesChange={onEdgesChangeWrapped}
+                    onConnect={onConnect}
+                    onConnectStart={onConnectStart}
+                    onConnectEnd={onConnectEnd}
+                    onReconnect={onReconnect}
+                    onReconnectStart={onReconnectStart}
+                    onReconnectEnd={onReconnectEnd}
+                    nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
+                    fitView
+                    className="bg-zinc-950"
+                    minZoom={0.1}
+                    maxZoom={4}
+                    defaultEdgeOptions={defaultEdgeOptions}
+                    onPaneContextMenu={onContextMenu}
+                    onPaneClick={onPaneClick}
+                >
+                    <Background color="#222" gap={20} />
+                    <Controls className="bg-zinc-900 border-zinc-800 text-zinc-400" />
+                    <MiniMap
+                        className="bg-zinc-900 border-zinc-800"
+                        nodeColor={nodeColor}
+                    />
+
+                    {/* Top Panel */}
+                    <Panel position="top-right" className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={toggleDisplayMode}
+                            className="gap-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-zinc-300"
+                        >
+                            {displayMode === 'value' ? <Hash className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
+                            {displayMode === 'value' ? 'Values' : 'Formulas'}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={handleSave} className="text-zinc-400 hover:text-green-400 hover:bg-zinc-700" title="Save Session">
+                            <Save className="w-5 h-5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => mouth.spit()} className="text-zinc-400 hover:text-blue-400 hover:bg-zinc-700" title="Export JSON">
+                            <Download className="w-5 h-5" />
+                        </Button>
+                        <div className="w-px h-6 bg-zinc-700 mx-1 self-center" />
+                        <Button variant="ghost" size="icon" onClick={handleGroupSelection} className="text-zinc-400 hover:text-purple-400 hover:bg-zinc-700" title="Group Selected">
+                            <Group className="w-5 h-5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={handleUngroup} className="text-zinc-400 hover:text-pink-400 hover:bg-zinc-700" title="Ungroup">
+                            <Ungroup className="w-5 h-5" />
+                        </Button>
+                        <div className="w-px h-6 bg-zinc-700 mx-1 self-center" />
+                        <Button variant="ghost" size="icon" onClick={() => { mouth.diet(); window.location.reload(); }} className="text-zinc-400 hover:text-red-400 hover:bg-zinc-700" title="Clear & Reset">
+                            <Trash className="w-5 h-5" />
+                        </Button>
+                    </Panel>
+                    <MiniMap
+                        nodeColor="#888"
+                        maskColor="rgba(0,0,0,0.6)"
+                        className="!bg-zinc-800 !border-zinc-700 rounded-lg"
+                    />
+                </ReactFlow>
+            </div>
         </div>
     );
 }

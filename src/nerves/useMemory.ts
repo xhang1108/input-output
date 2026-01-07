@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { type Node, type Edge, useReactFlow } from '@xyflow/react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/store/useAppStore';
 
 interface HistorySnapshot {
     nodes: Node[];
@@ -9,6 +10,7 @@ interface HistorySnapshot {
 
 export const useMemory = () => {
     const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
+    const { triggerLogicUpdate } = useAppStore();
 
     const [past, setPast] = useState<HistorySnapshot[]>([]);
     const [future, setFuture] = useState<HistorySnapshot[]>([]);
@@ -53,12 +55,13 @@ export const useMemory = () => {
             // Restore
             setNodes(snapshotToRestore.nodes);
             setEdges(snapshotToRestore.edges);
+            triggerLogicUpdate();
 
             toast.success('Undid last action');
 
             return newPast;
         });
-    }, [getNodes, getEdges, setNodes, setEdges]);
+    }, [getNodes, getEdges, setNodes, setEdges, triggerLogicUpdate]);
 
     const redo = useCallback(() => {
         setFuture(prevFuture => {
@@ -83,20 +86,21 @@ export const useMemory = () => {
             // Restore
             setNodes(snapshotToRestore.nodes);
             setEdges(snapshotToRestore.edges);
+            triggerLogicUpdate();
 
             toast.success('Redid action');
 
             return newFuture;
         });
-    }, [getNodes, getEdges, setNodes, setEdges]);
+    }, [getNodes, getEdges, setNodes, setEdges, triggerLogicUpdate]);
 
-    const memories = {
+    const memories = useMemo(() => ({
         remember,
         undo,
         redo,
         canUndo: past.length > 0,
         canRedo: future.length > 0
-    };
+    }), [remember, undo, redo, past.length, future.length]);
 
     return {
         memories
