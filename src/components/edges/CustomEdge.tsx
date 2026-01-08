@@ -2,60 +2,83 @@
 
 import {
     BaseEdge,
-    getBezierPath,
+    getSmoothStepPath,
     useReactFlow,
+    useStore,
+    Position,
     type EdgeProps,
+    type ReactFlowState,
 } from '@xyflow/react';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
+import { useAppStore } from '@/store/useAppStore';
 
-export const CustomEdge = memo(({
-    id,
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    style = {},
-    markerEnd,
-    source,
-    target,
-}: EdgeProps) => {
+export const CustomEdge = memo((props: EdgeProps) => {
+    const {
+        id,
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+        sourcePosition,
+        targetPosition,
+        style = {},
+        markerEnd,
+        source,
+        target,
+        sourceHandleId,
+        targetHandleId,
+        data,
+    } = props as any;
+
+    // Efficiently select only the target node's data and type
+    const targetNodeData = useStore(useCallback((s: ReactFlowState) => {
+        const node = s.nodeLookup.get(target);
+        return node ? { muted: node.data.muted, type: node.type } : null;
+    }, [target]));
+
     const { getNode } = useReactFlow();
 
     // 1. Calculate Path
-    const [edgePath] = getBezierPath({
+    const [edgePath] = getSmoothStepPath({
         sourceX,
         sourceY,
         sourcePosition,
         targetX,
         targetY,
         targetPosition,
+        borderRadius: 20, // Add some nice rounding
     });
 
     // 3. Determine Flow Type (Formula vs Value)
-    // Optimization: Removed dynamic node lookup during drag to improve performance.
-    // The previous `getNode(source)` call on every frame was causing significant lag.
-    // TODO: Pass 'isFormula' via edge.data from Body.tsx if needed.
-    const isFormula = false;
+    const { displayMode } = useAppStore();
+    const isFormula = !!(data as any)?.isFormula;
+    const showFormulaStyle = isFormula && displayMode === 'formula';
 
-    /*
-    const sourceNode = getNode(source);
-    const isFormula = useMemo(() => {
-        if (!sourceNode) return false;
-        const data = sourceNode.data as { rawExpression?: string, value?: number };
-        const expr = data.rawExpression || '';
-        return /[a-df-z]/i.test(expr) || expr.length > 5;
-    }, [sourceNode]);
-    */
+    // 3.1 Mute Logic: Dim edges that are NOT the pass-through on a muted node
+    const isTargetMuted = !!targetNodeData?.muted;
+    const targetNodeType = targetNodeData?.type;
+
+    // Define primary pass-through handles (must match Brain.ts)
+    const primaryHandles: Record<string, string> = {
+        'mathNode': 'inputA',
+        'unaryNode': 'inputA',
+        'logicNode': 'inputA',
+        'compareNode': 'inputA',
+        'switchNode': 'ifFalse',
+        'outputNode': 'inputA',
+        'solverNode': 'inputA',
+    };
+
+    // Correctly identify if this edge is connected to a non-primary handle on a muted node
+    const isIgnored = isTargetMuted && targetHandleId !== primaryHandles[targetNodeType || ''];
 
     // 4. Dynamic Styles
     const edgeStyle = {
         ...style,
-        stroke: isFormula ? '#a855f7' : '#71717a', // Purple for formula, Zinc for value
-        strokeWidth: isFormula ? 3 : 2,
-        strokeDasharray: isFormula ? '5 5' : undefined,
-        // Animation is handled by class
+        stroke: isIgnored ? '#d4d4d8' : (showFormulaStyle ? '#a855f7' : '#71717a'), // Dimmed if ignored
+        strokeWidth: showFormulaStyle ? 3 : 2,
+        strokeDasharray: (showFormulaStyle && !isIgnored) ? '5 5' : undefined,
+        opacity: isIgnored ? 0.3 : 1,
     };
 
     return (
@@ -63,7 +86,7 @@ export const CustomEdge = memo(({
             path={edgePath}
             markerEnd={markerEnd}
             style={edgeStyle}
-            className={isFormula ? "animate-pulse" : ""}
+            className={(showFormulaStyle && !isIgnored) ? "animate-pulse" : ""}
         />
     );
 });

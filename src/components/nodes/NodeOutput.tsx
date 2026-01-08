@@ -30,7 +30,7 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
     // --- Hybrid Pull Architecture Integration ---
     const { getNodes, getEdges } = useReactFlow();
     const { logicVersion } = useAppStore();
-    const [pullResult, setPullResult] = useState<{ val: string; formula: string } | null>(null);
+    const [pullResult, setPullResult] = useState<{ val: string; formula: string; display: string } | null>(null);
 
     useEffect(() => {
         const calculate = () => {
@@ -59,7 +59,7 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
                 // 2. Evaluate
                 // If the formula is just '0' (fallback) don't run mathjs
                 if (payload.formula === '0' && Object.keys(payload.scope).length === 0) {
-                    setPullResult({ val: '0', formula: '0' });
+                    setPullResult({ val: '0', formula: '0', display: '0' });
                     return;
                 }
 
@@ -77,7 +77,8 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
 
                 setPullResult({
                     val: displayVal,
-                    formula: payload.formula // Keeping internal formula for potential debug
+                    formula: payload.formula,
+                    display: payload.display
                 });
 
             } catch (e: any) {
@@ -85,9 +86,9 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
                 console.error("Payload was:", payload); // Debugging info
                 // Handle Cycle Error specifically?
                 if (e.message && e.message.includes("Cycle")) {
-                    setPullResult({ val: "Loop", formula: "Cycle Detected" });
+                    setPullResult({ val: "Loop", formula: "Cycle Detected", display: "Cycle" });
                 } else {
-                    setPullResult({ val: "Error", formula: "Calculation Error" });
+                    setPullResult({ val: "Error", formula: "Calculation Error", display: "Error" });
                 }
             }
         };
@@ -120,57 +121,18 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
         // User Requirement: "Outside always answer" (Big Text = Value)
         displayValue = pullResult.val;
 
-        // User Requirement: "Change content inside small box"
-        // NUM Mode (isSymbolic=false): Show Human Readable Formula (Labels) e.g. "(Rent + Tax)"
-        // SYM Mode (isSymbolic=true): Show System Raw Formula (IDs) e.g. "(var_a + var_b)" ?? 
-        // OR maybe the user means:
-        // NUM: Show "Result" or simple label?
-        // SYM: Show the Formula?
-
-        // Let's try: 
-        // NUM = Human Labels Formula (Easier to read)
-        // SYM = Raw ID Formula (Debug / Precise) - wait, pullResult doesn't have raw ID formula easily available here unless we passed it.
-        // Actually Brain.ts returns { formula: safeId, display: label }.
-        // But we computed pullResult.formula = payload.display.
-
-        // Let's modify setPullResult to store both.
-        // But for now, let's just Stick to:
         // Toggle changes Small Box:
-        // If SYM: Show Formula
-        // If NUM: Show NOTHING (Clean)? 
-
-        // Re-reading user: "should only change the content inside the small box" implies it DOES show something different.
-        // Let's try:
-        // NUM: Human Readable Formula
-        // SYM: The same formula?? Then toggle does nothing?
-
-        // Wait, look at the screen shot 2 (Step 532).
-        // It shows "SYM" badge. Big Text is Formula. User complained "Outside should be answer".
-
-        // Let's implement this:
-        // Big Text: ALWAYS Value.
-        // Small Box: Value vs Formula? No that's redundant.
-
-        // Let's assuming "SYM" means "Show Me The Math". "NUM" means "Clean Result".
-        // NUM: Small Box = HIDDEN or Static Label "Result".
-        // SYM: Small Box = The Formula.
-
-        // Updated Logic:
-        // Big Text: val
-        // Small Box: isSymbolic ? formula : (maybe nothing or simplified label)
-
-        if (isSymbolic) {
-            formula = pullResult.formula;
-        } else {
-            // In NUM mode, show the human-readable formula
-            formula = pullResult.formula; // We can refine this later if needed
-        }
+        // If SYM (isSymbolic=true): Show raw formula (IDs)
+        // If NUM (isSymbolic=false): Show display formula (Labels)
+        formula = isSymbolic ? pullResult.formula : pullResult.display;
     }
+
+    const isMuted = !!data.muted;
 
     return (
         <NodeShell
             selected={selected}
-            className="bg-white border-2 border-green-500 rounded-xl p-4 shadow-[0_0_15px_rgba(34,197,94,0.3)] min-w-[200px] hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:border-green-400 relative"
+            className={`bg-white border-2 border-green-500 rounded-xl p-4 shadow-[0_0_15px_rgba(34,197,94,0.3)] min-w-[200px] hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:border-green-400 relative transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <TargetHandle
                 nodeId={id}

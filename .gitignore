@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 # study
 study/
+
+# agent
+.agent
+
+# mcp
+.mcp.json

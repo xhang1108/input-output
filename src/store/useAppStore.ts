@@ -1,5 +1,6 @@
 
 import { create } from 'zustand';
+import { clearCache } from '@/engine/Brain';
 
 interface AppState {
     displayMode: 'value' | 'formula';
@@ -17,5 +18,8 @@ export const useAppStore = create<AppState>((set) => ({
     })),
     setDisplayMode: (mode) => set({ displayMode: mode }),
     logicVersion: 0,
-    triggerLogicUpdate: () => set((state) => ({ logicVersion: state.logicVersion + 1 })),
+    triggerLogicUpdate: () => {
+        clearCache();
+        set((state) => ({ logicVersion: state.logicVersion + 1 }));
+    },
 }));

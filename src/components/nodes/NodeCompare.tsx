@@ -1,10 +1,12 @@
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { NodeShell } from './NodeShell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
 import { useAppStore } from '@/store/useAppStore';
 import { pullValue } from '@/engine/Brain';
+import { useMuteLine, MuteLine } from './MuteVisual';
 
 const operations = [
     { value: 'gt', label: '>' },
@@ -14,13 +16,22 @@ const operations = [
     { value: 'gte', label: '≥' },
     { value: 'lte', label: '≤' },
 ];
+interface NodeCompareProps {
+    id: string;
+    data: { operation?: string; result?: number; error?: string; muted?: boolean };
+}
 
-export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
+export const NodeCompare = memo(({ id, data, selected, isConnectable }: NodeCompareProps & { selected?: boolean; isConnectable?: boolean }) => {
     const { updateNodeData, getNodes, getEdges } = useReactFlow();
     const { triggerLogicUpdate, logicVersion } = useAppStore();
     const operation = (data.operation as string) || 'eq';
     const [result, setResult] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const isMuted = !!data.muted;
+
+    // Use shared mute line logic
+    const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [operation, selected]);
 
     // Unified Pull Logic for Preview
     useEffect(() => {
@@ -41,7 +52,11 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
     const isError = !!error;
 
     return (
-        <div className="bg-white border-2 border-teal-500 rounded-xl shadow-lg min-w-[140px] hover:border-teal-400">
+        <NodeShell
+            ref={containerRef}
+            selected={selected}
+            className={`bg-white border-2 border-teal-500 rounded-xl shadow-lg min-w-[140px] hover:border-teal-400 transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
+        >
             {/* Header */}
             <div className="bg-teal-50 px-4 py-2 border-b border-teal-100 flex items-center justify-between rounded-t-[10px]">
                 <div className="text-teal-600 font-bold text-xs uppercase tracking-wider">COMPARE</div>
@@ -59,11 +74,13 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between relative h-5">
                         <TargetHandle
+                            ref={inputARef}
                             nodeId={id}
                             position={Position.Left}
                             id="inputA"
                             isConnectable={isConnectable}
                             className="!-left-[17px]"
+                            style={{ top: '50%' }}
                         />
                         <span className="text-zinc-600 text-xs ml-2 font-bold">A</span>
                     </div>
@@ -75,6 +92,7 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
                             id="inputB"
                             isConnectable={isConnectable}
                             className="!-left-[17px]"
+                            style={{ top: '50%' }}
                         />
                         <span className="text-zinc-600 text-xs ml-2 font-bold">B</span>
                     </div>
@@ -103,6 +121,8 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
                 </div>
             </div>
 
+
+
             {/* Output */}
             <div className="bg-zinc-50 p-2 flex items-center justify-end relative h-8 rounded-b-[10px] border-t border-zinc-100">
                 <span className={`font-mono text-lg mr-2 font-bold transition-colors duration-300 ${isTrue ? 'text-green-600' : 'text-zinc-400'
@@ -110,6 +130,7 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
                     {isTrue ? 'TRUE' : isFalse ? 'FALSE' : '-'}
                 </span>
                 <SourceHandle
+                    ref={outputRef}
                     position={Position.Right}
                     id="output"
                     isConnectable={isConnectable}
@@ -124,7 +145,10 @@ export const NodeCompare = memo(({ id, data, isConnectable }: NodeProps) => {
                     {error}
                 </div>
             )}
-        </div>
+
+            {/* Muted Pass-through Visual */}
+            <MuteLine coords={lineCoords} color="#14b8a6" />
+        </NodeShell>
     );
 }, (prev, next) => (
     prev.id === next.id &&

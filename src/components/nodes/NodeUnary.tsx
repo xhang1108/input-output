@@ -14,10 +14,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useAppStore } from '@/store/useAppStore';
+import { useMuteLine, MuteLine } from './MuteVisual';
 
 interface NodeUnaryProps {
     id: string;
-    data: { operation?: string; result?: number; error?: string };
+    data: { operation?: string; result?: number; error?: string; muted?: boolean };
 }
 
 const operations = [
@@ -36,6 +37,9 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
     const [op, setOp] = useState(data.operation || 'sqrt');
     const [result, setResult] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const isMuted = !!data.muted;
+    const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [op, selected]);
 
     // Unified Pull Logic for Preview
     useEffect(() => {
@@ -58,8 +62,9 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
 
     return (
         <NodeShell
+            ref={containerRef}
             selected={selected}
-            className="bg-zinc-200 border-2 border-purple-500 rounded-lg p-3 shadow-md min-w-[120px]"
+            className={`bg-zinc-200 border-2 border-purple-500 rounded-lg p-3 shadow-md min-w-[120px] transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <div className="text-xs text-purple-500 mb-2 font-bold uppercase tracking-wider">
                 Trig / Math
@@ -99,14 +104,19 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
             </div>
 
             <TargetHandle
+                ref={inputARef}
                 nodeId={id}
                 position={Position.Left}
                 id="inputA"
             />
             <SourceHandle
+                ref={outputRef}
                 position={Position.Right}
                 color="purple"
             />
+
+            {/* Muted Pass-through Visual */}
+            <MuteLine coords={lineCoords} color="#a855f7" />
         </NodeShell>
     );
 }, (prev, next) => (

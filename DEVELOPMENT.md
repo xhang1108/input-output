@@ -15,6 +15,22 @@ The Body and Brain communicate via specialized hooks. **Crucial:** All these hoo
 -   **`useMemory` (Hippocampus):** Provides short-term memory (Undo/Redo) capabilities.
 -   **`useMouth` (Communication Nerve):** Handles long-term persistence (Auto-save) and file IO.
 
+### 2. The Biological Protocol (Nerve Decoupling Rules)
+To prevent "Refactor Hell" and ensure the project remains maintainable (unlike the legacy Svelte version), all Nerves must follow these strict boundary rules:
+
+1.  **Sensory vs. Motor Separation:**
+    *   **Sensory Nerves (`useEar`, `useEye`)** only **Listen**. They should contain zero logic for *how* to change data. They capture intent (e.g., "G key pressed") and delegation (e.g., `hands.grab()`).
+    *   **Motor Nerves (`useHand`)** only **Act**. They should never contain `addEventListener`. They provide methods for others to call.
+2.  **No Direct Cross-Talk:** Nerves should not call each other directly inside their internal logic if possible. They should be coordinated by the **Body** (`Body.tsx`) or via passed references.
+3.  **The "Reflex" Rule (Alerts):**
+    *   Nerves are allowed to trigger "Reflexes" (Toasts/Notifications) using `sonner`.
+    *   **Motor Reflexes:** `useHand` toasts when an action completes (e.g., "Pasted").
+    *   **Sensory Warnings:** `Body.tsx` toasts when it detects a structural violation (e.g., "Loop detected").
+4.  **No Domain Leakage:**
+    *   `useHand` should not know about DOM IDs or CSS classes.
+    *   `useEar` should not know about MathJS or Bounding Boxes.
+    *   `useEye` should not know about Node Data.
+
 ### 2. The Cycle of Reactivity (V3: Decoupled)
 1.  **Visual Change (Drag/Select):** Handled entirely by React Flow and local state. No calculation is triggered.
 2.  **Logical Change (Type/Connect):** Any data-altering action calls `triggerLogicUpdate()`.
@@ -59,19 +75,30 @@ All user-defined variables are prefixed with `v_` (e.g., `x` becomes `v_x`) befo
 **The Fix:**
 All nervous system hooks use `useMemo` for their return objects to ensure referential stability.
 
+### 5. Physical Auto-Insertion (The "Snap" Effect)
+**Problem:** Manually reconnecting wires when adding a node is tedious.
+**The Fix (`Body.tsx`):**
+When a node is dropped, we calculate the distance to all existing edges using `distanceToSegment`. If the node is within a short threshold (30px), we automatically:
+1. Split the edge.
+2. Link the Source to the new Node's input.
+3. Link the new Node's output to the original Target.
+**Safety**: This ignores `InputNodes` and respects port occupancy (won't connect if the port is already full).
+
+### 6. The Knife Tool (Visual Severing)
+**Problem:** Deleting multiple wires manually is slow.
+**The Fix (`useEye.ts` + `useHand.ts`):**
+Using `Ctrl + Right Click Drag`, the user creates a path. `useEye` performs a collision check between this path and all edges. Any intersected edges are passed to `useHand.sever()`, which removes them from the graph in a single atomic operation.
+
+### 7. Logical Bypass (Mute Lines)
+**Problem:** Muting a node should pass the input directly to the output without processing.
+**The Fix (`Brain.ts` + `CustomEdge.tsx`):**
+- **Logic**: `Brain.ts` detects the `muted` flag. If true, it recursively calls `pullValue` on a predefined "Bypass Handle" (e.g., `inputA`) and returns that value directly.
+- **Visual**: `CustomEdge.tsx` detects if the source node is muted. If so, it renders a specialized "Bypass Line" (Purple dashed) that visually bypasses the node's shell to indicate the flow of data is jumping through.
+
 ---
 
-## 🏛️ Architecture Snapshot (Updates)
-
-### 1. High-Level Stack
--   **Framework:** Next.js 16 (App Router)
--   **UI Library:** React 19
--   **State Management:** Zustand (`useAppStore.ts`) for global signals.
--   **Graph Engine:** `@xyflow/react` (React Flow 12)
--   **Math Engine:** `mathjs`
-
-### 2. Key Directories
--   `src/nerves/`: Stabilized hooks for logic-to-UI communication.
+## 🏛️ Structural Blueprint
+(Structure moved to [PROJECT_STRUCTURE.md](file:///d:/Antigravity/Calctopus/PROJECT_STRUCTURE.md))
 
 ---
 
@@ -95,4 +122,9 @@ As of Jan 2026, Calctopus intentionally maintains certain architectural debts to
 
 ### 4. Visual Scalability (Spaghetti UX)
 **Constraint:** Complex graphs with 50+ nodes lead to cognitive overload.
-- **The Strategy:** High-level grouping (Sub-graphs) and "Defined Variabled Naming" for intermediate Math nodes are the next strategic milestones to prevent "Visual Spaghetti."
+- **The Strategy:** High-level grouping (Sub-graphs) and "Defined Variable Naming" for intermediate Math nodes are the next strategic milestones to prevent "Visual Spaghetti."
+
+### 5. Mute System Sync (The "Double Map" Debt)
+**Constraint:** Mute bypass logic is currently duplicated between the engine and the UI.
+- **The Debt**: Both `Brain.ts` and `CustomEdge.tsx` maintain a manual mapping of "Primary Bypass Handles". Adding a new node type requires updating both files.
+- **Risk**: A desync could show a visual bypass line while the engine still processes logic (or vice versa).

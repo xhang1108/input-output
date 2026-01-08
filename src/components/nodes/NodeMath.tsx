@@ -1,7 +1,7 @@
 'use client';
 
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { useState, memo, useEffect } from 'react';
+import { useState, memo, useEffect, useRef } from 'react';
 import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
@@ -14,10 +14,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useAppStore } from '@/store/useAppStore';
+import { useMuteLine, MuteLine } from './MuteVisual';
 
 interface NodeMathProps {
     id: string;
-    data: { operation?: string; result?: number; error?: string };
+    data: { operation?: string; result?: number; error?: string; muted?: boolean };
 }
 
 const operations = [
@@ -35,6 +36,11 @@ export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected
     const [op, setOp] = useState(data.operation || 'add');
     const [result, setResult] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const isMuted = !!data.muted;
+
+    // Use shared mute line logic
+    const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [op, selected]);
 
     // Unified Pull Logic for Preview
     useEffect(() => {
@@ -59,10 +65,12 @@ export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected
 
     return (
         <NodeShell
+            ref={containerRef}
             selected={selected}
-            className="bg-white border-2 border-orange-400 rounded-full w-[80px] h-[80px] shadow-lg flex flex-col items-center justify-center relative hover:border-orange-500"
+            className={`bg-white border-2 border-orange-400 rounded-full w-[80px] h-[80px] shadow-lg flex flex-col items-center justify-center relative hover:border-orange-500 transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <TargetHandle
+                ref={inputARef}
                 nodeId={id}
                 position={Position.Left}
                 id="inputA"
@@ -107,10 +115,16 @@ export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected
                 </span>
             )}
 
+
+
             <SourceHandle
+                ref={outputRef}
                 position={Position.Right}
                 color="orange"
             />
+
+            {/* Muted Pass-through Visual */}
+            <MuteLine coords={lineCoords} color="#f97316" opacity={0.8} />
         </NodeShell>
     );
 }, (prev, next) => (

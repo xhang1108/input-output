@@ -20,6 +20,7 @@ import {
     useEdges,
     type NodeChange,
     type EdgeChange,
+    SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -29,10 +30,14 @@ import { nanoid } from 'nanoid';
 import { useHand } from '../nerves/useHand';
 import { useEar } from '../nerves/useEar';
 import { useEye } from '../nerves/useEye';
+import { useLayout } from '../nerves/useLayout';
 import { useMemory } from '../nerves/useMemory';
 import { useMouth } from '../nerves/useMouth';
 import { Skin } from './Skin';
-import { Plus, Calculator, Hash, Monitor, Sigma, Save, Download, Trash } from 'lucide-react';
+import {
+    Plus, Calculator, Variable, Sigma, Monitor, Save, Download,
+    Trash, Hash, Scale, ToggleRight, Group, Ungroup, LayoutTemplate
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
@@ -43,9 +48,10 @@ import { NodeLogic } from './nodes/NodeLogic';
 import { NodeCompare } from './nodes/NodeCompare';
 import { NodeOutput } from './nodes/NodeOutput';
 import { NodeSolver } from './nodes/NodeSolver';
+import { NodeSwitch } from './nodes/NodeSwitch';
 import { NodeGroup } from './nodes/NodeGroup';
 import { CustomEdge } from './edges/CustomEdge';
-import { Group, Layers, Ungroup, ToggleRight, Scale } from 'lucide-react';
+import { KnifeVisual } from './tools/KnifeVisual';
 import { useAppStore } from '@/store/useAppStore';
 
 const nodeTypes: NodeTypes = {
@@ -56,6 +62,7 @@ const nodeTypes: NodeTypes = {
     compareNode: NodeCompare,
     outputNode: NodeOutput,
     solverNode: NodeSolver,
+    switchNode: NodeSwitch,
     groupNode: NodeGroup,
 };
 
@@ -138,30 +145,14 @@ export function Body() {
     const interactionLockRef = useRef(false); // Prevents overlapping events (e.g. drop vs click)
     const [pendingConnection, setPendingConnection] = useState<{ source: string; sourceHandle: string | null } | null>(null);
 
-    // Cycle Detection (Stable - uses getEdges helper)
-    const wouldCreateCycle = useCallback(
-        (sourceId: string, targetId: string): boolean => {
-            const currentEdges = getEdges();
-            const successors = new Map<string, string[]>();
-            currentEdges.forEach((e) => {
-                if (!successors.has(e.source)) successors.set(e.source, []);
-                successors.get(e.source)!.push(e.target);
-            });
+    // --- Organ Integration (Moved to top for scope visibility) ---
+    const { memories } = useMemory();
+    const { hands } = useHand(memories, setNodes, setEdges);
+    const { eyes } = useEye();
+    const { layoutGraph } = useLayout(memories);
 
-            const visited = new Set<string>();
-            const stack = [targetId];
-            while (stack.length > 0) {
-                const nodeId = stack.pop()!;
-                if (nodeId === sourceId) return true;
-                if (visited.has(nodeId)) continue;
-                visited.add(nodeId);
-                const succs = successors.get(nodeId) || [];
-                stack.push(...succs);
-            }
-            return false;
-        },
-        [getEdges]
-    );
+
+
 
     // Toast debounce ref to avoid spam
     const lastToastTimeRef = useRef(0);
@@ -183,7 +174,7 @@ export function Body() {
     const onConnect = useCallback(
         (params: Connection) => {
             connectionMadeRef.current = true;
-            if (wouldCreateCycle(params.source!, params.target!)) {
+            if (eyes.detectCycle(params.source!, params.target!)) {
                 toast.error('⚠️ Loop detected! This connection would create a cycle.');
                 return;
             }
@@ -191,7 +182,10 @@ export function Body() {
             setEdges((eds) => {
                 const currentNodes = getNodes();
                 const targetNode = currentNodes.find((n) => n.id === params.target);
+                const sourceNode = currentNodes.find((n) => n.id === params.source);
+
                 const isOutputNode = targetNode?.type === 'outputNode';
+                const isFormula = sourceNode?.type !== 'inputNode';
 
                 const filtered = eds.filter(
                     (e) => {
@@ -200,11 +194,11 @@ export function Body() {
                         return !(isSameTargetHandle || isOutputNodeConflict);
                     }
                 );
-                return addEdge({ ...params, type: 'customEdge' }, filtered);
+                return addEdge({ ...params, type: 'customEdge', data: { isFormula } }, filtered);
             });
             setTimeout(() => triggerLogicUpdate(), 0);
         },
-        [wouldCreateCycle, getNodes, setEdges, triggerLogicUpdate]
+        [eyes, getNodes, setEdges, triggerLogicUpdate]
     );
 
     // Handle edge reconnection (Blender-style: drag from handle to detach and reconnect)
@@ -212,13 +206,17 @@ export function Body() {
         (oldEdge: Edge, newConnection: Connection) => {
             edgeReconnectSuccessful.current = true;
             // Check for cycle with the new connection
-            if (wouldCreateCycle(newConnection.source!, newConnection.target!)) {
+            if (eyes.detectCycle(newConnection.source!, newConnection.target!)) {
                 toast.error('⚠️ Loop detected! This reconnection would create a cycle.');
                 return;
             }
 
             // Enforce "one edge per input handle" during reconnection
             setEdges((eds) => {
+                const currentNodes = getNodes();
+                const sourceNode = currentNodes.find(n => n.id === newConnection.source);
+                const isFormula = sourceNode?.type !== 'inputNode';
+
                 // Remove any *other* edge that is already connected to the *new* target handle
                 // (We don't remove oldEdge here; reconnectEdge handles that update)
                 const conflictingEdgesRemoved = eds.filter(e => {
@@ -228,11 +226,11 @@ export function Body() {
                     return !isConflicting || isOldEdge;
                 });
 
-                return reconnectEdge(oldEdge, newConnection, conflictingEdgesRemoved);
+                return reconnectEdge(oldEdge, { ...newConnection, data: { isFormula } } as any, conflictingEdgesRemoved);
             });
             setTimeout(() => triggerLogicUpdate(), 0);
         },
-        [wouldCreateCycle, setEdges, triggerLogicUpdate]
+        [eyes, getNodes, setEdges, triggerLogicUpdate]
     );
 
     const edgeReconnectSuccessful = useRef(true);
@@ -251,19 +249,29 @@ export function Body() {
         edgeReconnectSuccessful.current = true;
     }, [setEdges, triggerLogicUpdate]);
 
-    // Use store state for evaluation to catch deep data changes from NodeInput
-    // --- Hand Integration ---
-    const { memories } = useMemory();
-    const { hands } = useHand(memories, setNodes, setEdges);
 
-
-    // --- Eye Integration ---
-    const { eyes } = useEye();
 
     // --- Mouth Integration ---
     const { mouth } = useMouth();
 
-    // --- React Flow Utils ---
+    // --- Knife Tool Logic (Ctrl + Right Drag) ---
+    const [knifePath, setKnifePath] = useState<{ x: number, y: number }[]>([]);
+    const [isCutting, setIsCutting] = useState(false);
+
+    const handsWithLayout = useMemo(() => ({
+        ...hands,
+        layoutGraph
+    }), [hands, layoutGraph]);
+
+    const { keys } = useEar({
+        hands: handsWithLayout,
+        eyes,
+        memories,
+        onOpenMenu: (pos) => setMenuPosition(pos),
+    });
+
+    // (Moved Handlers to below to fix scope scope ordering)
+
     // (Already declared above at top of component)
 
     // --- Hand Integration ---
@@ -521,13 +529,14 @@ export function Body() {
     }, [mouth, triggerLogicUpdate]); // Added dependencies for stability
 
     // Listens for keyboard shortcuts and mouse movements
-    useEar({
+    // useEar is now called above to get keys!
+    // Removing duplicate call.
+    /* useEar({
         hands,
         eyes,
         memories,
-        setNodes,
         onOpenMenu: (pos) => setMenuPosition(pos),
-    });
+    }); */
 
     const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
@@ -577,22 +586,75 @@ export function Body() {
     // Right Click Menu
     const onContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
         event.preventDefault();
+
+        // Disable Menu if Ctrl is held (Cutting Mode)
+        if (keys.ctrl || isCutting) return;
+
         // Check if clientX exists (MouseEvent)
         if ('clientX' in event) {
             setMenuPosition({ x: event.clientX, y: event.clientY });
         }
-    }, []);
+    }, [keys.ctrl, isCutting]);
 
 
 
-    const onPaneClick = useCallback(() => {
-        // Prevent closing menu if we just finished a connection drag (within 300ms)
-        if (Date.now() - connectEndTimestampRef.current < 300) return;
-        setMenuPosition(null);
-        setPendingConnection(null);
-    }, []);
+    // Global Click Outside & Esc Listener
+    const menuRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!menuPosition) return;
+
+        const closeMenu = () => {
+            setMenuPosition(null);
+            setPendingConnection(null);
+        };
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as unknown as HTMLElement)) {
+                closeMenu();
+            }
+        };
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeMenu();
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [menuPosition]);
 
     // Helper to add node at menu position (Stable)
+    const handleWrapperMouseDown = useCallback((e: React.MouseEvent) => {
+        // Init Knife: Ctrl + Right Click (button 2)
+        if (keys.ctrl && e.button === 2) {
+            setIsCutting(true);
+            setKnifePath([{ x: e.clientX, y: e.clientY }]);
+        }
+    }, [keys.ctrl]);
+
+    const handleWrapperMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!isCutting) return;
+        setKnifePath(prev => [...prev, { x: e.clientX, y: e.clientY }]);
+    }, [isCutting]);
+
+    const handleWrapperMouseUp = useCallback((e: React.MouseEvent) => {
+        if (!isCutting) return;
+        if (knifePath.length > 1) {
+            const flowPath = knifePath.map(p => screenToFlowPosition(p));
+
+            // Atomic Sequence: Perception (Eye) -> Action (Hand)
+            const victims = eyes.seeCuts(flowPath);
+            if (victims.length > 0) {
+                hands.sever(victims);
+            }
+        }
+        setIsCutting(false);
+        setKnifePath([]);
+    }, [isCutting, knifePath, hands, eyes, screenToFlowPosition]);
+
     const addNodeAtCursor = useCallback((type: string) => {
         if (!menuPosition) return;
 
@@ -614,8 +676,11 @@ export function Body() {
         if (pendingConnection) {
             // Heuristic target handle matching standardized IDs
             let targetHandle = 'inputA';
-            if (type === 'mathNode' || type === 'logicNode' || type === 'compareNode') targetHandle = 'inputA';
+            if (type === 'mathNode' || type === 'logicNode' || type === 'compareNode' || type === 'switchNode') targetHandle = 'inputA';
             else if (type === 'unaryNode' || type === 'outputNode' || type === 'solverNode') targetHandle = 'inputA';
+
+            const sourceNode = getNodes().find(n => n.id === pendingConnection.source);
+            const isFormula = sourceNode?.type !== 'inputNode';
 
             setEdges((eds) => addEdge({
                 id: nanoid(6),
@@ -624,6 +689,7 @@ export function Body() {
                 target: id,
                 targetHandle: targetHandle,
                 type: 'customEdge',
+                data: { isFormula }
             }, eds));
         }
 
@@ -631,142 +697,23 @@ export function Body() {
         setMenuPosition(null);
         setPendingConnection(null);
         triggerLogicUpdate();
-    }, [menuPosition, screenToFlowPosition, pendingConnection, setEdges, setNodes, triggerLogicUpdate]);
+    }, [menuPosition, screenToFlowPosition, pendingConnection, getNodes, setEdges, setNodes, triggerLogicUpdate]);
 
-    // Auto-Insert Logic (Stable)
+    // Auto-Insert Logic (Atomic Refactor)
     const onNodeDragStop = useCallback((_: any, node: Node) => {
-        // Input Nodes cannot be inserted into wires (they have no inputs)
-        if (node.type === 'inputNode') return;
+        // Atomic Sequence: Perception (Eye) -> Action (Hand)
+        // Eye scans for nearby edges and determines the insertion handle
+        const candidate = eyes.scanInsertionCandidate(node);
 
-        const currentNodes = getNodes();
-        const currentEdges = getEdges();
-
-        // Find visible edges
-        const candidateEdges = currentEdges.filter(e => e.source !== node.id && e.target !== node.id);
-
-        const w = node.measured?.width || node.width || 150;
-        const h = node.measured?.height || node.height || 50;
-        const cx = node.position.x + w / 2;
-        const cy = node.position.y + h / 2;
-
-        const threshold = 30; // pixels
-
-        for (const edge of candidateEdges) {
-            const sourceNode = currentNodes.find(n => n.id === edge.source);
-            const targetNode = currentNodes.find(n => n.id === edge.target);
-            if (!sourceNode || !targetNode) continue;
-
-            const sx = sourceNode.position.x + (sourceNode.measured?.width || 150) / 2;
-            const sy = sourceNode.position.y + (sourceNode.measured?.height || 50) / 2;
-            const tx = targetNode.position.x + (targetNode.measured?.width || 150) / 2;
-            const ty = targetNode.position.y + (targetNode.measured?.height || 50) / 2;
-
-            // Distance from point (cx, cy) to segment (sx, sy)-(tx, ty)
-            const dist = distanceToSegment(cx, cy, sx, sy, tx, ty);
-
-            if (dist < threshold) {
-                // Bingo! Insert node.
-                // 1. Remove old edge
-                // 2. Add Source -> Node
-                // 3. Add Node -> Target
-
-                // Which handles?
-                // Source -> Node: use edge.sourceHandle -> NodeInput (generic or 'a')
-                // Node -> Target: use NodeOutput (generic) -> edge.targetHandle
-
-                let newNodeInput = 'inputA';
-
-                // Smart Port Selection & Full Occupancy Check
-                if (node.type === 'mathNode') {
-                    const isInputAOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputA');
-                    const isInputBOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputB');
-
-                    if (isInputAOccupied) {
-                        if (isInputBOccupied) {
-                            // Both ports full: Abort Auto-Insert
-                            continue;
-                        }
-                        newNodeInput = 'inputB';
-                    }
-                } else {
-                    // For single-input nodes (Unary, Output, Solver), abort if inputA is occupied
-                    const isInputAOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputA');
-                    if (isInputAOccupied) {
-                        continue;
-                    }
-                }
-
-                let newNodeOutput = null; // Default output (null for generic source handle)
-
-
-
-                const newEdge1: Edge = {
-                    id: nanoid(6),
-                    source: edge.source,
-                    sourceHandle: edge.sourceHandle,
-                    target: node.id,
-                    targetHandle: newNodeInput,
-                    type: 'customEdge'
-                };
-
-                const newEdge2: Edge = {
-                    id: nanoid(6),
-                    source: node.id,
-                    sourceHandle: newNodeOutput, // Default source handle
-                    target: edge.target,
-                    targetHandle: edge.targetHandle,
-                    type: 'customEdge'
-                };
-
-                // Update edges:
-                // 1. Remove the edge we split (edge.id)
-                // 2. Remove any PRE-EXISTING edge to the inserted node's input (newNodeInput)
-                //    This prevents the "double connection" bug when inserting a node that already has a wire.
-                setEdges(eds => {
-                    return eds
-                        .filter(e => e.id !== edge.id) // Remove split edge
-                        .filter(e => !(e.target === node.id && e.targetHandle === newNodeInput)) // Remove old input to inserted node
-                        .concat([newEdge1, newEdge2]);
-                });
-
-                toast.success('Auto-inserted node!');
-                break; // One insertion at a time
-            }
+        if (candidate) {
+            // Hand executes the injection (splits edge, creates connections)
+            hands.injectNode(node, candidate.edge, candidate.targetHandle);
         }
-    }, [getNodes, getEdges, setEdges]);
+    }, [eyes, hands]);
 
 
 
-    // Helper for math
-    function distanceToSegment(x: number, y: number, x1: number, y1: number, x2: number, y2: number) {
-        const A = x - x1;
-        const B = y - y1;
-        const C = x2 - x1;
-        const D = y2 - y1;
 
-        const dot = A * C + B * D;
-        const len_sq = C * C + D * D;
-        let param = -1;
-        if (len_sq !== 0) // in case of 0 length line
-            param = dot / len_sq;
-
-        let xx, yy;
-
-        if (param < 0) {
-            xx = x1;
-            yy = y1;
-        } else if (param > 1) {
-            xx = x2;
-            yy = y2;
-        } else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
-        }
-
-        const dx = x - xx;
-        const dy = y - yy;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
 
 
 
@@ -774,11 +721,15 @@ export function Body() {
         <div
             className="h-screen w-screen bg-zinc-900 relative"
             onContextMenu={onContextMenu}
+            onMouseDown={handleWrapperMouseDown}
+            onMouseMove={handleWrapperMouseMove}
+            onMouseUp={handleWrapperMouseUp}
         >
 
             {/* Context Menu (Blender Style) */}
             {menuPosition && (
                 <div
+                    ref={menuRef}
                     className="absolute z-[100] bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl p-1 min-w-[150px] flex flex-col gap-1"
                     style={{ top: menuPosition.y, left: menuPosition.x }}
                     onClick={(e) => e.stopPropagation()}
@@ -798,6 +749,9 @@ export function Body() {
                     </button>
                     <button onClick={() => addNodeAtCursor('compareNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
                         <Scale className="w-4 h-4 text-teal-400" /> Compare
+                    </button>
+                    <button onClick={() => addNodeAtCursor('switchNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                        <ToggleRight className="w-4 h-4 text-indigo-500" /> Switch
                     </button>
                     <button onClick={() => addNodeAtCursor('solverNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
                         <Sigma className="w-4 h-4 text-indigo-500" /> Solver
@@ -822,6 +776,7 @@ export function Body() {
                     onReconnect={onReconnect}
                     onReconnectStart={onReconnectStart}
                     onReconnectEnd={onReconnectEnd}
+                    onNodeDragStop={onNodeDragStop}
                     nodeTypes={nodeTypes}
                     edgeTypes={edgeTypes}
                     fitView
@@ -829,8 +784,11 @@ export function Body() {
                     minZoom={0.1}
                     maxZoom={4}
                     defaultEdgeOptions={defaultEdgeOptions}
+                    panOnDrag={[1, 2]}
+                    selectionOnDrag
+                    selectionMode={SelectionMode.Partial}
                     onPaneContextMenu={onContextMenu}
-                    onPaneClick={onPaneClick}
+                    onMoveStart={() => setMenuPosition(null)}
                 >
                     <Background color="#222" gap={20} />
                     <Controls className="bg-zinc-900 border-zinc-800 text-zinc-400" />
@@ -841,6 +799,10 @@ export function Body() {
 
                     {/* Top Panel */}
                     <Panel position="top-right" className="flex gap-2">
+                        <div className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-3 py-1 rounded-md text-sm font-mono flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            {nodes.length} Nodes
+                        </div>
                         <Button
                             variant="outline"
                             size="sm"
@@ -849,6 +811,16 @@ export function Body() {
                         >
                             {displayMode === 'value' ? <Hash className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
                             {displayMode === 'value' ? 'Values' : 'Formulas'}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={layoutGraph}
+                            className="gap-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-zinc-300"
+                            title="Auto Layout (Shift+L)"
+                        >
+                            <LayoutTemplate className="w-4 h-4" />
+                            Layout
                         </Button>
                         <Button variant="ghost" size="icon" onClick={handleSave} className="text-zinc-400 hover:text-green-400 hover:bg-zinc-700" title="Save Session">
                             <Save className="w-5 h-5" />
@@ -868,13 +840,10 @@ export function Body() {
                             <Trash className="w-5 h-5" />
                         </Button>
                     </Panel>
-                    <MiniMap
-                        nodeColor="#888"
-                        maskColor="rgba(0,0,0,0.6)"
-                        className="!bg-zinc-800 !border-zinc-700 rounded-lg"
-                    />
                 </ReactFlow>
             </div>
+            {/* Knife Visual Layer */}
+            {isCutting && <KnifeVisual path={knifePath} />}
         </div>
     );
 }

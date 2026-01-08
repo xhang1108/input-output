@@ -21,6 +21,13 @@ export const FALLBACK_PAYLOAD: NodePayload = {
     val: 0
 };
 
+// --- Frame Cache for O(N) Performance ---
+const frameCache = new Map<string, NodePayload>();
+
+export const clearCache = () => {
+    frameCache.clear();
+};
+
 // --- Helpers ---
 
 /**
@@ -46,19 +53,60 @@ export const pullValue = (
 ): NodePayload => {
 
     // 1. Cycle Detection
+    // 0. Cache Hit (Optimization)
+    if (frameCache.has(nodeId)) {
+        return frameCache.get(nodeId)!;
+    }
+
+    // 1. Cycle Detection
     if (visited.has(nodeId)) {
         throw new Error(`Cycle detected at node ${nodeId}`);
     }
     const newVisited = new Set(visited);
     newVisited.add(nodeId);
 
+    // Wrapper to cache result before returning
+    const cacheAndReturn = (result: NodePayload) => {
+        frameCache.set(nodeId, result);
+        return result;
+    };
+
     // 2. Find Node
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return FALLBACK_PAYLOAD;
 
-    // 3. Node Logic Switch
+    // DEBUG LOG
+    // console.log(`[Brain] Pulling ${nodeId} (${node.type})`, { data: node.data, visited: Array.from(visited) });
+
+    // 3. Mute Bypass (Blender Style)
+    // If muted, we try to pass through the "primary" input value without processing.
+    if (node.data.muted) {
+        // Define primary inputs for each node type
+        let primaryInputKey: string | null = null;
+        switch (node.type) {
+            case 'mathNode': primaryInputKey = 'inputA'; break; // Pass Input A
+            case 'unaryNode': primaryInputKey = 'inputA'; break;
+            case 'logicNode': primaryInputKey = 'inputA'; break;
+            case 'compareNode': primaryInputKey = 'inputA'; break;
+            case 'switchNode': primaryInputKey = 'ifFalse'; break; // Default to passing False path
+            case 'outputNode': primaryInputKey = 'inputA'; break;
+            default: primaryInputKey = null;
+        }
+
+        if (primaryInputKey) {
+            const edge = edges.find(e => e.target === nodeId && e.targetHandle === primaryInputKey);
+            if (edge) {
+                return cacheAndReturn(pullValue(edge.source, nodes, edges, newVisited));
+            }
+        }
+        // If no primary input connected, return 0 (as if it's a pass-through of nothing)
+        return cacheAndReturn(FALLBACK_PAYLOAD);
+    }
+
+    // 4. Node Logic Switch
     switch (node.type) {
         case 'inputNode': {
+            if (node.data.muted) return FALLBACK_PAYLOAD; // Muted Input = 0
             const val = Number(node.data.value) || 0;
             // Use node ID as variable name in scope to ensure uniqueness
             // Use label for display
@@ -69,12 +117,12 @@ export const pullValue = (
             // Namespace variables to avoid MathJS collisions (e.g. 'sin', 'pi', or leading numbers)
             const safeId = 'v_' + node.id.replace(/-/g, '_');
 
-            return {
+            return cacheAndReturn({
                 formula: safeId,
                 scope: { [safeId]: val },
                 display: node.data.label ? String(node.data.label) : `${val}`,
                 val: val
-            };
+            });
         }
 
         case 'mathNode': {
@@ -91,6 +139,8 @@ export const pullValue = (
 
             const payloadA = edgeA ? pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
             const payloadB = edgeB ? pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+
+            // console.log(`[Brain] MathNode ${nodeId} inputs:`, { A: payloadA.val, B: payloadB.val });
 
             const op = (node.data.operation as string) || 'add';
             let calculatedVal = 0;
@@ -114,12 +164,12 @@ export const pullValue = (
             // Final safety filter
             if (isNaN(calculatedVal)) calculatedVal = 0;
 
-            return {
+            return cacheAndReturn({
                 formula: `(${payloadA.formula} ${symbol} ${payloadB.formula})`,
                 scope: { ...payloadA.scope, ...payloadB.scope },
                 display: `(${payloadA.display} ${symbol} ${payloadB.display})`,
                 val: calculatedVal
-            };
+            });
         }
 
         case 'unaryNode': {
@@ -141,12 +191,12 @@ export const pullValue = (
                 case 'round': val = Math.round(inputVal); funcName = 'round'; break;
             }
 
-            return {
+            return cacheAndReturn({
                 formula: `${funcName}(${payload.formula})`,
                 scope: { ...payload.scope },
                 display: `${funcName}(${payload.display})`,
                 val: val
-            };
+            });
         }
 
         case 'compareNode': {
@@ -171,14 +221,14 @@ export const pullValue = (
 
             const val = bool ? 1 : 0;
 
-            return {
+            return cacheAndReturn({
                 // Determine formula representation for comparison?
                 // MathJS supports comparison.
                 formula: `(${pA.formula} ${sym} ${pB.formula})`,
                 scope: { ...pA.scope, ...pB.scope },
                 display: `(${pA.display} ${sym} ${pB.display})`,
                 val: val
-            };
+            });
         }
 
         case 'solverNode': {
@@ -207,12 +257,12 @@ export const pullValue = (
                 solutionStr = "Error";
             }
 
-            return {
+            return cacheAndReturn({
                 formula: `${solvedVal}`, // We return the CONCRETE solved value as the formula for downstream nodes
                 scope: {}, // Constant value has no variables
                 display: solutionStr,
                 val: solvedVal
-            };
+            });
         }
 
         case 'logicNode': {
@@ -246,17 +296,47 @@ export const pullValue = (
                 displayStr = `NAND(${pA.display}, ${pB.display})`;
             }
 
-            return {
+            return cacheAndReturn({
                 formula: formulaStr,
                 scope: { ...pA.scope, ...pB.scope },
                 display: displayStr,
                 val: res
-            };
+            });
+        }
+
+        case 'switchNode': {
+            const edgeCond = edges.find(e => e.target === nodeId && (e.targetHandle === 'condition' || e.targetHandle === 'inputA'));
+            const edgeTrue = edges.find(e => e.target === nodeId && (e.targetHandle === 'ifTrue' || e.targetHandle === 'inputB'));
+            const edgeFalse = edges.find(e => e.target === nodeId && (e.targetHandle === 'ifFalse' || e.targetHandle === 'inputC'));
+
+            const pCond = edgeCond ? pullValue(edgeCond.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+
+            // Lazy Pulling: Only pull branch if needed for the VALUE calculation
+            // But for Formula generation we might need both? 
+            // In a reactive graph pull, we usually want the current value to be fast.
+            const condition = pCond.val !== 0;
+
+            // Always pull results for formula completeness if we want a static expression?
+            // No, follow the "Pull" philosophy: only calculate what is requested.
+            // If we want a symbolic representation of the whole graph, we'd need to pull all.
+            // For now, let's balance:
+            const pTrue = edgeTrue ? pullValue(edgeTrue.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pFalse = edgeFalse ? pullValue(edgeFalse.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+
+            const resVal = condition ? pTrue.val : pFalse.val;
+
+            return cacheAndReturn({
+                // formula: if(condition, trueValue, falseValue)
+                formula: `if(${pCond.formula}, ${pTrue.formula}, ${pFalse.formula})`,
+                scope: { ...pCond.scope, ...pTrue.scope, ...pFalse.scope },
+                display: condition ? pTrue.display : pFalse.display,
+                val: resVal
+            });
         }
 
 
         // Placeholder for other nodes
         default:
-            return FALLBACK_PAYLOAD;
+            return cacheAndReturn(FALLBACK_PAYLOAD);
     }
 };

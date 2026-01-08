@@ -33,66 +33,54 @@ export const useMemory = () => {
     }, [getNodes, getEdges]);
 
     const undo = useCallback(() => {
-        setPast(prevPast => {
-            if (prevPast.length === 0) {
-                // toast.info('Nothing to undo');
-                return prevPast;
-            }
+        if (past.length === 0) return;
 
-            const newPast = [...prevPast];
-            const snapshotToRestore = newPast.pop();
+        const newPast = [...past];
+        const snapshotToRestore = newPast.pop();
 
-            if (!snapshotToRestore) return prevPast;
+        if (!snapshotToRestore) return;
 
-            // Before restoring, save CURRENT state to Future so we can Redo
-            const currentSnapshot: HistorySnapshot = {
-                nodes: getNodes(),
-                edges: getEdges()
-            };
+        // Before restoring, save CURRENT state to Future so we can Redo
+        const currentSnapshot: HistorySnapshot = {
+            nodes: getNodes(),
+            edges: getEdges()
+        };
 
-            setFuture(prevFuture => [currentSnapshot, ...prevFuture]);
+        setFuture(prevFuture => [currentSnapshot, ...prevFuture]);
+        setPast(newPast);
 
-            // Restore
-            setNodes(snapshotToRestore.nodes);
-            setEdges(snapshotToRestore.edges);
-            triggerLogicUpdate();
+        // Restore
+        setNodes(snapshotToRestore.nodes);
+        setEdges(snapshotToRestore.edges);
+        triggerLogicUpdate();
 
-            toast.success('Undid last action');
-
-            return newPast;
-        });
-    }, [getNodes, getEdges, setNodes, setEdges, triggerLogicUpdate]);
+        toast.success('Undid last action');
+    }, [past, getNodes, getEdges, setNodes, setEdges, triggerLogicUpdate]);
 
     const redo = useCallback(() => {
-        setFuture(prevFuture => {
-            if (prevFuture.length === 0) {
-                // toast.info('Nothing to redo');
-                return prevFuture;
-            }
+        if (future.length === 0) return;
 
-            const newFuture = [...prevFuture];
-            const snapshotToRestore = newFuture.shift(); // Take from front (stack top)
+        const newFuture = [...future];
+        const snapshotToRestore = newFuture.shift(); // Take from front (stack top)
 
-            if (!snapshotToRestore) return prevFuture;
+        if (!snapshotToRestore) return;
 
-            // Before restoring, save CURRENT state to Past
-            const currentSnapshot: HistorySnapshot = {
-                nodes: getNodes(),
-                edges: getEdges()
-            };
+        // Before restoring, save CURRENT state to Past
+        const currentSnapshot: HistorySnapshot = {
+            nodes: getNodes(),
+            edges: getEdges()
+        };
 
-            setPast(prevPast => [...prevPast, currentSnapshot]);
+        setPast(prevPast => [...prevPast, currentSnapshot]);
+        setFuture(newFuture);
 
-            // Restore
-            setNodes(snapshotToRestore.nodes);
-            setEdges(snapshotToRestore.edges);
-            triggerLogicUpdate();
+        // Restore
+        setNodes(snapshotToRestore.nodes);
+        setEdges(snapshotToRestore.edges);
+        triggerLogicUpdate();
 
-            toast.success('Redid action');
-
-            return newFuture;
-        });
-    }, [getNodes, getEdges, setNodes, setEdges, triggerLogicUpdate]);
+        toast.success('Redid action');
+    }, [future, getNodes, getEdges, setNodes, setEdges, triggerLogicUpdate]);
 
     const memories = useMemo(() => ({
         remember,

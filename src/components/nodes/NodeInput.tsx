@@ -10,13 +10,15 @@ import { useAppStore } from '@/store/useAppStore';
 
 interface NodeInputProps {
     id: string;
-    data: { label?: string; value?: number; rawExpression?: string };
+    data: { label?: string; value?: number; rawExpression?: string; muted?: boolean };
 }
 
 export const NodeInput = memo(({ id, data, selected }: NodeInputProps & { selected?: boolean }) => {
     const { updateNodeData, setNodes } = useReactFlow();
     const { triggerLogicUpdate } = useAppStore();
     const [value, setValue] = useState(data.rawExpression ?? data.value ?? 0);
+
+    const isMuted = !!data.muted;
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newVal = e.target.value;
@@ -43,7 +45,7 @@ export const NodeInput = memo(({ id, data, selected }: NodeInputProps & { select
     return (
         <NodeShell
             selected={selected}
-            className="bg-white border border-zinc-300 rounded-xl p-3 shadow-lg hover:shadow-xl hover:border-blue-400"
+            className={`bg-white border-2 border-blue-500 rounded-xl p-4 shadow-lg min-w-[140px] hover:border-blue-400 transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <div className="flex items-center gap-2 mb-2">
                 <Box className="w-3 h-3 text-blue-500" />

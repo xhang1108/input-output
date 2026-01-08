@@ -8,6 +8,7 @@ import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
 import { useAppStore } from '@/store/useAppStore';
 import { pullValue } from '@/engine/Brain';
+import { useMuteLine, MuteLine } from './MuteVisual';
 
 interface NodeSolverProps {
     id: string;
@@ -17,6 +18,7 @@ interface NodeSolverProps {
         targetVar?: string; // The variable to solve for (e.g. 'x')
         inheritedAST?: any; // The LHS expression (e.g. 2x + 5)
         rhsValue?: number; // The RHS value (e.g. 15)
+        muted?: boolean;
     };
 }
 
@@ -26,6 +28,9 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
     const [targetVar, setTargetVar] = useState(data.targetVar || 'x');
     const [solution, setSolution] = useState<number | string>('?');
     const [error, setError] = useState<string | null>(null);
+
+    const isMuted = !!data.muted;
+    const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [targetVar, selected]);
 
     // Unified Pull Logic
     useEffect(() => {
@@ -50,11 +55,13 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
 
     return (
         <NodeShell
+            ref={containerRef}
             selected={selected}
-            className="bg-zinc-900 border-2 border-indigo-500 rounded-xl p-4 shadow-lg min-w-[200px]"
+            className={`bg-zinc-900 border-2 border-indigo-500 rounded-xl p-4 shadow-lg min-w-[200px] transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             {/* Inputs */}
             <TargetHandle
+                ref={inputARef}
                 nodeId={id}
                 position={Position.Left}
                 id="inputA"
@@ -91,9 +98,13 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
 
             {/* Output (The solved value) */}
             <SourceHandle
+                ref={outputRef}
                 position={Position.Right}
                 color="indigo"
             />
+
+            {/* Muted Pass-through Visual */}
+            <MuteLine coords={lineCoords} color="#6366f1" />
         </NodeShell>
     );
 }, (prev, next) => (

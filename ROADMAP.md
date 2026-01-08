@@ -112,3 +112,19 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [ ] **Expression Propagation:** Wire carries `Symbol("x")` or `Expression("sin(x^2)")` instead of just numbers.
     - [ ] **Computer Algebra System (CAS):** Nodes calculate symbolic derivatives, integrals, or simplifications.
     - [ ] **Visual Proofs:** Show the step-by-step transformation of a formula as it passes through the graph.
+
+## 🧬 Phase 9: Simulation & Macros (Blender 5.0 Architecture)
+**Goal:** Introduce programmability, loops, and time-based simulation.
+
+- [ ] **Simulation Zones (Time Travel)**
+    - [ ] **Concept:** Allow `Result(Frame t)` to be fed into `Input(Frame t+1)`.
+    - [ ] **Architecture:** Implement a **Simulation Zone** (Input/Output pair). Nodes inside execute once per frame.
+    - [ ] **State Cache:** Need a "Cache Manager" in `Body.tsx` to store the history of simulation steps.
+- [ ] **Functional Closures (Macros)**
+    - [ ] **Concept:** Pass *logic* instead of *values*.
+    - [ ] **Implementation:** Wires can carry a `(x) => y` function payload.
+    - [ ] **Use Case:** Custom "Loop" nodes that run a connected subgraph 100 times.
+- [ ] **Data Bundles (Structs)**
+    - [ ] **Concept:** Clean up spaghetti wires by bundling related data.
+    - [ ] **Implementation:** A single wire carries `{ pos: Vec3, vel: Vec3, mass: Number }`.
+    - [ ] **Nodes:** `Pack Bundle` and `Unpack Bundle` nodes.
