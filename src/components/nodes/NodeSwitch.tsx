@@ -60,7 +60,7 @@ export const NodeSwitch = memo(({ id, data, selected, isConnectable }: NodeProps
                             position={Position.Left}
                             id="condition"
                             isConnectable={isConnectable}
-                            className="!-left-[17px] !bg-indigo-400"
+                            className="-left-[17px]! bg-indigo-400!"
                         />
                         <span className="text-indigo-600 text-[10px] ml-2 font-bold uppercase">Condition</span>
                     </div>
@@ -72,7 +72,7 @@ export const NodeSwitch = memo(({ id, data, selected, isConnectable }: NodeProps
                             position={Position.Left}
                             id="ifTrue"
                             isConnectable={isConnectable}
-                            className="!-left-[17px] !bg-green-400"
+                            className="-left-[17px]! bg-green-400!"
                         />
                         <span className="text-green-600 text-[10px] ml-2 font-bold uppercase">If True</span>
                     </div>
@@ -85,7 +85,7 @@ export const NodeSwitch = memo(({ id, data, selected, isConnectable }: NodeProps
                             position={Position.Left}
                             id="ifFalse"
                             isConnectable={isConnectable}
-                            className="!-left-[17px] !bg-red-400"
+                            className="-left-[17px]! bg-red-400!"
                         />
                         <span className="text-red-600 text-[10px] ml-2 font-bold uppercase">If False</span>
                     </div>
@@ -103,7 +103,7 @@ export const NodeSwitch = memo(({ id, data, selected, isConnectable }: NodeProps
                     position={Position.Right}
                     id="output"
                     isConnectable={isConnectable}
-                    className="!-right-[7px] !bg-indigo-500 !border-indigo-500"
+                    className="-right-[7px]! bg-indigo-500! border-indigo-500!"
                 />
             </div>
 

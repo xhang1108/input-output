@@ -57,7 +57,7 @@ export function MuteLine({ coords, color, opacity = 0.6 }: MuteLineProps) {
 
     return (
         <svg
-            className="absolute inset-0 w-full h-full pointer-events-none z-[100]"
+            className="absolute inset-0 w-full h-full pointer-events-none z-100"
             style={{ overflow: 'visible' }}
         >
             <line

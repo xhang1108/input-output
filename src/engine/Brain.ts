@@ -326,8 +326,8 @@ export const pullValue = (
             const resVal = condition ? pTrue.val : pFalse.val;
 
             return cacheAndReturn({
-                // formula: if(condition, trueValue, falseValue)
-                formula: `if(${pCond.formula}, ${pTrue.formula}, ${pFalse.formula})`,
+                // Use math.js ternary syntax (condition ? trueVal : falseVal)
+                formula: `(${pCond.formula} ? ${pTrue.formula} : ${pFalse.formula})`,
                 scope: { ...pCond.scope, ...pTrue.scope, ...pFalse.scope },
                 display: condition ? pTrue.display : pFalse.display,
                 val: resVal

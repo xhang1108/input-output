@@ -64,7 +64,7 @@ export const NodeLogic = memo(({ id, data, selected, isConnectable }: NodeLogicP
                             position={Position.Left}
                             id="inputA"
                             isConnectable={isConnectable}
-                            className="!-left-[13px]"
+                            className="-left-[13px]!"
                             style={{ top: '50%' }}
                         />
                         <span className="text-zinc-600 text-xs ml-2 font-bold">A</span>
@@ -76,7 +76,7 @@ export const NodeLogic = memo(({ id, data, selected, isConnectable }: NodeLogicP
                             position={Position.Left}
                             id="inputB"
                             isConnectable={isConnectable}
-                            className="!-left-[13px]"
+                            className="-left-[13px]!"
                             style={{ top: '50%' }}
                         />
                         <span className="text-zinc-600 text-xs ml-2 font-bold">B</span>
@@ -116,7 +116,7 @@ export const NodeLogic = memo(({ id, data, selected, isConnectable }: NodeLogicP
                     position={Position.Right}
                     id="output"
                     isConnectable={isConnectable}
-                    className="!-right-[0px]"
+                    className="right-0!"
                     color="indigo"
                 />
             </div>

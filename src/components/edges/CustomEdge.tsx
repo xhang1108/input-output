@@ -46,7 +46,7 @@ export const CustomEdge = memo((props: EdgeProps) => {
         targetX,
         targetY,
         targetPosition,
-        borderRadius: 20, // Add some nice rounding
+        borderRadius: 20,
     });
 
     // 3. Determine Flow Type (Formula vs Value)
@@ -73,20 +73,22 @@ export const CustomEdge = memo((props: EdgeProps) => {
     const isIgnored = isTargetMuted && targetHandleId !== primaryHandles[targetNodeType || ''];
 
     // 4. Dynamic Styles
-    const edgeStyle = {
+    const edgeStyle = useMemo(() => ({
         ...style,
-        stroke: isIgnored ? '#d4d4d8' : (showFormulaStyle ? '#a855f7' : '#71717a'), // Dimmed if ignored
+        stroke: isIgnored ? '#d4d4d8' : (showFormulaStyle ? '#a855f7' : '#71717a'),
         strokeWidth: showFormulaStyle ? 3 : 2,
         strokeDasharray: (showFormulaStyle && !isIgnored) ? '5 5' : undefined,
         opacity: isIgnored ? 0.3 : 1,
-    };
+        // Desynchronize overlapping dashed lines
+        animationDelay: showFormulaStyle ? `-${(id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 10) / 10}s` : undefined,
+    }), [style, isIgnored, showFormulaStyle, id]);
 
     return (
         <BaseEdge
             path={edgePath}
             markerEnd={markerEnd}
             style={edgeStyle}
-            className={(showFormulaStyle && !isIgnored) ? "animate-pulse" : ""}
+            className={(showFormulaStyle && !isIgnored) ? "animate-dash-flow" : ""}
         />
     );
 });

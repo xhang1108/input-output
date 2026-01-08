@@ -7,13 +7,13 @@ interface SourceHandleProps extends Omit<HandleProps, 'type' | 'position'> {
 }
 
 const COLOR_MAP = {
-    green: '!bg-green-500',
-    blue: '!bg-blue-500',
-    zinc: '!bg-zinc-400',
-    red: '!bg-red-500',
-    orange: '!bg-orange-500',
-    purple: '!bg-purple-500',
-    indigo: '!bg-indigo-500',
+    green: 'bg-green-500!',
+    blue: 'bg-blue-500!',
+    zinc: 'bg-zinc-400!',
+    red: 'bg-red-500!',
+    orange: 'bg-orange-500!',
+    purple: 'bg-purple-500!',
+    indigo: 'bg-indigo-500!',
 };
 
 export const SourceHandle = forwardRef<HTMLDivElement, SourceHandleProps>(
@@ -28,9 +28,9 @@ export const SourceHandle = forwardRef<HTMLDivElement, SourceHandleProps>(
                 position={position}
                 className={`
                     nodrag 
-                    !w-3 !h-3 
-                    !rounded-full 
-                    !border-2 !border-white 
+                    w-3! h-3! 
+                    rounded-full! 
+                    border-2! border-white! 
                     ${bgColor} 
                     ${className || ''}
                 `.trim().replace(/\s+/g, ' ')}

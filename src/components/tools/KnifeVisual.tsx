@@ -14,7 +14,7 @@ export const KnifeVisual = memo(({ path }: KnifeVisualProps) => {
 
     return (
         <svg
-            className="absolute inset-0 w-full h-full pointer-events-none z-[9999]"
+            className="absolute inset-0 w-full h-full pointer-events-none z-9999"
             style={{ overflow: 'visible' }}
         >
             <path

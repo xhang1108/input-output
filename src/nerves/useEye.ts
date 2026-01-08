@@ -81,6 +81,31 @@ function pathIntersectsLine(pathStr: string, p1: { x: number, y: number }, p2: {
             if (lineIntersection(p1, p2, mid, next)) return true;
             current = next;
             i += 5;
+        } else if (cmd === 'C') {
+            const cp1 = { x: parseFloat(tokens[i + 1]), y: parseFloat(tokens[i + 2]) };
+            const cp2 = { x: parseFloat(tokens[i + 3]), y: parseFloat(tokens[i + 4]) };
+            const next = { x: parseFloat(tokens[i + 5]), y: parseFloat(tokens[i + 6]) };
+
+            // Sample Cubic Bezier into 4 segments (t=0.25, 0.5, 0.75)
+            const sample = (t: number) => {
+                const invT = 1 - t;
+                return {
+                    x: invT ** 3 * current.x + 3 * invT ** 2 * t * cp1.x + 3 * invT * t ** 2 * cp2.x + t ** 3 * next.x,
+                    y: invT ** 3 * current.y + 3 * invT ** 2 * t * cp1.y + 3 * invT * t ** 2 * cp2.y + t ** 3 * next.y
+                };
+            };
+
+            const p_25 = sample(0.25);
+            const p_50 = sample(0.5);
+            const p_75 = sample(0.75);
+
+            if (lineIntersection(p1, p2, current, p_25)) return true;
+            if (lineIntersection(p1, p2, p_25, p_50)) return true;
+            if (lineIntersection(p1, p2, p_50, p_75)) return true;
+            if (lineIntersection(p1, p2, p_75, next)) return true;
+
+            current = next;
+            i += 7;
         } else {
             i++;
         }

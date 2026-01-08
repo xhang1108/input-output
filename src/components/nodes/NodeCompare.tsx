@@ -79,7 +79,7 @@ export const NodeCompare = memo(({ id, data, selected, isConnectable }: NodeComp
                             position={Position.Left}
                             id="inputA"
                             isConnectable={isConnectable}
-                            className="!-left-[17px]"
+                            className="-left-[17px]!"
                             style={{ top: '50%' }}
                         />
                         <span className="text-zinc-600 text-xs ml-2 font-bold">A</span>
@@ -91,7 +91,7 @@ export const NodeCompare = memo(({ id, data, selected, isConnectable }: NodeComp
                             position={Position.Left}
                             id="inputB"
                             isConnectable={isConnectable}
-                            className="!-left-[17px]"
+                            className="-left-[17px]!"
                             style={{ top: '50%' }}
                         />
                         <span className="text-zinc-600 text-xs ml-2 font-bold">B</span>
@@ -134,7 +134,7 @@ export const NodeCompare = memo(({ id, data, selected, isConnectable }: NodeComp
                     position={Position.Right}
                     id="output"
                     isConnectable={isConnectable}
-                    className="!-right-[7px] !bg-teal-500 !border-teal-500"
+                    className="-right-[7px]! bg-teal-500! border-teal-500!"
                     color="green"
                 />
             </div>
