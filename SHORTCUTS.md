@@ -25,6 +25,7 @@ This document serves as the Single Source of Truth for all keyboard interactions
 | Ctrl + Shift + Z| Global | Redo | Re-applies reverted change. |
 | Ctrl + Y | Global | Redo | Alternative for Redo. |
 | LMB (Click) | Global | Select / Confirm | |
+| X / Y | G Mode | Axis Lock | Restricts movement to X or Y axis. |
 | MMB (Drag) | Global | Pan View | |
 | Ctrl+RMB(Drag) | Global | Knife (Sever) | Cuts edges intersected by the line. |
 | Shift + L | Object Mode | Auto Layout | Organizes nodes using Elk.js algorithm. |
@@ -46,6 +47,7 @@ This document serves as the Single Source of Truth for all keyboard interactions
 | Add Node | Shift + A | (Right Click Context Menu) | Opens search/add menu. |
 | Confirm | LMB / Enter | | Finishes G / S / R operation. |
 | Cancel | RMB / Esc | | Cancels & reverts G / S / R. |
+| Axis Lock | X / Y | | Toggles X or Y axis locking during G. |
 | Select All | A | | |
 | Focus View | . | | Centers view on selection. |
 | Auto Layout | Shift + L | (Layout Button) | Arranges nodes left-to-right using Elk.js. |
@@ -57,3 +59,4 @@ This document serves as the Single Source of Truth for all keyboard interactions
 4.  **Auto-Insert**: Dragging a node (except Input nodes) onto an existing wire will automatically split the wire and insert the node into the chain.
 5.  **Perception -> Action**: The Knife tool uses the "Eye" to detect intersected edges before the "Hand" severs them.
 6.  **Quick Cancellation**: During any transformation (G, S, R), Right-Click immediately reverts the change and suppresses the context menu.
+7.  **Precision Locking**: Pressing X or Y during G restricts the movement to the horizontal or vertical axis respectively.

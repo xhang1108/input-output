@@ -34,6 +34,7 @@ export const useHand = (
     // --- Placement State (Internal Motor State) ---
     type HandMode = 'move' | 'scale' | 'rotate';
     const [handMode, setHandMode] = useState<HandMode>('move');
+    const [axisLock, setAxisLock] = useState<'x' | 'y' | null>(null);
     const [placingNodeIds, setPlacingNodeIds] = useState<Set<string> | null>(null);
     const placementRef = useRef<{
         startMousePos: { x: number, y: number },
@@ -143,6 +144,7 @@ export const useHand = (
         const mouseFlowPos = screenToFlowPosition(initialMousePos);
 
         setHandMode(mode);
+        setAxisLock(null); // Reset lock on start
         setPlacingNodeIds(new Set(nodeIds));
         placementRef.current = {
             startMousePos: initialMousePos,
@@ -154,6 +156,7 @@ export const useHand = (
 
     const commitPlacement = useCallback(() => {
         setPlacingNodeIds(null);
+        setAxisLock(null);
         placementRef.current = null;
     }, []);
 
@@ -172,6 +175,7 @@ export const useHand = (
         }));
 
         setPlacingNodeIds(null);
+        setAxisLock(null);
         placementRef.current = null;
 
         // Trigger logic update to ensure engine is in sync with reverted positions
@@ -194,8 +198,11 @@ export const useHand = (
             const currentFlowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
 
             if (handMode === 'move') {
-                const dx = currentFlowPos.x - startFlowPos.x;
-                const dy = currentFlowPos.y - startFlowPos.y;
+                let dx = currentFlowPos.x - startFlowPos.x;
+                let dy = currentFlowPos.y - startFlowPos.y;
+
+                if (axisLock === 'x') dy = 0;
+                if (axisLock === 'y') dx = 0;
 
                 setNodes((nds) => nds.map(n => {
                     if (placingNodeIds.has(n.id)) {
@@ -257,7 +264,20 @@ export const useHand = (
             }
         };
 
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (handMode !== 'move') return;
+
+            if (e.key.toLowerCase() === 'x') {
+                setAxisLock(prev => prev === 'x' ? null : 'x');
+                toast.info(axisLock === 'x' ? 'Axis Lock Disabled' : 'Locked to X Axis');
+            } else if (e.key.toLowerCase() === 'y') {
+                setAxisLock(prev => prev === 'y' ? null : 'y');
+                toast.info(axisLock === 'y' ? 'Axis Lock Disabled' : 'Locked to Y Axis');
+            }
+        };
+
         window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('keydown', handleKeyDown);
         // Safety: Delay attaching mousedown to prevent instant drops if event is leaking
         // (e.g., if the user is still holding Shift+D)
         const timer = setTimeout(() => {
@@ -267,10 +287,11 @@ export const useHand = (
 
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('mousedown', handleMouseDown, { capture: true });
             clearTimeout(timer);
         };
-    }, [handMode, placingNodeIds, screenToFlowPosition, setNodes, commitPlacement, cancelPlacement]);
+    }, [handMode, axisLock, placingNodeIds, screenToFlowPosition, setNodes, commitPlacement, cancelPlacement]);
 
     // --- Selection ---
 
