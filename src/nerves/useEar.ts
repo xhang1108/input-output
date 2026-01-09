@@ -149,7 +149,6 @@ export const useEar = ({ hands, eyes, memories, onOpenMenu }: UseEarProps) => {
             }
 
             // M: Mute
-            // M: Mute
             if (e.code === 'KeyM') {
                 e.preventDefault();
                 setKeys(k => ({ ...k, isMuting: true }));
@@ -174,8 +173,6 @@ export const useEar = ({ hands, eyes, memories, onOpenMenu }: UseEarProps) => {
                 e.preventDefault();
                 hands.grabRotate(mousePosRef.current);
             }
-
-
 
             // Shift + L: Auto Layout (Elk)
             if (e.shiftKey && e.code === 'KeyL') {
