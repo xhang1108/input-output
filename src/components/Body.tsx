@@ -92,12 +92,19 @@ export function Body() {
 
     // --- Local Event Handlers (Orchestration) ---
     const onContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
+        // If we are currently placing/transforming nodes, right click should be handled by useHand (cancellation)
+        // and we must NOT open the menu.
+        if (hands.isPlacing || keys.ctrl || knife.isCutting) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
         event.preventDefault();
-        if (keys.ctrl || knife.isCutting) return;
         if ('clientX' in event) {
             setMenuPosition({ x: event.clientX, y: event.clientY });
         }
-    }, [keys.ctrl, knife.isCutting]);
+    }, [hands.isPlacing, keys.ctrl, knife.isCutting]);
 
     const connectionStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null } | null>(null);
 

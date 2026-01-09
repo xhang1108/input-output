@@ -51,6 +51,28 @@ export function getBoundingBox(nodes: Node[]): { x: number; y: number } {
 }
 
 /**
+ * Returns the average of visual centers of the provided nodes.
+ */
+export function getMedianCenter(nodes: Node[]): { x: number; y: number } {
+    if (nodes.length === 0) return { x: 0, y: 0 };
+
+    let sumX = 0;
+    let sumY = 0;
+
+    nodes.forEach(n => {
+        const w = n.measured?.width ?? n.width ?? 200;
+        const h = n.measured?.height ?? n.height ?? 50;
+        sumX += n.position.x + w / 2;
+        sumY += n.position.y + h / 2;
+    });
+
+    return {
+        x: sumX / nodes.length,
+        y: sumY / nodes.length
+    };
+}
+
+/**
  * Calculates the offset and returns a new array of Node objects.
  */
 export function generateOffsetNodes(
@@ -78,4 +100,81 @@ export function getConnectedEdgeIds(allEdges: Edge[], nodeIdsToRemove: Set<strin
     return allEdges
         .filter(e => nodeIdsToRemove.has(e.source) || nodeIdsToRemove.has(e.target))
         .map(e => e.id);
+}
+
+/**
+ * Scales nodes positions relative to a center point, using node visual centers for stability.
+ */
+export function scaleNodes(
+    nodes: Node[],
+    pivot: { x: number; y: number },
+    scale: number,
+    initialPositions: Record<string, { x: number; y: number }>
+): Node[] {
+    return nodes.map(node => {
+        const initialPos = initialPositions[node.id];
+        if (!initialPos) return node;
+
+        const w = node.measured?.width ?? node.width ?? 200;
+        const h = node.measured?.height ?? node.height ?? 50;
+
+        // Current visual center relative to pivot
+        const initialCenterX = initialPos.x + w / 2;
+        const initialCenterY = initialPos.y + h / 2;
+
+        const dx = initialCenterX - pivot.x;
+        const dy = initialCenterY - pivot.y;
+
+        // Transformed visual center
+        const newCenterX = pivot.x + dx * scale;
+        const newCenterY = pivot.y + dy * scale;
+
+        return {
+            ...node,
+            position: {
+                x: newCenterX - w / 2,
+                y: newCenterY - h / 2
+            }
+        };
+    });
+}
+
+/**
+ * Rotates nodes positions relative to a center point, using node visual centers for stability.
+ */
+export function rotateNodes(
+    nodes: Node[],
+    pivot: { x: number; y: number },
+    angleRad: number,
+    initialPositions: Record<string, { x: number; y: number }>
+): Node[] {
+    const cos = Math.cos(angleRad);
+    const sin = Math.sin(angleRad);
+
+    return nodes.map(node => {
+        const initialPos = initialPositions[node.id];
+        if (!initialPos) return node;
+
+        const w = node.measured?.width ?? node.width ?? 200;
+        const h = node.measured?.height ?? node.height ?? 50;
+
+        // Visual center relative to pivot
+        const initialCenterX = initialPos.x + w / 2;
+        const initialCenterY = initialPos.y + h / 2;
+
+        const dx = initialCenterX - pivot.x;
+        const dy = initialCenterY - pivot.y;
+
+        // Transformed visual center
+        const newCenterX = pivot.x + (dx * cos - dy * sin);
+        const newCenterY = pivot.y + (dx * sin + dy * cos);
+
+        return {
+            ...node,
+            position: {
+                x: newCenterX - w / 2,
+                y: newCenterY - h / 2
+            }
+        };
+    });
 }

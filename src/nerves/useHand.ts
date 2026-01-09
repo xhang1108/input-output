@@ -6,7 +6,10 @@ import {
     createNodeObject,
     getBoundingBox,
     generateOffsetNodes,
-    getConnectedEdgeIds
+    getConnectedEdgeIds,
+    scaleNodes,
+    rotateNodes,
+    getMedianCenter
 } from '../utils/graphPhysics';
 import { nanoid } from 'nanoid';
 
@@ -29,10 +32,14 @@ export const useHand = (
     const [clipboard, setClipboard] = useState<Node[]>([]);
 
     // --- Placement State (Internal Motor State) ---
+    type HandMode = 'move' | 'scale' | 'rotate';
+    const [handMode, setHandMode] = useState<HandMode>('move');
     const [placingNodeIds, setPlacingNodeIds] = useState<Set<string> | null>(null);
     const placementRef = useRef<{
         startMousePos: { x: number, y: number },
-        nodeOffsets: Record<string, { x: number, y: number }>
+        startFlowPos: { x: number, y: number },
+        nodeOffsets: Record<string, { x: number, y: number }>,
+        center?: { x: number, y: number }
     } | null>(null);
 
     // =========================================
@@ -107,7 +114,7 @@ export const useHand = (
 
     // --- Placement Logic (The Follower) ---
 
-    const startPlacing = useCallback((nodeIds: string[], initialMousePos: { x: number, y: number }, initialNodes?: Node[]) => {
+    const startPlacing = useCallback((nodeIds: string[], initialMousePos: { x: number, y: number }, mode: HandMode = 'move', initialNodes?: Node[]) => {
         if (!nodeIds || nodeIds.length === 0) return;
 
         // Use provided nodes (just created) or fetch from store (existing)
@@ -131,10 +138,17 @@ export const useHand = (
             nodeOffsets[node.id] = { x: node.position.x, y: node.position.y };
         });
 
+        // Calculate pivot point (Selection Center / Median Point of centers)
+        const center = getMedianCenter(nodesToMove);
+        const mouseFlowPos = screenToFlowPosition(initialMousePos);
+
+        setHandMode(mode);
         setPlacingNodeIds(new Set(nodeIds));
         placementRef.current = {
             startMousePos: initialMousePos,
-            nodeOffsets: nodeOffsets
+            startFlowPos: mouseFlowPos,
+            nodeOffsets: nodeOffsets,
+            center: center
         };
     }, [getNodes, setNodes]);
 
@@ -143,55 +157,120 @@ export const useHand = (
         placementRef.current = null;
     }, []);
 
+    const cancelPlacement = useCallback(() => {
+        if (!placementRef.current || !placingNodeIds) return;
+        const originalOffsets = placementRef.current.nodeOffsets;
+
+        setNodes((nds) => nds.map(n => {
+            if (placingNodeIds.has(n.id)) {
+                const originalPos = originalOffsets[n.id];
+                if (originalPos) {
+                    return { ...n, position: { ...originalPos } };
+                }
+            }
+            return n;
+        }));
+
+        setPlacingNodeIds(null);
+        placementRef.current = null;
+
+        // Trigger logic update to ensure engine is in sync with reverted positions
+        setTimeout(() => {
+            useAppStore.getState().triggerLogicUpdate();
+        }, 0);
+
+        toast('Canceled');
+    }, [placingNodeIds, setNodes]);
+
     // --- Movement Effect (The "Hand" follows the "Cursor") ---
     useEffect(() => {
         if (!placingNodeIds) return;
 
         const handleMouseMove = (e: MouseEvent) => {
-            if (!placementRef.current) return;
+            const currentParams = placementRef.current;
+            if (!currentParams) return;
 
+            const { startFlowPos, nodeOffsets, center } = currentParams;
             const currentFlowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-            const startFlowPos = screenToFlowPosition(placementRef.current.startMousePos);
 
-            const dx = currentFlowPos.x - startFlowPos.x;
-            const dy = currentFlowPos.y - startFlowPos.y;
+            if (handMode === 'move') {
+                const dx = currentFlowPos.x - startFlowPos.x;
+                const dy = currentFlowPos.y - startFlowPos.y;
 
-            setNodes((nds) => nds.map(n => {
-                if (placingNodeIds.has(n.id)) {
-                    const originalPos = placementRef.current!.nodeOffsets[n.id];
-                    if (originalPos) {
-                        return {
-                            ...n,
-                            position: {
-                                x: originalPos.x + dx,
-                                y: originalPos.y + dy
-                            }
-                        };
+                setNodes((nds) => nds.map(n => {
+                    if (placingNodeIds.has(n.id)) {
+                        const originalPos = nodeOffsets[n.id];
+                        if (originalPos) {
+                            return {
+                                ...n,
+                                position: {
+                                    x: originalPos.x + dx,
+                                    y: originalPos.y + dy
+                                }
+                            };
+                        }
                     }
-                }
-                return n;
-            }));
+                    return n;
+                }));
+            } else if (handMode === 'scale') {
+                const pivot = center!;
+                const startDist = Math.sqrt(Math.pow(startFlowPos.x - pivot.x, 2) + Math.pow(startFlowPos.y - pivot.y, 2));
+                const currentDist = Math.sqrt(Math.pow(currentFlowPos.x - pivot.x, 2) + Math.pow(currentFlowPos.y - pivot.y, 2));
+
+                // Stability: If mouse starts at pivot, scale is 1
+                const scaleFactor = startDist < 1 ? 1 : currentDist / startDist;
+
+                setNodes((nds) => scaleNodes(nds, pivot, scaleFactor, nodeOffsets));
+            } else if (handMode === 'rotate') {
+                const pivot = center!;
+                const startDist = Math.sqrt(Math.pow(startFlowPos.x - pivot.x, 2) + Math.pow(startFlowPos.y - pivot.y, 2));
+
+                // Stability: If mouse is too close to pivot, don't rotate (or it will flip wildly)
+                if (startDist < 1) return;
+
+                const startAngle = Math.atan2(startFlowPos.y - pivot.y, startFlowPos.x - pivot.x);
+                const currentAngle = Math.atan2(currentFlowPos.y - pivot.y, currentFlowPos.x - pivot.x);
+                const deltaAngle = currentAngle - startAngle;
+
+                setNodes((nds) => rotateNodes(nds, pivot, deltaAngle, nodeOffsets));
+            }
         };
 
         const handleMouseDown = (e: MouseEvent) => {
-            // Commit placement on click
-            e.stopPropagation();
-            commitPlacement();
+            if (e.button === 0) {
+                // Left Click: Commit
+                e.stopPropagation();
+                commitPlacement();
+            } else if (e.button === 2) {
+                // Right Click: Cancel
+                e.preventDefault();
+                e.stopPropagation();
+
+                // CRITICAL: Block the upcoming contextmenu event that follows this mousedown/mouseup
+                const blockNextMenu = (ce: MouseEvent) => {
+                    ce.preventDefault();
+                    ce.stopPropagation();
+                };
+                window.addEventListener('contextmenu', blockNextMenu, { capture: true, once: true });
+
+                cancelPlacement();
+            }
         };
 
         window.addEventListener('mousemove', handleMouseMove);
         // Safety: Delay attaching mousedown to prevent instant drops if event is leaking
         // (e.g., if the user is still holding Shift+D)
         const timer = setTimeout(() => {
+            // Use capture to preempt React Flow or other handlers
             window.addEventListener('mousedown', handleMouseDown, { capture: true });
-        }, 300);
+        }, 100);
 
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mousedown', handleMouseDown, { capture: true });
             clearTimeout(timer);
         };
-    }, [placingNodeIds, screenToFlowPosition, setNodes, commitPlacement]);
+    }, [handMode, placingNodeIds, screenToFlowPosition, setNodes, commitPlacement, cancelPlacement]);
 
     // --- Selection ---
 
@@ -200,11 +279,11 @@ export const useHand = (
     }, [setNodes]);
 
     // Unified Grab Action (Tries selection first, then hover)
-    const grab = useCallback((screenMousePos: { x: number, y: number }) => {
+    const grab = useCallback((screenMousePos: { x: number, y: number }, mode: HandMode = 'move') => {
         const selected = getSelectedNodes();
         if (selected.length > 0) {
-            startPlacing(selected.map(n => n.id), screenMousePos);
-            toast.success('Grabbed');
+            startPlacing(selected.map(n => n.id), screenMousePos, mode);
+            toast.success(mode.charAt(0).toUpperCase() + mode.slice(1) + 'ing');
             return true;
         }
 
@@ -217,8 +296,8 @@ export const useHand = (
             if (mouseFlowPos.x >= n.position.x && mouseFlowPos.x <= n.position.x + w &&
                 mouseFlowPos.y >= n.position.y && mouseFlowPos.y <= n.position.y + h) {
 
-                startPlacing([n.id], screenMousePos);
-                toast.success('Grabbed');
+                startPlacing([n.id], screenMousePos, mode);
+                toast.success(mode.charAt(0).toUpperCase() + mode.slice(1) + 'ed');
                 return true;
             }
         }
@@ -354,7 +433,7 @@ export const useHand = (
         _spawnNodes(newNodes);
 
         // AUTO-START PLACING (Pass nodes directly to avoid stale store race condition)
-        startPlacing(newNodes.map(n => n.id), screenMousePos, newNodes);
+        startPlacing(newNodes.map(n => n.id), screenMousePos, 'move', newNodes);
 
         toast.success(`Duplicated ${selectedNodes.length} node(s)`);
         return newNodes;
@@ -397,6 +476,8 @@ export const useHand = (
     const hands = useMemo(() => ({
         grabAll,
         grab,
+        grabScale: (pos: { x: number, y: number }) => grab(pos, 'scale'),
+        grabRotate: (pos: { x: number, y: number }) => grab(pos, 'rotate'),
         discard,
         copy,
         cut, // Clipboard cut
@@ -409,8 +490,9 @@ export const useHand = (
         createNode,
         startPlacing,
         commitPlacement,
+        cancelPlacement,
         isPlacing: !!placingNodeIds
-    }), [grabAll, grab, discard, copy, cut, paste, duplicate, toggleMute, deselectAll, createNode, startPlacing, commitPlacement, placingNodeIds]);
+    }), [grabAll, grab, discard, copy, cut, paste, duplicate, toggleMute, deselectAll, createNode, startPlacing, commitPlacement, cancelPlacement, placingNodeIds]);
 
     return {
         hands

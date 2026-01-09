@@ -18,6 +18,8 @@ interface Eyes {
 interface Hands {
     grabAll: () => void;
     grab: (pos: { x: number, y: number }) => boolean;
+    grabScale: (pos: { x: number, y: number }) => boolean;
+    grabRotate: (pos: { x: number, y: number }) => boolean;
     discard: () => void;
     copy: () => void;
     cut: () => void;
@@ -159,6 +161,18 @@ export const useEar = ({ hands, eyes, memories, onOpenMenu }: UseEarProps) => {
             if (e.code === 'KeyG') {
                 e.preventDefault();
                 hands.grab(mousePosRef.current);
+            }
+
+            // S: Scale
+            if (e.code === 'KeyS') {
+                e.preventDefault();
+                hands.grabScale(mousePosRef.current);
+            }
+
+            // R: Rotate
+            if (e.code === 'KeyR') {
+                e.preventDefault();
+                hands.grabRotate(mousePosRef.current);
             }
 
             // Shift + F: Fit View
