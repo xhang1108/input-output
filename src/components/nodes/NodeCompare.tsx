@@ -7,6 +7,7 @@ import { SourceHandle } from '../handles/SourceHandle';
 import { useAppStore } from '@/store/useAppStore';
 import { pullValue } from '@/engine/Brain';
 import { useMuteLine, MuteLine } from './MuteVisual';
+import { useNodeResult } from './useNodeResult';
 
 const operations = [
     { value: 'gt', label: '>' },
@@ -24,27 +25,12 @@ interface NodeCompareProps {
 export const NodeCompare = memo(({ id, data, selected, isConnectable }: NodeCompareProps & { selected?: boolean; isConnectable?: boolean }) => {
     const { updateNodeData, getNodes, getEdges } = useReactFlow();
     const { triggerLogicUpdate, logicVersion } = useAppStore();
+    const { result, error } = useNodeResult(id);
     const operation = (data.operation as string) || 'eq';
-    const [result, setResult] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
     const isMuted = !!data.muted;
 
     // Use shared mute line logic
     const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [operation, selected]);
-
-    // Unified Pull Logic for Preview
-    useEffect(() => {
-        const nodes = getNodes();
-        const edges = getEdges();
-        try {
-            const pullResult = pullValue(id, nodes, edges);
-            setResult(pullResult.val);
-            setError(null);
-        } catch (e: any) {
-            setError(e.message || 'Error');
-        }
-    }, [logicVersion, id, getNodes, getEdges]);
 
     // Helper to get boolean state from result
     const isTrue = result === 1;

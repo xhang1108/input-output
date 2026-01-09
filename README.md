@@ -12,8 +12,10 @@
   - **Logic Nodes:** Perform boolean operations (AND, OR, XOR, NAND).
   - **Comparison Nodes:** Compare values (>, <, =, ≠) with visual LED feedback.
   - **Unary Nodes:** Handle single-input operations (e.g., Negate, Sin, Cos).
+  - **Slider Nodes:** Interactive real-time value adjustment.
   - **Output Nodes:** Visualize results with real-time tracking.
-- **High-Precision Engine:** Powered by `mathjs` BigNumber to eliminate floating-point errors (e.g., `0.1 + 0.2` is exactly `0.3`).
+- **High-Precision Engine:** Powered by `mathjs` BigNumber and frame-level caching for O(N) performance.
+- **Auto-Layout:** Instant organization of complex graphs using Elk.js.
 - **Premium UI:** A sleek, dark-themed interface optimized for both desktop and mobile.
 - **Fluid Interactions:** Blender-style edge detachment (drag from input to disconnect) and auto-snap.
 - **Persistence System:**
@@ -67,6 +69,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - [x] **Persistence:** Local storage auto-save and manual controls.
 - [x] **Export:** Save your graphs as JSON.
 - [x] **Logic Gates:** Integration of `if/else` and comparison operators.
+- [x] **Auto Layout:** Intelligent graph organization (Elk.js).
 - [ ] **Export Options:** Save graphs as high-resolution images (PNG/SVG).
 - [ ] **Cloud Sync:** Multi-device synchronization.
 

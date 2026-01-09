@@ -8,30 +8,17 @@ import { useAppStore } from '@/store/useAppStore';
 import { pullValue } from '@/engine/Brain';
 import { NodeShell } from './NodeShell';
 import { useMuteLine, MuteLine } from './MuteVisual';
+import { useNodeResult } from './useNodeResult';
+import { ResultPreview } from './ResultPreview';
 
 export const NodeSwitch = memo(({ id, data, selected, isConnectable }: NodeProps) => {
     const { getNodes, getEdges } = useReactFlow();
     const { triggerLogicUpdate, logicVersion } = useAppStore();
-    const [result, setResult] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
+    const { result, error } = useNodeResult(id);
     const isMuted = !!data.muted;
 
     // In NodeSwitch, mute pass-through is ifFalse -> Output
     const { containerRef, inputARef: inputFalseRef, outputRef, lineCoords } = useMuteLine(isMuted, [selected]);
-
-    // Unified Pull Logic for Preview
-    useEffect(() => {
-        const nodes = getNodes();
-        const edges = getEdges();
-        try {
-            const pullResult = pullValue(id, nodes, edges);
-            setResult(pullResult.val);
-            setError(null);
-        } catch (e: any) {
-            setError(e.message || 'Error');
-        }
-    }, [logicVersion, id, getNodes, getEdges]);
 
     // Check condition value (pulled from inputA in Brain.ts)
     // We'll need to know which branch is active for the LED
@@ -94,10 +81,7 @@ export const NodeSwitch = memo(({ id, data, selected, isConnectable }: NodeProps
 
             {/* Output Area */}
             <div className="bg-zinc-50 p-2 flex items-center justify-end relative h-8 rounded-b-[10px] border-t border-zinc-100">
-                <span className="font-mono text-sm mr-2 font-bold text-zinc-600 truncate max-w-[100px]">
-                    {error ? 'Error' : result !== null ?
-                        result.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '—'}
-                </span>
+                <ResultPreview result={result} error={error} precision={4} className="border-t-0 mt-0 pt-0 max-w-[100px]" />
                 <SourceHandle
                     ref={outputRef}
                     position={Position.Right}

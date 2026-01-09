@@ -6,53 +6,13 @@ import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
 import { pullValue, FALLBACK_PAYLOAD } from '../../engine/Brain';
 import { useAppStore } from '@/store/useAppStore';
-import { checkIsMatrix, formatValue } from '@/utils/resultUtils';
+import { useNodeResult } from './useNodeResult';
+import { ResultPreview } from './ResultPreview';
 
 export const NodeNumber = memo(({ id, data, selected }: NodeProps) => {
-    const { getEdges } = useReactFlow();
-    const { logicVersion } = useAppStore();
-    const [displayValue, setDisplayValue] = useState<string>('—');
-    const [isError, setIsError] = useState(false);
-
-    const store = useStoreApi();
-
-    useEffect(() => {
-        const calculate = () => {
-            const nodeLookup = store.getState().nodeLookup;
-            const edges = getEdges();
-
-            try {
-                // 1. Pull payload
-                const inputEdge = edges.find(e => e.target === id && e.targetHandle === 'inputA');
-                const payload = inputEdge
-                    ? pullValue(inputEdge.source, nodeLookup, edges, new Set())
-                    : FALLBACK_PAYLOAD;
-
-                const val = payload.val;
-
-                // 2. Strict Type Check
-                // If it's a Matrix or Array, this is the Wrong Node
-                const isMatrix = checkIsMatrix(val);
-
-                if (isMatrix) {
-                    setDisplayValue("TYPE ERR");
-                    setIsError(true);
-                    return;
-                }
-
-                setIsError(false);
-
-                // 3. Format Number
-                setDisplayValue(formatValue(val));
-
-            } catch (e) {
-                setDisplayValue("ERR");
-                setIsError(true);
-            }
-        };
-
-        calculate();
-    }, [logicVersion, id, getEdges, store]);
+    const { result, error } = useNodeResult(id);
+    const isMatrix = result && (result.isMatrix || Array.isArray(result));
+    const isError = !!error || isMatrix;
 
     const isMuted = !!data.muted;
 
@@ -72,9 +32,11 @@ export const NodeNumber = memo(({ id, data, selected }: NodeProps) => {
                     Number
                 </div>
 
-                <div className={`font-mono font-bold text-zinc-800 tabular-nums my-1 text-3xl ${isError ? 'text-red-500' : ''}`}>
-                    {displayValue}
-                </div>
+                <ResultPreview
+                    result={isMatrix ? "TYPE ERR" : result}
+                    error={error}
+                    className={`text-3xl font-bold ${isError ? 'text-red-500' : ''}`}
+                />
 
                 {isError && (
                     <div className="text-[9px] text-red-500 font-bold uppercase">

@@ -7,6 +7,7 @@ import { SourceHandle } from '../handles/SourceHandle';
 import { useAppStore } from '@/store/useAppStore';
 import { pullValue } from '@/engine/Brain';
 import { useMuteLine, MuteLine } from './MuteVisual';
+import { useNodeResult } from './useNodeResult';
 
 interface NodeLogicProps {
     id: string;
@@ -16,31 +17,12 @@ interface NodeLogicProps {
 export const NodeLogic = memo(({ id, data, selected, isConnectable }: NodeLogicProps & { selected?: boolean; isConnectable?: boolean }) => {
     const { updateNodeData, getNodes, getEdges } = useReactFlow();
     const { triggerLogicUpdate, logicVersion } = useAppStore();
+    const { result, error } = useNodeResult(id);
     const operation = (data.operation as string) || 'AND';
-    const [result, setResult] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
     const isMuted = !!data.muted;
 
     // Use shared mute line logic
     const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [operation, selected]);
-
-    // Unified Pull Logic for Preview
-    const store = useStoreApi();
-
-    useEffect(() => {
-        const edges = getEdges();
-
-        try {
-            // Optimization: Use internal map for O(1) lookup
-            const nodeLookup = store.getState().nodeLookup;
-            const pullResult = pullValue(id, nodeLookup, edges);
-            setResult(pullResult.val);
-            setError(null);
-        } catch (e: any) {
-            setError(e.message || 'Error');
-        }
-    }, [logicVersion, id, getEdges]);
 
     // Helper to get boolean state from result (0 = false, 1 = true)
     const isTrue = result === 1;

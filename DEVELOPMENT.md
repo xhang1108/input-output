@@ -31,13 +31,14 @@ To prevent "Refactor Hell" and ensure the project remains maintainable (unlike t
     *   `useEar` should not know about MathJS or Bounding Boxes.
     *   `useEye` should not know about Node Data.
 
-### 2. The Cycle of Reactivity (V3: Decoupled)
+### 2. The Cycle of Reactivity (V4: Optimized Pull)
 1.  **Visual Change (Drag/Select):** Handled entirely by React Flow and local state. No calculation is triggered.
 2.  **Logical Change (Type/Connect):** Any data-altering action calls `triggerLogicUpdate()`.
 3.  **The Signal:** The global `logicVersion` (Zustand) increments.
-4.  **The Pull:** Functional nodes (like `NodeOutput`) detect the version change and initiate a **Lazy Pull**.
-5.  **Recursion:** `Brain.ts` runs `pullValue()`, which recursively traverses the graph *backwards* from the output to the source.
-6.  **Expression:** Results are displayed instantly. Because this is decoupled from the drag loops, dragging remains 60fps.
+4.  **The Cache Clear:** `clearCache()` is called in `Brain.ts` to prepare for a fresh frame.
+5.  **The Pull:** Functional nodes (like `NodeOutput`) detect the version change and initiate a **Lazy Pull**.
+6.  **Recursion + Memoization:** `Brain.ts` runs `_pullValue()`, which recursively traverses the graph. Intermediate results are stored in a **Frame Cache** (Map), ensuring O(N) complexity even with massive branching.
+7.  **Expression:** Results are displayed instantly.
 
 ### 3. Forward Flow, Backward Calculation
 -   **Visual Flow:** Edges look like they flow forward (Input -> Math -> Output).
@@ -59,6 +60,14 @@ All node components use a **Custom Memo Comparison**. We explicitly ignore posit
 ));
 ```
 **Result:** Only the node's "wrapper" moves geographically. The internal JSX (icons, math, labels) stays static and does not re-render until the data actually changes.
+
+### 2. Frame-Level Memoization
+**Problem:** A deep tree with shared sub-branches (e.g. output depends on A and B, which both depend on C) would lead to exponential calculation time.
+**The Fix:**
+`Brain.ts` maintains a `frameCache` (Javascript Map). Every node's result is calculated once per logic version and reused.
+```typescript
+if (frameCache.has(nodeId)) return frameCache.get(nodeId)!;
+```
 
 ### 2. Recursive Cycle Protection
 **Problem:** A graph loop (A->B->A) would cause a `Stack Overflow` in a recursive pull model.
@@ -98,7 +107,7 @@ Using `Ctrl + Right Click Drag`, the user creates a path. `useEye` performs a co
 ---
 
 ## 🏛️ Structural Blueprint
-(Structure moved to [PROJECT_STRUCTURE.md](file:///d:/Antigravity/Calctopus/PROJECT_STRUCTURE.md))
+(Structure moved to [.agent/blueprints.md](file:///.agent/blueprints.md))
 
 ---
 
@@ -120,9 +129,10 @@ As of Jan 2026, Calctopus intentionally maintains certain architectural debts to
 **Constraint:** JavaScript's weak typing ("100" + 5 = "1005") is a risk for mathematical software.
 - **The Fix:** The engine enforces strict numeric casting (coercion) within `Brain.ts` for all Input data (e.g., `Number(val) || 0`) before it touches MathJS.
 
-### 4. Visual Scalability (Spaghetti UX)
-**Constraint:** Complex graphs with 50+ nodes lead to cognitive overload.
-- **The Strategy:** High-level grouping (Sub-graphs) and "Defined Variable Naming" for intermediate Math nodes are the next strategic milestones to prevent "Visual Spaghetti."
+### 4. Visual Scalability (Graph Layout)
+**Constraint:** Complex graphs with 50+ nodes lead to cognitive overload and spaghetti connections.
+- **The Solution:** Auto Layout via **Elk.js** (`Shift + L`) allows users to instantly organize their graph into a readable hierarchical structure.
+- **Next Steps:** Implementing "Sub-graphs" (Grouping) to further collapse complexity.
 
 ### 5. Mute System Sync (The "Double Map" Debt)
 **Constraint:** Mute bypass logic is currently duplicated between the engine and the UI.

@@ -7,7 +7,8 @@ import { TargetHandle } from '../handles/TargetHandle';
 import { pullValue, FALLBACK_PAYLOAD } from '../../engine/Brain';
 import { useAppStore } from '@/store/useAppStore';
 import { MatrixTable } from '../visuals/MatrixTable';
-import { formatValue, checkIsMatrix } from '@/utils/resultUtils';
+import { useNodeResult } from './useNodeResult';
+import { ResultPreview } from './ResultPreview';
 
 interface NodeOutputData {
     value?: number;
@@ -20,72 +21,10 @@ interface NodeOutputData {
 }
 
 export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
-    const outputData = data as NodeOutputData;
-    const { updateNodeData } = useReactFlow();
-
-    const { getNodes, getEdges } = useReactFlow();
-    const { logicVersion } = useAppStore();
-    const [pullResult, setPullResult] = useState<{ val: string; rawVal: any; formula: string; display: string } | null>(null);
-
-    const store = useStoreApi();
-
-    useEffect(() => {
-        const calculate = () => {
-            const nodeLookup = store.getState().nodeLookup;
-            const edges = getEdges();
-
-            let payload;
-            try {
-                // 1. Pull
-                const inputEdge = edges.find(e => e.target === id && e.targetHandle === 'inputA');
-
-                payload = inputEdge
-                    ? pullValue(inputEdge.source, nodeLookup, edges, new Set())
-                    : FALLBACK_PAYLOAD;
-
-                // 2. Evaluate
-                if (payload.formula === '0' && Object.keys(payload.scope).length === 0) {
-                    setPullResult({ val: '0', rawVal: 0, formula: '0', display: '0' });
-                    return;
-                }
-
-                // 3. Final Execution
-                const finalVal = payload.val;
-
-                setPullResult({
-                    val: formatValue(finalVal),
-                    rawVal: finalVal,
-                    formula: payload.formula,
-                    display: payload.display
-                });
-
-            } catch (e: any) {
-                if (e.message && e.message.includes("Cycle")) {
-                    setPullResult({ val: "Loop", rawVal: null, formula: "Cycle Detected", display: "Cycle" });
-                } else {
-                    setPullResult({ val: "Error", rawVal: null, formula: "Calculation Error", display: "Error" });
-                }
-            }
-        };
-
-        calculate();
-    }, [logicVersion, id, getNodes, getEdges]);
-
-    // Use the decoupled engine result
-    let displayValue = '—';
-
-    // --- Legacy Logic (Push) ---
-    if (outputData.result !== undefined && outputData.result !== null) {
-        displayValue = String(outputData.result);
-    }
-
-    // --- Hybrid Pull Override ---
-    if (pullResult) {
-        displayValue = pullResult.val;
-    }
+    const { result, error, display, rawPayload } = useNodeResult(id);
+    const isMatrix = result && (result.isMatrix || Array.isArray(result));
 
     const isMuted = !!data.muted;
-    const isMatrix = pullResult?.rawVal && checkIsMatrix(pullResult.rawVal);
 
     return (
         <NodeShell
@@ -103,9 +42,12 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
                     <span>Result</span>
                 </div>
 
-                <div className={`font-mono font-bold text-zinc-800 tabular-nums my-1 transition-all text-3xl`}>
-                    {displayValue}
-                </div>
+                <ResultPreview
+                    result={result}
+                    error={error}
+                    precision={14}
+                    className="border-t-0 mt-0 pt-0 text-3xl font-bold"
+                />
 
                 {/* Atomic Matrix View */}
                 {isMatrix && (
@@ -114,7 +56,7 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
                             <span>Matrix View</span>
                             <span className="text-indigo-500">Live</span>
                         </div>
-                        <MatrixTable data={pullResult.rawVal} />
+                        <MatrixTable data={result} />
                     </div>
                 )}
             </div>

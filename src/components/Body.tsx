@@ -152,7 +152,8 @@ export function Body() {
     // Context Menu Logic
     const {
         pendingConnection, setPendingConnection,
-        menuRef, closeMenu, addNodeAtCursor
+        menuRef, closeMenu, addNodeAtCursor,
+        connectionHandlers
     } = useContextMenu(
         menuPosition,
         setMenuPosition,
@@ -160,7 +161,10 @@ export function Body() {
         setNodes,
         setEdges,
         () => nodes,
-        triggerLogicUpdate
+        triggerLogicUpdate,
+        onConnect,
+        onReconnectStart,
+        onReconnectEnd
     );
 
     // Ears (Keyboard & Mouse Context)
@@ -197,72 +201,6 @@ export function Body() {
         }
     }, [hands.isPlacing, keys.ctrl, knife.isCutting]);
 
-    // Flag to track if a successful connection just occurred
-    const justConnectedRef = useRef(false);
-
-    // Intercept onConnect to set the flag
-    const onConnectWrapped = useCallback((params: any) => {
-        justConnectedRef.current = true;
-        onConnect(params);
-    }, [onConnect]);
-
-    const connectionStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null } | null>(null);
-
-    // Flag to track if we are RECONNECTING (detaching an existing edge)
-    // We should NEVER open the auto-insert menu during a reconnect action
-    const isReconnectingRef = useRef(false);
-
-    const onReconnectStartWrapped = useCallback(() => {
-        isReconnectingRef.current = true;
-        onReconnectStart();
-    }, [onReconnectStart]);
-
-    const onReconnectEndWrapped = useCallback((event: any, edge: any, handleType: any) => {
-        isReconnectingRef.current = false;
-        onReconnectEnd(event, edge, handleType);
-    }, [onReconnectEnd]);
-
-    const onConnectStartWrapped = useCallback((_: any, params: any) => {
-        // Reset connection-success flag on start
-        justConnectedRef.current = false;
-
-        // Only track start params if we are NOT reconnecting
-        // This ensures purely new connections are tracked for the menu
-        if (!isReconnectingRef.current) {
-            connectionStartRef.current = params;
-        }
-
-        // Note: We do NOT call onReconnectStart here anymore to avoid logic bleed
-    }, []);
-
-    const onConnectEndWrapped = useCallback((event: any) => {
-        // 1. If we just made a valid connection, skip
-        if (justConnectedRef.current) {
-            justConnectedRef.current = false;
-            connectionStartRef.current = null;
-            return;
-        }
-
-        // 2. If we are in the middle of a Reconnect/Detach action, skip
-        if (isReconnectingRef.current) {
-            return;
-        }
-
-        const startParams = connectionStartRef.current;
-        if (startParams && startParams.handleType === 'source') {
-            const clientX = (event instanceof TouchEvent) ? event.changedTouches[0]?.clientX : event.clientX;
-            const clientY = (event instanceof TouchEvent) ? event.changedTouches[0]?.clientY : event.clientY;
-
-            if (clientX !== undefined && clientY !== undefined) {
-                setMenuPosition({ x: clientX, y: clientY });
-                setPendingConnection({
-                    source: startParams.nodeId!,
-                    sourceHandle: startParams.handleId
-                });
-            }
-        }
-        connectionStartRef.current = null;
-    }, [setMenuPosition, setPendingConnection]);
 
     const onNodeDragStop = useCallback((_: any, node: any) => {
         const candidate = eyes.scanInsertionCandidate(node);
@@ -335,12 +273,12 @@ export function Body() {
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
-                    onConnect={onConnectWrapped}
-                    onConnectStart={onConnectStartWrapped}
-                    onConnectEnd={onConnectEndWrapped}
+                    onConnect={connectionHandlers.onConnect}
+                    onConnectStart={connectionHandlers.onConnectStart}
+                    onConnectEnd={connectionHandlers.onConnectEnd}
                     onReconnect={onReconnect}
-                    onReconnectStart={onReconnectStartWrapped}
-                    onReconnectEnd={onReconnectEndWrapped}
+                    onReconnectStart={connectionHandlers.onReconnectStart}
+                    onReconnectEnd={connectionHandlers.onReconnectEnd}
                     onNodeDragStop={onNodeDragStop}
                     nodeTypes={nodeTypes}
                     edgeTypes={edgeTypes}

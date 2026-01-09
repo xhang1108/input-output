@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/select';
 import { useAppStore } from '@/store/useAppStore';
 import { useMuteLine, MuteLine } from './MuteVisual';
+import { useNodeResult } from './useNodeResult';
+import { ResultPreview } from './ResultPreview';
 
 interface NodeUnaryProps {
     id: string;
@@ -35,26 +37,9 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
     const { updateNodeData, getNodes, getEdges } = useReactFlow();
     const { triggerLogicUpdate, logicVersion } = useAppStore();
     const [op, setOp] = useState(data.operation || 'sqrt');
-    const [result, setResult] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
+    const { result, error } = useNodeResult(id);
     const isMuted = !!data.muted;
     const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [op, selected]);
-
-    // Unified Pull Logic for Preview
-    const store = useStoreApi();
-
-    useEffect(() => {
-        const edges = getEdges();
-        try {
-            const nodeLookup = store.getState().nodeLookup;
-            const pullResult = pullValue(id, nodeLookup, edges);
-            setResult(pullResult.val);
-            setError(null);
-        } catch (e) {
-            setError('Error');
-        }
-    }, [logicVersion, id, getEdges]);
 
     const onSelect = (value: string) => {
         setOp(value);
@@ -86,35 +71,7 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
             </Select>
 
             {/* Result Display */}
-            <div className="mt-2 pt-2 border-t border-purple-200 flex justify-center">
-                {error ? (
-                    <span className="text-red-500 text-xs font-bold">⚠️ Error</span>
-                ) : (
-                    <span className="text-zinc-600 font-mono font-bold text-sm">
-                        {(() => {
-                            if (result === null || result === undefined) return '...';
-
-                            // Matrix Dimension Detection
-                            const isMatrix = result && ((result as any).isMatrix || Array.isArray(result));
-                            if (isMatrix) {
-                                const clean = (result as any).toArray ? (result as any).toArray() : result;
-                                if (Array.isArray(clean) && Array.isArray(clean[0])) {
-                                    return `${clean.length}×${clean[0].length}`;
-                                }
-                                return `[${(clean as any).length}]`;
-                            }
-
-                            if (typeof result === 'number' && !isNaN(result)) {
-                                return result.toLocaleString('en-US', {
-                                    maximumFractionDigits: 2,
-                                    useGrouping: true
-                                });
-                            }
-                            return String(result).slice(0, 8);
-                        })()}
-                    </span>
-                )}
-            </div>
+            <ResultPreview result={result} error={error} className="mt-0 pt-2" />
 
             <TargetHandle
                 ref={inputARef}

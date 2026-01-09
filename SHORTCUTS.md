@@ -14,7 +14,7 @@ This document serves as the Single Source of Truth for all keyboard interactions
 | R | Object Mode | Rotate | Rotates node arrangement. |
 | X | Object Mode | Delete | Disabled if typing. |
 | M | Object Mode | Mute Selected | Toggles "muted" state on nodes. |
-| . (Period) | Object Mode | Focus View | Disabled if typing. |
+| . (Period) / Shift + F | Object Mode | Focus View | Disabled if typing. |
 | Del / Backspace| Global | Delete Object / Text | Text delete if typing; Object delete if not. |
 | Shift + A | Object Mode | Add Menu | Disabled if typing. |
 | Shift + D | Object Mode | Duplicate | Creates copy & starts move. |
@@ -49,7 +49,7 @@ This document serves as the Single Source of Truth for all keyboard interactions
 | Cancel | RMB / Esc | | Cancels & reverts G / S / R. |
 | Axis Lock | X / Y | | Toggles X or Y axis locking during G. |
 | Select All | A | | |
-| Focus View | . | | Centers view on selection. |
+| Focus View | . | Shift + F | Centers view on selection. |
 | Auto Layout | Shift + L | (Layout Button) | Arranges nodes left-to-right using Elk.js. |
 
 ## 3. Interaction Principles

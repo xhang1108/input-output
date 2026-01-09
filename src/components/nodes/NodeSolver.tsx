@@ -9,6 +9,8 @@ import { SourceHandle } from '../handles/SourceHandle';
 import { useAppStore } from '@/store/useAppStore';
 import { pullValue } from '@/engine/Brain';
 import { useMuteLine, MuteLine } from './MuteVisual';
+import { useNodeResult } from './useNodeResult';
+import { ResultPreview } from './ResultPreview';
 
 interface NodeSolverProps {
     id: string;
@@ -26,34 +28,18 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
     const { updateNodeData, getNodes, getEdges } = useReactFlow();
     const { triggerLogicUpdate, logicVersion } = useAppStore();
     const [targetVar, setTargetVar] = useState(data.targetVar || 'x');
-    const [solution, setSolution] = useState<number | string>('?');
-    const [error, setError] = useState<string | null>(null);
-
+    const { result, error } = useNodeResult(id);
     const isMuted = !!data.muted;
+
+    // Use shared mute line logic
     const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [targetVar, selected]);
 
-    // Unified Pull Logic
-    const store = useStoreApi();
-
+    // Sync result back to data if needed (Solver needs this for persistence of its "Solution")
     useEffect(() => {
-        const edges = getEdges();
-
-        try {
-            const nodeLookup = store.getState().nodeLookup;
-            const pullResult = pullValue(id, nodeLookup, edges);
-            // We store the number for formatting, but Brain.ts might give a non-number in some edge cases
-            setSolution(pullResult.val);
-            setError(null);
-
-            // If the solved value differs from current data, update it
-            if (pullResult.val !== data.value) {
-                updateNodeData(id, { value: pullResult.val });
-            }
-        } catch (e: any) {
-            setError(e.message || 'Error');
-            setSolution('Error');
+        if (result !== null && result !== undefined && result !== data.value) {
+            updateNodeData(id, { value: result });
         }
-    }, [logicVersion, id, getEdges, updateNodeData, data.value]);
+    }, [result, id, updateNodeData, data.value]);
 
     return (
         <NodeShell
@@ -88,13 +74,8 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
                     />
                 </div>
 
-                <div className="bg-zinc-950 rounded p-2 text-center">
-                    <div className="text-[10px] text-zinc-500 mb-1">SOLUTION</div>
-                    <div className="text-xl font-mono text-indigo-400 font-bold tabular-nums">
-                        {typeof solution === 'number'
-                            ? solution.toLocaleString('en-US', { maximumFractionDigits: 10 })
-                            : solution}
-                    </div>
+                <div className="bg-zinc-950 rounded p-1 flex justify-center">
+                    <ResultPreview result={result} error={error} precision={10} className="border-t-0 mt-0 pt-0" />
                 </div>
             </div>
 
