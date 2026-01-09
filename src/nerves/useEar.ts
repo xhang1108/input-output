@@ -90,8 +90,8 @@ export const useEar = ({ hands, eyes, memories, onOpenMenu }: UseEarProps) => {
                 return;
             }
 
-            // Period (.): Focus Selected
-            if (e.key === '.' || e.code === 'Period') {
+            // Period (.) or Shift + F: Focus Selected
+            if ((e.key === '.' || e.code === 'Period') || (e.shiftKey && e.code === 'KeyF')) {
                 e.preventDefault();
                 const selected = getNodes().filter(n => n.selected);
                 eyes.focus(selected);
@@ -175,13 +175,7 @@ export const useEar = ({ hands, eyes, memories, onOpenMenu }: UseEarProps) => {
                 hands.grabRotate(mousePosRef.current);
             }
 
-            // Shift + F: Fit View
-            if (e.shiftKey && e.code === 'KeyF') {
-                e.preventDefault();
-                const selected = getNodes().filter(n => n.selected);
-                eyes.focus(selected);
-                return;
-            }
+
 
             // Shift + L: Auto Layout (Elk)
             if (e.shiftKey && e.code === 'KeyL') {
