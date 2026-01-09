@@ -1,6 +1,6 @@
 'use client';
 
-import { Handle, Position, useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useStoreApi } from '@xyflow/react';
 import { useState, useEffect, memo } from 'react';
 import { Sigma } from 'lucide-react';
 import { NodeShell } from './NodeShell';
@@ -33,12 +33,14 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
     const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [targetVar, selected]);
 
     // Unified Pull Logic
+    const store = useStoreApi();
+
     useEffect(() => {
-        const nodes = getNodes();
         const edges = getEdges();
 
         try {
-            const pullResult = pullValue(id, nodes, edges);
+            const nodeLookup = store.getState().nodeLookup;
+            const pullResult = pullValue(id, nodeLookup, edges);
             // We store the number for formatting, but Brain.ts might give a non-number in some edge cases
             setSolution(pullResult.val);
             setError(null);
@@ -51,13 +53,13 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
             setError(e.message || 'Error');
             setSolution('Error');
         }
-    }, [logicVersion, id, getNodes, getEdges, updateNodeData, data.value]);
+    }, [logicVersion, id, getEdges, updateNodeData, data.value]);
 
     return (
         <NodeShell
             ref={containerRef}
             selected={selected}
-            className={`bg-zinc-900 border-2 border-indigo-500 rounded-xl p-4 shadow-lg min-w-[200px] transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-zinc-900 border-2 border-indigo-500 rounded-xl p-4 min-w-[200px] ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             {/* Inputs */}
             <TargetHandle

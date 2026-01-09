@@ -3,8 +3,11 @@
 import {
     BaseEdge,
     getSmoothStepPath,
+    getBezierPath,
+    getStraightPath,
     useReactFlow,
     useStore,
+    useStoreApi,
     Position,
     type EdgeProps,
     type ReactFlowState,
@@ -13,7 +16,11 @@ import { memo, useMemo, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { pullValue } from '@/engine/Brain';
 
+import { useRenderTracker } from '../debug/Profiler';
+import './edge-anim.css';
+
 export const CustomEdge = memo((props: EdgeProps) => {
+    useRenderTracker('Edge');
     const {
         id,
         sourceX,
@@ -39,35 +46,57 @@ export const CustomEdge = memo((props: EdgeProps) => {
 
     const { getNode, getNodes, getEdges } = useReactFlow();
 
+    const { logicVersion, settings } = useAppStore(); // Destructure settings here too for path logic
+
     // 1. Calculate Path
-    const [edgePath] = getSmoothStepPath({
+    const pathParams = {
         sourceX,
         sourceY,
         sourcePosition,
         targetX,
         targetY,
         targetPosition,
-        borderRadius: 20,
-    });
+    };
+
+    let edgePath = '';
+    // Select path algorithm based on settings
+    switch (settings.edgeStyle) {
+        case 'straight':
+            [edgePath] = getStraightPath(pathParams);
+            break;
+        case 'bezier':
+            [edgePath] = getBezierPath(pathParams);
+            break;
+        case 'step':
+        default:
+            [edgePath] = getSmoothStepPath({
+                ...pathParams,
+                borderRadius: 20,
+            });
+            break;
+    }
 
     // 3. Determine Flow Type (Formula vs Value)
-    const { displayMode, logicVersion } = useAppStore();
     const isFormula = !!(data as any)?.isFormula;
-    const showFormulaStyle = isFormula && displayMode === 'formula';
+
+
+    const store = useStoreApi();
 
     // 3.1 Detect Data Type (Matrix/Array = Thick Wire)
     const isThick = useMemo(() => {
         try {
-            const nodes = getNodes();
             const edges = getEdges();
+
             // Pull only from source to see what it's carrying
-            const payload = pullValue(source, nodes, edges, new Set());
+            // Optimization: Use imperative store access to avoid re-rendering on every node move
+            const nodeLookup = store.getState().nodeLookup;
+            const payload = pullValue(source, nodeLookup, edges, new Set());
             const val = payload.val;
-            return Array.isArray(val) || (val && val.toArray);
+            return Array.isArray(val) || (val && (val.isMatrix || val.toArray));
         } catch (e) {
             return false;
         }
-    }, [source, getNodes, getEdges, logicVersion]); // Re-check on logic update
+    }, [source, getEdges, logicVersion]); // Re-check on logic update
 
     // 3.1 Mute Logic: Dim edges that are NOT the pass-through on a muted node
     const isTargetMuted = !!targetNodeData?.muted;
@@ -88,27 +117,46 @@ export const CustomEdge = memo((props: EdgeProps) => {
     const isIgnored = isTargetMuted && targetHandleId !== primaryHandles[targetNodeType || ''];
 
     // 4. Dynamic Styles
+    // Settings are available from the top-level hook
+
     const edgeStyle = useMemo(() => {
-        let strokeWidth = showFormulaStyle ? 3 : 2;
-        if (isThick) strokeWidth += 2.5; // Double the thickness for arrays
+        let strokeWidth = 2;
+        if (isThick) strokeWidth += 2.5;
+
+        // Simplify: Only animate if explicitly formula data and enabled in settings
+        // (Previously relied on global displayMode)
+        const shouldAnimate = isFormula && settings.enableAnimations;
+        const showFormulaStyle = isFormula; // Always show purple for formula edges
+
+        // If animation is disabled, we also disable dashes to make it solid
+        const dashArray = (shouldAnimate) ? '5 5' : undefined;
+
+        // Calculate delay
+        const delay = shouldAnimate
+            ? `-${(id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 10) / 10}s`
+            : undefined;
+
+        const debugStroke = showFormulaStyle ? '#a855f7' : '#71717a';
 
         return {
             ...style,
-            stroke: isIgnored ? '#d4d4d8' : (showFormulaStyle ? '#a855f7' : '#71717a'),
+            stroke: isIgnored ? '#d4d4d8' : debugStroke,
             strokeWidth,
-            strokeDasharray: (showFormulaStyle && !isIgnored) ? '5 5' : undefined,
+            strokeDasharray: dashArray || 'none',
             opacity: isIgnored ? 0.3 : 1,
-            // Desynchronize overlapping dashed lines
-            animationDelay: showFormulaStyle ? `-${(id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 10) / 10}s` : undefined,
+            animation: 'none',
+            animationDelay: delay,
         };
-    }, [style, isIgnored, showFormulaStyle, isThick, id]);
+    }, [style, isIgnored, isFormula, isThick, id, settings.enableAnimations]);
+
+    const shouldAnimate = isFormula && !isIgnored && settings.enableAnimations;
 
     return (
         <BaseEdge
             path={edgePath}
             markerEnd={markerEnd}
             style={edgeStyle}
-            className={(showFormulaStyle && !isIgnored) ? "animate-dash-flow" : ""}
+            className={shouldAnimate ? "anim-flowing-edge" : ""}
         />
     );
 });

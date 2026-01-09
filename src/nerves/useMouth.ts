@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/store/useAppStore';
 
 const STORAGE_KEY = 'calctopus-graph';
 
@@ -9,9 +10,12 @@ export const useMouth = () => {
 
     // Savor: Save to LocalStorage
     const savor = useCallback(() => {
+        const { settings, displayMode } = useAppStore.getState();
         const flow = {
             nodes: getNodes(),
             edges: getEdges(),
+            settings,
+            displayMode, // Also persist display mode
             timestamp: Date.now()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(flow));
@@ -25,6 +29,14 @@ export const useMouth = () => {
                 const flow = JSON.parse(saved);
                 if (flow.nodes && flow.edges) {
                     setNodes(flow.nodes);
+
+                    // Restore Settings
+                    if (flow.settings) {
+                        useAppStore.getState().updateSettings(flow.settings);
+                    }
+                    if (flow.displayMode) {
+                        useAppStore.getState().setDisplayMode(flow.displayMode);
+                    }
 
                     // Migration: Fix legacy edges (a/b/in/eq -> inputA/inputB)
                     // Skip migration for 'groupNode' as they have dynamic handles (e.g. input-0)

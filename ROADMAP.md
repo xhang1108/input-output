@@ -54,6 +54,7 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
 - [ ] **Keyboard Shortcuts Audit:**
     - [ ] 1. Verify operation of all existing shortcuts.
     - [ ] 2. Implement new shortcuts for improved workflow.
+    - [ ] 3. **Copy-Paste with Edges**: Ensure connected edges are also copied when multiple nodes are selected and pasted.
 
 ## 🎨 Phase 3: Visuals & Polish
 **Goal:** Enhance the user interface and graph management tools.

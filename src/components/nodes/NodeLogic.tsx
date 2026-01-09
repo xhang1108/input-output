@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react';
-import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { Handle, Position, NodeProps, useReactFlow, useStoreApi } from '@xyflow/react';
 import { NodeShell } from './NodeShell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TargetHandle } from '../handles/TargetHandle';
@@ -26,17 +26,21 @@ export const NodeLogic = memo(({ id, data, selected, isConnectable }: NodeLogicP
     const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [operation, selected]);
 
     // Unified Pull Logic for Preview
+    const store = useStoreApi();
+
     useEffect(() => {
-        const nodes = getNodes();
         const edges = getEdges();
+
         try {
-            const pullResult = pullValue(id, nodes, edges);
+            // Optimization: Use internal map for O(1) lookup
+            const nodeLookup = store.getState().nodeLookup;
+            const pullResult = pullValue(id, nodeLookup, edges);
             setResult(pullResult.val);
             setError(null);
         } catch (e: any) {
             setError(e.message || 'Error');
         }
-    }, [logicVersion, id, getNodes, getEdges]);
+    }, [logicVersion, id, getEdges]);
 
     // Helper to get boolean state from result (0 = false, 1 = true)
     const isTrue = result === 1;
@@ -47,7 +51,7 @@ export const NodeLogic = memo(({ id, data, selected, isConnectable }: NodeLogicP
         <NodeShell
             ref={containerRef}
             selected={selected}
-            className={`bg-white border-2 border-indigo-500 rounded-xl shadow-lg min-w-[140px] hover:border-indigo-400 transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-white border-2 border-indigo-500 rounded-xl min-w-[140px] hover:border-indigo-400 ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             {/* Header */}
             <div className="bg-indigo-50 px-4 py-2 border-b border-indigo-100 flex items-center justify-between rounded-t-[10px]">

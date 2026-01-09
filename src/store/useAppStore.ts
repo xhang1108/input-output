@@ -9,6 +9,13 @@ interface AppState {
     // Performance Optimization: Logical Versioning
     logicVersion: number;
     triggerLogicUpdate: () => void;
+    settings: {
+        showMinimap: boolean;
+        enableAnimations: boolean;
+        edgeStyle: 'bezier' | 'straight' | 'step';
+        showDebugInfo: boolean;
+    };
+    updateSettings: (settings: Partial<AppState['settings']>) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -22,4 +29,19 @@ export const useAppStore = create<AppState>((set) => ({
         clearCache();
         set((state) => ({ logicVersion: state.logicVersion + 1 }));
     },
+    // Settings
+    settings: {
+        showMinimap: true,
+        enableAnimations: true, // Default to true, but we will respect the toggle
+        edgeStyle: 'step', // Default to current look (SmoothStep)
+        showDebugInfo: false,
+    },
+    updateSettings: (newSettings) => set((state) => {
+        const updated = {
+            ...state.settings,
+            ...newSettings
+        };
+        // Force a new object reference for settings
+        return { settings: updated };
+    }),
 }));

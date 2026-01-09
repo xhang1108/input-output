@@ -50,10 +50,11 @@ interface MuteLineProps {
  * Shared SVG component to render the mute pass-through line
  */
 export function MuteLine({ coords, color, opacity = 0.6 }: MuteLineProps) {
-    const { displayMode } = useAppStore();
+    const { displayMode, settings } = useAppStore();
     if (!coords) return null;
 
     const strokeWidth = displayMode === 'formula' ? 3 : 2;
+    const shouldAnimate = settings.enableAnimations;
 
     return (
         <svg
@@ -67,9 +68,9 @@ export function MuteLine({ coords, color, opacity = 0.6 }: MuteLineProps) {
                 y2={coords.y2}
                 stroke={color}
                 strokeWidth={strokeWidth}
-                strokeDasharray="5 5"
-                className="animate-dash-flow"
-                style={{ opacity }}
+                className=""
+                strokeDasharray={shouldAnimate ? "5 5" : undefined}
+                style={{ opacity, animation: shouldAnimate ? 'dash-flow 0.5s linear infinite' : 'none' }}
             />
         </svg>
     );

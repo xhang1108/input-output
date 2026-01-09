@@ -1,0 +1,12 @@
+@keyframes super-dash-flow {
+  from {
+    stroke-dashoffset: 20px;
+  }
+  to {
+    stroke-dashoffset: 0px;
+  }
+}
+
+.anim-flowing-edge {
+  animation: super-dash-flow 0.8s linear infinite !important;
+}

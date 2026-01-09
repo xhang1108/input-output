@@ -1,10 +1,15 @@
 import { type Node, type Edge, type NodeTypes, type EdgeTypes } from '@xyflow/react';
 import { NodeInput } from '../nodes/NodeInput';
+import { NodeInputNumber } from '../nodes/NodeInputNumber';
+import { NodeInputMatrix } from '../nodes/NodeInputMatrix';
 import { NodeMath } from '../nodes/NodeMath';
 import { NodeUnary } from '../nodes/NodeUnary';
 import { NodeLogic } from '../nodes/NodeLogic';
 import { NodeCompare } from '../nodes/NodeCompare';
 import { NodeOutput } from '../nodes/NodeOutput';
+import { NodeNumber } from '../nodes/NodeNumber';
+import { NodeMatrix } from '../nodes/NodeMatrix';
+import { NodeFormula } from '../nodes/NodeFormula';
 import { NodeSolver } from '../nodes/NodeSolver';
 import { NodeSwitch } from '../nodes/NodeSwitch';
 import { NodeGroup } from '../nodes/NodeGroup';
@@ -12,12 +17,17 @@ import { NodeSlider } from '../nodes/NodeSlider';
 import { CustomEdge } from '../edges/CustomEdge';
 
 export const nodeTypes: NodeTypes = {
-    inputNode: NodeInput,
+    inputNode: NodeInput, // legacy
+    inputNumber: NodeInputNumber,
+    inputMatrix: NodeInputMatrix,
     mathNode: NodeMath,
     unaryNode: NodeUnary,
     logicNode: NodeLogic,
     compareNode: NodeCompare,
-    outputNode: NodeOutput,
+    outputNode: NodeOutput, // Legacy support
+    numberNode: NodeNumber,
+    matrixNode: NodeMatrix,
+    formulaNode: NodeFormula,
     solverNode: NodeSolver,
     switchNode: NodeSwitch,
     groupNode: NodeGroup,

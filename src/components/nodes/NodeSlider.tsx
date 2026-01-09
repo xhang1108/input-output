@@ -44,7 +44,7 @@ export const NodeSlider = memo(({ id, data, selected }: NodeSliderProps & { sele
     return (
         <NodeShell
             selected={selected}
-            className={`bg-white border-2 border-indigo-500 rounded-xl p-4 shadow-lg min-w-[160px] hover:border-indigo-400 transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-white border-2 border-indigo-500 rounded-xl p-4 min-w-[160px] hover:border-indigo-400 ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">

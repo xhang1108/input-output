@@ -1,6 +1,6 @@
 'use client';
 
-import { Handle, Position, useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useStoreApi } from '@xyflow/react';
 import { useState, memo, useEffect, useRef } from 'react';
 import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
@@ -30,7 +30,10 @@ const operations = [
     { value: 'mod', label: '%' },
 ];
 
+import { useRenderTracker } from '../debug/Profiler';
+
 export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected?: boolean }) => {
+    useRenderTracker('NodeMath');
     const { updateNodeData, getNodes, getEdges } = useReactFlow();
     const { triggerLogicUpdate, logicVersion } = useAppStore();
     const [op, setOp] = useState(data.operation || 'add');
@@ -43,17 +46,21 @@ export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected
     const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [op, selected]);
 
     // Unified Pull Logic for Preview
+    const store = useStoreApi();
+
     useEffect(() => {
-        const nodes = getNodes();
         const edges = getEdges();
+
         try {
-            const pullResult = pullValue(id, nodes, edges);
+            // Optimization: Use internal map for O(1) lookup
+            const nodeLookup = store.getState().nodeLookup;
+            const pullResult = pullValue(id, nodeLookup, edges);
             setResult(pullResult.val);
             setError(null);
         } catch (e) {
             setError('Error');
         }
-    }, [logicVersion, id, getNodes, getEdges]);
+    }, [logicVersion, id, getEdges]);
 
     const onSelect = (value: string) => {
         setOp(value);
@@ -67,7 +74,7 @@ export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected
         <NodeShell
             ref={containerRef}
             selected={selected}
-            className={`bg-white border-2 border-orange-400 rounded-full w-[80px] h-[80px] shadow-lg flex flex-col items-center justify-center relative hover:border-orange-500 transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-white border-2 border-orange-400 rounded-full w-[80px] h-[80px] flex flex-col items-center justify-center relative hover:border-orange-500 ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <TargetHandle
                 ref={inputARef}

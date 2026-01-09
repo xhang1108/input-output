@@ -10,7 +10,8 @@ export function usePersistence(
     setEdges: (eds: Edge[] | ((eds: Edge[]) => Edge[])) => void,
     mouth: any,
     triggerLogicUpdate: () => void,
-    logicVersion: number
+    logicVersion: number,
+    settings: any // dependency for auto-save
 ) {
     const handleSave = useCallback(() => {
         mouth.savor();
@@ -28,7 +29,7 @@ export function usePersistence(
             mouth.savor();
         }, 2000);
         return () => clearTimeout(timeout);
-    }, [logicVersion, mouth]);
+    }, [logicVersion, mouth, settings]);
 
     // Auto-Load
     useEffect(() => {

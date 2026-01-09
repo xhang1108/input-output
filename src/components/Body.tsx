@@ -16,11 +16,13 @@ import '@xyflow/react/dist/style.css';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
     Plus, Calculator, Sigma, Monitor, Save, Download,
-    Trash, Hash, Scale, ToggleRight, Group, Ungroup, LayoutTemplate, Sliders
+    Trash, Hash, Scale, ToggleRight, Group, Ungroup, LayoutTemplate, Sliders, Settings as SettingsIcon
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 import { useHand } from '../nerves/useHand';
 import { useEar } from '../nerves/useEar';
@@ -38,10 +40,98 @@ import { useGraphState } from './Body/useGraphState';
 import { useKnifeTool } from './Body/useKnifeTool';
 import { useContextMenu } from './Body/useContextMenu';
 import { usePersistence } from './Body/usePersistence';
+import { Profiler, useRenderTracker } from './debug/Profiler';
+
+function SettingsMenu() {
+    const { settings, updateSettings } = useAppStore();
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="relative">
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(!isOpen)}
+                title="Settings"
+                className={isOpen ? 'bg-zinc-800 text-white' : ''}
+            >
+                <SettingsIcon className="w-5 h-5" />
+            </Button>
+            {isOpen && (
+                <div className="absolute top-full right-0 mt-2 w-64 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl p-4 flex flex-col gap-4 z-50">
+                    <div className="text-sm font-bold text-zinc-400 border-b border-zinc-700 pb-2">Appearance & Performance</div>
+
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="minimap" className="text-zinc-200 text-sm">
+                            MiniMap <span className="text-zinc-500 text-xs">({settings.showMinimap ? 'ON' : 'OFF'})</span>
+                        </Label>
+                        <Switch
+                            id="minimap"
+                            checked={settings.showMinimap}
+                            onCheckedChange={(c) => updateSettings({ showMinimap: c })}
+                            className="scale-75"
+                        />
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="animations" className="text-zinc-200 text-sm">
+                            Flow Animations <span className="text-zinc-500 text-xs">({settings.enableAnimations ? 'ON' : 'OFF'})</span>
+                        </Label>
+                        <Switch
+                            id="animations"
+                            checked={settings.enableAnimations}
+                            onCheckedChange={(c) => updateSettings({ enableAnimations: c })}
+                            className="scale-75"
+                        />
+                    </div>
+
+                    <div className="text-sm font-bold text-zinc-400 border-b border-zinc-700 pb-2 mt-2">Connection Style</div>
+                    <div className="flex flex-col gap-2">
+                        {['step', 'bezier', 'straight'].map((style) => (
+                            <div key={style} className="flex items-center space-x-2">
+                                <input
+                                    type="radio"
+                                    id={`style-${style}`}
+                                    name="edgeStyle"
+                                    value={style}
+                                    checked={settings.edgeStyle === style}
+                                    onChange={() => updateSettings({ edgeStyle: style as any })}
+                                    className="accent-primary"
+                                />
+                                <Label htmlFor={`style-${style}`} className="text-zinc-200 text-sm capitalize">
+                                    {style}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="text-sm font-bold text-zinc-400 border-b border-zinc-700 pb-2 mt-2">Debug</div>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="debug" className="text-zinc-200 text-sm">
+                            Show Performance <span className="text-zinc-500 text-xs">({settings.showDebugInfo ? 'ON' : 'OFF'})</span>
+                        </Label>
+                        <Switch
+                            id="debug"
+                            checked={settings.showDebugInfo}
+                            onCheckedChange={(c) => updateSettings({ showDebugInfo: c })}
+                            className="scale-75"
+                        />
+                    </div>
+                </div>
+            )}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-transparent"
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
+        </div>
+    );
+}
 
 export function Body() {
+    useRenderTracker('Body');
     const { screenToFlowPosition } = useReactFlow();
-    const { displayMode, toggleDisplayMode, triggerLogicUpdate, logicVersion } = useAppStore();
+    const { triggerLogicUpdate, logicVersion, settings } = useAppStore();
 
     // --- State & Organs ---
     const [menuPosition, setMenuPosition] = useState<XYPosition | null>(null);
@@ -86,9 +176,10 @@ export function Body() {
     const knife = useKnifeTool(keys, eyes, hands, screenToFlowPosition);
 
     // Persistence & Scene Actions
+    // const { logicVersion, settings } = useAppStore(); // Removed duplicate
     const {
         handleSave, handleReset, handleGroupSelection, handleUngroup
-    } = usePersistence(nodes, edges, setNodes, setEdges, mouth, triggerLogicUpdate, logicVersion);
+    } = usePersistence(nodes, edges, setNodes, setEdges, mouth, triggerLogicUpdate, logicVersion, settings);
 
     // --- Local Event Handlers (Orchestration) ---
     const onContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
@@ -106,14 +197,57 @@ export function Body() {
         }
     }, [hands.isPlacing, keys.ctrl, knife.isCutting]);
 
+    // Flag to track if a successful connection just occurred
+    const justConnectedRef = useRef(false);
+
+    // Intercept onConnect to set the flag
+    const onConnectWrapped = useCallback((params: any) => {
+        justConnectedRef.current = true;
+        onConnect(params);
+    }, [onConnect]);
+
     const connectionStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null } | null>(null);
 
-    const onConnectStartWrapped = useCallback((_: any, params: any) => {
-        connectionStartRef.current = params;
+    // Flag to track if we are RECONNECTING (detaching an existing edge)
+    // We should NEVER open the auto-insert menu during a reconnect action
+    const isReconnectingRef = useRef(false);
+
+    const onReconnectStartWrapped = useCallback(() => {
+        isReconnectingRef.current = true;
         onReconnectStart();
     }, [onReconnectStart]);
 
+    const onReconnectEndWrapped = useCallback((event: any, edge: any, handleType: any) => {
+        isReconnectingRef.current = false;
+        onReconnectEnd(event, edge, handleType);
+    }, [onReconnectEnd]);
+
+    const onConnectStartWrapped = useCallback((_: any, params: any) => {
+        // Reset connection-success flag on start
+        justConnectedRef.current = false;
+
+        // Only track start params if we are NOT reconnecting
+        // This ensures purely new connections are tracked for the menu
+        if (!isReconnectingRef.current) {
+            connectionStartRef.current = params;
+        }
+
+        // Note: We do NOT call onReconnectStart here anymore to avoid logic bleed
+    }, []);
+
     const onConnectEndWrapped = useCallback((event: any) => {
+        // 1. If we just made a valid connection, skip
+        if (justConnectedRef.current) {
+            justConnectedRef.current = false;
+            connectionStartRef.current = null;
+            return;
+        }
+
+        // 2. If we are in the middle of a Reconnect/Detach action, skip
+        if (isReconnectingRef.current) {
+            return;
+        }
+
         const startParams = connectionStartRef.current;
         if (startParams && startParams.handleType === 'source') {
             const clientX = (event instanceof TouchEvent) ? event.changedTouches[0]?.clientX : event.clientX;
@@ -143,6 +277,7 @@ export function Body() {
             onMouseMove={knife.onMouseMove}
             onMouseUp={knife.onMouseUp}
         >
+            {useAppStore.getState().settings.showDebugInfo && <Profiler />}
             {/* Context Menu (Blender Style) */}
             {menuPosition && (
                 <div
@@ -151,10 +286,7 @@ export function Body() {
                     style={{ top: menuPosition.y, left: menuPosition.x }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="px-2 py-1 text-xs font-bold text-zinc-500 border-b border-zinc-700 mb-1">Add Node</div>
-                    <button onClick={() => addNodeAtCursor('inputNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
-                        <Hash className="w-4 h-4 text-blue-500" /> Input
-                    </button>
+
                     <button onClick={() => addNodeAtCursor('mathNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
                         <Plus className="w-4 h-4 text-orange-500" /> Math
                     </button>
@@ -176,8 +308,23 @@ export function Body() {
                     <button onClick={() => addNodeAtCursor('solverNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
                         <Sigma className="w-4 h-4 text-indigo-500" /> Solver
                     </button>
-                    <button onClick={() => addNodeAtCursor('outputNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
-                        <Monitor className="w-4 h-4 text-green-500" /> Output
+                    <div className="px-2 py-1 text-xs font-bold text-zinc-500 border-b border-zinc-700 mb-1 mt-1">Inputs</div>
+                    <button onClick={() => addNodeAtCursor('inputNumber')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                        <Hash className="w-4 h-4 text-blue-500" /> Number
+                    </button>
+                    <button onClick={() => addNodeAtCursor('inputMatrix')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                        <LayoutTemplate className="w-4 h-4 text-blue-500" /> Matrix
+                    </button>
+
+                    <div className="px-2 py-1 text-xs font-bold text-zinc-500 border-b border-zinc-700 mb-1 mt-1">Results</div>
+                    <button onClick={() => addNodeAtCursor('numberNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                        <Hash className="w-4 h-4 text-green-500" /> Number
+                    </button>
+                    <button onClick={() => addNodeAtCursor('matrixNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                        <LayoutTemplate className="w-4 h-4 text-indigo-500" /> Matrix
+                    </button>
+                    <button onClick={() => addNodeAtCursor('formulaNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                        <Sigma className="w-4 h-4 text-purple-500" /> Formula
                     </button>
                 </div>
             )}
@@ -188,12 +335,12 @@ export function Body() {
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
+                    onConnect={onConnectWrapped}
                     onConnectStart={onConnectStartWrapped}
                     onConnectEnd={onConnectEndWrapped}
                     onReconnect={onReconnect}
-                    onReconnectStart={onReconnectStart}
-                    onReconnectEnd={onReconnectEnd}
+                    onReconnectStart={onReconnectStartWrapped}
+                    onReconnectEnd={onReconnectEndWrapped}
                     onNodeDragStop={onNodeDragStop}
                     nodeTypes={nodeTypes}
                     edgeTypes={edgeTypes}
@@ -207,22 +354,20 @@ export function Body() {
                     panOnDrag={[1, 2]}
                     selectionOnDrag
                     selectionMode={SelectionMode.Partial}
-                    onPaneContextMenu={onContextMenu}
                     onMoveStart={() => setMenuPosition(null)}
+                    proOptions={{ hideAttribution: true }}
                 >
                     <Background color="#222" gap={20} />
-                    <Controls className="bg-zinc-900 border-zinc-800 text-zinc-400" />
-                    <MiniMap className="bg-zinc-900 border-zinc-800" nodeColor={nodeColor} />
+                    {/* Controls removed per user request */}
+                    {useAppStore.getState().settings.showMinimap && (
+                        <MiniMap className="bg-zinc-900 border-zinc-800" nodeColor={nodeColor} />
+                    )}
 
                     <Panel position="top-right" className="flex gap-2">
                         <div className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-3 py-1 rounded-md text-sm font-mono flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                             {nodes.length} Nodes
                         </div>
-                        <Button variant="outline" size="sm" onClick={toggleDisplayMode} className="gap-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-zinc-300">
-                            {displayMode === 'value' ? <Hash className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
-                            {displayMode === 'value' ? 'Values' : 'Formulas'}
-                        </Button>
                         <Button variant="outline" size="sm" onClick={layoutGraph} className="gap-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-zinc-300">
                             <LayoutTemplate className="w-4 h-4" />
                             Layout
@@ -232,6 +377,8 @@ export function Body() {
                         <Button variant="ghost" size="icon" onClick={handleGroupSelection} title="Group Selected"><Group className="w-5 h-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={handleUngroup} title="Ungroup"><Ungroup className="w-5 h-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={handleReset} title="Clear & Reset"><Trash className="w-5 h-5" /></Button>
+                        <div className="w-px h-6 bg-zinc-700 mx-1" />
+                        <SettingsMenu />
                     </Panel>
                 </ReactFlow>
             </div>

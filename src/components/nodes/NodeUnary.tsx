@@ -1,6 +1,6 @@
 'use client';
 
-import { Handle, Position, useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useStoreApi } from '@xyflow/react';
 import { useState, memo, useEffect } from 'react';
 import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
@@ -42,17 +42,19 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
     const { containerRef, inputARef, outputRef, lineCoords } = useMuteLine(isMuted, [op, selected]);
 
     // Unified Pull Logic for Preview
+    const store = useStoreApi();
+
     useEffect(() => {
-        const nodes = getNodes();
         const edges = getEdges();
         try {
-            const pullResult = pullValue(id, nodes, edges);
+            const nodeLookup = store.getState().nodeLookup;
+            const pullResult = pullValue(id, nodeLookup, edges);
             setResult(pullResult.val);
             setError(null);
         } catch (e) {
             setError('Error');
         }
-    }, [logicVersion, id, getNodes, getEdges]);
+    }, [logicVersion, id, getEdges]);
 
     const onSelect = (value: string) => {
         setOp(value);
@@ -64,7 +66,7 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
         <NodeShell
             ref={containerRef}
             selected={selected}
-            className={`bg-zinc-200 border-2 border-purple-500 rounded-lg p-3 shadow-md min-w-[120px] transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-zinc-200 border-2 border-purple-500 rounded-lg p-3 min-w-[120px] ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <div className="text-xs text-purple-500 mb-2 font-bold uppercase tracking-wider">
                 Trig / Math

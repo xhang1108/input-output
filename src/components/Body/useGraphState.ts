@@ -37,10 +37,12 @@ export function useGraphState(eyes: any, memories: any) {
 
     const onConnect = useCallback(
         (params: Connection) => {
+            /*
             if (eyes.detectCycle(params.source!, params.target!)) {
                 toast.error('⚠️ Loop detected! This connection would create a cycle.');
                 return;
             }
+            */
 
             setEdges((eds) => {
                 const currentNodes = getNodes();

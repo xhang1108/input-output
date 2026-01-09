@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useReactFlow, type Node, type Edge, getSmoothStepPath, Position, type XYPosition } from '@xyflow/react';
+import { trackLogic } from '@/components/debug/Profiler';
 
 // --- Math Helpers (Perception Logic) ---
 
@@ -127,6 +128,7 @@ export const useEye = () => {
 
     // Perception: Identify edges intersected by a path
     const seeCuts = useCallback((path: XYPosition[]): Edge[] => {
+        const start = performance.now();
         if (path.length < 2) return [];
         const edges = getEdges();
         const nodes = getNodes();
@@ -170,11 +172,13 @@ export const useEye = () => {
             }
         }
 
+        trackLogic('Eye:seeCuts', performance.now() - start);
         return victims;
     }, [getNodes, getEdges]);
 
     // Perception: Detect if connecting source->target would create a cycle
     const detectCycle = useCallback((sourceId: string, targetId: string) => {
+        const start = performance.now();
         if (sourceId === targetId) return true;
 
         const edges = getEdges();
@@ -190,7 +194,10 @@ export const useEye = () => {
 
         while (queue.length > 0) {
             const curr = queue.shift()!;
-            if (curr === sourceId) return true;
+            if (curr === sourceId) {
+                trackLogic('Eye:Cycle', performance.now() - start);
+                return true;
+            }
 
             const neighbors = adjacency.get(curr) || [];
             for (const next of neighbors) {
@@ -200,11 +207,13 @@ export const useEye = () => {
                 }
             }
         }
+        trackLogic('Eye:Cycle', performance.now() - start);
         return false;
     }, [getEdges]);
 
     // Perception: Scan for a nearby edge to split (Auto-Insert)
     const scanInsertionCandidate = useCallback((node: Node, threshold: number = 30) => {
+        const start = performance.now();
         if (node.type === 'inputNode') return null; // Logic check (Perception knows rules?) Perception knows geometry.
 
         const currentEdges = getEdges();
@@ -251,15 +260,18 @@ export const useEye = () => {
                     if ((node.type === 'mathNode' || node.type === 'logicNode' || node.type === 'compareNode') && targetHandle === 'inputA') {
                         const isBOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputB');
                         if (!isBOccupied) {
+                            trackLogic('Eye:Scan', performance.now() - start);
                             return { edge, targetHandle: 'inputB' };
                         }
                     }
                     continue; // Full
                 }
 
+                trackLogic('Eye:Scan', performance.now() - start);
                 return { edge, targetHandle };
             }
         }
+        trackLogic('Eye:Scan', performance.now() - start);
         return null;
     }, [getNodes, getEdges]);
 
