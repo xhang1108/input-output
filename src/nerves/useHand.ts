@@ -107,12 +107,17 @@ export const useHand = (
 
     // --- Placement Logic (The Follower) ---
 
-    const startPlacing = useCallback((nodeIds: string[], initialMousePos: { x: number, y: number }) => {
+    const startPlacing = useCallback((nodeIds: string[], initialMousePos: { x: number, y: number }, initialNodes?: Node[]) => {
         if (!nodeIds || nodeIds.length === 0) return;
 
-        const currentNodes = getNodes();
+        // Use provided nodes (just created) or fetch from store (existing)
+        const currentNodes = initialNodes || getNodes();
         const nodesToMove = currentNodes.filter(n => nodeIds.includes(n.id));
-        if (nodesToMove.length === 0) return;
+
+        if (nodesToMove.length === 0) {
+            console.warn('[Hand] startPlacing failed: No nodes found for IDs', nodeIds);
+            return;
+        }
 
         // Select the new nodes
         setNodes((nds) => nds.map(node => ({
@@ -176,9 +181,10 @@ export const useHand = (
 
         window.addEventListener('mousemove', handleMouseMove);
         // Safety: Delay attaching mousedown to prevent instant drops if event is leaking
+        // (e.g., if the user is still holding Shift+D)
         const timer = setTimeout(() => {
             window.addEventListener('mousedown', handleMouseDown, { capture: true });
-        }, 100);
+        }, 300);
 
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
@@ -327,12 +333,9 @@ export const useHand = (
 
         _spawnNodes(newNodes);
 
-        // AUTO-START PLACING (The Sticky Part)
-        startPlacing(newNodes.map(n => n.id), screenMousePos);
-
         toast.success(`Pasted ${newNodes.length} node(s)`);
         return newNodes;
-    }, [clipboard, screenToFlowPosition, _spawnNodes, startPlacing]);
+    }, [clipboard, screenToFlowPosition, _spawnNodes]);
 
     // --- Duplication ---
 
@@ -340,18 +343,22 @@ export const useHand = (
         const selectedNodes = getSelectedNodes();
         if (selectedNodes.length === 0) return;
 
-        const center = getBoundingBox(selectedNodes);
-        const targetPos = screenToFlowPosition(screenMousePos);
-        const newNodes = generateOffsetNodes(selectedNodes, targetPos, center);
+        const OFFSET = 40;
+        const newNodes = selectedNodes.map(node => {
+            return createNodeObject(node.type || 'default', {
+                x: node.position.x + OFFSET,
+                y: node.position.y + OFFSET
+            }, node.data, true);
+        });
 
         _spawnNodes(newNodes);
 
-        // AUTO-START PLACING (The Sticky Part)
-        startPlacing(newNodes.map(n => n.id), screenMousePos);
+        // AUTO-START PLACING (Pass nodes directly to avoid stale store race condition)
+        startPlacing(newNodes.map(n => n.id), screenMousePos, newNodes);
 
         toast.success(`Duplicated ${selectedNodes.length} node(s)`);
         return newNodes;
-    }, [getSelectedNodes, screenToFlowPosition, _spawnNodes, startPlacing]);
+    }, [getSelectedNodes, _spawnNodes, startPlacing]);
 
 
     // --- Mute ---

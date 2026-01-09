@@ -161,6 +161,14 @@ export const useEar = ({ hands, eyes, memories, onOpenMenu }: UseEarProps) => {
                 hands.grab(mousePosRef.current);
             }
 
+            // Shift + F: Fit View
+            if (e.shiftKey && e.code === 'KeyF') {
+                e.preventDefault();
+                const selected = getNodes().filter(n => n.selected);
+                eyes.focus(selected);
+                return;
+            }
+
             // Shift + L: Auto Layout (Elk)
             if (e.shiftKey && e.code === 'KeyL') {
                 e.preventDefault();

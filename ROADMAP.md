@@ -13,23 +13,24 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [x] **Nerves System:** Custom hooks (`useBrain`, `useHand`, `useEar`) for event handling.
 - [x] **Persistence**
     - [x] `localStorage` sync via `useMouth`.
-- [ ] **Performance & Optimization**
+- [x] **Performance & Optimization**
     - [x] **Engine Debounce:** Optimize `useBrain` to skip hash calculation during drag frames.
-    - [ ] **Edge Rendering:** Refactor `CustomEdge` to use `edge.data.isFormula` instead of expensive `getNode()` lookups for styling.
+    - [x] **Edge Rendering:** Refactor `CustomEdge` to use `edge.data.isFormula` instead of expensive `getNode()` lookups for styling.
+    - [x] **Frame Cache:** Implement memoization in `Brain.ts` for recursive evaluation.
 
 ---
 
 ## 🚧 Phase 2: Hybrid Pull Architecture (Current Focus)
 **Goal:** Implementation of "Push Signal, Pull Data" Engine.
 
-- [ ] **Core Engine Rewrite**
-    - [ ] **PullEngine.ts:** Implement recursive `getValue` with cycle detection.
-    - [ ] **Payload Standard:** Define `{ formula, scope, display, val }` structure.
-    - [ ] **Safety:** Implement `FALLBACK_PAYLOAD` (Zero) and `try-catch` error handling.
-- [ ] **Node Architecture v2**
-    - [ ] **Smart Result Node:** The only node that triggers calculation (via `math.evaluate`).
-    - [ ] **Lazy Intermediates:** Math/Logic nodes only calculate when pulled by a Result node.
-    - [ ] **Scoped Flow:** Wires carry variable tables (`scope`), not just numbers.
+- [x] **Core Engine Rewrite**
+    - [x] **PullEngine.ts:** Implement recursive `pullValue` with cycle detection in `Brain.ts`.
+    - [x] **Payload Standard:** Define `NodePayload` structure.
+    - [x] **Safety:** Implement `FALLBACK_PAYLOAD` and error handling.
+- [x] **Node Architecture v2**
+    - [x] **Smart Result Node:** Logic nodes trigger calculation via `pullValue`.
+    - [x] **Lazy Intermediates:** Nodes only calculate when pulled.
+    - [x] **Scoped Flow:** Wires carry variable tables (`scope`) for formula generation.
 - [ ] **Migration**
     - [ ] Deprecate `Brain.think()` (Monolithic Push).
     - [ ] Verify `ResultNode` handles Cycles gracefully without crashing.
@@ -41,12 +42,15 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [x] **Component:** Create `src/components/nodes/NodeCompare.tsx`.
     - [x] **Ops:** `>`, `<`, `=`, `!=`, `>=`, `<=`.
     - [x] **Visual Feedback:** LED indicator (Green=True, Red=False).
-- [ ] **Control Flow (Switch/If)**
-    - [ ] **Implementation:** Create `NodeSwitch.tsx`.
-    - [ ] **Data Logic:** If the switch is "Off", the output should propagate a special `Signal.NO_VALUE` or `null`.
+- [x] **Control Flow (Switch/If)**
+    - [x] **Implementation:** Created `NodeSwitch.tsx`.
+    - [x] **Data Logic:** Implemented ternary formula and lazy branch pulling in `Brain.ts`.
 
 ## 🐛 Known Issues / Polish
-- [ ] **Sticky Placement:** `Shift+D` (Duplicate) and `Ctrl+V` (Paste) should attach nodes to the mouse cursor for immediate placement. Currently, they paste at the cursor but do not "stick" for dragging.
+- [x] **Sticky Placement (Blender Style)**
+    - [x] **Shift+D**: Implemented spawn-in-place + relative sticky movement.
+    - [x] **Ctrl+V**: Standard mouse-centered paste (non-sticky).
+    - [x] **Race Condition Fix**: Ensured 100% activation reliability by passing node refs directly.
 - [ ] **Keyboard Shortcuts Audit:**
     - [ ] 1. Verify operation of all existing shortcuts.
     - [ ] 2. Implement new shortcuts for improved workflow.
@@ -54,21 +58,21 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
 ## 🎨 Phase 3: Visuals & Polish
 **Goal:** Enhance the user interface and graph management tools.
 
-- [ ] **Graph Layout Engine**
-    - [ ] **Library:** Integrate `elkjs` (Eclipse Layout Kernel) via a new `useLayout` hook.
-    - [ ] **Strategy:** Use `elk.layered` algorithm which respects ports (unlike `dagre`), ensuring inputs stay on the left.
-    - [ ] **UI:** Add "Auto Layout" button in the Panel.
-- [ ] **Navigation & A11y**
-    - [ ] **Minimap:** Add `<Minimap />` from `@xyflow/react` with custom `nodeColor` prop mapped to node types (e.g., Math=Orange, Input=Blue).
-    - [ ] **Keyboard:** Ensure `useEar` handles Focus Management so users can Tab between nodes.
+- [x] **Graph Layout Engine**
+    - [x] **Library:** Integrated `elkjs` via `useLayout` hook.
+    - [x] **Strategy:** Used `elk.layered` algorithm respecting ports.
+    - [x] **UI:** Added "Layout" button in the Panel.
+- [x] **Navigation & A11y**
+    - [x] **Minimap:** Added `<Minimap />` with custom node colors.
+    - [ ] **Keyboard:** Ensure `useEar` handles Focus Management.
 
 ## 🧮 Phase 4: Advanced Mathematics
 **Goal:** Support engineering workflows.
 
-- [ ] **Scientific Functions**
-    - [ ] **Library:** Leverage `mathjs` for all heavy lifting.
-    - [ ] **Node:** Expand `NodeUnary.tsx` to include `sin`, `cos`, `log`, `exp`.
-    - [ ] **UI:** Add a dropdown to select the function, updating the node label dynamically.
+- [x] **Scientific Functions**
+    - [x] **Library:** Leveraged `mathjs`.
+    - [x] **Node:** Expanded `NodeUnary.tsx` to include `sin`, `cos`, `tan`, `log`, etc.
+    - [x] **UI:** Added a dropdown to select functions.
 - [ ] **Custom Functions (Subgraphs)**
     - [ ] **Architecture:** Define a `MacroNode` type that holds a nested `nodes` and `edges` state.
     - [ ] **Execution:** `Brain.ts` needs to recursively call a `think()` sub-routine for these nodes.
