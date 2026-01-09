@@ -119,9 +119,9 @@ export const useEye = () => {
     // Focus on specific nodes or the whole graph if empty
     const focus = useCallback((nodes: Node[] = []) => {
         if (nodes.length > 0) {
-            fitView({ nodes, duration: 800, padding: 0.2 });
+            fitView({ nodes, duration: 400, padding: 0.2 });
         } else {
-            fitView({ duration: 800, padding: 0.2 });
+            fitView({ duration: 400, padding: 0.2 });
         }
     }, [fitView]);
 
@@ -231,19 +231,30 @@ export const useEye = () => {
 
             if (dist < threshold) {
                 // Check Port Availability (Vision)
-                let targetHandle = 'inputA';
+                // Define primary handles for injection
+                const primaryHandles: Record<string, string> = {
+                    'mathNode': 'inputA',
+                    'unaryNode': 'inputA',
+                    'logicNode': 'inputA',
+                    'compareNode': 'inputA',
+                    'switchNode': 'ifFalse',
+                    'outputNode': 'inputA',
+                    'solverNode': 'inputA',
+                };
 
-                if (node.type === 'mathNode') {
-                    const isInputAOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputA');
-                    const isInputBOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputB');
+                const targetHandle = primaryHandles[node.type || ''];
+                if (!targetHandle) continue; // Cannot inject into nodes without standard inputs (e.g. Slider)
 
-                    if (isInputAOccupied) {
-                        if (isInputBOccupied) continue; // Full
-                        targetHandle = 'inputB';
+                const isOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === targetHandle);
+                if (isOccupied) {
+                    // Special case for Math: try inputB if inputA is full
+                    if ((node.type === 'mathNode' || node.type === 'logicNode' || node.type === 'compareNode') && targetHandle === 'inputA') {
+                        const isBOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputB');
+                        if (!isBOccupied) {
+                            return { edge, targetHandle: 'inputB' };
+                        }
                     }
-                } else {
-                    const isInputAOccupied = currentEdges.some(e => e.target === node.id && e.targetHandle === 'inputA');
-                    if (isInputAOccupied) continue; // Full
+                    continue; // Full
                 }
 
                 return { edge, targetHandle };

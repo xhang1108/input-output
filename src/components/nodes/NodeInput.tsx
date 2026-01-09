@@ -65,6 +65,7 @@ export const NodeInput = memo(({ id, data, selected }: NodeInputProps & { select
 
             <SourceHandle
                 position={Position.Right}
+                id="output"
                 color="blue"
             />
         </NodeShell>

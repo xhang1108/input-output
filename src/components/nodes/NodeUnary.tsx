@@ -90,14 +90,25 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
                 ) : (
                     <span className="text-zinc-600 font-mono font-bold text-sm">
                         {(() => {
-                            if (result === null) return '...';
+                            if (result === null || result === undefined) return '...';
+
+                            // Matrix Dimension Detection
+                            const isMatrix = result && ((result as any).isMatrix || Array.isArray(result));
+                            if (isMatrix) {
+                                const clean = (result as any).toArray ? (result as any).toArray() : result;
+                                if (Array.isArray(clean) && Array.isArray(clean[0])) {
+                                    return `${clean.length}×${clean[0].length}`;
+                                }
+                                return `[${(clean as any).length}]`;
+                            }
+
                             if (typeof result === 'number' && !isNaN(result)) {
                                 return result.toLocaleString('en-US', {
                                     maximumFractionDigits: 2,
                                     useGrouping: true
                                 });
                             }
-                            return '...';
+                            return String(result).slice(0, 8);
                         })()}
                     </span>
                 )}
@@ -112,6 +123,7 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
             <SourceHandle
                 ref={outputRef}
                 position={Position.Right}
+                id="output"
                 color="purple"
             />
 

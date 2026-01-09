@@ -30,7 +30,7 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
     // --- Hybrid Pull Architecture Integration ---
     const { getNodes, getEdges } = useReactFlow();
     const { logicVersion } = useAppStore();
-    const [pullResult, setPullResult] = useState<{ val: string; formula: string; display: string } | null>(null);
+    const [pullResult, setPullResult] = useState<{ val: string; rawVal: any; formula: string; display: string } | null>(null);
 
     useEffect(() => {
         const calculate = () => {
@@ -50,7 +50,7 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
 
                 // Let's implement the logic HERE for now, or update PullEngine?
                 // Better to simple find the edge and pull from source.
-                const inputEdge = edges.find(e => e.target === id && (e.targetHandle === 'input' || e.targetHandle === 'inputA'));
+                const inputEdge = edges.find(e => e.target === id && e.targetHandle === 'inputA');
 
                 payload = inputEdge
                     ? pullValue(inputEdge.source, nodes, edges, new Set())
@@ -59,24 +59,45 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
                 // 2. Evaluate
                 // If the formula is just '0' (fallback) don't run mathjs
                 if (payload.formula === '0' && Object.keys(payload.scope).length === 0) {
-                    setPullResult({ val: '0', formula: '0', display: '0' });
+                    setPullResult({ val: '0', rawVal: 0, formula: '0', display: '0' });
                     return;
                 }
 
                 // 3. Final Execution (The Execution Law)
-                // Result Node is the ONLY one running math.evaluate
-                const finalVal = math.evaluate(payload.formula, payload.scope);
+                // Use the pre-calculated value from the engine (payload.val)
+                // instead of re-evaluating to ensure matrix types are preserved.
+                const finalVal = payload.val;
 
-                // Format with high precision and wider scientific notation boundaries
-                const formatted = math.format(finalVal, { precision: 14, lowerExp: -12, upperExp: 15 });
+                // Helper to format any value (scalar or matrix)
+                // Helper to format any value (scalar or matrix)
+                const formatValue = (val: any): string => {
+                    if (val === null || val === undefined) return '—';
 
-                // Add thousands separators (commas) for better readability if it's a plain number
-                const displayVal = /^-?\d+\.?\d*$/.test(formatted)
-                    ? Number(formatted).toLocaleString('en-US', { maximumFractionDigits: 10 })
-                    : formatted;
+                    // Unified extraction of raw data for visualization/summary
+                    const isMatrix = val && (val.isMatrix || typeof val.toArray === 'function');
+                    const cleanVal = isMatrix ? val.toArray() : val;
+
+                    if (Array.isArray(cleanVal)) {
+                        // For 2D matrices, show rows x cols
+                        if (Array.isArray(cleanVal[0])) {
+                            return `${cleanVal.length}×${cleanVal[0].length}`;
+                        }
+                        return `[${cleanVal.length}]`;
+                    }
+
+                    if (typeof cleanVal === 'number') {
+                        const formatted = math.format(cleanVal, { precision: 14, lowerExp: -12, upperExp: 15 });
+                        return /^-?\d+\.?\d*$/.test(formatted)
+                            ? Number(formatted).toLocaleString('en-US', { maximumFractionDigits: 10 })
+                            : formatted;
+                    }
+
+                    return String(cleanVal);
+                };
 
                 setPullResult({
-                    val: displayVal,
+                    val: formatValue(finalVal),
+                    rawVal: finalVal,
                     formula: payload.formula,
                     display: payload.display
                 });
@@ -86,9 +107,9 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
                 console.error("Payload was:", payload); // Debugging info
                 // Handle Cycle Error specifically?
                 if (e.message && e.message.includes("Cycle")) {
-                    setPullResult({ val: "Loop", formula: "Cycle Detected", display: "Cycle" });
+                    setPullResult({ val: "Loop", rawVal: null, formula: "Cycle Detected", display: "Cycle" });
                 } else {
-                    setPullResult({ val: "Error", formula: "Calculation Error", display: "Error" });
+                    setPullResult({ val: "Error", rawVal: null, formula: "Calculation Error", display: "Error" });
                 }
             }
         };
@@ -161,6 +182,41 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
                 <div className="text-3xl font-mono font-bold text-zinc-800 tabular-nums my-1">
                     {displayValue}
                 </div>
+
+                {/* Array Detail View (Enhanced Persistence) */}
+                {pullResult?.rawVal && (Array.isArray(pullResult.rawVal) || pullResult.rawVal.isMatrix || pullResult.rawVal.toArray) && (
+                    <div className="w-full mt-2 border-t border-zinc-200 pt-3">
+                        <div className="text-[9px] text-zinc-400 uppercase mb-2 font-bold flex justify-between">
+                            <span>Matrix View</span>
+                            <span className="text-indigo-500">Live</span>
+                        </div>
+                        <div className="max-h-[200px] overflow-auto border border-zinc-200 rounded-md bg-zinc-50 shadow-inner p-1">
+                            <table className="w-full text-[11px] font-mono border-collapse bg-white">
+                                <tbody>
+                                    {(pullResult.rawVal.toArray ? pullResult.rawVal.toArray() : pullResult.rawVal).map((row: any, i: number) => {
+                                        const isRowArray = Array.isArray(row);
+                                        return (
+                                            <tr key={i} className="border-b border-zinc-100 last:border-0 hover:bg-blue-50/50 transition-colors">
+                                                {isRowArray ? (
+                                                    row.map((cell: any, j: number) => (
+                                                        <td key={j} className="p-2 text-center border-x border-zinc-100 first:border-l-0 last:border-r-0 text-zinc-800">
+                                                            {typeof cell === 'number' ? math.format(cell, { precision: 4 }) : String(cell)}
+                                                        </td>
+                                                    ))
+                                                ) : (
+                                                    <td className="p-2 text-zinc-700">
+                                                        <span className="text-zinc-300 mr-2 font-bold">[{i}]</span>
+                                                        {typeof row === 'number' ? math.format(row, { precision: 6 }) : String(row)}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
         </NodeShell>
     );

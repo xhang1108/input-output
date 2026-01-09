@@ -7,9 +7,9 @@ import 'nerdamer/Solve';
 
 export interface NodePayload {
     formula: string;    // Safe ID formula for MathJS (e.g. "node_a + node_b")
-    scope: Record<string, number>; // Variable values (e.g. { node_a: 10, node_b: 20 })
-    display: string;    // Human-readable formula (e.g. "Rent + Tax")
-    val: number;        // Preview value for this node
+    scope: Record<string, any>; // Variable values
+    display: string;    // Human-readable formula
+    val: any;           // Preview value (can be number, array, matrix)
 }
 
 // --- Constants ---
@@ -106,68 +106,64 @@ export const pullValue = (
     // 4. Node Logic Switch
     switch (node.type) {
         case 'inputNode': {
-            if (node.data.muted) return FALLBACK_PAYLOAD; // Muted Input = 0
-            const val = Number(node.data.value) || 0;
-            // Use node ID as variable name in scope to ensure uniqueness
-            // Use label for display
-            // Clean ID to be safe for MathJS (usually IDs are safe, but better safe than sorry if we used UUIDs with dashes)
-            // Actually MathJS handles many chars, but safeVar is better.
-            // Our nanoid(8) might have dashes? nanoid default has -_.
-            // Let's assume we treat ID as the key.
-            // Namespace variables to avoid MathJS collisions (e.g. 'sin', 'pi', or leading numbers)
+            if (node.data.muted) return FALLBACK_PAYLOAD;
+
+            // Use math.evaluate for robust parsing of numbers, arrays, and matrices
+            let val = node.data.rawExpression ?? node.data.value;
+            let parsedVal: any = 0;
+
+            try {
+                if (typeof val === 'string' && val.trim() !== '') {
+                    parsedVal = math.evaluate(val);
+                } else {
+                    parsedVal = Number(val) || 0;
+                }
+            } catch (e) {
+                parsedVal = Number(val) || 0;
+            }
+
             const safeId = 'v_' + node.id.replace(/-/g, '_');
 
             return cacheAndReturn({
                 formula: safeId,
-                scope: { [safeId]: val },
-                display: node.data.label ? String(node.data.label) : `${val}`,
-                val: val
+                scope: { [safeId]: parsedVal },
+                display: node.data.label ? String(node.data.label) : `${parsedVal}`,
+                val: parsedVal
             });
         }
 
         case 'mathNode': {
-            // Pull Inputs
-            // MathNode expects inputs on handles 'inputA' and 'inputB' (or 'a' and 'b' depending on version, let's standardize on standardized 'inputA'/'inputB')
-            // Wait, previous conversations said we standardized to 'inputA', 'inputB' for MathNode? 
-            // Checking Body.tsx defaultEdges: targetHandle: 'inputA'
-            // Checking Brain.ts (old): it used 'a' and 'b' in some places?
-            // Let's look for edges targeting this node's 'inputA' and 'inputB'.
+            const edgeA = edges.find(e => e.target === nodeId && e.targetHandle === 'inputA');
+            const edgeB = edges.find(e => e.target === nodeId && e.targetHandle === 'inputB');
 
-            // Standardize handles: 'inputA', 'inputB'
-            const edgeA = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputA' || e.targetHandle === 'a'));
-            const edgeB = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputB' || e.targetHandle === 'b'));
-
-            const payloadA = edgeA ? pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
-            const payloadB = edgeB ? pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
-
-            // console.log(`[Brain] MathNode ${nodeId} inputs:`, { A: payloadA.val, B: payloadB.val });
+            const pA = edgeA ? pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pB = edgeB ? pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
 
             const op = (node.data.operation as string) || 'add';
-            let calculatedVal = 0;
+            let calculatedVal: any = 0;
             let symbol = '+';
+            let mathFn: ((a: any, b: any) => any) | null = null;
 
             switch (op) {
-                case 'add': calculatedVal = Number(payloadA.val) + Number(payloadB.val); symbol = '+'; break;
-                case 'sub': calculatedVal = Number(payloadA.val) - Number(payloadB.val); symbol = '-'; break;
-                case 'mul': calculatedVal = Number(payloadA.val) * Number(payloadB.val); symbol = '*'; break;
-                case 'div': {
-                    const valA = Number(payloadA.val);
-                    const valB = Number(payloadB.val);
-                    calculatedVal = valB === 0 ? Infinity : valA / valB;
-                    symbol = '/';
-                    break;
-                }
-                case 'pow': calculatedVal = Math.pow(Number(payloadA.val), Number(payloadB.val)); symbol = '^'; break;
-                case 'mod': calculatedVal = Number(payloadA.val) % Number(payloadB.val); symbol = '%'; break;
+                case 'add': mathFn = math.add; symbol = '+'; break;
+                case 'sub': mathFn = math.subtract; symbol = '-'; break;
+                case 'mul': mathFn = math.multiply; symbol = '*'; break;
+                case 'div': mathFn = math.divide; symbol = '/'; break;
+                case 'pow': mathFn = math.pow; symbol = '^'; break;
+                case 'mod': mathFn = math.mod; symbol = '%'; break;
             }
 
-            // Final safety filter
-            if (isNaN(calculatedVal)) calculatedVal = 0;
+            try {
+                calculatedVal = mathFn ? mathFn(pA.val, pB.val) : 0;
+            } catch (e) {
+                console.error(`MathNode error (${op}):`, e);
+                calculatedVal = 0;
+            }
 
             return cacheAndReturn({
-                formula: `(${payloadA.formula} ${symbol} ${payloadB.formula})`,
-                scope: { ...payloadA.scope, ...payloadB.scope },
-                display: `(${payloadA.display} ${symbol} ${payloadB.display})`,
+                formula: `(${pA.formula} ${symbol} ${pB.formula})`,
+                scope: { ...pA.scope, ...pB.scope },
+                display: `(${pA.display} ${symbol} ${pB.display})`,
                 val: calculatedVal
             });
         }
@@ -177,18 +173,26 @@ export const pullValue = (
             const payload = edge ? pullValue(edge.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
 
             const op = (node.data.operation as string) || 'sqrt';
-            let val = 0;
+            let val: any = 0;
             let funcName = op;
 
-            const inputVal = Number(payload.val);
-            switch (op) {
-                case 'sqrt': val = Math.sqrt(inputVal); funcName = 'sqrt'; break;
-                case 'sin': val = Math.sin(inputVal); funcName = 'sin'; break;
-                case 'cos': val = Math.cos(inputVal); funcName = 'cos'; break;
-                case 'tan': val = Math.tan(inputVal); funcName = 'tan'; break;
-                case 'abs': val = Math.abs(inputVal); funcName = 'abs'; break;
-                case 'log': val = Math.log(inputVal); funcName = 'log'; break;
-                case 'round': val = Math.round(inputVal); funcName = 'round'; break;
+            try {
+                // Use mathjs functions to support matrices
+                const mathFn = (math as any)[op];
+                if (mathFn) {
+                    // Element-wise support: if it's a matrix or array, map it
+                    const isCollection = payload.val && (payload.val.isMatrix || Array.isArray(payload.val));
+                    if (isCollection) {
+                        val = math.map(payload.val, (v: any) => mathFn(v));
+                    } else {
+                        val = mathFn(payload.val);
+                    }
+                } else {
+                    val = 0;
+                }
+            } catch (e) {
+                console.error(`UnaryNode error (${op}):`, e);
+                val = 0;
             }
 
             return cacheAndReturn({
@@ -232,7 +236,7 @@ export const pullValue = (
         }
 
         case 'solverNode': {
-            const edge = edges.find(e => e.target === nodeId && (e.targetHandle === 'input' || e.targetHandle === 'inputA'));
+            const edge = edges.find(e => e.target === nodeId && e.targetHandle === 'inputA');
             const payload = edge ? pullValue(edge.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
 
             const targetVar = (node.data.targetVar as string) || 'x';
@@ -240,6 +244,12 @@ export const pullValue = (
             let solutionStr = '?';
 
             try {
+                // Security Check: Only allow safe characters in the formula
+                // Allowed: Integers, decimals, letters, underscores, parens, operators (+-*/^=), spaces
+                if (!payload.formula || /[^a-zA-Z0-9_\.\s\+\-\*\/\^\(\),=]/.test(payload.formula)) {
+                    throw new Error("Invalid characters in formula");
+                }
+
                 // We use nerdamer to solve the expression assuming LHS = 0
                 // So if input is "x - 5", it solves for x - 5 = 0 -> x = 5.
                 const result = (nerdamer as any).solve(payload.formula, targetVar);
@@ -253,7 +263,7 @@ export const pullValue = (
                 const num = Number(firstSol);
                 if (!isNaN(num)) solvedVal = num;
             } catch (e) {
-                console.error("Solver failed:", e);
+                // Silent fail for solver - it's common to have unsolvable states while typing
                 solutionStr = "Error";
             }
 
@@ -305,9 +315,9 @@ export const pullValue = (
         }
 
         case 'switchNode': {
-            const edgeCond = edges.find(e => e.target === nodeId && (e.targetHandle === 'condition' || e.targetHandle === 'inputA'));
-            const edgeTrue = edges.find(e => e.target === nodeId && (e.targetHandle === 'ifTrue' || e.targetHandle === 'inputB'));
-            const edgeFalse = edges.find(e => e.target === nodeId && (e.targetHandle === 'ifFalse' || e.targetHandle === 'inputC'));
+            const edgeCond = edges.find(e => e.target === nodeId && e.targetHandle === 'condition');
+            const edgeTrue = edges.find(e => e.target === nodeId && e.targetHandle === 'ifTrue');
+            const edgeFalse = edges.find(e => e.target === nodeId && e.targetHandle === 'ifFalse');
 
             const pCond = edgeCond ? pullValue(edgeCond.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
 

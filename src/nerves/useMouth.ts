@@ -30,16 +30,37 @@ export const useMouth = () => {
                     // Skip migration for 'groupNode' as they have dynamic handles (e.g. input-0)
                     let duplicateCount = 0;
                     const tempEdges = flow.edges.map((e: any) => {
+                        const sourceNode = flow.nodes.find((n: any) => n.id === e.source);
                         const targetNode = flow.nodes.find((n: any) => n.id === e.target);
-                        if (targetNode?.type === 'groupNode') {
-                            return e; // Preserve group node handles precisely
+                        if (!targetNode) return e;
+
+                        let newTargetHandle = e.targetHandle;
+                        let newSourceHandle = e.sourceHandle;
+
+                        // --- 1. Migrate Target Handles ---
+                        if (targetNode.type !== 'groupNode') {
+                            // Standardize common names to inputA/inputB
+                            if (!newTargetHandle || newTargetHandle === 'a' || newTargetHandle === 'in' || newTargetHandle === 'eq' || newTargetHandle === 'input') {
+                                newTargetHandle = 'inputA';
+                            }
+                            if (newTargetHandle === 'b') newTargetHandle = 'inputB';
+
+                            // Force Correct for Specialized Nodes (e.g. Switch)
+                            if (targetNode.type === 'switchNode') {
+                                if (newTargetHandle === 'inputA' || newTargetHandle === 'input') newTargetHandle = 'condition';
+                                else if (newTargetHandle === 'inputB') newTargetHandle = 'ifTrue';
+                                else if (newTargetHandle === 'inputC') newTargetHandle = 'ifFalse';
+                            }
                         }
 
-                        let newHandle = e.targetHandle;
-                        // Handle legacy or missing handle IDs
-                        if (!newHandle || newHandle === 'a' || newHandle === 'in' || newHandle === 'eq') newHandle = 'inputA';
-                        if (newHandle === 'b') newHandle = 'inputB';
-                        return { ...e, targetHandle: newHandle };
+                        // --- 2. Migrate Source Handles ---
+                        if (sourceNode && sourceNode.type !== 'groupNode') {
+                            if (!newSourceHandle || newSourceHandle === 'out' || newSourceHandle === 'output-0') {
+                                newSourceHandle = 'output';
+                            }
+                        }
+
+                        return { ...e, sourceHandle: newSourceHandle, targetHandle: newTargetHandle };
                     });
 
                     // Deduplicate: Ensure only one edge per target handle

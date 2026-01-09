@@ -100,6 +100,7 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
             <SourceHandle
                 ref={outputRef}
                 position={Position.Right}
+                id="output"
                 color="indigo"
             />
 

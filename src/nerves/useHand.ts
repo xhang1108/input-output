@@ -387,7 +387,7 @@ export const useHand = (
             const sourceNode = currentNodes.find(n => n.id === edgeToSplit.source);
 
             const newNodeInput = targetHandle;
-            const newNodeOutput = null; // Default source handle for new node
+            const newNodeOutput = 'output'; // Standard source handle for all nodes
 
             const newEdge1 = {
                 id: nanoid(6),

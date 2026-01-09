@@ -76,6 +76,7 @@ export const NodeSlider = memo(({ id, data, selected }: NodeSliderProps & { sele
 
             <SourceHandle
                 position={Position.Right}
+                id="output"
                 color="indigo"
             />
         </NodeShell>

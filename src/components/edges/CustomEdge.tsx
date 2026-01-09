@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 import { memo, useMemo, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { pullValue } from '@/engine/Brain';
 
 export const CustomEdge = memo((props: EdgeProps) => {
     const {
@@ -36,7 +37,7 @@ export const CustomEdge = memo((props: EdgeProps) => {
         return node ? { muted: node.data.muted, type: node.type } : null;
     }, [target]));
 
-    const { getNode } = useReactFlow();
+    const { getNode, getNodes, getEdges } = useReactFlow();
 
     // 1. Calculate Path
     const [edgePath] = getSmoothStepPath({
@@ -50,9 +51,23 @@ export const CustomEdge = memo((props: EdgeProps) => {
     });
 
     // 3. Determine Flow Type (Formula vs Value)
-    const { displayMode } = useAppStore();
+    const { displayMode, logicVersion } = useAppStore();
     const isFormula = !!(data as any)?.isFormula;
     const showFormulaStyle = isFormula && displayMode === 'formula';
+
+    // 3.1 Detect Data Type (Matrix/Array = Thick Wire)
+    const isThick = useMemo(() => {
+        try {
+            const nodes = getNodes();
+            const edges = getEdges();
+            // Pull only from source to see what it's carrying
+            const payload = pullValue(source, nodes, edges, new Set());
+            const val = payload.val;
+            return Array.isArray(val) || (val && val.toArray);
+        } catch (e) {
+            return false;
+        }
+    }, [source, getNodes, getEdges, logicVersion]); // Re-check on logic update
 
     // 3.1 Mute Logic: Dim edges that are NOT the pass-through on a muted node
     const isTargetMuted = !!targetNodeData?.muted;
@@ -73,15 +88,20 @@ export const CustomEdge = memo((props: EdgeProps) => {
     const isIgnored = isTargetMuted && targetHandleId !== primaryHandles[targetNodeType || ''];
 
     // 4. Dynamic Styles
-    const edgeStyle = useMemo(() => ({
-        ...style,
-        stroke: isIgnored ? '#d4d4d8' : (showFormulaStyle ? '#a855f7' : '#71717a'),
-        strokeWidth: showFormulaStyle ? 3 : 2,
-        strokeDasharray: (showFormulaStyle && !isIgnored) ? '5 5' : undefined,
-        opacity: isIgnored ? 0.3 : 1,
-        // Desynchronize overlapping dashed lines
-        animationDelay: showFormulaStyle ? `-${(id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 10) / 10}s` : undefined,
-    }), [style, isIgnored, showFormulaStyle, id]);
+    const edgeStyle = useMemo(() => {
+        let strokeWidth = showFormulaStyle ? 3 : 2;
+        if (isThick) strokeWidth += 2.5; // Double the thickness for arrays
+
+        return {
+            ...style,
+            stroke: isIgnored ? '#d4d4d8' : (showFormulaStyle ? '#a855f7' : '#71717a'),
+            strokeWidth,
+            strokeDasharray: (showFormulaStyle && !isIgnored) ? '5 5' : undefined,
+            opacity: isIgnored ? 0.3 : 1,
+            // Desynchronize overlapping dashed lines
+            animationDelay: showFormulaStyle ? `-${(id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 10) / 10}s` : undefined,
+        };
+    }, [style, isIgnored, showFormulaStyle, isThick, id]);
 
     return (
         <BaseEdge

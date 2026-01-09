@@ -17,13 +17,14 @@ const COLOR_MAP = {
 };
 
 export const SourceHandle = forwardRef<HTMLDivElement, SourceHandleProps>(
-    ({ color = 'blue', className, style, position = Position.Right, ...props }, ref) => {
+    ({ color = 'blue', id, className, style, position = Position.Right, ...props }, ref) => {
         const bgColor = COLOR_MAP[color] || COLOR_MAP.blue;
 
         return (
             <Handle
                 {...props}
                 ref={ref}
+                id={id}
                 type="source"
                 position={position}
                 className={`
