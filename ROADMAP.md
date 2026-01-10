@@ -65,7 +65,7 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [x] **UI:** Added "Layout" button in the Panel.
 - [x] **Navigation & A11y**
     - [x] **Minimap:** Added `<Minimap />` with custom node colors.
-    - [ ] **Keyboard:** Ensure `useEar` handles Focus Management.
+    - [x] **Keyboard:** Ensure `useEar` handles Focus Management.
 
 ---
 

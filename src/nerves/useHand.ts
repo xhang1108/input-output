@@ -329,8 +329,14 @@ export const useHand = (
 
     const discard = useCallback(() => {
         const selected = getSelectedNodes();
-        _removeNodes(selected);
+        if (selected.length > 0) _removeNodes(selected);
     }, [getSelectedNodes, _removeNodes]);
+
+    // Deselect all
+    const release = useCallback(() => {
+        setNodes((nodes) => nodes.map(n => ({ ...n, selected: false })));
+        setEdges((edges) => edges.map(e => ({ ...e, selected: false })));
+    }, [setNodes, setEdges]);
 
     // --- Clipboard: Copy / Cut / Paste ---
 
@@ -620,6 +626,7 @@ export const useHand = (
         grabScale: (pos: { x: number, y: number }) => grab(pos, 'scale'),
         grabRotate: (pos: { x: number, y: number }) => grab(pos, 'rotate'),
         discard,
+        release,
         copy,
         cut, // Clipboard cut
         sever, // Knife cut (Atomic)

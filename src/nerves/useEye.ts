@@ -117,14 +117,25 @@ function pathIntersectsLine(pathStr: string, p1: { x: number, y: number }, p2: {
 export const useEye = () => {
     const { fitView, getNodes, getEdges } = useReactFlow();
 
-    // Focus on specific nodes or the whole graph if empty
-    const focus = useCallback((nodes: Node[] = []) => {
-        if (nodes.length > 0) {
-            fitView({ nodes, duration: 400, padding: 0.2 });
+    // Focus on specific nodes, or selected nodes, or the whole graph
+    const focus = useCallback((nodes?: Node[]) => {
+        let targets = nodes;
+
+        // If no explicit targets provided, check for selection (Intelligent Eye)
+        if (!targets || targets.length === 0) {
+            const currentNodes = getNodes();
+            const selected = currentNodes.filter(n => n.selected);
+            if (selected.length > 0) {
+                targets = selected;
+            }
+        }
+
+        if (targets && targets.length > 0) {
+            fitView({ nodes: targets, duration: 400, padding: 0.2 });
         } else {
             fitView({ duration: 400, padding: 0.2 });
         }
-    }, [fitView]);
+    }, [fitView, getNodes]);
 
     // Perception: Identify edges intersected by a path
     const seeCuts = useCallback((path: XYPosition[]): Edge[] => {

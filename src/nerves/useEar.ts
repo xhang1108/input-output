@@ -23,6 +23,7 @@ interface Hands {
     discard: () => void;
     copy: () => void;
     cut: () => void;
+    release: () => void; // New: Deselect All
     paste: (position: { x: number; y: number }) => any[] | undefined;
     duplicate: (position: { x: number; y: number }) => any[] | undefined;
     toggleMute: () => void;
@@ -58,21 +59,38 @@ export const useEar = ({ hands, eyes, memories, onOpenMenu }: UseEarProps) => {
     // --- Keyboard Listening (Ear -> Brain -> Hand) ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Escape: Blur Input
+            // Escape: Universal Blur (Reset Focus) -> Then Deselect
             if (e.code === 'Escape') {
-                if (document.activeElement instanceof HTMLElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+                let didBlur = false;
+                if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
                     document.activeElement.blur();
-                    e.preventDefault();
-                    return;
+                    didBlur = true;
                 }
+
+                // If we didn't have anything important to blur (or even if we did?), 
+                // we probably also want to clear selection? 
+                // UX decision: If I'm typing in a node label and hit Escape, I want to finish typing (blur).
+                // I might NOT want to lose my selection of that node immediately?
+                // Standard behavior: Escape blurs first. Second Escape deselects.
+                if (!didBlur) {
+                    hands.release();
+                }
+
+                e.preventDefault();
+                return;
             }
 
             if (e.key === 'Shift') setKeys(k => ({ ...k, shift: true }));
             if (e.key === 'Alt') setKeys(k => ({ ...k, alt: true }));
             if (e.key === 'Control' || e.key === 'Meta') setKeys(k => ({ ...k, ctrl: true }));
 
-            // Global Ignore for Inputs
-            if (e.target instanceof HTMLElement && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+            // --- Global Ignore Logic ---
+            // Don't trigger shortcuts if the user is typing in an input, text area, or select
+            const target = e.target as HTMLElement;
+            const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+            const isEditable = target.isContentEditable;
+
+            if (isInput || isEditable) {
                 return;
             }
 
@@ -90,11 +108,10 @@ export const useEar = ({ hands, eyes, memories, onOpenMenu }: UseEarProps) => {
                 return;
             }
 
-            // Period (.) or Shift + F: Focus Selected
+            // Period (.) or Shift + F: Focus Selected / All
             if ((e.key === '.' || e.code === 'Period') || (e.shiftKey && e.code === 'KeyF')) {
                 e.preventDefault();
-                const selected = getNodes().filter(n => n.selected);
-                eyes.focus(selected);
+                eyes.focus(); // Eye handles selection logic
                 return;
             }
 
