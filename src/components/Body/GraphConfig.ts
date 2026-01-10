@@ -11,6 +11,7 @@ import { NodeSolver } from '../nodes/NodeSolver';
 import { NodeSwitch } from '../nodes/NodeSwitch';
 import { NodeGroup } from '../nodes/NodeGroup';
 import { NodeSlider } from '../nodes/NodeSlider';
+import { NodeMacro } from '../nodes/NodeMacro';
 import { CustomEdge } from '../edges/CustomEdge';
 
 export const nodeTypes: NodeTypes = {
@@ -29,6 +30,7 @@ export const nodeTypes: NodeTypes = {
     switchNode: NodeSwitch,
     groupNode: NodeGroup,
     sliderNode: NodeSlider,
+    macroNode: NodeMacro,
 };
 
 export const edgeTypes: EdgeTypes = {

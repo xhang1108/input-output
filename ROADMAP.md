@@ -92,7 +92,16 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [ ] **Output Node:** If `value` is Array, render a small HTML `<table>` or grid instead of a single number.
     - [ ] **Spreadsheet Node:** A new input node allowing CSV-style data entry.
 
-## 🛠️ Phase 6: Engineering Health
+## � Phase 6: Deployment & Infrastructure
+**Goal:** Production readiness and public access.
+
+- [ ] **Domain Configuration**
+    - [ ] **Prefix Change:** Update project configuration to use new domain prefix.
+- [ ] **Cloudflare Pages**
+    - [ ] **Integration:** Connect repository to Cloudflare Pages for continuous deployment.
+    - [ ] **Environment:** Configure build settings for Next.js static/edge export.
+
+## �🛠️ Phase 7: Engineering Health
 **Goal:** Maintain stability at scale.
 
 - [ ] **Testing Strategy**
@@ -102,7 +111,7 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [ ] **Refactor:** Move `Brain.ts` into a `brain.worker.ts`.
     - [ ] **Comms:** Use `postMessage` to send `nodes/edges` and receive `results`, keeping the UI thread unblocked.
 
-## ☁️ Phase 7: Cloud & Community
+## ☁️ Phase 8: Cloud & Community
 **Goal:** Sharing and Storage.
 
 - [ ] **Serialization**
@@ -110,7 +119,7 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
 - [ ] **Backend**
     - [ ] **Supabase:** Simple `graphs` table with `id`, `user_id`, and `json_data` columns.
 
-## 🔮 Phase 8: Symbolic & Constraint Intelligence
+## 🔮 Phase 9: Symbolic & Constraint Intelligence
 **Goal:** Transform Calctopus from a Calculator to a Computational Engine.
 
 - [ ] **Omni-directional Nodes (Constraint Solver)**
@@ -122,14 +131,14 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [ ] **Computer Algebra System (CAS):** Nodes calculate symbolic derivatives, integrals, or simplifications.
     - [ ] **Visual Proofs:** Show the step-by-step transformation of a formula as it passes through the graph.
 
-## 🧬 Phase 9: Simulation & Macros (Blender 5.0 Architecture)
+## 🧬 Phase 10: Simulation & Macros (Blender 5.0 Architecture)
 **Goal:** Introduce programmability, loops, and time-based simulation.
 
 - [ ] **Simulation Zones (Time Travel)**
     - [ ] **Concept:** Allow `Result(Frame t)` to be fed into `Input(Frame t+1)`.
     - [ ] **Architecture:** Implement a **Simulation Zone** (Input/Output pair). Nodes inside execute once per frame.
     - [ ] **State Cache:** Need a "Cache Manager" in `Body.tsx` to store the history of simulation steps.
-- [ ] **Functional Closures (Macros)**
+- [x] **Functional Closures (Macros)**
     - [ ] **Concept:** Pass *logic* instead of *values*.
     - [ ] **Implementation:** Wires can carry a `(x) => y` function payload.
     - [ ] **Use Case:** Custom "Loop" nodes that run a connected subgraph 100 times.

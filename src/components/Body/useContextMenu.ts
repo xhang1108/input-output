@@ -141,15 +141,38 @@ export function useContextMenu(
 
         const position = screenToFlowPosition({ x: menuPosition.x, y: menuPosition.y });
         const id = nanoid(8);
+        let initialData: any = { value: 0 };
+
+        switch (type) {
+            case 'inputNode': initialData = { label: 'Value', value: 0 }; break;
+            case 'mathNode': initialData = { operation: 'add' }; break;
+            case 'unaryNode': initialData = { operation: 'sqrt' }; break;
+            case 'solverNode': initialData = { targetVar: 'x' }; break;
+            case 'macroNode':
+                initialData = {
+                    label: 'Doubler (x2)',
+                    inputs: [{ id: 'in-1', label: 'Value', type: 'number' }],
+                    outputs: [{ id: 'out-1', label: 'Result' }],
+                    nodes: [
+                        { id: 'in-1', type: 'macroInput', data: { label: 'Value' } },
+                        { id: 'const-2', type: 'inputNumber', data: { value: 2 } },
+                        { id: 'math-mul', type: 'mathNode', data: { operation: 'mul' } },
+                        { id: 'out-1', type: 'macroOutput', data: { label: 'Result' } }
+                    ],
+                    edges: [
+                        { id: 'e1', source: 'in-1', target: 'math-mul', targetHandle: 'inputA' },
+                        { id: 'e2', source: 'const-2', target: 'math-mul', targetHandle: 'inputB' },
+                        { id: 'e3', source: 'math-mul', target: 'out-1', targetHandle: 'inputA' }
+                    ]
+                };
+                break;
+        }
+
         const newNode: FlowNode = {
             id,
             type,
             position,
-            data: type === 'inputNode' ? { label: 'Value', value: 0 }
-                : type === 'mathNode' ? { operation: 'add' }
-                    : type === 'unaryNode' ? { operation: 'sqrt' }
-                        : type === 'solverNode' ? { targetVar: 'x' }
-                            : { value: 0 }
+            data: initialData
         };
 
         if (pendingConnection) {

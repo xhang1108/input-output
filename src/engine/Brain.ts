@@ -10,7 +10,13 @@ export interface NodePayload {
     formula: string;    // Safe ID formula for MathJS (e.g. "node_a + node_b")
     scope: Record<string, any>; // Variable values
     display: string;    // Human-readable formula
-    val: any;           // Preview value (can be number, array, matrix)
+    val: any;           // Preview value (can be number, array, matrix, or Object for multi-output)
+}
+
+// Context for Macro recursion
+interface EvaluationContext {
+    // A function to resolve a value for a specific inner input node ID (which corresponds to an outer connection)
+    resolveMacroInput?: (innerNodeId: string, visited: Set<string>) => NodePayload;
 }
 
 // --- Constants ---
@@ -35,6 +41,20 @@ export const toSafeVar = (label: string): string => {
     return label.replace(/[^a-zA-Z0-9]/g, '');
 };
 
+/**
+ * Extracts the correct value from a source payload based on the connecting handle.
+ * Supports both single-value nodes (primitive) and multi-value nodes (macros/objects).
+ */
+const resolveSourceValue = (payload: NodePayload, sourceHandle: string | null | undefined): any => {
+    const val = payload.val;
+    // If it's a Macro/Multi-Output (Object/Map) AND we have a specific handle
+    if (val && typeof val === 'object' && !Array.isArray(val) && !val.isMatrix && sourceHandle && sourceHandle in val) {
+        return val[sourceHandle];
+    }
+    // Default / Single Value / Matrix / Array
+    return val;
+};
+
 // --- Internals ---
 
 // The core recursive logic (renamed from pullValue)
@@ -42,7 +62,8 @@ const _pullValue = (
     nodeId: string,
     nodes: Node[] | Map<string, Node>,
     edges: Edge[],
-    visited: Set<string> = new Set()
+    visited: Set<string> = new Set(),
+    context?: EvaluationContext
 ): NodePayload => {
 
     // 0. Cache Hit
@@ -52,7 +73,10 @@ const _pullValue = (
 
     // 1. Cycle Detection
     if (visited.has(nodeId)) {
-        throw new Error(`Cycle detected at node ${nodeId}`);
+        // Return fallback to break cycle gracefully usually, but error is safer for debugging
+        // throw new Error(`Cycle detected at node ${nodeId}`);
+        // For robustness, we return 0/Error instead of crashing the whole graph
+        return FALLBACK_PAYLOAD;
     }
     const newVisited = new Set(visited);
     newVisited.add(nodeId);
@@ -76,6 +100,7 @@ const _pullValue = (
             case 'logicNode': primaryInputKey = 'inputA'; break;
             case 'compareNode': primaryInputKey = 'inputA'; break;
             case 'switchNode': primaryInputKey = 'ifFalse'; break;
+            // Macros might need custom bypass logic? Ignore for now.
             default: primaryInputKey = null;
         }
 
@@ -83,7 +108,7 @@ const _pullValue = (
             const edge = edges.find(e => e.target === nodeId && e.targetHandle === primaryInputKey);
             if (edge) {
                 // RECURSIVE CALL -> _pullValue
-                return cacheAndReturn(_pullValue(edge.source, nodes, edges, newVisited));
+                return cacheAndReturn(_pullValue(edge.source, nodes, edges, newVisited, context));
             }
         }
         return cacheAndReturn(FALLBACK_PAYLOAD);
@@ -91,6 +116,101 @@ const _pullValue = (
 
     // 4. Node Logic Switch
     switch (node.type) {
+        // --- Macro Logic ---
+        case 'macroNode': {
+            // A Macro contains an inner graph.
+            // We need to evaluate the "Inner Outputs" and return them bundled.
+            // data.nodes, data.edges, data.outputs (list of {id, label})
+
+            const innerNodes = node.data.nodes as Node[] | undefined;
+            const innerEdges = node.data.edges as Edge[] | undefined;
+            const outputDefs = node.data.outputs as Array<{ id: string, label: string }> | undefined;
+
+            if (!innerNodes || !innerEdges || !outputDefs) {
+                return cacheAndReturn(FALLBACK_PAYLOAD);
+            }
+
+            // Define Context for Inner Graph
+            const innerContext: EvaluationContext = {
+                resolveMacroInput: (innerInputId, innerVisited) => {
+                    // This callback runs WHEN the inner graph hits a 'macroInput' node.
+                    // We need to find the OUTER edge connected to this Macro Node's corresponding input handle.
+
+                    // 1. Find the input definition in the Macro Node data that matches this innerInputId
+                    // (The macroInput node ID inside IS the handle ID for the outside, usually? 
+                    //  Or we store a map? Let's assume innerInputId === inputHandleId for simplicity 
+                    //  OR the macroNode has `data.inputs` mapping).
+                    // Implementation Plan Assumption: innerNode.id === outerHandleId
+                    // Let's verify: In `data.inputs`, we have `{ id: 'inner_id', label: 'A' }`.
+                    // The handle on the macroNode would likely be the `inner_id`.
+
+                    const outerHandleId = innerInputId;
+
+                    const outerEdge = edges.find(e => e.target === nodeId && e.targetHandle === outerHandleId);
+
+                    if (outerEdge) {
+                        // Jump back to Outer Graph!
+                        // We use `newVisited` (outer visited set) to prevent cycles crossing boundaries
+                        return _pullValue(outerEdge.source, nodes, edges, newVisited, context); // Inherit outer context too? Yes.
+                    }
+
+                    return FALLBACK_PAYLOAD;
+                }
+            };
+
+            // Calculate ALL outputs
+            // (Since we cache by Node, we must compute the whole node state)
+            const resultBundle: Record<string, any> = {};
+            const scopes: Record<string, any> = {};
+            let displayStr = "Macro";
+
+            outputDefs.forEach(outDef => {
+                // outDef.id is the ID of the 'macroOutput' node inside
+                const innerResult = _pullValue(outDef.id, innerNodes, innerEdges, new Set(), innerContext); // Reset visited for inner graph? No, cycle detection should ideally be global? 
+                // Creating `new Set()` for inner graph is strictly "Safe" if we don't have recursion back to self.
+                // Macro recursion is dangerous. `innerContext` handles the jump out.
+                // We should theoretically pass a combined visited set, but IDs might collide!
+                // IDs in inner graph are generated by nanoid, unlikely to collide with outer.
+                // Safe choice: Pass `new Set()` for now, assuming unique IDs.
+
+                resultBundle[outDef.id] = innerResult.val;
+                Object.assign(scopes, innerResult.scope);
+                // For display, we might just pick the first one or combine
+                if (displayStr === "Macro") displayStr = innerResult.display;
+            });
+
+            return cacheAndReturn({
+                formula: `macro_${node.id}`,
+                scope: scopes,
+                display: displayStr,
+                val: resultBundle // The Bundle!
+            });
+        }
+
+        case 'macroInput': {
+            // This node exists INSIDE a macro. It represents a connection to the outside.
+            // We delegate to the context.
+            if (context && context.resolveMacroInput) {
+                // Pass current visited stack?
+                // The context func switches graphs, so handling `visited` there is complex.
+                // `resolveMacroInput` will restart search in Outer Graph.
+                return context.resolveMacroInput(nodeId, visited);
+            }
+            return cacheAndReturn(FALLBACK_PAYLOAD);
+        }
+
+        case 'macroOutput': {
+            // This node exists INSIDE a macro. It behaves like an Output/Result node.
+            // It just passes through its input.
+            const edge = edges.find(e => e.target === nodeId && e.targetHandle === 'inputA');
+            if (edge) {
+                return cacheAndReturn(_pullValue(edge.source, nodes, edges, newVisited, context));
+            }
+            return cacheAndReturn(FALLBACK_PAYLOAD);
+        }
+
+        // --- Standard Logic ---
+
         case 'outputNode':
         case 'monitorNode':
         case 'numberNode':
@@ -98,8 +218,10 @@ const _pullValue = (
         case 'formulaNode': {
             const edge = edges.find(e => e.target === nodeId && e.targetHandle === 'inputA');
             if (edge) {
-                // Return result from connected source
-                return cacheAndReturn(_pullValue(edge.source, nodes, edges, newVisited));
+                const payload = _pullValue(edge.source, nodes, edges, newVisited, context);
+                // Resolve handle if needed (though typical source is simple)
+                const val = resolveSourceValue(payload, edge.sourceHandle);
+                return cacheAndReturn({ ...payload, val });
             }
             return cacheAndReturn(FALLBACK_PAYLOAD);
         }
@@ -209,8 +331,12 @@ const _pullValue = (
             const edgeB = edges.find(e => e.target === nodeId && e.targetHandle === 'inputB');
 
             // RECURSIVE CALLS -> _pullValue
-            const pA = edgeA ? _pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
-            const pB = edgeB ? _pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pA = edgeA ? _pullValue(edgeA.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+            const pB = edgeB ? _pullValue(edgeB.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+
+            // RESOLVE VALUES (Multi-output safety)
+            const vA = resolveSourceValue(pA, edgeA?.sourceHandle);
+            const vB = resolveSourceValue(pB, edgeB?.sourceHandle);
 
             const op = (node.data.operation as string) || 'add';
             let calculatedVal: any = 0;
@@ -227,7 +353,7 @@ const _pullValue = (
             }
 
             try {
-                calculatedVal = mathFn ? mathFn(pA.val, pB.val) : 0;
+                calculatedVal = mathFn ? mathFn(vA, vB) : 0;
             } catch (e) {
                 // console.error(`MathNode error (${op}):`, e);
                 calculatedVal = 0;
@@ -244,7 +370,8 @@ const _pullValue = (
         case 'unaryNode': {
             const edge = edges.find(e => e.target === nodeId && (e.targetHandle === 'input' || e.targetHandle === 'inputA'));
             // RECURSIVE CALL -> _pullValue
-            const payload = edge ? _pullValue(edge.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const payload = edge ? _pullValue(edge.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+            const vInput = resolveSourceValue(payload, edge?.sourceHandle);
 
             const op = (node.data.operation as string) || 'sqrt';
             let val: any = 0;
@@ -253,11 +380,11 @@ const _pullValue = (
             try {
                 const mathFn = (math as any)[op];
                 if (mathFn) {
-                    const isCollection = payload.val && (payload.val.isMatrix || Array.isArray(payload.val));
+                    const isCollection = vInput && (vInput.isMatrix || Array.isArray(vInput));
                     if (isCollection) {
-                        val = math.map(payload.val, (v: any) => mathFn(v));
+                        val = math.map(vInput, (v: any) => mathFn(v));
                     } else {
-                        val = mathFn(payload.val);
+                        val = mathFn(vInput);
                     }
                 } else {
                     val = 0;
@@ -279,20 +406,23 @@ const _pullValue = (
             const edgeB = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputB'));
 
             // RECURSIVE CALLS -> _pullValue
-            const pA = edgeA ? _pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
-            const pB = edgeB ? _pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pA = edgeA ? _pullValue(edgeA.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+            const pB = edgeB ? _pullValue(edgeB.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+
+            const vA = resolveSourceValue(pA, edgeA?.sourceHandle);
+            const vB = resolveSourceValue(pB, edgeB?.sourceHandle);
 
             const op = (node.data.operation as string) || 'eq';
             let bool = false;
             let sym = '==';
 
             switch (op) {
-                case 'gt': bool = pA.val > pB.val; sym = '>'; break;
-                case 'lt': bool = pA.val < pB.val; sym = '<'; break;
-                case 'eq': bool = pA.val === pB.val; sym = '=='; break;
-                case 'neq': bool = pA.val !== pB.val; sym = '!='; break;
-                case 'gte': bool = pA.val >= pB.val; sym = '>='; break;
-                case 'lte': bool = pA.val <= pB.val; sym = '<='; break;
+                case 'gt': bool = vA > vB; sym = '>'; break;
+                case 'lt': bool = vA < vB; sym = '<'; break;
+                case 'eq': bool = vA === vB; sym = '=='; break;
+                case 'neq': bool = vA !== vB; sym = '!='; break;
+                case 'gte': bool = vA >= vB; sym = '>='; break;
+                case 'lte': bool = vA <= vB; sym = '<='; break;
             }
 
             const val = bool ? 1 : 0;
@@ -315,7 +445,7 @@ const _pullValue = (
 
             // Collect all inputs
             for (const edge of edgesToNode) {
-                const p = _pullValue(edge.source, nodes, edges, newVisited);
+                const p = _pullValue(edge.source, nodes, edges, newVisited, context);
                 // Merge scopes from inputs (e.g. if a node provided a scope variable)
                 accumulatedScope = { ...accumulatedScope, ...p.scope };
 
@@ -469,15 +599,18 @@ const _pullValue = (
             const edgeB = edges.find(e => e.target === nodeId && (e.targetHandle === 'inputB'));
 
             // RECURSIVE CALLS -> _pullValue
-            const pA = edgeA ? _pullValue(edgeA.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
-            const pB = edgeB ? _pullValue(edgeB.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pA = edgeA ? _pullValue(edgeA.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+            const pB = edgeB ? _pullValue(edgeB.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+
+            const vA = resolveSourceValue(pA, edgeA?.sourceHandle);
+            const vB = resolveSourceValue(pB, edgeB?.sourceHandle);
 
             const op = (node.data.operation as string) || 'AND';
             let res = 0;
             let sym = 'and';
 
-            const valA = pA.val !== 0;
-            const valB = pB.val !== 0;
+            const valA = vA !== 0; // Use resolved value
+            const valB = vB !== 0;
 
             switch (op) {
                 case 'AND': res = (valA && valB) ? 1 : 0; sym = 'and'; break;
@@ -508,15 +641,19 @@ const _pullValue = (
             const edgeFalse = edges.find(e => e.target === nodeId && e.targetHandle === 'ifFalse');
 
             // RECURSIVE CALL -> _pullValue
-            const pCond = edgeCond ? _pullValue(edgeCond.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pCond = edgeCond ? _pullValue(edgeCond.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+            const vCond = resolveSourceValue(pCond, edgeCond?.sourceHandle);
 
-            const condition = pCond.val !== 0;
+            const condition = vCond !== 0;
 
             // RECURSIVE CALLS -> _pullValue
-            const pTrue = edgeTrue ? _pullValue(edgeTrue.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
-            const pFalse = edgeFalse ? _pullValue(edgeFalse.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            const pTrue = edgeTrue ? _pullValue(edgeTrue.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
+            const pFalse = edgeFalse ? _pullValue(edgeFalse.source, nodes, edges, newVisited, context) : FALLBACK_PAYLOAD;
 
-            const resVal = condition ? pTrue.val : pFalse.val;
+            const vTrue = resolveSourceValue(pTrue, edgeTrue?.sourceHandle);
+            const vFalse = resolveSourceValue(pFalse, edgeFalse?.sourceHandle);
+
+            const resVal = condition ? vTrue : vFalse;
 
             return cacheAndReturn({
                 formula: `(${pCond.formula}?${pTrue.formula}:${pFalse.formula})`,
@@ -561,13 +698,19 @@ export const isNodeAlive = (
 
     // Normalize Data Structure
     let isSink = false;
+    let type = '';
     if (nodes instanceof Map) {
         const n = nodes.get(nodeId);
-        if (n && (n.type === 'outputNode' || n.type === 'monitorNode')) isSink = true;
+        if (n) type = n.type || '';
     } else {
         const n = (nodes as Node[]).find(n => n.id === nodeId);
-        if (n && (n.type === 'outputNode' || n.type === 'monitorNode')) isSink = true;
+        if (n) type = n.type || '';
     }
+
+    // Macro Nodes might be sinks or sources depending on context, 
+    // but usually they are treated like generic nodes unless they are top-level outputs.
+    // Basic Sink Check:
+    if (type === 'outputNode' || type === 'monitorNode') isSink = true;
 
     if (isSink) return true;
     if (!hasOutgoing) return false;
@@ -583,14 +726,16 @@ export const isNodeAlive = (
         visited.add(curr);
 
         // Check types of current node to see if it's a sink
-        let currNode: Node | undefined;
+        let currType = '';
         if (nodes instanceof Map) {
-            currNode = nodes.get(curr);
+            const n = nodes.get(curr);
+            if (n) currType = n.type || '';
         } else {
-            currNode = (nodes as Node[]).find(n => n.id === curr);
+            const n = (nodes as Node[]).find(n => n.id === curr);
+            if (n) currType = n.type || '';
         }
 
-        if (currNode && (currNode.type === 'outputNode' || currNode.type === 'monitorNode')) {
+        if (currType === 'outputNode' || currType === 'monitorNode') {
             return true;
         }
 

@@ -16,7 +16,7 @@ import '@xyflow/react/dist/style.css';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
     Plus, Calculator, Sigma, Monitor, Save, Download,
-    Trash, Hash, Scale, ToggleRight, Group, Ungroup, LayoutTemplate, Sliders, Settings as SettingsIcon
+    Trash, Hash, Scale, ToggleRight, Group, Ungroup, LayoutTemplate, Sliders, Settings as SettingsIcon, Box
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -265,6 +265,9 @@ export function Body() {
                     </button>
                     <button onClick={() => addNodeAtCursor('formulaNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <Sigma className="w-4 h-4 text-purple-500" /> Formula
+                    </button>
+                    <button onClick={() => addNodeAtCursor('macroNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
+                        <Box className="w-4 h-4 text-amber-500" /> Macro
                     </button>
                 </div>
             )}
