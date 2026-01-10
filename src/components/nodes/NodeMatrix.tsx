@@ -6,8 +6,9 @@ import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
 import { pullValue, FALLBACK_PAYLOAD } from '../../engine/Brain';
 import { useAppStore } from '@/store/useAppStore';
-import { MatrixTable } from '../visuals/MatrixTable';
+import { GridTable } from '../visuals/GridTable';
 import { useNodeResult } from './useNodeResult';
+import { NodeHeader } from './NodeHeader';
 
 export const NodeMatrix = memo(({ id, data, selected }: NodeProps) => {
     const { result, error } = useNodeResult(id);
@@ -28,13 +29,13 @@ export const NodeMatrix = memo(({ id, data, selected }: NodeProps) => {
             />
 
             <div className="flex flex-col items-center gap-2 w-full">
-                <div className="flex justify-between w-full text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
-                    <span>Matrix</span>
-                    <span className="text-indigo-500">{dims}</span>
-                </div>
+                <NodeHeader
+                    label="Matrix"
+                    badge={dims}
+                />
 
                 {(isMatrix || typeof result === 'number') ? (
-                    <MatrixTable data={isMatrix ? result : [[result]]} />
+                    <GridTable data={isMatrix ? result : [[result]]} />
                 ) : (
                     <div className="text-zinc-300 py-4 italic text-xs">
                         {error ? 'Error' : 'No Data'}

@@ -6,7 +6,7 @@ import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
 import { pullValue, FALLBACK_PAYLOAD } from '../../engine/Brain';
 import { useAppStore } from '@/store/useAppStore';
-import { MatrixTable } from '../visuals/MatrixTable';
+import { GridTable } from '../visuals/GridTable';
 import { useNodeResult } from './useNodeResult';
 import { ResultPreview } from './ResultPreview';
 
@@ -56,7 +56,7 @@ export const NodeOutput = memo(({ id, data, selected }: NodeProps) => {
                             <span>Matrix View</span>
                             <span className="text-indigo-500">Live</span>
                         </div>
-                        <MatrixTable data={result} />
+                        <GridTable data={result} />
                     </div>
                 )}
             </div>

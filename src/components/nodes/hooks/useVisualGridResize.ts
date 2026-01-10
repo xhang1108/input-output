@@ -9,7 +9,7 @@ interface ResizeState {
 }
 
 interface UseVisualGridResizeProps {
-    gridRef: RefObject<HTMLElement>;
+    gridRef: RefObject<HTMLElement | null>;
     rows: number;
     cols: number;
     // Callback to update grid size

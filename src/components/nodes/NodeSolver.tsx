@@ -11,6 +11,7 @@ import { pullValue } from '@/engine/Brain';
 import { useMuteLine, MuteLine } from './MuteVisual';
 import { useNodeResult } from './useNodeResult';
 import { ResultPreview } from './ResultPreview';
+import { NodeHeader } from './NodeHeader';
 
 interface NodeSolverProps {
     id: string;
@@ -55,10 +56,12 @@ export const NodeSolver = memo(({ id, data, selected }: NodeSolverProps & { sele
                 id="inputA"
             />
 
-            <div className="flex items-center gap-2 mb-3 border-b border-zinc-800 pb-2">
-                <Sigma className="w-5 h-5 text-indigo-500" />
-                <span className="text-zinc-200 font-bold text-sm">Solver</span>
-            </div>
+            <NodeHeader
+                label="Solver"
+                icon={<Sigma className="w-4 h-4 text-indigo-500" />}
+                className="mb-3 border-b border-zinc-800 pb-2"
+                textColor="text-zinc-200"
+            />
 
             <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">

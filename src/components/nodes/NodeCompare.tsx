@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { pullValue } from '@/engine/Brain';
 import { useMuteLine, MuteLine } from './MuteVisual';
 import { useNodeResult } from './useNodeResult';
+import { NodeHeader } from './NodeHeader';
 
 const operations = [
     { value: 'gt', label: '>' },
@@ -44,16 +45,13 @@ export const NodeCompare = memo(({ id, data, selected, isConnectable }: NodeComp
             className={`bg-white border-2 border-teal-500 rounded-xl shadow-lg min-w-[140px] hover:border-teal-400 transition-all ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             {/* Header */}
-            <div className="bg-teal-50 px-4 py-2 border-b border-teal-100 flex items-center justify-between rounded-t-[10px]">
-                <div className="text-teal-600 font-bold text-xs uppercase tracking-wider">COMPARE</div>
-
-                {/* LED Indicator */}
-                <div className={`w-3 h-3 rounded-full shadow-sm transition-colors duration-300 ${isError ? 'bg-red-500 text-red-500' :
-                    isTrue ? 'bg-green-500 text-green-500' :
-                        isFalse ? 'bg-red-100 border border-red-300' :
-                            'bg-zinc-300 text-zinc-300'
-                    }`} />
-            </div>
+            <NodeHeader
+                label="Compare"
+                statusIndicator={isError ? 'error' : isTrue ? 'success' : isFalse ? 'neutral' : 'neutral'}
+                statusCustomColor={isFalse ? '#fee2e2' : undefined}
+                className="bg-teal-50 px-4 py-2 border-b border-teal-100 rounded-t-[10px] mb-0"
+                textColor="text-teal-600"
+            />
 
             {/* Inputs */}
             <div className="p-3 space-y-3 relative">

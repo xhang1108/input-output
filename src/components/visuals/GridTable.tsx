@@ -3,13 +3,16 @@
 import { memo } from 'react';
 import * as math from 'mathjs';
 
-interface MatrixTableProps {
+interface GridTableProps {
     data: any;
     maxRows?: number;
     maxCols?: number;
 }
 
-export const MatrixTable = memo(({ data, maxRows = 20, maxCols = 10 }: MatrixTableProps) => {
+/**
+ * A generic grid table component for displaying 2D data (matrices, arrays, etc.)
+ */
+export const GridTable = memo(({ data, maxRows = 20, maxCols = 10 }: GridTableProps) => {
     if (!data) return null;
 
     // Normalize data to array
@@ -27,10 +30,6 @@ export const MatrixTable = memo(({ data, maxRows = 20, maxCols = 10 }: MatrixTab
 
                     return (
                         <div key={i} className="flex gap-1">
-                            {/* Row Index ?? Maybe minimal style doesn't need it. Input doesn't have it.
-                                User asked for "same form". Input has no indices. Let's omit for clean look.
-                            */}
-
                             {cells.slice(0, maxCols).map((cell: any, j: number) => (
                                 <div
                                     key={j}
@@ -57,3 +56,5 @@ export const MatrixTable = memo(({ data, maxRows = 20, maxCols = 10 }: MatrixTab
         </div>
     );
 });
+
+GridTable.displayName = 'GridTable';
