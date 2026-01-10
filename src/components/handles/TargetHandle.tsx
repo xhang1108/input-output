@@ -30,6 +30,7 @@ export const TargetHandle = forwardRef<HTMLDivElement, TargetHandleProps>(
                     rounded-full! 
                     border-2! border-white! 
                     bg-green-500! 
+                    left-0!
                     ${cleanClassName}
                 `.trim().replace(/\s+/g, ' ')}
                 style={{

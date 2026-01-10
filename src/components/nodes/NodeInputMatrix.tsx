@@ -110,28 +110,29 @@ export const NodeInputMatrix = memo(({ id, data, selected }: NodeProps) => {
     return (
         <NodeShell
             selected={selected}
-            className={`bg-white border-2 border-blue-600 rounded-xl p-3 min-w-fit hover:border-blue-500 transition-colors relative ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-white border-2 border-blue-600 rounded-xl p-4 min-w-[160px] hover:border-blue-500 transition-colors relative ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <div className="flex flex-col gap-2">
                 <NodeHeader
                     label="Matrix"
                     badge={`${rows}×${cols}`}
                     badgeColor="text-blue-500 bg-blue-50"
-                    symbolInput={{
+                    editableLabel={{
                         value: localSymbol,
-                        onChange: setLocalSymbol
+                        onChange: setLocalSymbol,
+                        placeholder: "Matrix Name"
                     }}
                 />
 
                 {/* Grid UI Container */}
-                <div className="flex flex-col gap-1 w-full relative">
+                <div className="flex flex-col gap-1 w-fit relative mx-auto">
                     <div className="flex flex-col gap-1" ref={gridRef}>
                         {grid.map((row, r) => (
                             <div key={r} className="flex gap-1">
                                 {row.map((cell, c) => (
                                     <input
                                         key={`${r}-${c}`}
-                                        className="w-10 h-8 text-center text-sm font-bold font-mono bg-zinc-50 border border-zinc-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-sm text-zinc-900"
+                                        className="w-12 h-10 text-center text-sm font-bold font-mono bg-zinc-50 border border-zinc-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-md text-zinc-900"
                                         value={cell === 0 && !data.value ? '' : cell}
                                         onChange={(e) => handleCellChange(r, c, e.target.value)}
                                         onKeyDown={(e) => e.stopPropagation()}

@@ -99,6 +99,43 @@ export function useContextMenu(
         };
     }, [menuPosition, handleClickOutside, handleKeyDown]);
 
+    const [adjustedPosition, setAdjustedPosition] = useState<XYPosition | null>(null);
+
+    // Effect to adjust menu position when menuPosition is set
+    useEffect(() => {
+        if (!menuPosition) {
+            setAdjustedPosition(null);
+            return;
+        }
+
+        // We use a small timeout to let the menu render so we can measure it
+        // but it's better to do it immediately if possible or use a safer approach.
+        // For now, let's just use the ref in the next tick.
+        const timer = setTimeout(() => {
+            if (menuRef.current) {
+                const { offsetWidth, offsetHeight } = menuRef.current;
+                const { innerWidth, innerHeight } = window;
+
+                let x = menuPosition.x;
+                let y = menuPosition.y;
+
+                if (x + offsetWidth > innerWidth) {
+                    x = innerWidth - offsetWidth - 10; // 10px padding
+                }
+                if (y + offsetHeight > innerHeight) {
+                    y = innerHeight - offsetHeight - 10;
+                }
+
+                setAdjustedPosition({ x, y });
+            } else {
+                // Fallback if ref not ready
+                setAdjustedPosition(menuPosition);
+            }
+        }, 0);
+
+        return () => clearTimeout(timer);
+    }, [menuPosition]);
+
     const addNodeAtCursor = useCallback((type: string) => {
         if (!menuPosition) return;
 
@@ -143,6 +180,7 @@ export function useContextMenu(
         menuRef,
         closeMenu,
         addNodeAtCursor,
+        adjustedPosition,
         // Export wrapped handlers for Body.tsx
         connectionHandlers: {
             onConnect,

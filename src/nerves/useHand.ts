@@ -29,7 +29,7 @@ export const useHand = (
     const setNodes = setNodesExternal || setNodesInternal;
     const setEdges = setEdgesExternal || setEdgesInternal;
 
-    const [clipboard, setClipboard] = useState<Node[]>([]);
+    const [clipboard, setClipboard] = useState<{ nodes: Node[], edges: Edge[] }>({ nodes: [], edges: [] });
 
     // --- Placement State (Internal Motor State) ---
     type HandMode = 'move' | 'scale' | 'rotate';
@@ -337,7 +337,7 @@ export const useHand = (
     const copy = useCallback(() => {
         const selected = getSelectedNodes();
         if (selected.length > 0) {
-            // Sanitize: Only copy essential data
+            // 1. Sanitize Nodes
             const cleanNodes = selected.map(n => ({
                 id: n.id,
                 type: n.type,
@@ -345,25 +345,52 @@ export const useHand = (
                 data: JSON.parse(JSON.stringify(n.data)),
             }));
 
-            setClipboard(cleanNodes as Node[]);
-            toast.success(`Copied ${selected.length} node(s)`);
+            // 2. Identify Internal Edges
+            // An edge is "internal" if BOTH its source and target are in the selected set.
+            const selectedIds = new Set(selected.map(n => n.id));
+            const allEdges = getEdges();
+            const internalEdges = allEdges.filter(e =>
+                selectedIds.has(e.source) && selectedIds.has(e.target)
+            ).map(e => ({
+                ...e,
+                selected: false, // Don't keep selection state
+                id: e.id, // Keep ID for mapping, will change on paste
+                data: JSON.parse(JSON.stringify(e.data || {}))
+            }));
+
+            setClipboard({ nodes: cleanNodes as Node[], edges: internalEdges });
+            toast.success(`Copied ${selected.length} node(s) and ${internalEdges.length} connection(s)`);
         }
-    }, [getSelectedNodes]);
+    }, [getSelectedNodes, getEdges]);
 
     const cut = useCallback(() => {
         const selected = getSelectedNodes();
         if (selected.length > 0) {
+            // 1. Copy Logic
             const cleanNodes = selected.map(n => ({
                 id: n.id,
                 type: n.type,
                 position: { ...n.position },
                 data: JSON.parse(JSON.stringify(n.data)),
             }));
-            setClipboard(cleanNodes as Node[]);
+
+            const selectedIds = new Set(selected.map(n => n.id));
+            const allEdges = getEdges();
+            const internalEdges = allEdges.filter(e =>
+                selectedIds.has(e.source) && selectedIds.has(e.target)
+            ).map(e => ({
+                ...e,
+                selected: false,
+                data: JSON.parse(JSON.stringify(e.data || {}))
+            }));
+
+            setClipboard({ nodes: cleanNodes as Node[], edges: internalEdges });
+
+            // 2. Delete Logic
             _removeNodes(selected);
             toast.success(`Cut ${selected.length} node(s)`);
         }
-    }, [getSelectedNodes, _removeNodes]);
+    }, [getSelectedNodes, getEdges, _removeNodes]);
 
     // --- Knife Tool: Sever Edges (Atomic Action) ---
     // Receives identified edges from Eye, and cuts them.
@@ -425,17 +452,67 @@ export const useHand = (
     }, [getNodes, setEdges, memories]);
 
     const paste = useCallback((screenMousePos: { x: number; y: number }) => {
-        if (!clipboard || clipboard.length === 0) return;
+        if (!clipboard.nodes || clipboard.nodes.length === 0) return;
 
-        const center = getBoundingBox(clipboard);
+        const center = getBoundingBox(clipboard.nodes);
         const targetPos = screenToFlowPosition(screenMousePos);
-        const newNodes = generateOffsetNodes(clipboard, targetPos, center);
 
-        _spawnNodes(newNodes);
+        // 1. Generate New Nodes & ID Map
+        // We need a map of OldID -> NewID to reconstruct edges
+        const idMap = new Map<string, string>();
 
-        toast.success(`Pasted ${newNodes.length} node(s)`);
+        const newNodes = generateOffsetNodes(clipboard.nodes, targetPos, center).map((node, index) => {
+            // generateOffsetNodes creates new IDs, but we need to map them back to original clipboard IDs
+            // standard generateOffsetNodes logic might need a tweak or we just manually map here.
+            // Actually, generateOffsetNodes calls createNodeObject which makes a random ID.
+            // We need to intercept that or map by index since arrays are ordered.
+
+            // Let's rely on index, assuming generated order matches input order.
+            const originalId = clipboard.nodes[index].id;
+            idMap.set(originalId, node.id);
+            return node;
+        });
+
+        // 2. Reconstruct Edges
+        const newEdges: Edge[] = [];
+        if (clipboard.edges) {
+            clipboard.edges.forEach(oldEdge => {
+                const newSource = idMap.get(oldEdge.source);
+                const newTarget = idMap.get(oldEdge.target);
+
+                if (newSource && newTarget) {
+                    newEdges.push({
+                        ...oldEdge,
+                        id: nanoid(6),
+                        source: newSource,
+                        target: newTarget,
+                        selected: false
+                    });
+                }
+            });
+        }
+
+        // 3. Spawn Everything
+        store.setState({ nodesSelectionActive: false });
+        memories.remember();
+
+        setNodes((currentNodes) => {
+            const deselected = currentNodes.map(n => ({ ...n, selected: false }));
+            return [...deselected, ...newNodes.map(n => ({ ...n, selected: true }))];
+        });
+
+        if (newEdges.length > 0) {
+            setEdges((currentEdges) => [...currentEdges, ...newEdges]);
+        }
+
+        // Trigger calculation if we pasted logic
+        setTimeout(() => {
+            useAppStore.getState().triggerLogicUpdate();
+        }, 0);
+
+        toast.success(`Pasted ${newNodes.length} node(s)${newEdges.length > 0 ? ` and ${newEdges.length} wires` : ''}`);
         return newNodes;
-    }, [clipboard, screenToFlowPosition, _spawnNodes]);
+    }, [clipboard, screenToFlowPosition, setNodes, setEdges, memories, store]);
 
     // --- Duplication ---
 
@@ -443,22 +520,65 @@ export const useHand = (
         const selectedNodes = getSelectedNodes();
         if (selectedNodes.length === 0) return;
 
+        // 1. Identification & Logic Preparation
+        const selectedIds = new Set(selectedNodes.map(n => n.id));
+        const allEdges = getEdges();
+        const internalEdges = allEdges.filter(e =>
+            selectedIds.has(e.source) && selectedIds.has(e.target)
+        );
+
+        // 2. Generate New Nodes & ID Map
         const OFFSET = 40;
+        const idMap = new Map<string, string>();
+
         const newNodes = selectedNodes.map(node => {
-            return createNodeObject(node.type || 'default', {
+            const newNode = createNodeObject(node.type || 'default', {
                 x: node.position.x + OFFSET,
                 y: node.position.y + OFFSET
             }, node.data, true);
+
+            idMap.set(node.id, newNode.id);
+            return newNode;
         });
 
-        _spawnNodes(newNodes);
+        // 3. Reconstruct Edges
+        const newEdges = internalEdges.map(oldEdge => {
+            const newSource = idMap.get(oldEdge.source)!;
+            const newTarget = idMap.get(oldEdge.target)!;
 
-        // AUTO-START PLACING (Pass nodes directly to avoid stale store race condition)
+            return {
+                ...oldEdge,
+                id: nanoid(6),
+                source: newSource,
+                target: newTarget,
+                selected: false
+            };
+        });
+
+        // 4. Spawn Nodes + Edges (Manual _spawnNodes expansion to include edges)
+        store.setState({ nodesSelectionActive: false });
+        memories.remember();
+
+        setNodes((currentNodes) => {
+            const deselected = currentNodes.map(n => ({ ...n, selected: false }));
+            return [...deselected, ...newNodes.map(n => ({ ...n, selected: true }))];
+        });
+
+        if (newEdges.length > 0) {
+            setEdges((currentEdges) => [...currentEdges, ...newEdges]);
+        }
+
+        // Trigger logic
+        setTimeout(() => {
+            useAppStore.getState().triggerLogicUpdate();
+        }, 0);
+
+        // AUTO-START PLACING
         startPlacing(newNodes.map(n => n.id), screenMousePos, 'move', newNodes);
 
         toast.success(`Duplicated ${selectedNodes.length} node(s)`);
         return newNodes;
-    }, [getSelectedNodes, _spawnNodes, startPlacing]);
+    }, [getSelectedNodes, getEdges, startPlacing, setNodes, setEdges, memories, store]);
 
 
     // --- Mute ---

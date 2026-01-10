@@ -1,4 +1,5 @@
 'use client';
+import { cn } from '@/lib/utils';
 
 import { Handle, Position, useReactFlow, useStoreApi } from '@xyflow/react';
 import { useState, memo, useEffect, useRef } from 'react';
@@ -16,6 +17,7 @@ import {
 import { useAppStore } from '@/store/useAppStore';
 import { useMuteLine, MuteLine } from './MuteVisual';
 import { useNodeResult } from './useNodeResult';
+import { NodeHeader } from './NodeHeader';
 import { ResultPreview } from './ResultPreview';
 
 interface NodeMathProps {
@@ -34,10 +36,12 @@ const operations = [
 
 import { useRenderTracker } from '../debug/Profiler';
 
+import { NodeOperationSelect } from './NodeOperationSelect';
+
 export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected?: boolean }) => {
     useRenderTracker('NodeMath');
-    const { updateNodeData, getNodes, getEdges } = useReactFlow();
-    const { triggerLogicUpdate, logicVersion } = useAppStore();
+    const { updateNodeData } = useReactFlow();
+    const { triggerLogicUpdate } = useAppStore();
     const [op, setOp] = useState(data.operation || 'add');
     const { result, error } = useNodeResult(id);
     const isMuted = !!data.muted;
@@ -49,44 +53,52 @@ export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected
         triggerLogicUpdate();
     };
 
-    const currentLabel = operations.find((o) => o.value === op)?.label || '+';
-
     return (
+
         <NodeShell
             ref={containerRef}
             selected={selected}
-            className={`bg-white border-2 border-orange-400 rounded-full w-[80px] h-[80px] flex flex-col items-center justify-center relative hover:border-orange-500 ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-white border-2 border-orange-500 rounded-xl min-w-[140px] p-3 hover:border-orange-400 transition-all flex flex-col ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
+            {/* Header: Inset Style */}
+            <NodeHeader
+                label="Arithmetic"
+                className="mb-2 w-full"
+                textColor="text-orange-600"
+            />
+            <div className="flex flex-col items-center gap-3">
+                <div className="w-full flex justify-center">
+                    <NodeOperationSelect
+                        value={op}
+                        options={operations}
+                        onValueChange={onSelect}
+                        colorTheme="orange"
+                        variant="hero"
+                        valueClassName={(val) => cn(
+                            val === 'pow' ? "top-[4px]" :
+                                val === 'mod' ? "top-[-2px]" :
+                                    "top-[-4px]"
+                        )}
+                    />
+                </div>
+
+                {/* Result Display */}
+                <ResultPreview result={result} error={error} className="border-t-0 mt-0 pt-0 text-orange-600 font-bold" />
+            </div>
+
             <TargetHandle
                 ref={inputARef}
                 nodeId={id}
                 position={Position.Left}
                 id="inputA"
-                style={{ top: '30%' }}
+                style={{ top: '45%' }}
             />
             <TargetHandle
                 nodeId={id}
                 position={Position.Left}
                 id="inputB"
-                style={{ top: '70%' }}
+                style={{ top: '65%' }}
             />
-
-
-            <Select value={op} onValueChange={onSelect}>
-                <SelectTrigger className="w-12 h-12 border-none bg-transparent text-3xl font-bold text-orange-500 justify-center nodrag [&>svg]:hidden">
-                    <SelectValue>{currentLabel}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                    {operations.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                            <span className="text-lg font-bold">{o.label}</span>
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-
-            {/* Result Display */}
-            <ResultPreview result={result} error={error} className="border-t-0 mt-0 pt-0" />
 
 
 
@@ -99,7 +111,7 @@ export const NodeMath = memo(({ id, data, selected }: NodeMathProps & { selected
 
             {/* Muted Pass-through Visual */}
             <MuteLine coords={lineCoords} color="#f97316" opacity={0.8} />
-        </NodeShell>
+        </NodeShell >
     );
 }, (prev, next) => (
     prev.id === next.id &&

@@ -13,10 +13,15 @@ interface GridTableProps {
  * A generic grid table component for displaying 2D data (matrices, arrays, etc.)
  */
 export const GridTable = memo(({ data, maxRows = 20, maxCols = 10 }: GridTableProps) => {
-    if (!data) return null;
-
     // Normalize data to array
-    const rawData = data.toArray ? data.toArray() : data;
+    let rawData = data;
+    if (data?.toArray) {
+        rawData = data.toArray();
+    } else if (data?.data && Array.isArray(data.data)) {
+        rawData = data.data;
+    } else if (data?._data && Array.isArray(data._data)) {
+        rawData = data._data;
+    }
     if (!Array.isArray(rawData)) return null;
 
     const rowsToRender = rawData.slice(0, maxRows);

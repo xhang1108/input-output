@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useReactFlow, useStoreApi } from '@xyflow/react';
-import { pullValue } from '@/engine/Brain';
+import { pullValue, isNodeAlive } from '@/engine/Brain';
 import { useAppStore } from '@/store/useAppStore';
 
 /**
@@ -20,8 +20,20 @@ export const useNodeResult = (nodeId: string) => {
     useEffect(() => {
         const edges = getEdges();
         try {
-            const nodeLookup = (store.getState() as any).nodeLookup;
-            const pullResult = pullValue(nodeId, nodeLookup, edges);
+            const state = store.getState() as any;
+            // React Flow v12 nodes can be accessed via 'nodes' array or internal 'nodeLookup' map
+            const nodes = state.nodes || [];
+            const nodeLookup = state.nodeLookup || new Map();
+            const referenceNodes = nodeLookup.size > 0 ? nodeLookup : nodes;
+
+            // Dead Code Elimination: Only calculate if alive (connected to sink)
+            if (!isNodeAlive(nodeId, referenceNodes, edges)) {
+                setPayload(null);
+                setError(null);
+                return;
+            }
+
+            const pullResult = pullValue(nodeId, referenceNodes, edges);
 
             setPayload(pullResult);
             setError(null);

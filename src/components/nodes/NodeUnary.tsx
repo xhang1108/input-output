@@ -1,22 +1,16 @@
 'use client';
 
-import { Handle, Position, useReactFlow, useStoreApi } from '@xyflow/react';
-import { useState, memo, useEffect } from 'react';
+import { Position, useReactFlow } from '@xyflow/react';
+import { useState, memo } from 'react';
 import { NodeShell } from './NodeShell';
 import { TargetHandle } from '../handles/TargetHandle';
 import { SourceHandle } from '../handles/SourceHandle';
-import { pullValue } from '@/engine/Brain';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { useAppStore } from '@/store/useAppStore';
 import { useMuteLine, MuteLine } from './MuteVisual';
 import { useNodeResult } from './useNodeResult';
+import { NodeHeader } from './NodeHeader';
 import { ResultPreview } from './ResultPreview';
+import { NodeOperationSelect } from './NodeOperationSelect';
 
 interface NodeUnaryProps {
     id: string;
@@ -24,18 +18,18 @@ interface NodeUnaryProps {
 }
 
 const operations = [
+    { value: 'abs', label: '|x|' },
     { value: 'sqrt', label: '√' },
     { value: 'sin', label: 'sin' },
     { value: 'cos', label: 'cos' },
     { value: 'tan', label: 'tan' },
-    { value: 'abs', label: 'abs' },
     { value: 'log', label: 'log' },
-    { value: 'round', label: 'round' },
+    { value: 'exp', label: 'exp' },
 ];
 
 export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { selected?: boolean }) => {
-    const { updateNodeData, getNodes, getEdges } = useReactFlow();
-    const { triggerLogicUpdate, logicVersion } = useAppStore();
+    const { updateNodeData } = useReactFlow();
+    const { triggerLogicUpdate } = useAppStore();
     const [op, setOp] = useState(data.operation || 'sqrt');
     const { result, error } = useNodeResult(id);
     const isMuted = !!data.muted;
@@ -51,34 +45,36 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
         <NodeShell
             ref={containerRef}
             selected={selected}
-            className={`bg-zinc-200 border-2 border-purple-500 rounded-lg p-3 min-w-[120px] ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-white border-2 border-purple-500 rounded-xl min-w-[140px] p-3 hover:border-purple-400 transition-all flex flex-col ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
-            <div className="text-xs text-purple-500 mb-2 font-bold uppercase tracking-wider">
-                Trig / Math
+            <NodeHeader
+                label="Function"
+                className="mb-2 w-full"
+                textColor="text-purple-600"
+            />
+
+            <div className="flex flex-col items-center gap-3">
+                <NodeOperationSelect
+                    value={op}
+                    options={operations}
+                    onValueChange={onSelect}
+                    colorTheme="purple"
+                    triggerClassName="w-16 h-16 text-3xl font-black rounded-2xl [&>svg]:hidden p-0"
+                    valueClassName={() => "relative top-[-4px]"}
+                />
+
+                {/* Result Display */}
+                <ResultPreview result={result} error={error} className="border-t-0 mt-0 pt-0 text-purple-600 font-bold" />
             </div>
-
-            <Select value={op} onValueChange={onSelect}>
-                <SelectTrigger className="w-full nodrag">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    {operations.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                            {o.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-
-            {/* Result Display */}
-            <ResultPreview result={result} error={error} className="mt-0 pt-2" />
 
             <TargetHandle
                 ref={inputARef}
                 nodeId={id}
                 position={Position.Left}
                 id="inputA"
+                style={{ top: '50%' }}
             />
+
             <SourceHandle
                 ref={outputRef}
                 position={Position.Right}
@@ -95,3 +91,5 @@ export const NodeUnary = memo(({ id, data, selected }: NodeUnaryProps & { select
     prev.selected === next.selected &&
     prev.data === next.data
 ));
+
+NodeUnary.displayName = 'NodeUnary';

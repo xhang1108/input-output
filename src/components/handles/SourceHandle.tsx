@@ -33,6 +33,7 @@ export const SourceHandle = forwardRef<HTMLDivElement, SourceHandleProps>(
                     rounded-full! 
                     border-2! border-white! 
                     ${bgColor} 
+                    right-0!
                     ${className || ''}
                 `.trim().replace(/\s+/g, ' ')}
                 style={{

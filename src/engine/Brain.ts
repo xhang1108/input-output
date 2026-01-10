@@ -76,7 +76,6 @@ const _pullValue = (
             case 'logicNode': primaryInputKey = 'inputA'; break;
             case 'compareNode': primaryInputKey = 'inputA'; break;
             case 'switchNode': primaryInputKey = 'ifFalse'; break;
-            case 'outputNode': primaryInputKey = 'inputA'; break;
             default: primaryInputKey = null;
         }
 
@@ -92,6 +91,20 @@ const _pullValue = (
 
     // 4. Node Logic Switch
     switch (node.type) {
+        case 'outputNode':
+        case 'monitorNode':
+        case 'numberNode':
+        case 'matrixNode':
+        case 'formulaNode': {
+            const edge = edges.find(e => e.target === nodeId && e.targetHandle === 'inputA');
+            if (edge) {
+                // Return result from connected source
+                return cacheAndReturn(_pullValue(edge.source, nodes, edges, newVisited));
+            }
+            return cacheAndReturn(FALLBACK_PAYLOAD);
+        }
+
+        case 'sliderNode':
         case 'inputNode':
         case 'inputNumber': {
             if (node.data.muted) return FALLBACK_PAYLOAD;
@@ -100,20 +113,69 @@ const _pullValue = (
             // But legacy inputNode might use rawExpression string.
             let val = node.data.value ?? node.data.rawExpression;
             let parsedVal: any = 0;
+            let displayVal = "0";
 
             try {
                 if (typeof val === 'number') {
                     parsedVal = val;
+                    displayVal = String(val);
                 } else if (typeof val === 'string' && val.trim() !== '') {
-                    if (/^-?\d+\.?\d*$/.test(val.trim())) {
-                        parsedVal = parseFloat(val);
+                    // Critical: If string contains '=', it's likely a definition/equation (e.g. "x=5" or "2x+y=10").
+                    // We MUST pass this as a raw string to downstream nodes (Solver) instead of evaluating it to a number.
+                    if (val.includes('=')) {
+                        // Check for spaces here too if we want strictness everywhere
+                        if (/\s/.test(val.trim())) {
+                            throw new Error("Invalid format: No spaces allowed in equation.");
+                        }
+                        throw new Error("Equation detected");
+                    }
+
+                    // STRICT NUMBER VALIDATION:
+                    // The user demands "Error instead of 0" if there are spaces.
+                    // This creates a "Zero Tolerance for Space in Numbers/Symbols" policy.
+                    // Regex: Digit-Space, Dot-Space, Space-Digit, Space-Dot, or Alpha-Space-Alpha
+                    // Note: We allow leading/trailing spaces via trim(), but internal spaces are forbidden.
+                    const trimmed = val.trim();
+                    if (/\s/.test(trimmed)) {
+                        throw new Error("Invalid format: No spaces allowed.");
+                    }
+
+                    if (/^-?\d+\.?\d*$/.test(trimmed)) {
+                        parsedVal = parseFloat(trimmed);
+                        displayVal = trimmed;
                     } else {
-                        parsedVal = math.evaluate(val);
+                        parsedVal = math.evaluate(trimmed);
+                        displayVal = String(parsedVal);
                     }
                 } else {
                     parsedVal = Number(val) || 0;
+                    displayVal = String(parsedVal);
                 }
-            } catch (e) {
+            } catch (e: any) {
+                // If evaluation fails (e.g. standard equation "2x+5=15"),
+                // treat it as a raw symbolic formula if it's a string.
+                if (typeof val === 'string' && val.trim() !== '') {
+                    let isError = false;
+
+                    // Check if it was a strict validation error
+                    if (e.message && e.message.startsWith("Invalid")) {
+                        isError = true;
+                        displayVal = "Error"; // Explicit Error Display
+                        // We set val to NaN so valid downstream math fails too
+                        parsedVal = NaN;
+                    } else {
+                        // Standard equation fallback
+                        displayVal = val;
+                        parsedVal = 0; // Fallback for solver
+                    }
+
+                    return cacheAndReturn({
+                        formula: val, // Pass raw equation (e.g. "2x+5=15")
+                        scope: {},
+                        display: displayVal,
+                        val: parsedVal
+                    });
+                }
                 parsedVal = Number(val) || 0;
             }
 
@@ -122,7 +184,7 @@ const _pullValue = (
             return cacheAndReturn({
                 formula: safeId,
                 scope: { [safeId]: parsedVal },
-                display: node.data.symbol ? String(node.data.symbol) : (node.data.label ? String(node.data.label) : `${parsedVal}`),
+                display: node.data.symbol ? String(node.data.symbol) : (node.data.label ? String(node.data.label) : (displayVal === "Error" ? "Error" : `${parsedVal}`)),
                 val: parsedVal
             });
         }
@@ -172,7 +234,7 @@ const _pullValue = (
             }
 
             return cacheAndReturn({
-                formula: `(${pA.formula} ${symbol} ${pB.formula})`,
+                formula: `(${pA.formula}${symbol}${pB.formula})`,
                 scope: { ...pA.scope, ...pB.scope },
                 display: `(${pA.display} ${symbol} ${pB.display})`,
                 val: calculatedVal
@@ -236,7 +298,7 @@ const _pullValue = (
             const val = bool ? 1 : 0;
 
             return cacheAndReturn({
-                formula: `(${pA.formula} ${sym} ${pB.formula})`,
+                formula: `(${pA.formula}${sym}${pB.formula})`,
                 scope: { ...pA.scope, ...pB.scope },
                 display: `(${pA.display} ${sym} ${pB.display})`,
                 val: val
@@ -244,28 +306,155 @@ const _pullValue = (
         }
 
         case 'solverNode': {
-            const edge = edges.find(e => e.target === nodeId && e.targetHandle === 'inputA');
-            // RECURSIVE CALL -> _pullValue
-            const payload = edge ? _pullValue(edge.source, nodes, edges, newVisited) : FALLBACK_PAYLOAD;
+            // 1. Identification: 'input_0' (or legacy 'inputA') is the Equation
+            //    All other inputs are Context/Variables
+            const edgesToNode = edges.filter(e => e.target === nodeId);
+
+            let equations: string[] = [];
+            let accumulatedScope: Record<string, any> = {};
+
+            // Collect all inputs
+            for (const edge of edgesToNode) {
+                const p = _pullValue(edge.source, nodes, edges, newVisited);
+                // Merge scopes from inputs (e.g. if a node provided a scope variable)
+                accumulatedScope = { ...accumulatedScope, ...p.scope };
+
+                // Check formula from input
+                if (p.formula && p.formula.trim() !== '') {
+                    equations.push(p.formula);
+                }
+            }
 
             const targetVar = (node.data.targetVar as string) || 'x';
             let solvedVal = 0;
             let solutionStr = '?';
 
             try {
-                if (!payload.formula || /[^a-zA-Z0-9_\.\s\+\-\*\/\^\(\),=]/.test(payload.formula)) {
-                    throw new Error("Invalid characters in formula");
+                // Pre-process equations to find explicit definitions (LHS = RHS where LHS is symbol)
+                let mainEq = "";
+
+                for (let eqStr of equations) {
+                    // ULTRA-STRICT VALIDATION: Zero tolerance for spaces.
+                    // The user explicitly requested "No spaces allowed inside value" and complained about "6a= 103.8".
+                    // To ensure absolute robustness and no ambiguity, we forbid spaces entirely.
+                    // Users must write compact equations: "x=5", "2x+y=10".
+                    if (/\s/.test(eqStr)) {
+                        throw new Error("Invalid format: Spaces are not allowed anywhere. Please remove all spaces.");
+                    }
+
+                    // 2. Variables/Symbols cannot be split or imply implicit multiplication with spaces:
+                    //    "a b" (two variables), "5 a" (number space variable), "my var" (split variable)
+                    //    Valid: "a+b", "sin(x)", "3*x"
+                    //    Regex: [Alphanumeric/Underscore] [Space] [Letter/Underscore/OpenParen]
+                    //    Note: We allow space before operators like +, -, =, etc., so we target identifiers.
+                    //    We assume operators are NOT alphanumeric (except maybe 'mod'?).
+                    //    If nerdamer treats 'mod' as operator, we need to be careful. 
+                    //    Let's target strict "Identifier Space Identifier" pattern for now.
+                    if (/[a-zA-Z0-9_]\s+[a-zA-Z_]/.test(eqStr)) {
+                        throw new Error("Invalid format: Spaces between values/variables are not allowed. Use explicit operators.");
+                    }
+
+                    // Robust Parsing: Split by '=' to handle complex cases
+                    const parts = eqStr.split('=');
+
+                    if (parts.length === 2) {
+                        const lhs = parts[0].trim();
+                        const rhs = parts[1].trim();
+
+                        // STRICT VALIDATION (LHS):
+                        // If LHS looks like multiple identifiers separated by spaces (e.g. "my var", "x y"),
+                        // and has no other operators, throw an error.
+                        // User requirement: "Don't have any spaces". 
+                        // This prevents "my var" being silently treated as "my * var".
+                        if (/^[a-zA-Z_]\w*(\s+[a-zA-Z_]\w*)+$/.test(lhs)) {
+                            throw new Error("Invalid format: Spaces are not allowed in variable names. Use '*' for multiplication.");
+                        }
+
+                        // Check if LHS is a valid variable name
+                        if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(lhs)) {
+                            // Basic sanitize for definition check (trim only)
+                            const cleanRhs = rhs.trim();
+
+                            // 2. Check if valid number (supports scientific: 1e2, -5.5e-10)
+                            // Strict check: No spaces allowed within the number string
+                            if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(cleanRhs)) {
+                                accumulatedScope[lhs] = Number(cleanRhs);
+                                continue; // It's a definition, don't treat as main equation
+                            }
+                        }
+                    }
+
+                    // If not a simple definition, it's an equation to solve
+                    mainEq = eqStr;
                 }
-                const result = (nerdamer as any).solve(payload.formula, targetVar);
+
+                // Optimization: If the target variable is ALREADY defined in the scope, 
+                // we don't need to solve anything. Just return it!
+                if (accumulatedScope[targetVar] !== undefined) {
+                    solvedVal = accumulatedScope[targetVar];
+                    solutionStr = String(solvedVal);
+
+                    return cacheAndReturn({
+                        formula: `${solvedVal}`,
+                        scope: {},
+                        display: solutionStr,
+                        val: solvedVal
+                    });
+                }
+
+
+                if (!mainEq) {
+                    // Fallback logic
+                    if (accumulatedScope[targetVar] !== undefined) {
+                        mainEq = `${targetVar} = ${accumulatedScope[targetVar]}`;
+                    } else if (equations.length > 0) {
+                        mainEq = equations[0];
+                    }
+                }
+
+                if (!mainEq || /[^a-zA-Z0-9_\.\s\+\-\*\/\^\(\),=]/.test(mainEq)) {
+                    if (!mainEq) throw new Error("No Equation Found");
+                    throw new Error("Invalid characters");
+                }
+
+                // Substitute Scope into Equation
+                let expr = nerdamer(mainEq);
+                const scopeKeys = Object.keys(accumulatedScope);
+
+                if (scopeKeys.length > 0) {
+                    for (const key of scopeKeys) {
+                        if (key !== targetVar) {
+                            expr = expr.sub(key, String(accumulatedScope[key]));
+                        }
+                    }
+                }
+
+                const finalEq = expr.toString();
+
+                const result = (nerdamer as any).solve(finalEq, targetVar);
                 const sol = result.toString();
                 solutionStr = sol;
                 const cleanSol = sol.replace(/[\[\]]/g, '');
                 const firstSol = cleanSol.split(',')[0];
-                const num = Number(firstSol);
-                if (!isNaN(num)) solvedVal = num;
+
+                // Nerdamer often returns fractions like "1/2". 
+                // Number("1/2") is NaN. We need to evaluate it using mathjs to get a decimal.
+                try {
+                    // Try simple parse first
+                    let parsed = Number(firstSol);
+                    if (isNaN(parsed)) {
+                        // If plain number fails, try evaluating as expression (handles 1/2, sqrt(2), etc.)
+                        parsed = math.evaluate(firstSol);
+                    }
+                    if (!isNaN(parsed)) solvedVal = parsed;
+                } catch (e) {
+                    // Fail silently, default to 0
+                }
+
             } catch (e) {
                 solutionStr = "Error";
             }
+
 
             return cacheAndReturn({
                 formula: `${solvedVal}`,
@@ -297,7 +486,7 @@ const _pullValue = (
                 case 'NAND': res = !(valA && valB) ? 1 : 0; sym = 'and'; break;
             }
 
-            let formulaStr = `(${pA.formula} ${sym} ${pB.formula})`;
+            let formulaStr = `(${pA.formula}${sym}${pB.formula})`;
             let displayStr = `(${pA.display} ${sym.toUpperCase()} ${pB.display})`;
 
             if (op === 'NAND') {
@@ -330,7 +519,7 @@ const _pullValue = (
             const resVal = condition ? pTrue.val : pFalse.val;
 
             return cacheAndReturn({
-                formula: `(${pCond.formula} ? ${pTrue.formula} : ${pFalse.formula})`,
+                formula: `(${pCond.formula}?${pTrue.formula}:${pFalse.formula})`,
                 scope: { ...pCond.scope, ...pTrue.scope, ...pFalse.scope },
                 display: condition ? pTrue.display : pFalse.display,
                 val: resVal
@@ -357,4 +546,60 @@ export const pullValue = (
     } finally {
         trackLogic('Brain:pullValue', performance.now() - start);
     }
+};
+
+// --- Dead Code Elimination ---
+// Returns true if the node is part of a dependency chain leading to a Sink (Output/Monitor/Network)
+export const isNodeAlive = (
+    nodeId: string,
+    nodes: Node[] | Map<string, Node>,
+    edges: Edge[]
+): boolean => {
+    // 1. Quick Check: Am I connected to anything?
+    // If I have no outgoing edges, and I am not a Sink, I am dead.
+    const hasOutgoing = edges.some(e => e.source === nodeId);
+
+    // Normalize Data Structure
+    let isSink = false;
+    if (nodes instanceof Map) {
+        const n = nodes.get(nodeId);
+        if (n && (n.type === 'outputNode' || n.type === 'monitorNode')) isSink = true;
+    } else {
+        const n = (nodes as Node[]).find(n => n.id === nodeId);
+        if (n && (n.type === 'outputNode' || n.type === 'monitorNode')) isSink = true;
+    }
+
+    if (isSink) return true;
+    if (!hasOutgoing) return false;
+
+    // 2. Full Reachability Check (BFS)
+    // Search forward to see if we can reach ANY Sink.
+    const queue = [nodeId];
+    const visited = new Set<string>();
+
+    while (queue.length > 0) {
+        const curr = queue.shift()!;
+        if (visited.has(curr)) continue;
+        visited.add(curr);
+
+        // Check types of current node to see if it's a sink
+        let currNode: Node | undefined;
+        if (nodes instanceof Map) {
+            currNode = nodes.get(curr);
+        } else {
+            currNode = (nodes as Node[]).find(n => n.id === curr);
+        }
+
+        if (currNode && (currNode.type === 'outputNode' || currNode.type === 'monitorNode')) {
+            return true;
+        }
+
+        // Find outgoing edges
+        const outgoers = edges.filter(e => e.source === curr);
+        for (const edge of outgoers) {
+            queue.push(edge.target);
+        }
+    }
+
+    return false;
 };

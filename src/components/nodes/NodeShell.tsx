@@ -14,7 +14,7 @@ export const NodeShell = forwardRef<HTMLDivElement, NodeShellProps>(({ children,
             className={cn(
                 // Base logic: Merge incoming className first, then apply selection ring
                 // We use 'group' here so children can use group-hover if needed
-                "group relative",
+                "group relative min-w-[140px] min-h-[40px] flex flex-col",
                 className,
                 // The critical fix: Always apply ring if selected
                 selected && "ring-2 ring-blue-500 ring-offset-2"

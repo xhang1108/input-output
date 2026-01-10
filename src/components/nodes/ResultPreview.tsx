@@ -49,7 +49,7 @@ export const ResultPreview = memo(({ result, error, className = "", precision = 
     })();
 
     return (
-        <div className={`mt-2 pt-2 border-t border-zinc-100 flex justify-center ${className}`}>
+        <div className={`flex justify-center ${className}`}>
             <span className="text-zinc-600 font-mono font-bold text-sm">
                 {displayContent}
             </span>

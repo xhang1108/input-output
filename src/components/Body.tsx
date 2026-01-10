@@ -153,6 +153,7 @@ export function Body() {
     const {
         pendingConnection, setPendingConnection,
         menuRef, closeMenu, addNodeAtCursor,
+        adjustedPosition,
         connectionHandlers
     } = useContextMenu(
         menuPosition,
@@ -220,48 +221,49 @@ export function Body() {
             {menuPosition && (
                 <div
                     ref={menuRef}
-                    className="absolute z-100 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl p-1 min-w-[150px] flex flex-col gap-1"
-                    style={{ top: menuPosition.y, left: menuPosition.x }}
+                    className="fixed z-1000 bg-zinc-800/95 backdrop-blur-md border border-zinc-700/50 rounded-lg shadow-2xl p-1 min-w-[160px] flex flex-col gap-0.5 transition-all duration-75 animate-in fade-in zoom-in-95"
+                    style={{
+                        top: adjustedPosition?.y ?? menuPosition.y,
+                        left: adjustedPosition?.x ?? menuPosition.x,
+                        opacity: adjustedPosition ? 1 : 0
+                    }}
                     onClick={(e) => e.stopPropagation()}
                 >
 
-                    <button onClick={() => addNodeAtCursor('mathNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('mathNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <Plus className="w-4 h-4 text-orange-500" /> Math
                     </button>
-                    <button onClick={() => addNodeAtCursor('unaryNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('unaryNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <Calculator className="w-4 h-4 text-purple-500" /> Function
                     </button>
-                    <button onClick={() => addNodeAtCursor('logicNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('logicNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <ToggleRight className="w-4 h-4 text-indigo-400" /> Logic
                     </button>
-                    <button onClick={() => addNodeAtCursor('compareNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('compareNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <Scale className="w-4 h-4 text-teal-400" /> Compare
                     </button>
-                    <button onClick={() => addNodeAtCursor('switchNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('switchNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <ToggleRight className="w-4 h-4 text-indigo-500" /> Switch
                     </button>
-                    <button onClick={() => addNodeAtCursor('sliderNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('sliderNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <Sliders className="w-4 h-4 text-indigo-400" /> Slider
                     </button>
-                    <button onClick={() => addNodeAtCursor('solverNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('solverNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <Sigma className="w-4 h-4 text-indigo-500" /> Solver
                     </button>
-                    <div className="px-2 py-1 text-xs font-bold text-zinc-500 border-b border-zinc-700 mb-1 mt-1">Inputs</div>
-                    <button onClick={() => addNodeAtCursor('inputNumber')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-t border-zinc-700/50 mt-1 mb-0.5">Inputs</div>
+                    <button onClick={() => addNodeAtCursor('inputNumber')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <Hash className="w-4 h-4 text-blue-500" /> Number
                     </button>
-                    <button onClick={() => addNodeAtCursor('inputMatrix')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('inputMatrix')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <LayoutTemplate className="w-4 h-4 text-blue-500" /> Matrix
                     </button>
 
-                    <div className="px-2 py-1 text-xs font-bold text-zinc-500 border-b border-zinc-700 mb-1 mt-1">Results</div>
-                    <button onClick={() => addNodeAtCursor('numberNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
-                        <Hash className="w-4 h-4 text-green-500" /> Number
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-t border-zinc-700/50 mt-1 mb-0.5">Results</div>
+                    <button onClick={() => addNodeAtCursor('monitorNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
+                        <Monitor className="w-4 h-4 text-green-500" /> Result
                     </button>
-                    <button onClick={() => addNodeAtCursor('matrixNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
-                        <LayoutTemplate className="w-4 h-4 text-indigo-500" /> Matrix
-                    </button>
-                    <button onClick={() => addNodeAtCursor('formulaNode')} className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-700 rounded text-sm text-zinc-200 text-left">
+                    <button onClick={() => addNodeAtCursor('formulaNode')} className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-700/50 rounded-md text-sm text-zinc-200 text-left transition-colors">
                         <Sigma className="w-4 h-4 text-purple-500" /> Formula
                     </button>
                 </div>

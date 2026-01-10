@@ -44,16 +44,26 @@ export const CustomEdge = memo((props: EdgeProps) => {
         return node ? { muted: node.data.muted, type: node.type } : null;
     }, [target]));
 
+    // Select only the source node's type to check for primitive values
+    const sourceNodeType = useStore(useCallback((s: ReactFlowState) => {
+        return s.nodeLookup.get(source)?.type;
+    }, [source]));
+
     const { getNode, getNodes, getEdges } = useReactFlow();
 
     const { logicVersion, settings } = useAppStore(); // Destructure settings here too for path logic
 
-    // 1. Calculate Path
+    // 1. Calculate Path with handle offset compensation
+    // handles are flush at 0, so we shift path endpoints 6px inward to meet the dot center
+    const offsetX = 6;
+    const adjustedSourceX = sourcePosition === Position.Right ? sourceX - offsetX : sourceX + offsetX;
+    const adjustedTargetX = targetPosition === Position.Left ? targetX + offsetX : targetX - offsetX;
+
     const pathParams = {
-        sourceX,
+        sourceX: adjustedSourceX,
         sourceY,
         sourcePosition,
-        targetX,
+        targetX: adjustedTargetX,
         targetY,
         targetPosition,
     };
@@ -123,10 +133,14 @@ export const CustomEdge = memo((props: EdgeProps) => {
         let strokeWidth = 2;
         if (isThick) strokeWidth += 2.5;
 
+        // Check for primitive source types (Slider, Number Input)
+        // These should always appear as value edges (grey), never formulas (purple)
+        const isPrimitiveSource = sourceNodeType === 'sliderNode' || sourceNodeType === 'inputNumberNode';
+
         // Simplify: Only animate if explicitly formula data and enabled in settings
         // (Previously relied on global displayMode)
-        const shouldAnimate = isFormula && settings.enableAnimations;
-        const showFormulaStyle = isFormula; // Always show purple for formula edges
+        const shouldAnimate = isFormula && !isPrimitiveSource && settings.enableAnimations;
+        const showFormulaStyle = isFormula && !isPrimitiveSource; // Always show purple for formula edges unless primitive
 
         // If animation is disabled, we also disable dashes to make it solid
         const dashArray = (shouldAnimate) ? '5 5' : undefined;
@@ -147,9 +161,11 @@ export const CustomEdge = memo((props: EdgeProps) => {
             animation: 'none',
             animationDelay: delay,
         };
-    }, [style, isIgnored, isFormula, isThick, id, settings.enableAnimations]);
+    }, [style, isIgnored, isFormula, isThick, id, settings.enableAnimations, sourceNodeType]);
 
-    const shouldAnimate = isFormula && !isIgnored && settings.enableAnimations;
+    // Re-calculate local shouldAnimate for the className
+    const isPrimitiveSource = sourceNodeType === 'sliderNode' || sourceNodeType === 'inputNumberNode';
+    const shouldAnimate = isFormula && !isPrimitiveSource && !isIgnored && settings.enableAnimations;
 
     return (
         <BaseEdge

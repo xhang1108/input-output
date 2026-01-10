@@ -20,7 +20,7 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
 
 ---
 
-## 🚧 Phase 2: Hybrid Pull Architecture (Current Focus)
+## ✅ Phase 2: Hybrid Pull Architecture (Completed)
 **Goal:** Implementation of "Push Signal, Pull Data" Engine.
 
 - [x] **Core Engine Rewrite**
@@ -29,11 +29,11 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [x] **Safety:** Implement `FALLBACK_PAYLOAD` and error handling.
 - [x] **Node Architecture v2**
     - [x] **Smart Result Node:** Logic nodes trigger calculation via `pullValue`.
-    - [x] **Lazy Intermediates:** Nodes only calculate when pulled.
+    - [x] **Lazy Intermediates:** Nodes only calculate when pulled (Dead Code Elimination).
     - [x] **Scoped Flow:** Wires carry variable tables (`scope`) for formula generation.
-- [ ] **Migration**
-    - [ ] Deprecate `Brain.think()` (Monolithic Push).
-    - [ ] Verify `ResultNode` handles Cycles gracefully without crashing.
+- [x] **Migration**
+    - [x] Deprecate `Brain.think()` (Monolithic Push).
+    - [x] Verify `ResultNode` handles Cycles gracefully without crashing.
 - [x] **Logic Nodes Implementation**
     - [x] **Component:** Create `src/components/nodes/NodeLogic.tsx`.
     - [x] **Ops:** AND, OR, XOR, NAND.
@@ -46,19 +46,19 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [x] **Implementation:** Created `NodeSwitch.tsx`.
     - [x] **Data Logic:** Implemented ternary formula and lazy branch pulling in `Brain.ts`.
 
-## 🐛 Known Issues / Polish
+---
+
+## 🚧 Phase 3: Visuals & Polish (Current Focus)
+**Goal:** Enhance the user interface and graph management tools.
+
 - [x] **Sticky Placement (Blender Style)**
     - [x] **Shift+D**: Implemented spawn-in-place + relative sticky movement.
     - [x] **Ctrl+V**: Standard mouse-centered paste (non-sticky).
     - [x] **Race Condition Fix**: Ensured 100% activation reliability by passing node refs directly.
-- [ ] **Keyboard Shortcuts Audit:**
-    - [ ] 1. Verify operation of all existing shortcuts.
-    - [ ] 2. Implement new shortcuts for improved workflow.
-    - [ ] 3. **Copy-Paste with Edges**: Ensure connected edges are also copied when multiple nodes are selected and pasted.
-
-## 🎨 Phase 3: Visuals & Polish
-**Goal:** Enhance the user interface and graph management tools.
-
+- [x] **Keyboard Shortcuts Audit:**
+    - [x] 1. Verify operation of all existing shortcuts.
+    - [x] 2. Implement new shortcuts for improved workflow (Fit View, Focus).
+    - [x] 3. **Copy-Paste with Edges**: Ensure connected edges are also copied when multiple nodes are selected and pasted.
 - [x] **Graph Layout Engine**
     - [x] **Library:** Integrated `elkjs` via `useLayout` hook.
     - [x] **Strategy:** Used `elk.layered` algorithm respecting ports.
@@ -66,6 +66,8 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
 - [x] **Navigation & A11y**
     - [x] **Minimap:** Added `<Minimap />` with custom node colors.
     - [ ] **Keyboard:** Ensure `useEar` handles Focus Management.
+
+---
 
 ## 🧮 Phase 4: Advanced Mathematics
 **Goal:** Support engineering workflows.
@@ -76,13 +78,15 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
     - [x] **UI:** Added a dropdown to select functions.
 - [ ] **Custom Functions (Subgraphs)**
     - [ ] **Architecture:** Define a `MacroNode` type that holds a nested `nodes` and `edges` state.
-    - [ ] **Execution:** `Brain.ts` needs to recursively call a `think()` sub-routine for these nodes.
+    - [ ] **Execution:** `Brain.ts` needs to recursively call a `pullValue` sub-routine for these nodes.
+
+---
 
 ## 📊 Phase 5: Data Structures (The "Spreadsheet" Upgrade)
 **Goal:** Handle collections of data (Arrays/Matrices).
 
 - [ ] **Matrix Engine Support**
-    - [ ] **MathJS:** Switch internal operations from native JS (`a + b`) to `math.add(a, b)` to support matrix addition automatically.
+    - [x] **MathJS:** Switch internal operations from native JS (`a + b`) to `math.add(a, b)` to support matrix addition automatically.
     - [ ] **Type Guard:** Update `CustomEdge.tsx` to detect `Array` values and render a "Double Line" or "Thick Wire" style.
 - [ ] **UI Visualization**
     - [ ] **Output Node:** If `value` is Array, render a small HTML `<table>` or grid instead of a single number.
@@ -92,11 +96,11 @@ This roadmap outlines the past achievements and future ambitions for **Calctopus
 **Goal:** Maintain stability at scale.
 
 - [ ] **Testing Strategy**
-    - [ ] **Unit:** Add `vitest` to test `Brain.think()` with various graph topologies (Cyclic, Disconnected, Type Errors).
+    - [ ] **Unit:** Add `vitest` to test `Brain.pullValue()` with various graph topologies (Cyclic, Disconnected, Type Errors).
     - [ ] **E2E:** Playwright tests to verify "Drag from Handle" works on canvas.
 - [ ] **Performance (Web Workers)**
-    - [ ] **Refactor:** Move `Brain.think()` into a `brain.worker.ts`.
-    - [ ] **Comms:** Use `postMessage` to send `nodes/edges` and receive `thoughts`, keeping the UI thread unblocked.
+    - [ ] **Refactor:** Move `Brain.ts` into a `brain.worker.ts`.
+    - [ ] **Comms:** Use `postMessage` to send `nodes/edges` and receive `results`, keeping the UI thread unblocked.
 
 ## ☁️ Phase 7: Cloud & Community
 **Goal:** Sharing and Storage.

@@ -35,9 +35,10 @@ To prevent "Refactor Hell" and ensure the project remains maintainable (unlike t
 1.  **Visual Change (Drag/Select):** Handled entirely by React Flow and local state. No calculation is triggered.
 2.  **Logical Change (Type/Connect):** Any data-altering action calls `triggerLogicUpdate()`.
 3.  **The Signal:** The global `logicVersion` (Zustand) increments.
-4.  **The Cache Clear:** `clearCache()` is called in `Brain.ts` to prepare for a fresh frame.
-5.  **The Pull:** Functional nodes (like `NodeOutput`) detect the version change and initiate a **Lazy Pull**.
-6.  **Recursion + Memoization:** `Brain.ts` runs `_pullValue()`, which recursively traverses the graph. Intermediate results are stored in a **Frame Cache** (Map), ensuring O(N) complexity even with massive branching.
+4.  **The Cache Clear:** `clearCache()` is collected to prepare for a fresh frame.
+5.  **Smart Liveness Check (Dead Code Elimination):** Before pulling, every node runs `isNodeAlive()` to verify if it contributes to a Sink (Output/Monitor). Disconnected chains are strictly ignored to save resources.
+6.  **The Pull:** Active nodes initiate a **Lazy Pull**.
+7.  **Recursion + Memoization:** `Brain.ts` runs `_pullValue()`, ...
 7.  **Expression:** Results are displayed instantly.
 
 ### 3. Forward Flow, Backward Calculation

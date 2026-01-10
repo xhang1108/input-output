@@ -16,10 +16,12 @@ export const NodeInputNumber = memo(({ id, data, selected }: NodeProps) => {
         id,
         data.rawExpression as string || String(data.value || 0),
         useCallback((val) => {
-            const num = parseFloat(val);
-            const isValid = !isNaN(num);
+            // Use strict Number() parsing instead of parseFloat to avoid treating "2x" as 2.
+            // Strings like "2x+5" will result in NaN, allowing Brain.ts to use rawExpression.
+            const num = Number(val);
+            const isValid = !isNaN(num) && val.trim() !== '';
             return {
-                value: isValid ? num : 0,
+                value: isValid ? num : null,
                 rawExpression: val,
                 label: data.label || 'Number',
             };
@@ -38,24 +40,30 @@ export const NodeInputNumber = memo(({ id, data, selected }: NodeProps) => {
     return (
         <NodeShell
             selected={selected}
-            className={`bg-white border-2 border-blue-500 rounded-xl p-3 min-w-[140px] hover:border-blue-400 transition-colors relative ${isMuted ? 'opacity-50 grayscale' : ''}`}
+            className={`bg-white border-2 border-blue-500 rounded-xl p-3 min-w-[140px] min-h-[100px] hover:border-blue-400 transition-colors relative flex flex-col ${isMuted ? 'opacity-50 grayscale' : ''}`}
         >
             <div className="flex flex-col gap-2">
                 <NodeHeader
                     label="Number Input"
-                    symbolInput={{
+                    editableLabel={{
                         value: localSymbol,
                         onChange: setLocalSymbol,
-                        title: "Assign Variable Name (e.g. 'x')"
+                        placeholder: "Input Name"
                     }}
                 />
 
-                <Input
-                    className="text-2xl font-bold font-mono text-center border-zinc-200 focus:border-blue-500 h-10 bg-zinc-50"
-                    value={localValue}
-                    onChange={(e) => setLocalValue(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
-                />
+                <div className="relative">
+                    <Input
+                        className="text-2xl font-bold font-mono text-center border-zinc-200 focus:border-blue-500 h-10 bg-zinc-50 text-blue-600"
+                        value={localValue}
+                        onChange={(e) => {
+                            // Automatically strip all spaces (Paste & Type)
+                            const cleanValue = e.target.value.replace(/\s/g, '');
+                            setLocalValue(cleanValue);
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                    />
+                </div>
             </div>
 
             <SourceHandle

@@ -5,8 +5,6 @@ import { ReactNode } from 'react';
 interface NodeHeaderProps {
     label: string;
     icon?: ReactNode;
-    statusIndicator?: 'success' | 'warning' | 'error' | 'neutral';
-    statusCustomColor?: string;
     badge?: string | number;
     badgeColor?: string;
     symbolInput?: {
@@ -15,6 +13,11 @@ interface NodeHeaderProps {
         placeholder?: string;
         title?: string;
     };
+    editableLabel?: {
+        value: string;
+        onChange: (val: string) => void;
+        placeholder?: string;
+    };
     className?: string;
     textColor?: string;
 }
@@ -22,21 +25,32 @@ interface NodeHeaderProps {
 export const NodeHeader = ({
     label,
     icon,
-    statusIndicator,
-    statusCustomColor,
     badge,
     badgeColor = 'text-indigo-500',
     symbolInput,
+    editableLabel,
     className = '',
     textColor = 'text-zinc-400'
 }: NodeHeaderProps) => {
     return (
         <div className={`flex items-center justify-between mb-2 w-full ${className}`}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
                 {icon && <div className="shrink-0">{icon}</div>}
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${textColor}`}>
-                    {label}
-                </span>
+
+                {editableLabel ? (
+                    <input
+                        className={`text-[10px] font-bold uppercase tracking-wider bg-transparent border-none p-0 focus:ring-0 w-full placeholder-zinc-300 ${textColor}`}
+                        value={editableLabel.value}
+                        onChange={(e) => editableLabel.onChange(e.target.value)}
+                        placeholder={editableLabel.placeholder || label}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        autoFocus={false}
+                    />
+                ) : (
+                    <span className={`text-[10px] font-bold uppercase tracking-wider truncate ${textColor}`}>
+                        {label}
+                    </span>
+                )}
                 {badge !== undefined && (
                     <span className={`text-[10px] font-bold bg-zinc-50 px-1 rounded ${badgeColor}`}>
                         {badge}
@@ -54,13 +68,6 @@ export const NodeHeader = ({
                         title={symbolInput.title || 'Variable Name'}
                         onKeyDown={(e) => e.stopPropagation()}
                     />
-                )}
-                {statusIndicator && (
-                    <div className={`w-2.5 h-2.5 rounded-full shadow-sm transition-colors duration-300 ${statusIndicator === 'success' ? 'bg-green-500' :
-                        statusIndicator === 'error' ? 'bg-red-500' :
-                            statusIndicator === 'warning' ? 'bg-yellow-500' :
-                                'bg-zinc-300'
-                        }`} style={statusCustomColor ? { backgroundColor: statusCustomColor } : undefined} />
                 )}
             </div>
         </div>

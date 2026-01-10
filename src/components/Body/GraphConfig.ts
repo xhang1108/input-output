@@ -1,5 +1,4 @@
 import { type Node, type Edge, type NodeTypes, type EdgeTypes } from '@xyflow/react';
-import { NodeInput } from '../nodes/NodeInput';
 import { NodeInputNumber } from '../nodes/NodeInputNumber';
 import { NodeInputMatrix } from '../nodes/NodeInputMatrix';
 import { NodeMath } from '../nodes/NodeMath';
@@ -7,8 +6,6 @@ import { NodeUnary } from '../nodes/NodeUnary';
 import { NodeLogic } from '../nodes/NodeLogic';
 import { NodeCompare } from '../nodes/NodeCompare';
 import { NodeOutput } from '../nodes/NodeOutput';
-import { NodeNumber } from '../nodes/NodeNumber';
-import { NodeMatrix } from '../nodes/NodeMatrix';
 import { NodeFormula } from '../nodes/NodeFormula';
 import { NodeSolver } from '../nodes/NodeSolver';
 import { NodeSwitch } from '../nodes/NodeSwitch';
@@ -17,16 +14,16 @@ import { NodeSlider } from '../nodes/NodeSlider';
 import { CustomEdge } from '../edges/CustomEdge';
 
 export const nodeTypes: NodeTypes = {
-    inputNode: NodeInput, // legacy
+    inputNode: NodeInputNumber, // Alias legacy inputNode to new component
     inputNumber: NodeInputNumber,
     inputMatrix: NodeInputMatrix,
     mathNode: NodeMath,
     unaryNode: NodeUnary,
     logicNode: NodeLogic,
     compareNode: NodeCompare,
-    outputNode: NodeOutput, // Legacy support
-    numberNode: NodeNumber,
-    matrixNode: NodeMatrix,
+    outputNode: NodeOutput,
+    monitorNode: NodeOutput,
+    matrixNode: NodeOutput,
     formulaNode: NodeFormula,
     solverNode: NodeSolver,
     switchNode: NodeSwitch,
@@ -41,13 +38,13 @@ export const edgeTypes: EdgeTypes = {
 export const defaultNodes: Node[] = [
     {
         id: 'input-a',
-        type: 'inputNode',
+        type: 'inputNumber',
         position: { x: 100, y: 100 },
         data: { label: 'Value A', value: 10, rawExpression: '10' },
     },
     {
         id: 'input-b',
-        type: 'inputNode',
+        type: 'inputNumber',
         position: { x: 100, y: 300 },
         data: { label: 'Value B', value: 7, rawExpression: '7' },
     },

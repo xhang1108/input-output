@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
+import { useAppStore } from '@/store/useAppStore';
 
 /**
  * Standardizes the debounce pattern for node data updates.
@@ -14,6 +15,7 @@ export function useNodeDebounce<T>(
     delay: number = 300
 ) {
     const { updateNodeData } = useReactFlow();
+    const { triggerLogicUpdate } = useAppStore();
     const [localValue, setLocalValue] = useState<T>(initialValue);
     const isFirstRender = useRef(true);
 
@@ -40,15 +42,20 @@ export function useNodeDebounce<T>(
     useEffect(() => {
         const handler = setTimeout(() => {
             const updatePayload = onSync(localValue);
-            if (Object.keys(updatePayload).length > 0) {
-                // Update our tracker before pushing so the echo check above knows it's us
+
+            // Check if any value in the payload is actually different from current tracking
+            // to avoid redundant updates that trigger global logic cycles.
+            const hasChanges = Object.keys(updatePayload).length > 0;
+
+            if (hasChanges) {
                 lastPushedValue.current = localValue;
                 updateNodeData(id, updatePayload);
+                triggerLogicUpdate();
             }
         }, delay);
 
         return () => clearTimeout(handler);
-    }, [localValue, id, updateNodeData, delay, onSync]);
+    }, [localValue, id, updateNodeData, delay, onSync, triggerLogicUpdate]);
 
     return [localValue, setLocalValue] as const;
 }

@@ -65,7 +65,7 @@ export const Profiler = () => {
     if (!settings.showDebugInfo) return null;
 
     return (
-        <div className="fixed bottom-2 left-2 bg-black/80 text-green-400 p-2 rounded text-[10px] font-mono border border-green-900 z-[9999] pointer-events-none shadow-xl backdrop-blur max-h-[300px] overflow-auto">
+        <div className="fixed bottom-2 left-2 bg-black/80 text-green-400 p-2 rounded text-[10px] font-mono border border-green-900 z-9999 pointer-events-none shadow-xl backdrop-blur max-h-[300px] overflow-auto">
             <div className="flex gap-4 border-b border-green-900 pb-1 mb-1 font-bold">
                 <span>FPS: {stats.fps}</span>
                 <span>MEM: {stats.memory} MB</span>
