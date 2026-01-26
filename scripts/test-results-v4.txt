@@ -1,0 +1,80 @@
+­ƒÜÇ Starting LaTeX Parser Verification...
+
+--- Testing: Basic Addition (a + b) ---
+Nodes Generated: 3
+  [inputNode] ID: WPMWil Data: {"symbol":"a","value":0}
+  [inputNode] ID: 6fIvue Data: {"symbol":"b","value":0}
+  [mathNode] ID: 7omN7L Data: {"operation":"add"}
+Edges Generated: 2
+  WPMWil [output] -> 7omN7L [inputA]
+  6fIvue [output] -> 7omN7L [inputB]
+
+
+--- Testing: Fraction (\frac{x}{y}) ---
+Nodes Generated: 3
+  [inputNode] ID: NUmtJf Data: {"symbol":"x","value":0}
+  [inputNode] ID: hLHTkn Data: {"symbol":"y","value":0}
+  [mathNode] ID: FMZn6q Data: {"operation":"div"}
+Edges Generated: 2
+  NUmtJf [output] -> FMZn6q [inputA]
+  hLHTkn [output] -> FMZn6q [inputB]
+
+
+--- Testing: Power (x^2) ---
+Nodes Generated: 3
+  [inputNode] ID: V0eTJE Data: {"symbol":"x","value":0}
+  [inputNumberNode] ID: 4qDpPi Data: {"value":2,"label":"2"}
+  [mathNode] ID: 1sWRg2 Data: {"operation":"pow"}
+Edges Generated: 2
+  V0eTJE [output] -> 1sWRg2 [inputA]
+  4qDpPi [output] -> 1sWRg2 [inputB]
+
+
+--- Testing: Deduplication (\sin(x) + \cos(x)) ---
+Nodes Generated: 4
+  [inputNode] ID: uq3Qxl Data: {"symbol":"x","value":0}
+  [unaryNode] ID: oJX70b Data: {"operation":"sin"}
+  [unaryNode] ID: UOxDcd Data: {"operation":"cos"}
+  [mathNode] ID: T-21vS Data: {"operation":"add"}
+Edges Generated: 4
+  uq3Qxl [output] -> oJX70b [inputA]
+  uq3Qxl [output] -> UOxDcd [inputA]
+  oJX70b [output] -> T-21vS [inputA]
+  UOxDcd [output] -> T-21vS [inputB]
+
+
+--- Testing: Nested Function (\sin(x^2) + \cos(y)) ---
+Nodes Generated: 7
+  [inputNode] ID: B_iw_M Data: {"symbol":"x","value":0}
+  [inputNumberNode] ID: JnbS8l Data: {"value":2,"label":"2"}
+  [mathNode] ID: Lybwfk Data: {"operation":"pow"}
+  [unaryNode] ID: U8mR8k Data: {"operation":"sin"}
+  [inputNode] ID: b_GkHS Data: {"symbol":"y","value":0}
+  [unaryNode] ID: hT5fgF Data: {"operation":"cos"}
+  [mathNode] ID: MoUhXT Data: {"operation":"add"}
+Edges Generated: 6
+  B_iw_M [output] -> Lybwfk [inputA]
+  JnbS8l [output] -> Lybwfk [inputB]
+  Lybwfk [output] -> U8mR8k [inputA]
+  b_GkHS [output] -> hT5fgF [inputA]
+  U8mR8k [output] -> MoUhXT [inputA]
+  hT5fgF [output] -> MoUhXT [inputB]
+
+
+--- Testing: Matrix (\begin{matrix}1&2\\3&4\end{matrix}) ---
+LaTeX Compilation Error: ParseError: m at 7: expected 'matrix' after '\begin{' (no other environnmentsare supported yet)
+    at Parser.tryConsume (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:333:19)
+    at Parser.nextMatrix (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:527:34)
+    at Parser.nextPrimary (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:399:32)
+    at Parser.nextPower (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:315:25)
+    at Parser.nextFactor (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:306:21)
+    at Parser.nextTerm (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:256:31)
+    at Parser.nextExpression (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:227:29)
+    at Object.parseTokens [as default] (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:597:33)
+    at parseTex (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\index.js:15:33)
+    at LaTeXCompiler.compile (D:\Antigravity\Calctopus\src\engine\Parser.ts:58:32)
+Nodes Generated: 0
+Edges Generated: 0
+
+
+Ô£à Verification Complete.

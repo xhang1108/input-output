@@ -1,0 +1,67 @@
+­ƒÜÇ Starting LaTeX Parser Verification...
+
+--- Testing: Basic Addition (a + b) ---
+Nodes Generated: 3
+  [inputNode] ID: V_3LUK Data: {"symbol":"a","value":0}
+  [inputNode] ID: _r4gO6 Data: {"symbol":"b","value":0}
+  [mathNode] ID: 7pcRZs Data: {"operation":"add"}
+Edges Generated: 2
+  V_3LUK [output] -> 7pcRZs [inputA]
+  _r4gO6 [output] -> 7pcRZs [inputB]
+
+
+--- Testing: Fraction (\frac{x}{y}) ---
+Nodes Generated: 3
+  [inputNode] ID: v_zXIY Data: {"symbol":"x","value":0}
+  [inputNode] ID: sogc9s Data: {"symbol":"y","value":0}
+  [mathNode] ID: s0O0za Data: {"operation":"add"}
+Edges Generated: 2
+  v_zXIY [output] -> s0O0za [inputA]
+  sogc9s [output] -> s0O0za [inputB]
+
+
+--- Testing: Power (x^2) ---
+Nodes Generated: 3
+  [inputNode] ID: vT5DJK Data: {"symbol":"x","value":0}
+  [inputNumberNode] ID: Y_d9tx Data: {"value":2,"label":"2"}
+  [mathNode] ID: Owu-ed Data: {"operation":"pow"}
+Edges Generated: 2
+  vT5DJK [output] -> Owu-ed [inputA]
+  Y_d9tx [output] -> Owu-ed [inputB]
+
+
+--- Testing: Nested Function (\sin(x^2) + \cos(y)) ---
+Nodes Generated: 7
+  [inputNode] ID: FWs73R Data: {"symbol":"x","value":0}
+  [inputNumberNode] ID: vvknhn Data: {"value":2,"label":"2"}
+  [mathNode] ID: DrLRo5 Data: {"operation":"pow"}
+  [unaryNode] ID: 3OFMF_ Data: {"operation":"sin"}
+  [inputNode] ID: xNObjs Data: {"symbol":"y","value":0}
+  [unaryNode] ID: 2Rkd5- Data: {"operation":"cos"}
+  [mathNode] ID: Edk98c Data: {"operation":"add"}
+Edges Generated: 6
+  FWs73R [output] -> DrLRo5 [inputA]
+  vvknhn [output] -> DrLRo5 [inputB]
+  DrLRo5 [output] -> 3OFMF_ [inputA]
+  xNObjs [output] -> 2Rkd5- [inputA]
+  3OFMF_ [output] -> Edk98c [inputA]
+  2Rkd5- [output] -> Edk98c [inputB]
+
+
+--- Testing: Matrix (\begin{matrix} 1 & 2 \\ 3 & 4 \end{matrix}) ---
+LaTeX Compilation Error: ParseError: m at 7: expected 'matrix' after '\begin{' (no other environnmentsare supported yet)
+Nodes Generated: 0
+    at Parser.tryConsume (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:333:19)
+    at Parser.nextMatrix (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:527:34)
+    at Parser.nextPrimary (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:399:32)
+    at Parser.nextPower (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:315:25)
+    at Parser.nextFactor (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:306:21)
+    at Parser.nextTerm (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:256:31)
+    at Parser.nextExpression (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:227:29)
+    at Object.parseTokens [as default] (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\parseTokens.js:597:33)
+    at parseTex (D:\Antigravity\Calctopus\node_modules\tex-math-parser\dist\index.js:15:33)
+    at LaTeXCompiler.compile (D:\Antigravity\Calctopus\src\engine\Parser.ts:43:32)
+Edges Generated: 0
+
+
+Ô£à Verification Complete.
