@@ -8,20 +8,24 @@ This document defines how data and symbols travel between nodes.
 - **Unit Metadata**: Carrying physical units (km, kg, $) through the wires.
 - **Visual Mapping**: Data types map to wire colors (Blender style).
 
-## 🧬 Proposed Payload Structure
+## 🧬 Core Payload Structure (The "Soul & Body")
 
-### Candidate A: The "Soul & Body" Object
-Every connection carries an object that contains both the symbolic string and the calculated data.
+As defined in the [ENGINE_ARCHITECTURE.md Bible](file:///d:/Antigravity/Calctopus/ENGINE_ARCHITECTURE.md), every connection must carry a `NodePayload` that facilitates distributed evaluation.
 
 ```typescript
 interface NodePayload {
-  latex: string;      // The "Soul" - For display and symbolic ops
-  ast: object;        // The "Blood" - For raw computation speed
-  value: any;         // The "Cache" - Numerical result for UI
-  unit: string | null;// The "Context" - Physical unit
-  type: DataType;     // The "Shape" - Scalar, Matrix, etc.
+  soul: ASTNode;      // The "Soul" - Internal AST structure for LaTeX & Symbolic ops
+  body: any;          // The "Body" - The pre-calculated numeric/matrix value (Atomic Cache)
+  unit: string | null;// Support for physical units (km, kg, etc.)
+  type: DataType;     // Scalar, Matrix, Error, etc.
+  isDirty: boolean;   // Status flag for current update cycle
 }
 ```
+
+### ⚛️ Evaluation Rules
+1. **Body-First Distribution**: Each node's `body` is calculated using the `body` values of its immediate parents.
+2. **Soul Linkage**: Each node's `soul` is a new AST node that wraps the `soul` of its parents.
+3. **Adaptive Fulfillment**: If the downstream request is "Value-only", the `soul` generation can be skipped to save memory.
 
 ---
 

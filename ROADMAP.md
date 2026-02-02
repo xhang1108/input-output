@@ -59,12 +59,11 @@ graph TD
     - [ ] Next.js 14+ / React Flow Integration.
     - [ ] **Separation of Concerns:** `Brain.ts` (Pure Logic) vs `Body.tsx` (React Render).
     - [ ] **Nerves System:** Custom hooks (`useBrain`, `useHand`, `useEar`) for event handling.
-- [ ] **Engine Architecture & Workers**
-    - [ ] **Web Workers**: Move calculation logic (`Brain.ts`) to a background worker to ensure UI never freezes.
-    - [ ] **Pull Engine**: Implement recursive `pullValue` as discussed in **[ENGINE_ARCHITECTURE.md](file:///d:/Antigravity/Calctopus/ENGINE_ARCHITECTURE.md)**.
-    - [ ] **Decision:** **Hybrid Pull**. Nodes only calculate when "pulled".
-    - [ ] **Throttle**: Auto/Pause/Play modes for manual calculation control.
-    - [ ] **Safety**: Implement `NodePayload`, `FALLBACK_PAYLOAD`, and strict Error Reporting.
+- [ ] **Engine Implementation (The "Brain")**
+    - [ ] **Core Engine Logic**: Implement the Hybrid Pull model as defined in the **[ENGINE_ARCHITECTURE.md Bible](file:///d:/Antigravity/Calctopus/ENGINE_ARCHITECTURE.md)**.
+    - [ ] **Web Worker Orchestration**: Setup background worker for math execution to keep UI at 60fps.
+    - [ ] **Payload Architecture**: Implement `NodePayload` (Soul & Body) in accordance with **[PAYLOAD_SPECIFICATION.md](file:///d:/Antigravity/Calctopus/PAYLOAD_SPECIFICATION.md)**.
+    - [ ] **Throttle & Control**: Implementation of manual Auto/Pause/Play modes for high-load state management.
 - [ ] **Testing & Telemetry**
     - [ ] **Unit**: `vitest` for graph topologies (Cyclic, Disconnected, Type Errors).
     - [ ] **E2E**: Browser-based tests utilizing Chrome DevTools Protocol (MDP) for UI interaction.
@@ -132,9 +131,10 @@ graph TD
 ## 🎓 Phase 3: LaTeX Unified Ecosystem
 **Goal:** Make LaTeX the "Soul" of the system without performance cost.
 
-- [ ] **LaTeX Logic & Parser**
+- [ ] **LaTeX Logic & Parser (The Formula Bridge)**
     - [ ] **LaTeX-to-Node**: Generate a visual subgraph from a LaTeX string.
-    - [ ] **Library**: Integrate `tex-math-parser` to parse LaTeX into MathJS AST.
+        - [ ] **Symbolic Parsing & AST Mapping**: Use `tex-math-parser` to map operators to atomic nodes.
+        - [ ] **Automatic Deduplication (Option B)**: Ensure identical variables in the formula point to a single `InputNode`.
     - [ ] **Node-to-LaTeX**: Compile groups/subgraphs into optimized LaTeX strings.
     - [ ] **Group-as-LaTeX Performance**: Evaluate the compiled single formula instead of individual internal nodes to save performance.
     - [ ] **Symbolic Propagation**: Wires carry LaTeX expressions as metadata.
