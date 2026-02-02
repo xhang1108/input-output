@@ -60,9 +60,11 @@ graph TD
     - [ ] **Separation of Concerns:** `Brain.ts` (Pure Logic) vs `Body.tsx` (React Render).
     - [ ] **Nerves System:** Custom hooks (`useBrain`, `useHand`, `useEar`) for event handling.
 - [ ] **Engine Implementation (The "Brain")**
-    - [ ] **Core Engine Logic**: Implement the Hybrid Pull model as defined in the **[ENGINE_ARCHITECTURE.md Bible](file:///d:/Antigravity/Calctopus/ENGINE_ARCHITECTURE.md)**.
-    - [ ] **Web Worker Orchestration**: Setup background worker for math execution to keep UI at 60fps.
-    - [ ] **Payload Architecture**: Implement `NodePayload` (Soul & Body) in accordance with **[PAYLOAD_SPECIFICATION.md](file:///d:/Antigravity/Calctopus/PAYLOAD_SPECIFICATION.md)**.
+    - [ ] **Core Engine Logic**: Implement the Hybrid Pull model (**Selective Processing**) as defined in the **[ENGINE_ARCHITECTURE.md Bible](file:///d:/Antigravity/Calctopus/ENGINE_ARCHITECTURE.md)**.
+    - [ ] **Web Worker Orchestration**: Setup background worker for math execution using **Shared/Pooled Workers**.
+    - [ ] **Payload Architecture**: Implement `NodePayload` (Soul & Body) with **Scale-Agnostic Unified Logic**.
+    - [ ] **Variable Registry**: Implement **Reference Counting GC** and **Option B Deduplication**.
+    - [ ] **Performance & UX**: Implement **Fusion-style progress** (NodeResolved) and **Transferables**.
     - [ ] **Throttle & Control**: Implementation of manual Auto/Pause/Play modes for high-load state management.
 - [ ] **Testing & Telemetry**
     - [ ] **Unit**: `vitest` for graph topologies (Cyclic, Disconnected, Type Errors).
@@ -196,3 +198,41 @@ graph TD
     - Gas station cost-benefit analysis.
     - Insurance risk and Expected Value modeling.
     - Cross-border price arbitrage logic.
+
+---
+
+## 📱 Phase 8: Cross-Platform Architecture Preparation
+**Goal:** Design for portability—enable future migration to desktop and mobile platforms.
+
+> [!IMPORTANT]
+> **核心原則：引擎與 UI 完全分離，確保計算邏輯可在任何平台複用。**
+
+- [ ] **Platform-Agnostic Engine Core**
+    - [ ] Ensure `Brain.ts` has **zero dependencies** on React, DOM, or browser APIs.
+    - [ ] Abstract interfaces for future portability:
+        - `IComputeExecutor` — Computation layer (Web Worker / Native Thread).
+        - `ICanvasAdapter` — Canvas rendering (React Flow / Flutter Canvas).
+        - `IPersistence` — Storage (localStorage / File System / SQLite).
+    - [ ] Consider future Rust rewrite for performance-critical paths (compile to WASM for Web, native for mobile).
+
+- [ ] **Target Platforms & Technology Stack**
+
+    | Platform | Technology | Reuse Level | Notes |
+    |----------|------------|-------------|-------|
+    | **Web** | Next.js + React Flow | 100% | Current implementation |
+    | **Desktop** | Tauri (Rust backend) | ~95% | Reuse React Flow UI, native system APIs |
+    | **Mobile** | Flutter (Dart + Skia) | Engine only | UI requires rewrite in Dart |
+
+- [ ] **Why Flutter for Mobile (Not Electron/React Native)**
+    - **True Native Rendering**: Skia/Impeller GPU engine, not a browser wrapper.
+    - **AOT Compilation**: Dart compiles to native machine code, not interpreted.
+    - **Performance**: Stable 60/120 fps, low memory footprint.
+    - **Cross-platform**: Single codebase for iOS + Android + Desktop.
+
+- [ ] **Migration Path**
+    1. **Phase 1 (Current)**: Web-first with clean engine separation.
+    2. **Phase 2 (Desktop)**: Wrap with Tauri for Windows/macOS/Linux (~minimal effort).
+    3. **Phase 3 (Mobile)**: Rewrite UI in Flutter, reuse engine via Rust FFI or WASM.
+
+- [ ] **Long-term Vision (TBD)**:
+    - **Multi-dimensional & Time-series Data**: 擴展 `NodePayload` 以支持時間序列數據，實現金融回測與模擬功能。

@@ -6,6 +6,9 @@
 /**
  * Represents the current state of a node's calculation.
  */
+/**
+ * Represents the current state of a node's calculation.
+ */
 export enum CalculationStage {
     IDLE = 'IDLE',          // No pending changes
     DIRTY = 'DIRTY',        // Upstream changed, cache invalid
@@ -24,9 +27,11 @@ export interface NodeSoul {
 
 /**
  * The "Body" of the data: Numeric/Concrete representation.
+ * Supports BigNumber (Precision) and TypedArrays (Scale).
  */
 export interface NodeBody {
-    value: any;             // Number, Matrix, Array, or Boolean
+    value: any;             // MathJS BigNumber, Fraction, Matrix, or Unit
+    typedValue?: Float64Array | null; // Optional buffer for high-scale matrix performance
     unit?: string;          // Optional physical unit (e.g., "m", "kg")
     errorCode?: string;     // Specific error code (e.g., "DIV_BY_ZERO")
 }
@@ -37,7 +42,7 @@ export interface NodeBody {
 export interface NodePayload {
     soul: NodeSoul;
     body: NodeBody;
-    isDirty: boolean;
+    stage: CalculationStage;
     lastUpdated: number;    // Epoch timestamp
 }
 
@@ -47,7 +52,7 @@ export interface NodePayload {
 export const FALLBACK_PAYLOAD: NodePayload = {
     soul: { ast: null, latex: '0' },
     body: { value: 0 },
-    isDirty: true,
+    stage: CalculationStage.DIRTY,
     lastUpdated: 0
 };
 
@@ -62,10 +67,28 @@ export interface EngineLink {
 }
 
 /**
+ * Variable Registry Entry for the "Option B" deduplication and GC.
+ */
+export interface VariableRegistryEntry {
+    name: string;
+    nodeIds: Set<string>;   // ids of InputNodes using this name (Reference Counting)
+    currentValue: any;      // The unified value for this variable name
+}
+
+/**
+ * Engine Events for the "Fusion-style" progress visualization.
+ */
+export type EngineEvent =
+    | { type: 'NODE_DIRTY'; nodeId: string }
+    | { type: 'NODE_RESOLVED'; nodeId: string; payload: NodePayload }
+    | { type: 'CALC_START'; terminalNodeId: string }
+    | { type: 'CALC_END'; terminalNodeId: string; duration: number };
+
+/**
  * Context for recursion, supporting packaging/scoping in the future.
  */
 export interface PullContext {
     mode: 'value' | 'soul' | 'full';
-    iterationCount: number;
-    maxIterations: number;
+    scopeId?: string;       // For nested/wrapped logic
+    trace: string[];        // To detect circularity during recursion
 }
