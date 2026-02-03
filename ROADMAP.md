@@ -110,6 +110,7 @@ graph TD
 - [ ] **3. Brain -> Worker IPC Protocol**
     - [ ] Define the JSON structure for "Task Packages" sent from Brain to Workers.
 - [ ] **4. Visual Language & Multi-branching Research**
+
     - [ ] Research shape/color standards for `Scalar` (Single), `Matrix` (Array), and `Simultaneous` (Multi-branch) connections.
     - [ ] Explore visual cues for "Parallel Realities" (Solver output) vs "Static Data".
     - [ ] **Goal**: Create a visual system that intuitively displays data complexity without overwhelming the user.

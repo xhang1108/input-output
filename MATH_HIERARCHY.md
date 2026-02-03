@@ -5,11 +5,11 @@
 | 等級 | 狀態 | 類別 (Category) | 數據類型 | 迭代策略 (Iter) | 性能 | 潛力 | 限制與解決方案 | 無法完成 (Unsupported) | 節點 | 維度 | 符號 | 核心概念 | 參考庫 | 視覺化 (Vis) | 驗證 (Valid) | 測試 (Test) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **L0** | ✅ | **萬有定義** | Void → Num | Num | 🚀 極快 | 100% | **公理基石**：無需證明。 | 無 (全功能) | NodeInputNumber.tsx | Rank 0 | $\pi, e, \phi$ | 宇宙常數 | MathJS | InputBox | TypeCheck | Unit |
-| **L1** | ✅ | **基礎算術** | Num → Num | Scalar | 🚀 極快 | 100% | **精度誤差**：BigNumber。 | 無 (全功能) | NodeMath.tsx | Rank 0 | `+`, `-`, `×`, `÷` | 加減乘除 | Native | NodeBody | TypeNum | Unit |
+| **L1** | ✅ | **基礎算術** | Num → Num | Scalar | 🚀 極快 | 100% | **精度誤差**：BigNumber。 | 無 (全功能) | NodeMath.tsx, NodeTheory.tsx | Rank 0 | `+`, `-`, `×`, `÷`, `%` | 加減乘除、數論 | Native | NodeBody | TypeNum | Unit |
 | **L1.5** | ✅ | **比較邏輯** | Num → Bool | Scalar | 🚀 極快 | 100% | **類型轉換**：布爾轉換。 | 無 (全功能) | NodeCompare.tsx | Rank 0 | `>`, `<`, `≠` | 大小比較 | Native | Toggle/LED | TypeBool | TruthTable |
 | **L2** | ✅ | **基礎代數** | Exp → Exp | Symbolic | ⚡ 快 | 100% | **求解範圍**：模塊覆蓋。 | 無 (全功能) | NodeSolver.tsx | Rank 0+ | $x, y, ()$ | 方程求解 | Nerdamer | LaTeXBlock | Syntax | SymTest |
-| **L3** | ✅ | **初等函數** | Num → Num | Vector/Map | 🚀 極快 | 100% | **參數類型**：複數域。 | 無 (全功能) | NodeUnary.tsx | 1D Map | $\sin, \log$ | 三角對數 | MathJS | Plot1D | Domain | Property |
-| **L4** | ✅ | **向量運算** | Vec → Vec | SIMD | ⚡ 快 | 100% | **維度匹配**：校驗引擎。 | 無 (全功能) | NodeMath.tsx | **Rank 1** | $\vec{v}, \cdot, \times$ | 點積叉積 | MathJS | Arrow3D | DimMatch | GeoTest |
+| **L3** | ✅ | **初等函數** | Num → Num | Vector/Map | 🚀 極快 | 100% | **參數類型**：複數域。 | 無 (全功能) | NodeUnary.tsx, NodeCombinatorics.tsx | 1D Map | $\sin, \log, n!$ | 三角、對數、組合 | MathJS | Plot1D | Domain | Property |
+| **L4** | ✅ | **向量運算** | Vec → Vec | SIMD | ⚡ 快 | 100% | **維度匹配**：校驗引擎。 | 無 (全功能) | NodeMath.tsx, NodeVectorUtils.tsx | **Rank 1** | $\vec{v}, \cdot, \times$ | 點積叉積 | MathJS | Arrow3D | DimMatch | GeoTest |
 | **L5** | 🚧 | **矩陣運算** | Mat → Mat | Parallel | 🐢 中 | 90% | **UI 渲染**：分頁預覽。 | **GPU 計算** | NodeInputMatrix.tsx | **Rank 2** | $[A], \det$ | 逆矩陣 | MathJS | Heatmap | SquareChk | Property |
 | **L6** | ⏳ | **複數分析** | Cplx → Cplx | Vector/Map | ⚡ 快 | 90% | **坐標映射**：2D 視覺化。 | **黎曼曲面** | - | 2D Plane | $i, z, \bar{z}$ | 虛數歐拉 | MathJS | ArgandMap | CplxType | Visual |
 | **L7** | ⏳ | **微積分 I** | Exp → Exp | Numeric | 🐢 中 | 70% | **解析解限制**：數值補位。 | **非初等積分** | - | $\Delta \to 0$ | $\frac{d}{dx}, \int$ | 導數積分 | Algebrite | funcPlot | Continuity | NumComp |
