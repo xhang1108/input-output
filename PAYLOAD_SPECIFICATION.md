@@ -15,12 +15,22 @@ As defined in the [ENGINE_ARCHITECTURE.md Bible](file:///d:/Antigravity/Calctopu
 ```typescript
 interface NodePayload {
   soul: ASTNode;      // The "Soul" - Internal AST structure for LaTeX & Symbolic ops
-  body: any;          // The "Body" - The pre-calculated numeric/matrix value (Atomic Cache)
+  body: any;          // The "Body" - Pre-calculated value (BigNumber or TypedArray)
   unit: string | null;// Support for physical units (km, kg, etc.)
   type: DataType;     // Scalar, Matrix, Error, etc.
   isDirty: boolean;   // Status flag for current update cycle
 }
 ```
+
+### 🏎️ Precision & Performance (The "Body" Logic)
+
+Users can toggle the Engine's calculation strategy globally or per-node:
+
+1.  **Auto (Default)**: Automatically switches to `TypedArray` when data size exceeds the performance threshold (e.g., 10,000 matrix elements), otherwise stays in `BigNumber`.
+2.  **Precision (準確)**: Forces `BigNumber` (MathJS) for all operations. Ensures 64+ significant digits but may lag on large matrices.
+3.  **Speed (快速)**: Forces `TypedArray` (Float64) for all operations to ensure maximum throughput. Precision is limited to ~15 digits.
+
+- **Down-casting**: In all modes, if a `BigNumber` interacts with a `TypedArray`, the `BigNumber` is converted to a native number to maintain calculation speed.
 
 ### ⚛️ Evaluation Rules
 1. **Body-First Distribution**: Each node's `body` is calculated using the `body` values of its immediate parents.

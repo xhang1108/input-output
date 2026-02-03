@@ -100,6 +100,22 @@ graph TD
 
 ---
 
+## 🚀 Pre-implementation Checklist (Before Coding)
+**Goal:** Align all definitions before the first line of engine code.
+
+- [ ] **1. Define Atomic Node Schema ([UTILITY_NODES.md](file:///d:/Antigravity/Calctopus/UTILITY_NODES.md))**
+    - [ ] Finalize Input/Output ports for `Solver`, `Matrix`, and `Logic` nodes.
+- [ ] **2. Establish SI Conversion Registry**
+    - [ ] Define internal base units (meters, kg, seconds) for the Engine's `Body` calculations.
+- [ ] **3. Brain -> Worker IPC Protocol**
+    - [ ] Define the JSON structure for "Task Packages" sent from Brain to Workers.
+- [ ] **4. Visual Language & Multi-branching Research**
+    - [ ] Research shape/color standards for `Scalar` (Single), `Matrix` (Array), and `Simultaneous` (Multi-branch) connections.
+    - [ ] Explore visual cues for "Parallel Realities" (Solver output) vs "Static Data".
+    - [ ] **Goal**: Create a visual system that intuitively displays data complexity without overwhelming the user.
+
+---
+
 ## 🧮 Phase 2: Data Engine & Smart Units
 **Goal:** A high-performance numerical core that understands physical units.
 

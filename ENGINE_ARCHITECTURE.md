@@ -63,6 +63,10 @@ sequenceDiagram
 - **按需計算 (Selective Processing)**：這是 Pull 模型的核心優化。
     - **邏輯**：不同的 Result 節點可以有不同的拉取需求（如：「我只要結果數字」或「我要全量公式」）。
     - **優化**：若下游所有的節點均只請求「Body/Value」，引擎在 Pull 過程中會**自動跳過** AST 的拼接與運算，確保資源不浪費在用戶不需要的東西上。
+- **單位一致性律 (SI-First Law)**：
+    - **內部計算**：引擎在計算（Body 軌）前，強制將所有輸入單位轉換為 SI 標準單位（Metric Standard）。
+    - **顯示優先**：輸出顯示單位由用戶在 Result 節點設定，或根據輸入權重自動推導。
+    - **符號保留**：Soul (AST) 軌道必須保留原始輸入的單位訊息，確保 LaTeX 輸出的原始性。
 - **緩存填充律**：任何 Pull 請求在計算發生時，必須產出並緩存對應請求的 `NodePayload`。
 
 ### 2. UI-引擎同步律 (Sync Laws)
@@ -81,7 +85,13 @@ sequenceDiagram
 - **性能擴展**：當數據達到矩陣量級時，引擎底層自動使用 TypedArrays (Float64) 加速，但對外接口與邏輯保持完全一致。
 
 ### 5. 零拷貝與融合式進度 (Efficiency & UX)
-- **零拷貝 (Transferables)**：大型矩陣數據傳輸必須使用 `Transferable Objects` 協議，確保 UI 零卡頓。
+- **方案 A：Worker 池 (Worker Pool) - 大腦調度模型**：
+    - **大腦主控 (Orchestrator)**：引擎主線程（Brain）負責維護全局拓撲、依賴層級與變量作用域。
+    - **任務分裝 (Task Isolation)**：大腦將「原料已就緒」（即上游依賴已算完）的節點打包成獨立任務塊發射給 Worker。Worker 內部不執行任何跨節點的 Pull，僅作為純粹的「計算機器」。
+    - **並行加速**：利用 `navigator.hardwareConcurrency` 維護核心池，將獨立分枝或同層級節點分配給空閒 Worker 並行執行。
+    - **零等待機制**：Worker 永遠不進入「等待上游」的狀態。若數據未就緒，任務根本不會被發射，從而消除執行緒空轉（Execution Bubbles）。
+    - **錯誤回退與監控**：Worker 計算失敗須立刻回報大腦；大腦具備超時監聽機制，確保系統不被死鎖。
+    - **傳輸優化**：利用 `Transferable Objects` 協議傳輸大數據（如矩陣），確保主線程調度零開銷。
 - **融合式進度 (Fusion Progress)**：
     - **NodeResolved**：當一個節點算完時，標記 `isDirty = false` 並向 UI 發送事件。
     - **視覺反饋**：UI 根據事件流，讓節點按計算順序點亮（類似 Fusion 渲染感），讓用戶看清數據流向。
@@ -97,7 +107,7 @@ sequenceDiagram
 - **還原邏輯**：該字符串包含了宇宙的所有元數據（坐標、樣式、邏輯拓撲），可 100% 復活畫布。LaTeX 僅作為顯示與 Phase 3 的逆向骨架生成工具。
 - **Undo 邊界**：
     - Undo 只記錄用戶的手動操作（修改輸入、重連線路、移動位置、重命名等）。
-    - **API 數據不進入 Undo 棧**：API 返回的動態數據（如實時匯率）不記錄。Undo 操作後，引擎應自動觸發相關鏈路的 `Dirty` 標記，並使用最新的 API 數據重新計算。
+    - **API 實時優先**：API 數據節點視為「未來導向」的模板，Undo 操作不會快照 API 的歷史數據。Undo 後，引擎僅還原邏輯結構並自動觸發重算，API 節點將獲取最新的實時數據，確保模板的實時性與正確性。
 
 ### 8. 符號索取與微積分 (Symbolic Globalism)
 - **靈魂索取 (Soul-Pull)**：微積分節點發起 `mode: 'soul'` 請求，強制上游交出 AST 公式而非數值，從而反向構建完整的符號表達式。

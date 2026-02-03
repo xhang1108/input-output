@@ -12,8 +12,9 @@ The Body and Brain communicate via specialized hooks. **Crucial:** All these hoo
 -   **`useHand` (Motor Nerve):** Manages user interactions like grabbing, copying, pasting, and duplicating nodes.
 -   **`useEar` (Sensory Nerve):** Listens for global keyboard shortcuts and mouse movements.
 -   **`useEye` (Sensory Nerve):** Manages vision and viewport (Focus, Zoom, Pan).
--   **`useMemory` (Hippocampus):** Provides short-term memory (Undo/Redo) capabilities.
--   **`useMouth` (Communication Nerve):** Handles long-term persistence (Auto-save) and file IO.
+-   **`useMemory` (Hippocampus):** Responsible for short-term memory (Undo/Redo command stack).
+-   **`useMouth` (Communication Nerve):** Handles long-term persistence (Auto-save) and file IO/Serialization.
+-   **`Brain` (Engine):** The central processing unit. Handles dependency resolution, task scheduling, and mathematical execution via Workers.
 
 ### 2. The Biological Protocol (Nerve Decoupling Rules)
 To prevent "Refactor Hell" and ensure the project remains maintainable (unlike the legacy Svelte version), all Nerves must follow these strict boundary rules:
