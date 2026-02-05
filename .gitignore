@@ -47,3 +47,8 @@ study/
 
 # mcp
 .mcp.json
+
+# windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
