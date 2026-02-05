@@ -327,34 +327,71 @@ export function useHand() {
         setCutPath([]);
     }, [getEdges, getNodes, setEdges, screenToFlowPosition]);
 
+    // --- Command: Swap Inputs (Alt + S) ---
+    const swapConnections = useCallback(() => {
+        const selectedNodes = getNodes().filter(n => n.selected);
+        if (selectedNodes.length !== 1) return; // Only support single node swap for now
 
-    // --- Interaction Triggers ---
+        const targetId = selectedNodes[0].id;
+        const edges = getEdges();
 
-    const startGrab = useCallback((mousePos: XYPosition) => {
+        // Find edges connected to Input A and Input B
+        const edgeA = edges.find(e => e.target === targetId && e.targetHandle === 'in-a');
+        const edgeB = edges.find(e => e.target === targetId && e.targetHandle === 'in-b');
+
+        if (edgeA && edgeB) {
+            // Swap their sources
+            setEdges(eds => eds.map(e => {
+                if (e.id === edgeA.id) return { ...e, source: edgeB.source, sourceHandle: edgeB.sourceHandle };
+                if (e.id === edgeB.id) return { ...e, source: edgeA.source, sourceHandle: edgeA.sourceHandle };
+                return e;
+            }));
+        } else if (edgeA && !edgeB) {
+            // Move A to B
+            setEdges(eds => eds.map(e => e.id === edgeA.id ? { ...e, targetHandle: 'in-b' } : e));
+        } else if (!edgeA && edgeB) {
+            // Move B to A
+            setEdges(eds => eds.map(e => e.id === edgeB.id ? { ...e, targetHandle: 'in-a' } : e));
+        }
+
+    }, [getNodes, getEdges, setEdges]);
+
+
+    // --- Command: Detach (Alt + Drag) ---
+    const detachSelected = useCallback(() => {
         const nodes = getNodes();
         const selected = nodes.filter(n => n.selected);
         if (selected.length === 0) return;
 
-        initialPositions.current.clear();
-        selected.forEach(n => {
-            initialPositions.current.set(n.id, { ...n.position });
-        });
+        const selectedIds = new Set(selected.map(n => n.id));
+        setEdges(eds => eds.filter(e => !selectedIds.has(e.source) && !selectedIds.has(e.target)));
+    }, [getNodes, setEdges]);
+
+    // --- Interaction Triggers ---
+
+    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false) => {
+        const nodes = getNodes();
+        const selected = nodes.filter(n => n.selected);
+        if (selected.length === 0) return;
+
+        // Detach Logic (Alt + Drag)
+        if (isAltHeld) {
+            detachSelected();
+        }
+
+        initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
 
         startMousePos.current = mousePos;
         setAxisLock(null); // Reset axis lock
         setMode('GRABBING');
-    }, [getNodes]);
+    }, [getNodes, detachSelected]);
 
     const startScale = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
         const selected = nodes.filter(n => n.selected);
         if (selected.length === 0) return;
 
-        initialPositions.current.clear();
-        selected.forEach(n => {
-            initialPositions.current.set(n.id, { ...n.position });
-        });
-
+        initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
         centerRef.current = getCentroid(selected);
         startMousePos.current = mousePos;
         setMode('SCALING');
@@ -365,11 +402,7 @@ export function useHand() {
         const selected = nodes.filter(n => n.selected);
         if (selected.length === 0) return;
 
-        initialPositions.current.clear();
-        selected.forEach(n => {
-            initialPositions.current.set(n.id, { ...n.position });
-        });
-
+        initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
         centerRef.current = getCentroid(selected);
         startMousePos.current = mousePos;
         setMode('ROTATING');
@@ -402,10 +435,27 @@ export function useHand() {
         setAxisLock(null);
     }, [setNodes]);
 
+    // --- Selection Helpers ---
+    const clearSelection = useCallback(() => {
+        setNodes(nds => nds.map(n => ({ ...n, selected: false })));
+    }, [setNodes]);
+
+    const selectNode = useCallback((id: string, exclusive: boolean = true) => {
+        setNodes(nds => nds.map(n => {
+            if (n.id === id) return { ...n, selected: true };
+            return { ...n, selected: exclusive ? false : n.selected };
+        }));
+    }, [setNodes]);
+
     // --- Event Handlers (to be attached to Body) ---
 
     // We need to handle Mouse Down for Knife
     const handleMouseDown = useCallback((e: MouseEvent) => {
+        // Ignore if clicking on a UI element (Handle, etc) to allow connections
+        if ((e.target as HTMLElement).classList.contains('react-flow__handle')) {
+            return;
+        }
+
         // Ctrl + Right Click (or just Right Click if we disabled context menu?)
         // User asked for "Ctrl + Right Click".
         // e.button === 2 is Right Click.
@@ -413,7 +463,7 @@ export function useHand() {
             // Store Screen Pos for drawing
             startCut({ x: e.clientX, y: e.clientY });
         }
-    }, [startCut]);
+    }, [startCut, startGrab]);
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         const currentMousePos = { x: e.clientX, y: e.clientY };
@@ -472,8 +522,10 @@ export function useHand() {
     const handleMouseUp = useCallback((e: MouseEvent) => {
         if (mode === 'CUTTING') {
             endCut();
+        } else if (mode === 'GRABBING') {
+            confirmGrab();
         }
-    }, [mode, endCut]);
+    }, [mode, endCut, confirmGrab]);
 
 
     return {
@@ -490,6 +542,10 @@ export function useHand() {
         pasteFromClipboard,
         deleteSelected,
         resetSelected,
+        swapConnections,
+        detachSelected,
+        clearSelection, // New Export
+        selectNode, // New Export
         setAxisLock,
         handleMouseMove,
         handleMouseDown,

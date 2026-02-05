@@ -2,7 +2,7 @@
 
 import { useStore } from '@xyflow/react';
 
-export function DebugOverlay({ mode }: { mode: string }) {
+export function DebugOverlay({ mode, actionLog }: { mode: string, actionLog: string[] }) {
     // Access React Flow internal store for stats
     const nodeCount = useStore(s => s.nodeLookup.size);
     const edgeCount = useStore(s => s.edges.length);
@@ -33,6 +33,19 @@ export function DebugOverlay({ mode }: { mode: string }) {
 
                 <span>Pan:</span>
                 <span className="text-zinc-300">{Math.round(transform[0])}, {Math.round(transform[1])}</span>
+            </div>
+
+            {/* Action Log */}
+            <div className="mt-3 pt-2 border-t border-zinc-800">
+                <span className="block mb-1 text-zinc-500 font-bold uppercase tracking-wider">Recent Actions</span>
+                <ul className="flex flex-col gap-0.5">
+                    {actionLog.slice(0, 5).map((log, i) => (
+                        <li key={i} className="text-[10px] text-zinc-400 truncate opacity-80">
+                            {log}
+                        </li>
+                    ))}
+                    {actionLog.length === 0 && <span className="text-[10px] text-zinc-600 italic">No actions yet</span>}
+                </ul>
             </div>
         </div>
     );

@@ -11,9 +11,11 @@ import {
     Connection,
     Edge,
     SelectionMode,
-    ConnectionLineType,
     useReactFlow,
     XYPosition,
+    reconnectEdge,
+    ConnectionMode,
+    ConnectionLineType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -27,6 +29,8 @@ import { useHand } from '../nerves/useHand';
 import { CommandPalette } from './ui/CommandPalette';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { InspectorPanel } from './ui/InspectorPanel';
+import { SettingsPanel } from './ui/SettingsPanel'; // Import SettingsPanel
+import { getLayoutedElements } from '../nerves/layoutEngine';
 
 const nodeTypes = {
     baseNode: BaseNode,
@@ -45,7 +49,7 @@ const initialNodes: Node[] = [
 
 export function Body() {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [showPalette, setShowPalette] = useState(false);
     const [palettePosition, setPalettePosition] = useState({ x: 0, y: 0 });
     const [showInspector, setShowInspector] = useState(false);
@@ -53,8 +57,131 @@ export function Body() {
     const mousePosRef = useRef({ x: 0, y: 0 });
     const [isSnapping, setIsSnapping] = useState(false);
 
+    // Settings States
+    const [manualSnap, setManualSnap] = useState(false);
+    const [showGrid, setShowGrid] = useState(true);
+    const [showDebug, setShowDebug] = useState(true);
+    const [edgeType, setEdgeType] = useState('bezier');
+    const [edgeAnimation, setEdgeAnimation] = useState(true);
+
+    const effectiveSnap = isSnapping || manualSnap;
+
+    // Sync Edge Type for existing edges
+    // (Removed duplicate useEffect that caused ReferenceError)
+
+
     // Get flow helpers
     const { screenToFlowPosition, fitView, getZoom } = useReactFlow();
+
+    // Action Log State
+    const [actionLog, setActionLog] = useState<string[]>([]);
+
+    const logAction = useCallback((action: string) => {
+        setActionLog(prev => [action, ...prev].slice(0, 20));
+    }, []);
+
+    // Sync Edge Type for existing edges (Moved here to use logAction)
+    useEffect(() => {
+        setEdges(eds => eds.map(e => ({
+            ...e,
+            data: {
+                ...e.data,
+                pathType: edgeType,
+                animate: edgeAnimation
+            }
+        })));
+        logAction(`Edge Type: ${edgeType} | Anim: ${edgeAnimation}`);
+    }, [edgeType, edgeAnimation, setEdges, logAction]);
+
+    // --- Persistence Logic ---
+    const STORAGE_KEY = 'calctopus-flow-storage-v1';
+
+    // Auto-Load on Mount
+    useEffect(() => {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                const flow = JSON.parse(stored);
+                if (flow.nodes && flow.edges) {
+                    setNodes(flow.nodes);
+                    setEdges(flow.edges);
+                    logAction('Session Restored');
+                }
+            } catch (error) {
+                console.error('Failed to load session:', error);
+            }
+        }
+    }, [setNodes, setEdges, logAction]);
+
+    // Auto-Save on Change
+    useEffect(() => {
+        if (nodes.length === 0 && edges.length === 0) return; // Don't save empty state immediately if loading failed
+
+        // Simple debounce could go here, but for now direct save is fine for small graphs
+        const flow = { nodes, edges };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(flow));
+    }, [nodes, edges]);
+
+    const handleReset = useCallback(() => {
+        if (confirm('Are you sure you want to reset the canvas? This cannot be undone.')) {
+            localStorage.removeItem(STORAGE_KEY);
+            setNodes(initialNodes);
+            setEdges([]);
+            logAction('Canvas Reset');
+            setTimeout(() => fitView({ duration: 400 }), 100);
+        }
+    }, [setNodes, setEdges, logAction, fitView]);
+
+    const handleAutoLayout = useCallback(async () => {
+        const selectedNodes = nodes.filter(n => n.selected);
+        const isPartial = selectedNodes.length > 0;
+
+        const nodesToLayout = isPartial ? selectedNodes : nodes;
+        const edgesToLayout = isPartial
+            ? edges.filter(e => selectedNodes.some(n => n.id === e.source) && selectedNodes.some(n => n.id === e.target))
+            : edges;
+
+        if (nodesToLayout.length === 0) return;
+
+        // Calculate center for partial layout to preserve location
+        let originalCenter = { x: 0, y: 0 };
+        if (isPartial) {
+            const xSum = nodesToLayout.reduce((acc, n) => acc + n.position.x, 0);
+            const ySum = nodesToLayout.reduce((acc, n) => acc + n.position.y, 0);
+            originalCenter = { x: xSum / nodesToLayout.length, y: ySum / nodesToLayout.length };
+        }
+
+        const layouted = await getLayoutedElements(nodesToLayout, edgesToLayout);
+
+        // Restore center for partial layout
+        let finalNodes = layouted.nodes;
+        if (isPartial) {
+            const xSum = layouted.nodes.reduce((acc, n) => acc + n.position.x, 0);
+            const ySum = layouted.nodes.reduce((acc, n) => acc + n.position.y, 0);
+            const currentCenter = { x: xSum / layouted.nodes.length, y: ySum / layouted.nodes.length };
+
+            const offsetX = originalCenter.x - currentCenter.x;
+            const offsetY = originalCenter.y - currentCenter.y;
+
+            finalNodes = layouted.nodes.map(n => ({
+                ...n,
+                position: { x: n.position.x + offsetX, y: n.position.y + offsetY }
+            }));
+        }
+
+        if (isPartial) {
+            setNodes(nds => nds.map(n => {
+                const found = finalNodes.find(ln => ln.id === n.id);
+                return found ? found : n;
+            }));
+            logAction('Layout Selected (L)');
+        } else {
+            setNodes([...finalNodes]);
+            setEdges([...layouted.edges]);
+            setTimeout(() => fitView({ duration: 400, padding: 0.2 }), 50);
+            logAction('Layout Global (L)');
+        }
+    }, [nodes, edges, setNodes, setEdges, fitView, logAction]);
 
     const {
         startGrab,
@@ -73,27 +200,44 @@ export function Body() {
         handleMouseDown,
         handleMouseUp,
         mode,
-        cutPath
+        cutPath,
+        swapConnections, // Imported
+        detachSelected, // Imported
+        clearSelection, // Imported
+        selectNode // Imported
     } = useHand();
+
+    // Debug: Log Mode Changes (To catch flickering)
+    useEffect(() => {
+        logAction(`Mode: ${mode}`);
+    }, [mode, logAction]);
 
     // Track Modifiers for Snapping (Standard Drag)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Control' || e.key === 'Meta') setIsSnapping(true);
+            if (e.key === 'Control') setIsSnapping(true);
         };
         const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key === 'Control' || e.key === 'Meta') setIsSnapping(false);
+            if (e.key === 'Control') setIsSnapping(false);
         };
+        const handleBlur = () => {
+            setIsSnapping(false); // Reset on focus loss
+        };
+
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('blur', handleBlur);
+
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
-        };
+            window.removeEventListener('blur', handleBlur);
+        }
     }, []);
 
     // Helper: Spawn Node
-    const spawnNode = useCallback((type: string, label: string) => {
+    const spawnNode = useCallback((type: string, label: string, extraData?: Record<string, any>) => {
+        logAction(`Spawn Node: ${type}`);
         // Project screen coordinates (palette position) to flow coordinates
         const flowPos = screenToFlowPosition({
             x: palettePosition.x,
@@ -104,12 +248,17 @@ export function Body() {
             id: nanoid(),
             type: type || 'baseNode',
             position: flowPos,
-            data: { label, type: type === 'baseNode' ? undefined : type },
+            data: {
+                label,
+                type: type === 'baseNode' ? undefined : type,
+                ...extraData
+            },
         };
 
         setNodes((nds) => nds.concat(newNode));
     }, [setNodes, palettePosition, screenToFlowPosition]);
 
+    // --- FEEL NERVES (Input Handling) ---
     useEar({
         onKeyDown: useCallback((e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
@@ -119,37 +268,61 @@ export function Body() {
                 e.preventDefault();
                 setPalettePosition(mousePosRef.current);
                 setShowPalette(true);
+                logAction('Show Palette (Shift+A)');
+                return;
+            }
+
+            // Interaction: Swap (Alt + S)
+            if (key === 's' && e.altKey) {
+                e.preventDefault();
+                swapConnections();
+                logAction('Swap Inputs (Alt+S)');
                 return;
             }
 
             // Interaction: Grab / Scale / Rotate
-            if (key === 'g') startGrab(mousePosRef.current);
-            if (key === 's') startScale(mousePosRef.current);
-            if (key === 'r') startRotate(mousePosRef.current);
+            if (key === 'g') {
+                startGrab(mousePosRef.current, e.altKey);
+                logAction('Start Grab (G)');
+            }
+            if (key === 's') {
+                startScale(mousePosRef.current);
+                logAction('Start Scale (S)');
+            }
+            if (key === 'r') {
+                startRotate(mousePosRef.current);
+                logAction('Start Rotate (R)');
+            }
+
             // Interaction: Duplicate
             if (key === 'd' && e.shiftKey) {
                 e.preventDefault();
                 if (duplicateSelected()) {
                     startGrab(mousePosRef.current);
+                    logAction('Duplicate Selected (Shift+D)');
                 }
             }
+
             // Interaction: Group (Frames)
             if (key === 'f') {
                 e.preventDefault();
                 groupSelected();
+                logAction('Group Selected (F)');
             }
+
             // Interaction: Inspector
             if (key === 'n') {
                 e.preventDefault();
                 setShowInspector(prev => !prev);
+                logAction('Toggle Inspector (N)');
             }
 
             // Interaction: Delete (X or Del)
-            // Note: X handles Delete only if NOT Grabbing (Axis Lock priority)
             if (key === 'delete' || (key === 'x' && mode !== 'GRABBING')) {
                 const active = document.activeElement?.tagName;
                 if (active !== 'INPUT' && active !== 'TEXTAREA') {
                     deleteSelected();
+                    logAction('Delete Selected');
                 }
             }
 
@@ -158,12 +331,21 @@ export function Body() {
                 const active = document.activeElement?.tagName;
                 if (active !== 'INPUT' && active !== 'TEXTAREA') {
                     resetSelected();
+                    logAction('Reset Selected');
                 }
             }
 
             // Interaction: Select All (A)
             if (key === 'a' && !e.shiftKey && !e.ctrlKey) {
                 setNodes(nds => nds.map(n => ({ ...n, selected: true })));
+                logAction('Select All (A)');
+            }
+
+            // Interaction: Auto Layout (L)
+            if (key === 'l' && !e.ctrlKey) {
+                // Prevent L if editing text? Active element check already handles INPUT/TEXTAREA generally at top of useEar?
+                // Yes, useEar checks activeElement for INPUT/TEXTAREA global skip.
+                handleAutoLayout();
             }
 
             // Interaction: Focus (.)
@@ -171,34 +353,69 @@ export function Body() {
                 const selected = nodes.filter(n => n.selected).map(n => ({ id: n.id }));
                 if (selected.length > 0) {
                     fitView({ nodes: selected, duration: 400, padding: 0.2 });
+                    logAction('Focus Selected (.)');
                 } else {
-                    fitView({ duration: 400, padding: 0.2 }); // Reset view
+                    fitView({ duration: 400, padding: 0.2 });
+                    logAction('Reset View (.)');
                 }
             }
 
             // Interaction: Axis Lock (X/Y)
             if (mode === 'GRABBING') {
-                if (key === 'x') setAxisLock('X');
-                if (key === 'y') setAxisLock('Y');
+                if (key === 'x') { setAxisLock('X'); logAction('Axis Lock X'); }
+                if (key === 'y') { setAxisLock('Y'); logAction('Axis Lock Y'); }
             }
 
             // Interaction: Clipboard
-            if (key === 'c' && (e.ctrlKey || e.metaKey)) copyToClipboard();
-            if (key === 'v' && (e.ctrlKey || e.metaKey)) pasteFromClipboard();
+            if (key === 'c' && (e.ctrlKey || e.metaKey)) {
+                copyToClipboard();
+                logAction('Copy (Ctrl+C)');
+            }
+            if (key === 'v' && (e.ctrlKey || e.metaKey)) {
+                pasteFromClipboard();
+                logAction('Paste (Ctrl+V)');
+            }
 
-            if (key === 'enter') confirmGrab();
+            if (key === 'enter') {
+                confirmGrab();
+                logAction('Confirm (Enter)');
+            }
+
             if (key === 'escape') {
                 cancelGrab();
                 setShowPalette(false);
                 setShowInspector(false);
                 setNodes(nds => nds.map(n => ({ ...n, selected: false }))); // Deselect All
+                logAction('Cancel/Deselect (Esc)');
             }
-        }, [startGrab, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, fitView, nodes, setNodes, mode, setAxisLock])
+        }, [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, fitView, nodes, setNodes, mode, setAxisLock, swapConnections, logAction])
     });
 
     const onConnect = useCallback(
-        (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-        [setEdges],
+        (params: Connection) => {
+            // Logic: 
+            // 1. Output (Source) -> Can have many connections (Default).
+            // 2. Input (Target) -> 
+            //    - If 'in-capsule': Multi-connect allowed.
+            //    - If 'in-a' or 'in-b': Single-connect (Replace old).
+
+            setEdges((eds) => {
+                const targetHandle = params.targetHandle;
+
+                // If standard input, remove existing edge to this specific handle
+                if (targetHandle === 'in-a' || targetHandle === 'in-b') {
+                    // Remove any edge that targets this node AND this handle
+                    const filtered = eds.filter(e => !(e.target === params.target && e.targetHandle === targetHandle));
+                    return addEdge(params, filtered);
+                }
+
+                // For 'in-capsule' or others, just add
+                return addEdge(params, eds);
+            });
+
+            logAction(`Connect: ${params.source} -> ${params.target}`);
+        },
+        [setEdges, logAction],
     );
 
     const onMouseMove = useCallback((e: React.MouseEvent) => {
@@ -244,40 +461,159 @@ export function Body() {
                 nodeTypes={nodeTypes}
                 fitView
                 colorMode="dark"
-                minZoom={0.1}
-                maxZoom={4}
                 proOptions={{ hideAttribution: true }}
+
+                // Edge Reconnection (Unplug & Relink)
+                onReconnect={(oldEdge, newConnection) => {
+                    setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
+                    logAction('Relinked Wire');
+                }}
+                onReconnectStart={() => logAction('Picking up Wire...')}
+                onReconnectEnd={(_, edge) => {
+                    // Logic for "Dropping" the wire (if failed to connect)
+                    // If the user drops the wire into void, we should probably delete it?
+                    // React Flow default: keeps old edge if reconnect fails.
+                    // If we want "Unplug" feel, we might want to delete if dropped in void?
+                    // For now, keep default (safe).
+                }}
+                snapToGrid={effectiveSnap}
 
                 onPaneContextMenu={(e) => e.preventDefault()}
                 onNodeContextMenu={(e) => e.preventDefault()}
                 onEdgeContextMenu={(e) => e.preventDefault()}
 
+                onConnectStart={(event, params) => {
+                    const { nodeId, handleId, handleType } = params;
+                    // Deselect all when starting a connection
+                    clearSelection();
+
+                    // Logic: Smart Unplug
+                    // 1. Single-Inputs ('in-a', 'in-b') -> Always Unplug (Move behavior).
+                    // 2. Multi-Connects ('out', 'capsule') -> Ctrl + Drag to Unplug (Pick up last).
+
+                    const node = nodes.find(n => n.id === nodeId);
+                    // Determine if handle is "Single" (Default assumption for inputs unless capsule)
+                    const isTarget = handleType === 'target';
+                    const isCapsule = handleId === 'in-capsule' || handleId?.includes('capsule'); // Simple check/fallback
+                    // Robust check via data if possible, but ID convention works for now.
+
+                    // Rule 1: Input (Single) -> Auto-Detach
+                    // Rule 2: Output or Capsule -> Ctrl-Detach
+
+                    // Identify Edge to Detach
+                    const edgesOnHandle = edges.filter(e => {
+                        if (isTarget) return e.target === nodeId && e.targetHandle === handleId;
+                        return e.source === nodeId && e.sourceHandle === handleId;
+                    });
+
+                    if (edgesOnHandle.length === 0) {
+                        logAction('Start Connection');
+                        return;
+                    }
+
+                    // Decision: Should we detach?
+                    const nativeEvent = event as any; // Safe cast for hybrid event types in React Flow
+                    const isCtrl = nativeEvent.ctrlKey || nativeEvent.metaKey;
+                    const isSingleInput = isTarget && !isCapsule;
+
+                    let shouldDetach = false;
+
+                    if (isSingleInput) {
+                        shouldDetach = true; // Always move single connections
+                    } else if (isCtrl) {
+                        shouldDetach = true; // Manual detach for multi
+                    }
+
+                    if (shouldDetach) {
+                        // Detach the LAST added edge (LIFO)
+                        const edgeToRemove = edgesOnHandle[edgesOnHandle.length - 1]; // Edges usually appended
+                        setEdges(eds => eds.filter(e => e.id !== edgeToRemove.id));
+                        logAction(`Picked up Wire (${isSingleInput ? 'Auto' : 'Ctrl'})`);
+                    } else {
+                        logAction('Start Connection');
+                    }
+                }}
+
+                onNodeDragStart={(e, node) => {
+                    // 1. Detach Logic (Alt + Drag)
+                    if (e.altKey) {
+                        detachSelected();
+                        logAction('Detach Selected');
+                    }
+
+                    // 2. Selection Polish (Drag unselected -> Select Exclusive)
+                    // If dragging a node that isn't selected, it should become the ONLY selection
+                    // unless Shift/Ctrl is held (standard multi-select behavior)
+                    if (!node.selected && !e.shiftKey && !e.ctrlKey) {
+                        selectNode(node.id, true);
+                        logAction(`Select Node ${node.id}`);
+                    }
+                }}
+
                 panOnDrag={[1]}
                 selectionOnDrag={true}
                 panOnScroll={false}
                 zoomOnScroll={true}
+                zoomOnPinch={true}
+                zoomOnDoubleClick={false}
+                preventScrolling={true}
                 selectionMode={SelectionMode.Partial}
-                connectionLineType={ConnectionLineType.Bezier}
+                connectionLineType={{
+                    bezier: ConnectionLineType.Bezier,
+                    straight: ConnectionLineType.Straight,
+                    step: ConnectionLineType.Step,
+                    smoothstep: ConnectionLineType.SmoothStep,
+                }[edgeType] || ConnectionLineType.Bezier}
                 connectionLineStyle={{ stroke: '#71717a', strokeWidth: 2 }}
                 edgeTypes={edgeTypes}
-                defaultEdgeOptions={{ type: 'magnetic', animated: false }}
+                defaultEdgeOptions={{
+                    type: 'magnetic',
+                    animated: false,
+                    data: { pathType: edgeType, animate: edgeAnimation }
+                }}
 
                 // Snapping Logic
-                snapToGrid={isSnapping}
-                snapGrid={[20, 20]}
+                snapToGrid={effectiveSnap}
+                snapGrid={effectiveSnap ? [20, 20] : undefined} // Only provide grid when enabled
+                minZoom={0.1}
+                maxZoom={4}
             >
-                <Background color="#222" variant={BackgroundVariant.Dots} />
+                {showGrid && <Background color="#555" gap={20} size={1} />}
+                {showDebug && <DebugOverlay mode={mode} actionLog={actionLog} />}
+
+                <SettingsPanel
+                    isSnapping={manualSnap}
+                    setSnapping={setManualSnap}
+                    showGrid={showGrid}
+                    setShowGrid={setShowGrid}
+                    showDebug={showDebug}
+                    setShowDebug={setShowDebug}
+                    showInspector={showInspector}
+                    setShowInspector={setShowInspector}
+                    edgeType={edgeType}
+                    setEdgeType={setEdgeType}
+                    edgeAnimation={edgeAnimation}
+                    setEdgeAnimation={setEdgeAnimation}
+                    onReset={handleReset}
+                />
+
+                {/* Command Palette (Shift + A) */}
+                {showPalette && (
+                    <CommandPalette
+                        isOpen={true}
+                        position={palettePosition}
+                        onClose={() => setShowPalette(false)}
+                        onSelect={spawnNode}
+                    />
+                )}
+
+                {/* Inspector Panel (N) */}
+                <InspectorPanel
+                    isOpen={showInspector}
+                    onClose={() => setShowInspector(false)}
+                />
             </ReactFlow>
 
-            {/* UI Overlays */}
-            <DebugOverlay mode={mode} />
-            <InspectorPanel isOpen={showInspector} onClose={() => setShowInspector(false)} />
-            <CommandPalette
-                isOpen={showPalette}
-                position={palettePosition}
-                onClose={() => setShowPalette(false)}
-                onSelect={spawnNode}
-            />
 
             {/* Knife Cut Path Overlay */}
             {mode === 'CUTTING' && cutPath.length > 0 && (

@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
+import { Position } from '@xyflow/react';
 
 interface CommandPaletteProps {
     isOpen: boolean;
     position?: { x: number, y: number };
     onClose: () => void;
-    onSelect: (type: string, label: string) => void;
+    onSelect: (type: string, label: string, data?: any) => void;
 }
 
 const MENU_ITEMS = [
@@ -29,6 +30,24 @@ const MENU_ITEMS = [
     {
         category: 'Logic', items: [
             { label: 'Result', type: 'baseNode', data: { type: 'result' } },
+        ]
+    },
+    {
+        category: 'Debug', items: [
+            {
+                label: 'Multi-Handle (5 Inputs)',
+                type: 'baseNode',
+                data: {
+                    label: 'Dynamic Node',
+                    handles: [
+                        { id: 'in-0', type: 'target', position: Position.Left, variant: 'capsule', label: 'Main' },
+                        { id: 'in-1', type: 'target', position: Position.Left, variant: 'single' },
+                        { id: 'in-2', type: 'target', position: Position.Left, variant: 'single' },
+                        { id: 'in-3', type: 'target', position: Position.Left, variant: 'single' },
+                        { id: 'in-4', type: 'target', position: Position.Left, variant: 'single' },
+                    ]
+                }
+            },
         ]
     },
 ];
@@ -68,7 +87,7 @@ export function CommandPalette({ isOpen, position, onClose, onSelect }: CommandP
             e.preventDefault();
             if (flattenedItems[selectedIndex]) {
                 const item = flattenedItems[selectedIndex];
-                onSelect(item.type, item.label);
+                onSelect(item.type, item.label, item.data);
                 onClose();
             }
         } else if (e.key === 'Escape') {
@@ -80,7 +99,7 @@ export function CommandPalette({ isOpen, position, onClose, onSelect }: CommandP
 
     return (
         <div
-            className="fixed z-[100] w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
+            className="fixed z-100 w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
             style={{
                 left: position?.x ?? '50%',
                 top: position?.y ?? '50%',
@@ -113,7 +132,7 @@ export function CommandPalette({ isOpen, position, onClose, onSelect }: CommandP
                             className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between group ${index === selectedIndex ? 'bg-blue-600 text-white' : 'text-zinc-300 hover:bg-zinc-800'
                                 }`}
                             onClick={() => {
-                                onSelect(item.type, item.label);
+                                onSelect(item.type, item.label, item.data);
                                 onClose();
                             }}
                             onMouseEnter={() => setSelectedIndex(index)}
