@@ -26,6 +26,7 @@ import { FrameNode } from './nodes/FrameNode';
 import { MagneticEdge } from './edges/MagneticEdge';
 import { useEar } from '../nerves/useEar';
 import { useHand } from '../nerves/useHand';
+import { useEye } from '../nerves/useEye';
 import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { useRelink } from '../hooks/useRelink';
 import { CommandPalette } from './ui/CommandPalette';
@@ -33,6 +34,7 @@ import { DebugOverlay } from './ui/DebugOverlay';
 import { InspectorPanel } from './ui/InspectorPanel';
 import { SettingsPanel } from './ui/SettingsPanel'; // Import SettingsPanel
 import { getLayoutedElements } from '../nerves/layoutEngine';
+import { useMemory, initialNodes } from '../engine/useMemory';
 
 const nodeTypes = {
     baseNode: BaseNode,
@@ -42,12 +44,6 @@ const nodeTypes = {
 const edgeTypes = {
     magnetic: MagneticEdge,
 };
-
-// Initial nodes for testing interactions
-const initialNodes: Node[] = [
-    { id: '1', type: 'baseNode', position: { x: 100, y: 100 }, data: { label: 'Cube' } },
-    { id: '2', type: 'baseNode', position: { x: 400, y: 100 }, data: { label: 'Sphere' } },
-];
 
 export function Body() {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -75,8 +71,8 @@ export function Body() {
 
 
     // Get flow helpers
-    const { fitView, getZoom } = useReactFlow();
     const { project } = useCanvasProjection();
+    const { focusOn, resetView, getZoom } = useEye();
 
     // Action Log State
     const [actionLog, setActionLog] = useState<string[]>([]);
@@ -99,8 +95,10 @@ export function Body() {
     }, [edgeType, edgeAnimation, setEdges, logAction]);
 
     // --- Persistence Logic ---
-    const STORAGE_KEY = 'calctopus-flow-storage-v1';
     const SETTINGS_KEY = 'calctopus-settings-v1';
+
+    // Memory (Nodes & Edges Persistence)
+    const { clearMemory } = useMemory(nodes, edges, setNodes, setEdges, logAction);
 
     // Load Settings on Mount
     useEffect(() => {
@@ -130,41 +128,6 @@ export function Body() {
     }, [manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation, layoutAlgorithm, layoutDirection]);
 
     // Auto-Load Flow Data on Mount
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                const flow = JSON.parse(stored);
-                if (flow.nodes && flow.edges) {
-                    setNodes(flow.nodes);
-                    setEdges(flow.edges);
-                    logAction('Session Restored');
-                }
-            } catch (error) {
-                console.error('Failed to load session:', error);
-            }
-        }
-    }, [setNodes, setEdges, logAction]);
-
-    // Auto-Save on Change
-    useEffect(() => {
-        if (nodes.length === 0 && edges.length === 0) return; // Don't save empty state immediately if loading failed
-
-        // Simple debounce could go here, but for now direct save is fine for small graphs
-        const flow = { nodes, edges };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(flow));
-    }, [nodes, edges]);
-
-
-    const handleReset = useCallback(() => {
-        if (confirm('Are you sure you want to reset the canvas? This cannot be undone.')) {
-            localStorage.removeItem(STORAGE_KEY);
-            setNodes(initialNodes);
-            setEdges([]);
-            logAction('Canvas Reset');
-            setTimeout(() => fitView({ duration: 400 }), 100);
-        }
-    }, [setNodes, setEdges, logAction, fitView]);
 
     const handleAutoLayout = useCallback(async () => {
         const selectedNodes = nodes.filter(n => n.selected);
@@ -215,10 +178,10 @@ export function Body() {
         } else {
             setNodes([...finalNodes]);
             setEdges([...layouted.edges]);
-            setTimeout(() => fitView({ duration: 400, padding: 0.2 }), 50);
+            setTimeout(() => focusOn([]), 50); // Global focus
             logAction('Layout Global (L)');
         }
-    }, [nodes, edges, setNodes, setEdges, fitView, logAction]);
+    }, [nodes, edges, setNodes, setEdges, focusOn, logAction]);
 
     const {
         startGrab,
@@ -332,6 +295,7 @@ export function Body() {
 
 
     // --- FEEL NERVES (Input Handling) ---
+
     useEar({
         shortcuts: {
             // Creation & Layout
@@ -339,14 +303,9 @@ export function Body() {
             'alt+s': (e) => { e.preventDefault(); swapConnections(); logAction('Swap Inputs (Alt+S)'); },
             'l': () => { handleAutoLayout(); },
             '.': (e) => {
-                const selected = nodes.filter(n => n.selected).map(n => ({ id: n.id }));
-                if (selected.length > 0) {
-                    fitView({ nodes: selected, duration: 400, padding: 0.2 });
-                    logAction('Focus Selected (.)');
-                } else {
-                    fitView({ duration: 400, padding: 0.2 });
-                    logAction('Reset View (.)');
-                }
+                const selected = nodes.filter(n => n.selected);
+                const actionName = focusOn(selected);
+                logAction(`${actionName} (.)`);
             },
 
             // Transform Commands
@@ -410,7 +369,7 @@ export function Body() {
                 logAction('Cancel/Deselect (Esc)');
             }
         },
-        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, fitView, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowInspector, handleAutoLayout]
+        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowInspector, handleAutoLayout]
     });
 
 
@@ -541,7 +500,7 @@ export function Body() {
                         setLayoutDirection={setLayoutDirection}
                         edgeAnimation={edgeAnimation}
                         setEdgeAnimation={setEdgeAnimation}
-                        onReset={handleReset}
+                        onReset={clearMemory}
                     />
 
                     {/* Command Palette (Shift + A) */}
