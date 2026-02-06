@@ -1,5 +1,4 @@
-import { ConnectionLineComponentProps, useStore } from '@xyflow/react';
-import { getBezierPath } from '@xyflow/react';
+import { ConnectionLineComponentProps, useStore, Position, getBezierPath, getStraightPath, getSmoothStepPath, getSimpleBezierPath } from '@xyflow/react';
 import React, { createContext, useContext } from 'react';
 import { useHandleMagnet } from '../../hooks/useHandleMagnet';
 
@@ -15,6 +14,7 @@ export interface RelinkState {
     targetHandleId: string | null; // The "Anchor" Handle ID
     type: 'source' | 'target';     // The Anchor Type: 'source' (Output) or 'target' (Input)
     anchors?: RelinkAnchor[];      // Multiple anchors for multi-wire output unplug
+    edgeType?: string;             // Dynamic path type
 }
 
 export const RelinkContext = createContext<RelinkState>({
@@ -23,6 +23,7 @@ export const RelinkContext = createContext<RelinkState>({
     targetHandleId: null,
     type: 'target',
     anchors: [],
+    edgeType: 'bezier',
 });
 
 export const RelinkLine = ({
@@ -34,12 +35,14 @@ export const RelinkLine = ({
     toPosition,
     connectionLineStyle,
 }: ConnectionLineComponentProps) => {
-    const { active, targetNodeId, targetHandleId, type, anchors } = useContext(RelinkContext);
+    const { active, targetNodeId, targetHandleId, type, anchors, edgeType: relinkEdgeType } = useContext(RelinkContext);
     const nodeLookup = useStore((s) => s.nodeLookup);
 
     // Use Magnetic Snapping Hook
     const { x: effectiveToX, y: effectiveToY, position: snappedPos } = useHandleMagnet(toX, toY);
-    const effectiveToPos = snappedPos || toPosition;
+
+    const defaultRelinkPos = type === 'source' ? Position.Left : Position.Right;
+    const effectiveToPos = snappedPos || (active ? defaultRelinkPos : toPosition);
 
     const computePath = (anchorNodeId: string, anchorHandleId: string | null) => {
         const targetNode = nodeLookup.get(anchorNodeId);
@@ -79,14 +82,33 @@ export const RelinkLine = ({
             sourcePos = effectiveToPos;
         }
 
-        const [d] = getBezierPath({
+        const pathParams = {
             sourceX,
             sourceY,
             sourcePosition: sourcePos,
             targetX,
             targetY,
             targetPosition: targetPos,
-        });
+        };
+
+        let d = '';
+        switch (relinkEdgeType) {
+            case 'straight':
+                [d] = getStraightPath(pathParams);
+                break;
+            case 'step':
+                // React Flow sometimes uses different names or Step isn't a direct export in all versions
+                // Fallback to smoothstep with 0 radius if specific step is missing or use straight
+                [d] = getSmoothStepPath({ ...pathParams, borderRadius: 0 });
+                break;
+            case 'smoothstep':
+                [d] = getSmoothStepPath(pathParams);
+                break;
+            case 'bezier':
+            default:
+                [d] = getBezierPath(pathParams);
+                break;
+        }
 
         return d;
     };
@@ -106,14 +128,25 @@ export const RelinkLine = ({
 
     // Standard connection line (no Relink active)
     if (!active || pathsToRender.length === 0) {
-        const [d] = getBezierPath({
+        const pathParams = {
             sourceX: fromX,
             sourceY: fromY,
             sourcePosition: fromPosition,
             targetX: effectiveToX,
             targetY: effectiveToY,
             targetPosition: effectiveToPos,
-        });
+        };
+
+        let d = '';
+        // Use the context edgeType if provided, fallback to bezier (active check is inside if)
+        const currentType = relinkEdgeType || 'bezier';
+
+        switch (currentType) {
+            case 'straight': [d] = getStraightPath(pathParams); break;
+            case 'step': [d] = getSmoothStepPath({ ...pathParams, borderRadius: 0 }); break;
+            case 'smoothstep': [d] = getSmoothStepPath(pathParams); break;
+            default: [d] = getBezierPath(pathParams); break;
+        }
 
         return (
             <g>

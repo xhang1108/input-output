@@ -96,8 +96,34 @@ export function Body() {
 
     // --- Persistence Logic ---
     const STORAGE_KEY = 'calctopus-flow-storage-v1';
+    const SETTINGS_KEY = 'calctopus-settings-v1';
 
-    // Auto-Load on Mount
+    // Load Settings on Mount
+    useEffect(() => {
+        const stored = localStorage.getItem(SETTINGS_KEY);
+        if (stored) {
+            try {
+                const s = JSON.parse(stored);
+                if (s.manualSnap !== undefined) setManualSnap(s.manualSnap);
+                if (s.showGrid !== undefined) setShowGrid(s.showGrid);
+                if (s.showDebug !== undefined) setShowDebug(s.showDebug);
+                if (s.showInspector !== undefined) setShowInspector(s.showInspector);
+                if (s.edgeType !== undefined) setEdgeType(s.edgeType);
+                if (s.edgeAnimation !== undefined) setEdgeAnimation(s.edgeAnimation);
+                logAction('Settings Loaded');
+            } catch (e) {
+                console.error('Failed to load settings:', e);
+            }
+        }
+    }, [logAction]);
+
+    // Save Settings on Change
+    useEffect(() => {
+        const settings = { manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }, [manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation]);
+
+    // Auto-Load Flow Data on Mount
     useEffect(() => {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -263,10 +289,10 @@ export function Body() {
     // --- Custom Handle Interactions State ---
     const {
         relinkState,
-        onConnectStart,
-        onConnectEnd,
-        onConnect,
-        isValidConnection
+        onRelinkStart,
+        onRelinkEnd,
+        onRelinkConnect,
+        isValidRelinkConnection
     } = useRelink({
         edges,
         setEdges,
@@ -274,6 +300,11 @@ export function Body() {
         edgeType,
         edgeAnimation: edgeAnimation
     });
+
+    const relinkValue = {
+        ...relinkState,
+        edgeType // Inject current edgeType into RelinkContext
+    };
 
     // --- FEEL NERVES (Input Handling) ---
     // ... (Keep useEar existing logic) ...
@@ -453,7 +484,7 @@ export function Body() {
     }, [mode, confirmGrab, showPalette]);
 
     return (
-        <RelinkContext.Provider value={relinkState}>
+        <RelinkContext.Provider value={relinkValue}>
             <div
                 className="h-screen w-screen bg-zinc-950 relative"
                 onMouseMove={onMouseMove}
@@ -468,8 +499,10 @@ export function Body() {
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    isValidConnection={isValidConnection}
+                    onConnect={onRelinkConnect}
+                    onConnectStart={onRelinkStart}
+                    onConnectEnd={onRelinkEnd}
+                    isValidConnection={isValidRelinkConnection}
                     nodeTypes={nodeTypes}
                     fitView
                     colorMode="dark"
@@ -481,9 +514,6 @@ export function Body() {
                     snapToGrid={effectiveSnap}
 
                     onPaneContextMenu={(e) => e.preventDefault()}
-
-                    onConnectEnd={onConnectEnd}
-                    onConnectStart={onConnectStart}
 
                     onNodeContextMenu={(e) => e.preventDefault()}
                     onEdgeContextMenu={(e) => e.preventDefault()}

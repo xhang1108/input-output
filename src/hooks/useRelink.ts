@@ -41,12 +41,20 @@ export function useRelink({
 
     const performRelink = useCallback((targetN: string, targetH: string | null) => {
         const state = relinkStateRef.current;
-        if (!state.active || !state.targetNodeId) return;
+        const anchorNodeId = state.targetNodeId || (state.anchors && state.anchors[0]?.nodeId);
+
+        if (!state.active || !anchorNodeId) return;
+
+        // 1. ABSOLUTE GUARD: Final edge cannot connect a node to itself
+        if (targetN === anchorNodeId) {
+            logAction(`Relink blocked: Attempted self-connection on ${targetN}`);
+            return;
+        }
 
         const dropSide = { n: targetN, h: targetH };
 
         if (state.type === 'target') {
-            // Anchor is TargetNode (Input) -> Dragging Source end -> Drop on new Source (Output)
+            // Anchor is Target (Input) -> Moving the Source end -> Should land on a new Source (Output)
             const anchorsToConnect = state.anchors && state.anchors.length > 0
                 ? state.anchors
                 : [{ nodeId: state.targetNodeId!, handleId: state.targetHandleId }];
@@ -62,9 +70,13 @@ export function useRelink({
             }));
 
             setEdges((eds) => [...eds, ...(newEdges as any[])]);
-            logAction(`Relinked ${newEdges.length} wires (Source Move)`);
+
+            const detail = newEdges.length > 1
+                ? `${newEdges.length} wires`
+                : `${dropSide.n}:${dropSide.h} -> ${anchorsToConnect[0].nodeId}:${anchorsToConnect[0].handleId}`;
+            logAction(`Relinked: ${detail}`);
         } else {
-            // Anchor is SourceNode (Output) -> Dragging Target end -> Drop on new Target (Input)
+            // Anchor is Source (Output) -> Moving the Target end -> Should land on a new Target (Input)
             const newEdge = {
                 id: nanoid(),
                 source: state.targetNodeId!,
@@ -76,13 +88,12 @@ export function useRelink({
             };
 
             setEdges((eds) => {
-                // Ensure atomic replacement for input (standard behavior: one wire per input)
                 const filtered = eds.filter(e =>
                     !(e.target === newEdge.target && e.targetHandle === newEdge.targetHandle)
                 );
                 return addEdge(newEdge as any, filtered);
             });
-            logAction('Relinked wire (Target Move)');
+            logAction(`Relinked: ${newEdge.source}:${newEdge.sourceHandle} -> ${newEdge.target}:${newEdge.targetHandle}`);
         }
     }, [edgeType, edgeAnimation, setEdges, logAction]);
 
@@ -98,8 +109,7 @@ export function useRelink({
         relinkStateRef.current = emptyState;
     }, []);
 
-    const onConnectStart = useCallback((event: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
-        // Guard: If we are natively reconnecting, IGNORE handle logic
+    const onRelinkStart = useCallback((event: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
         if (isReconnecting.current) return;
 
         const { nodeId, handleId, handleType } = params;
@@ -108,99 +118,85 @@ export function useRelink({
         const nativeEvent = event as any;
         const isCtrl = nativeEvent.ctrlKey || nativeEvent.metaKey;
 
-        // 1. Output Handle: RELINK UNPLUG (Source -> [Target])
         if (handleType === 'source' && isCtrl) {
             const outboundEdges = edges.filter(e => e.source === nodeId && e.sourceHandle === handleId);
             if (outboundEdges.length > 0) {
-                const anchors = outboundEdges.map(e => ({
-                    nodeId: e.target,
-                    handleId: e.targetHandle || null
-                }));
-
-                const newState: RelinkState = {
-                    active: true,
-                    targetNodeId: anchors[0].nodeId,
-                    targetHandleId: anchors[0].handleId,
-                    type: 'target',
-                    anchors: anchors
-                };
+                const anchors = outboundEdges.map(e => ({ nodeId: e.target, handleId: e.targetHandle || null }));
+                const newState: RelinkState = { active: true, targetNodeId: anchors[0].nodeId, targetHandleId: anchors[0].handleId, type: 'target', anchors: anchors };
                 setRelinkState(newState);
                 relinkStateRef.current = newState;
-
                 setEdges(eds => eds.filter(e => !outboundEdges.map(oe => oe.id).includes(e.id)));
-                logAction(`Unplugged ${outboundEdges.length} outputs`);
+                logAction(`Unplugged ${outboundEdges.length} outputs from ${nodeId}`);
             }
         }
-        // 2. Input Handle: RELINK UNPLUG (Target -> Source)
         else if (handleType === 'target') {
             const inboundEdges = edges.filter(e => e.target === nodeId && e.targetHandle === handleId);
             if (inboundEdges.length > 0) {
                 const sourceEdge = inboundEdges[0];
-
-                const newState: RelinkState = {
-                    active: true,
-                    targetNodeId: sourceEdge.source,
-                    targetHandleId: sourceEdge.sourceHandle || null,
-                    type: 'source'
-                };
+                const newState: RelinkState = { active: true, targetNodeId: sourceEdge.source, targetHandleId: sourceEdge.sourceHandle || null, type: 'source' };
                 setRelinkState(newState);
                 relinkStateRef.current = newState;
-
                 setEdges(eds => eds.filter(e => e.id !== sourceEdge.id));
-                logAction('Unplugged input');
+                logAction(`Unplugged input ${handleId} from ${nodeId}`);
             }
         }
     }, [edges, setEdges, logAction]);
 
-    const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
+    const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
         const state = relinkStateRef.current;
         if (state && state.active) {
-            // Use the connectionState provided by React Flow at the moment of drop
             const { toNode, toHandle, isValid } = connectionState || {};
-
-            // During Relink, we trust our own logic if a handle is hovered
-            if (toNode && toHandle) {
+            if (toNode && toHandle && (isValid || isValid === null)) {
                 performRelink(toNode.id, toHandle.id);
             } else {
-                logAction(`Relink aborted (Dropped in void - Valid: ${isValid})`);
+                logAction(`Relink canceled`);
             }
             resetRelink();
         }
     }, [resetRelink, performRelink, logAction]);
 
-    const isValidConnection = useCallback(
+    const isValidRelinkConnection = useCallback(
         (connection: Edge | Connection) => {
-            if (connection.source === connection.target) return false;
+            const isInput = (id: string | null) =>
+                !!id && (id.toLowerCase().startsWith('in') || id === 'target' || id.includes('input'));
 
-            const isInput = (id: string | null) => !!id && (id.startsWith('in') || id === 'target');
             const state = relinkStateRef.current;
 
             if (state.active) {
-                // IMPORTANT: During Relink, we are connecting the UNPLUGGED handle to a NEW handle.
-                // Both of these are of the SAME type (Input-to-Input or Output-to-Output).
-                // So we allow connection only if both handles are of the same type.
-                const sIn = isInput(connection.sourceHandle as string | null);
-                const tIn = isInput(connection.targetHandle as string | null);
-                return sIn === tIn;
+                const anchorNodeId = (state.targetNodeId || (state.anchors && state.anchors[0]?.nodeId));
+
+                // 1. Self-Loop Guard: In Relink, the resulting edge is [Anchor] <-> [Hovered Node].
+                // Since the drag-start node is NEVER the anchor (we unplugged the other end),
+                // if either node in the 'connection' is the anchor, it must be the hovered node.
+                if (connection.source === anchorNodeId || connection.target === anchorNodeId) {
+                    return false;
+                }
+
+                // 2. Type Mismatch Guard: If both handles are present, they must match types (In-to-In or Out-to-Out)
+                // to preserve the Relink intent. Standard RF rule (In-to-Out) is inverted during Relink drag.
+                if (connection.sourceHandle && connection.targetHandle) {
+                    const sIn = isInput(connection.sourceHandle as string | null);
+                    const tIn = isInput(connection.targetHandle as string | null);
+                    if (sIn !== tIn) return false;
+                }
+
+                return true;
             }
 
-            // Normal connection: Must be different types
+            // Normal Connection: Source (Out) -> Target (In)
+            if (connection.source === connection.target) return false;
             return isInput(connection.sourceHandle as string | null) !== isInput(connection.targetHandle as string | null);
         },
         []
     );
 
-    const onConnect = useCallback(
+    const onRelinkConnect = useCallback(
         (params: Connection) => {
             const state = relinkStateRef.current;
+            if (state.active) return; // Relink handled in onConnectEnd
 
-            // Relink is now handled exclusively in onConnectEnd to bypass native restrictions
-            if (state.active) return;
-
-            // Standard connection
             setEdges((eds) => {
                 const targetHandle = params.targetHandle;
-                // Simple pattern for input handles to enforce one wire per input
                 if (targetHandle && (targetHandle.startsWith('in') || targetHandle === 'target')) {
                     const filtered = eds.filter(e => !(e.target === params.target && e.targetHandle === targetHandle));
                     return addEdge(params, filtered);
@@ -208,16 +204,16 @@ export function useRelink({
                 return addEdge(params, eds);
             });
 
-            logAction(`Connect: ${params.source} -> ${params.target}`);
+            logAction(`Connect: ${params.source}:${params.sourceHandle} -> ${params.target}:${params.targetHandle}`);
         },
         [setEdges, logAction]
     );
 
     return {
         relinkState,
-        onConnectStart,
-        onConnectEnd,
-        onConnect,
-        isValidConnection
+        onRelinkStart,
+        onRelinkEnd,
+        onRelinkConnect,
+        isValidRelinkConnection
     };
 }
