@@ -13,10 +13,10 @@ import {
     SelectionMode,
     useReactFlow,
     XYPosition,
-    reconnectEdge,
     ConnectionMode,
     ConnectionLineType,
 } from '@xyflow/react';
+import { RelinkLine, RelinkContext, RelinkState, RelinkAnchor } from './edges/RelinkLine';
 import '@xyflow/react/dist/style.css';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
@@ -26,6 +26,7 @@ import { FrameNode } from './nodes/FrameNode';
 import { MagneticEdge } from './edges/MagneticEdge';
 import { useEar } from '../nerves/useEar';
 import { useHand } from '../nerves/useHand';
+import { useRelink } from '../hooks/useRelink';
 import { CommandPalette } from './ui/CommandPalette';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { InspectorPanel } from './ui/InspectorPanel';
@@ -121,6 +122,7 @@ export function Body() {
         const flow = { nodes, edges };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(flow));
     }, [nodes, edges]);
+
 
     const handleReset = useCallback(() => {
         if (confirm('Are you sure you want to reset the canvas? This cannot be undone.')) {
@@ -258,10 +260,42 @@ export function Body() {
         setNodes((nds) => nds.concat(newNode));
     }, [setNodes, palettePosition, screenToFlowPosition]);
 
+    // --- Custom Handle Interactions State ---
+    const {
+        relinkState,
+        onConnectStart,
+        onConnectEnd,
+        onConnect,
+        isValidConnection
+    } = useRelink({
+        edges,
+        setEdges,
+        logAction,
+        edgeType,
+        edgeAnimation: edgeAnimation
+    });
+
+    // --- FEEL NERVES (Input Handling) ---
+    // ... (Keep useEar existing logic) ...
+    // Note: Since I am replacing the block where pendingInputRelocation was defined, I must be careful not to delete useEar if it was below.
+    // Checking file content... useEar starts at line 265.
+    // I will target the onConnect/Return block specifically.
+
+    /*
+     Wait, I cannot easily replace the useState AND the JSX in one go if they are far apart.
+     I will break this into two edits.
+     1. Add State (Lines 258-260).
+     2. Update JSX (Lines 504-600).
+    */
+    // Guard: Prevent onConnectStart from interfering with native Reconnect
+
+
+
     // --- FEEL NERVES (Input Handling) ---
     useEar({
         onKeyDown: useCallback((e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
+
 
             // Interaction: Creation Gate (Shift + A)
             if (key === 'a' && e.shiftKey) {
@@ -391,32 +425,7 @@ export function Body() {
         }, [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, fitView, nodes, setNodes, mode, setAxisLock, swapConnections, logAction])
     });
 
-    const onConnect = useCallback(
-        (params: Connection) => {
-            // Logic: 
-            // 1. Output (Source) -> Can have many connections (Default).
-            // 2. Input (Target) -> 
-            //    - If 'in-capsule': Multi-connect allowed.
-            //    - If 'in-a' or 'in-b': Single-connect (Replace old).
 
-            setEdges((eds) => {
-                const targetHandle = params.targetHandle;
-
-                // If standard input, remove existing edge to this specific handle
-                if (targetHandle === 'in-a' || targetHandle === 'in-b') {
-                    // Remove any edge that targets this node AND this handle
-                    const filtered = eds.filter(e => !(e.target === params.target && e.targetHandle === targetHandle));
-                    return addEdge(params, filtered);
-                }
-
-                // For 'in-capsule' or others, just add
-                return addEdge(params, eds);
-            });
-
-            logAction(`Connect: ${params.source} -> ${params.target}`);
-        },
-        [setEdges, logAction],
-    );
 
     const onMouseMove = useCallback((e: React.MouseEvent) => {
         mousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -444,216 +453,164 @@ export function Body() {
     }, [mode, confirmGrab, showPalette]);
 
     return (
-        <div
-            className="h-screen w-screen bg-zinc-950 relative"
-            onMouseMove={onMouseMove}
-            onMouseDown={onMouseDown}
-            onMouseUp={onMouseUp}
-            onClick={onClick}
-            onContextMenu={(e) => e.preventDefault()}
-        >
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                nodeTypes={nodeTypes}
-                fitView
-                colorMode="dark"
-                proOptions={{ hideAttribution: true }}
-
-                // Edge Reconnection (Unplug & Relink)
-                onReconnect={(oldEdge, newConnection) => {
-                    setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
-                    logAction('Relinked Wire');
-                }}
-                onReconnectStart={() => logAction('Picking up Wire...')}
-                onReconnectEnd={(_, edge) => {
-                    // Logic for "Dropping" the wire (if failed to connect)
-                    // If the user drops the wire into void, we should probably delete it?
-                    // React Flow default: keeps old edge if reconnect fails.
-                    // If we want "Unplug" feel, we might want to delete if dropped in void?
-                    // For now, keep default (safe).
-                }}
-                snapToGrid={effectiveSnap}
-
-                onPaneContextMenu={(e) => e.preventDefault()}
-                onNodeContextMenu={(e) => e.preventDefault()}
-                onEdgeContextMenu={(e) => e.preventDefault()}
-
-                onConnectStart={(event, params) => {
-                    const { nodeId, handleId, handleType } = params;
-                    // Deselect all when starting a connection
-                    clearSelection();
-
-                    // Logic: Smart Unplug
-                    // 1. Single-Inputs ('in-a', 'in-b') -> Always Unplug (Move behavior).
-                    // 2. Multi-Connects ('out', 'capsule') -> Ctrl + Drag to Unplug (Pick up last).
-
-                    const node = nodes.find(n => n.id === nodeId);
-                    // Determine if handle is "Single" (Default assumption for inputs unless capsule)
-                    const isTarget = handleType === 'target';
-                    const isCapsule = handleId === 'in-capsule' || handleId?.includes('capsule'); // Simple check/fallback
-                    // Robust check via data if possible, but ID convention works for now.
-
-                    // Rule 1: Input (Single) -> Auto-Detach
-                    // Rule 2: Output or Capsule -> Ctrl-Detach
-
-                    // Identify Edge to Detach
-                    const edgesOnHandle = edges.filter(e => {
-                        if (isTarget) return e.target === nodeId && e.targetHandle === handleId;
-                        return e.source === nodeId && e.sourceHandle === handleId;
-                    });
-
-                    if (edgesOnHandle.length === 0) {
-                        logAction('Start Connection');
-                        return;
-                    }
-
-                    // Decision: Should we detach?
-                    const nativeEvent = event as any; // Safe cast for hybrid event types in React Flow
-                    const isCtrl = nativeEvent.ctrlKey || nativeEvent.metaKey;
-                    const isSingleInput = isTarget && !isCapsule;
-
-                    let shouldDetach = false;
-
-                    if (isSingleInput) {
-                        shouldDetach = true; // Always move single connections
-                    } else if (isCtrl) {
-                        shouldDetach = true; // Manual detach for multi
-                    }
-
-                    if (shouldDetach) {
-                        // Detach the LAST added edge (LIFO)
-                        const edgeToRemove = edgesOnHandle[edgesOnHandle.length - 1]; // Edges usually appended
-                        setEdges(eds => eds.filter(e => e.id !== edgeToRemove.id));
-                        logAction(`Picked up Wire (${isSingleInput ? 'Auto' : 'Ctrl'})`);
-                    } else {
-                        logAction('Start Connection');
-                    }
-                }}
-
-                onNodeDragStart={(e, node) => {
-                    // 1. Detach Logic (Alt + Drag)
-                    if (e.altKey) {
-                        detachSelected();
-                        logAction('Detach Selected');
-                    }
-
-                    // 2. Selection Polish (Drag unselected -> Select Exclusive)
-                    // If dragging a node that isn't selected, it should become the ONLY selection
-                    // unless Shift/Ctrl is held (standard multi-select behavior)
-                    if (!node.selected && !e.shiftKey && !e.ctrlKey) {
-                        selectNode(node.id, true);
-                        logAction(`Select Node ${node.id}`);
-                    }
-                }}
-
-                panOnDrag={[1]}
-                selectionOnDrag={true}
-                panOnScroll={false}
-                zoomOnScroll={true}
-                zoomOnPinch={true}
-                zoomOnDoubleClick={false}
-                preventScrolling={true}
-                selectionMode={SelectionMode.Partial}
-                connectionLineType={{
-                    bezier: ConnectionLineType.Bezier,
-                    straight: ConnectionLineType.Straight,
-                    step: ConnectionLineType.Step,
-                    smoothstep: ConnectionLineType.SmoothStep,
-                }[edgeType] || ConnectionLineType.Bezier}
-                connectionLineStyle={{ stroke: '#71717a', strokeWidth: 2 }}
-                edgeTypes={edgeTypes}
-                defaultEdgeOptions={{
-                    type: 'magnetic',
-                    animated: false,
-                    data: { pathType: edgeType, animate: edgeAnimation }
-                }}
-
-                // Snapping Logic
-                snapToGrid={effectiveSnap}
-                snapGrid={effectiveSnap ? [20, 20] : undefined} // Only provide grid when enabled
-                minZoom={0.1}
-                maxZoom={4}
+        <RelinkContext.Provider value={relinkState}>
+            <div
+                className="h-screen w-screen bg-zinc-950 relative"
+                onMouseMove={onMouseMove}
+                onMouseDown={onMouseDown}
+                onMouseUp={onMouseUp}
+                onClick={onClick}
+                onContextMenu={(e) => e.preventDefault()}
             >
-                {showGrid && <Background color="#555" gap={20} size={1} />}
-                {showDebug && <DebugOverlay mode={mode} actionLog={actionLog} />}
+                <ReactFlow
+                    connectionLineComponent={RelinkLine}
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onConnect={onConnect}
+                    isValidConnection={isValidConnection}
+                    nodeTypes={nodeTypes}
+                    fitView
+                    colorMode="dark"
+                    connectionMode={ConnectionMode.Loose} // Allow Target-to-Target connection start
+                    proOptions={{ hideAttribution: true }}
+                    // Explicitly disable native edge updates to prioritize our Relink system
+                    edgesReconnectable={false}
 
-                <SettingsPanel
-                    isSnapping={manualSnap}
-                    setSnapping={setManualSnap}
-                    showGrid={showGrid}
-                    setShowGrid={setShowGrid}
-                    showDebug={showDebug}
-                    setShowDebug={setShowDebug}
-                    showInspector={showInspector}
-                    setShowInspector={setShowInspector}
-                    edgeType={edgeType}
-                    setEdgeType={setEdgeType}
-                    edgeAnimation={edgeAnimation}
-                    setEdgeAnimation={setEdgeAnimation}
-                    onReset={handleReset}
-                />
+                    snapToGrid={effectiveSnap}
 
-                {/* Command Palette (Shift + A) */}
-                {showPalette && (
-                    <CommandPalette
-                        isOpen={true}
-                        position={palettePosition}
-                        onClose={() => setShowPalette(false)}
-                        onSelect={spawnNode}
+                    onPaneContextMenu={(e) => e.preventDefault()}
+
+                    onConnectEnd={onConnectEnd}
+                    onConnectStart={onConnectStart}
+
+                    onNodeContextMenu={(e) => e.preventDefault()}
+                    onEdgeContextMenu={(e) => e.preventDefault()}
+
+
+
+                    onNodeDragStart={(e, node) => {
+                        // 1. Detach Logic (Alt + Drag)
+                        if (e.altKey) {
+                            detachSelected();
+                            logAction('Detach Selected');
+                        }
+
+                        // 2. Selection Polish (Drag unselected -> Select Exclusive)
+                        // If dragging a node that isn't selected, it should become the ONLY selection
+                        // unless Shift/Ctrl is held (standard multi-select behavior)
+                        if (!node.selected && !e.shiftKey && !e.ctrlKey) {
+                            selectNode(node.id, true);
+                            logAction(`Select Node ${node.id}`);
+                        }
+                    }}
+
+                    panOnDrag={[1]}
+                    selectionOnDrag={true}
+                    panOnScroll={false}
+                    zoomOnScroll={true}
+                    zoomOnPinch={true}
+                    zoomOnDoubleClick={false}
+                    preventScrolling={true}
+                    selectionMode={SelectionMode.Partial}
+                    connectionLineType={{
+                        bezier: ConnectionLineType.Bezier,
+                        straight: ConnectionLineType.Straight,
+                        step: ConnectionLineType.Step,
+                        smoothstep: ConnectionLineType.SmoothStep,
+                    }[edgeType] || ConnectionLineType.Bezier}
+                    connectionLineStyle={{ stroke: '#71717a', strokeWidth: 2 }}
+                    edgeTypes={edgeTypes}
+                    defaultEdgeOptions={{
+                        type: 'magnetic',
+                        animated: false,
+                        data: { pathType: edgeType, animate: edgeAnimation }
+                    }}
+
+                    // Snapping Logic
+
+                    snapGrid={effectiveSnap ? [20, 20] : undefined} // Only provide grid when enabled
+                    minZoom={0.1}
+                    maxZoom={4}
+                >
+                    {showGrid && <Background color="#555" gap={20} size={1} />}
+                    {showDebug && <DebugOverlay mode={mode} actionLog={actionLog} />}
+
+                    <SettingsPanel
+                        isSnapping={manualSnap}
+                        setSnapping={setManualSnap}
+                        showGrid={showGrid}
+                        setShowGrid={setShowGrid}
+                        showDebug={showDebug}
+                        setShowDebug={setShowDebug}
+                        showInspector={showInspector}
+                        setShowInspector={setShowInspector}
+                        edgeType={edgeType}
+                        setEdgeType={setEdgeType}
+                        edgeAnimation={edgeAnimation}
+                        setEdgeAnimation={setEdgeAnimation}
+                        onReset={handleReset}
                     />
+
+                    {/* Command Palette (Shift + A) */}
+                    {showPalette && (
+                        <CommandPalette
+                            isOpen={true}
+                            position={palettePosition}
+                            onClose={() => setShowPalette(false)}
+                            onSelect={spawnNode}
+                        />
+                    )}
+
+                    {/* Inspector Panel (N) */}
+                    <InspectorPanel
+                        isOpen={showInspector}
+                        onClose={() => setShowInspector(false)}
+                    />
+                </ReactFlow>
+
+
+                {/* Knife Cut Path Overlay */}
+                {mode === 'CUTTING' && cutPath.length > 0 && (
+                    <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-50 overflow-visible">
+                        <polyline
+                            points={cutPath.map(p => `${p.x},${p.y}`).join(' ')}
+                            fill="none"
+                            stroke="#ef4444"
+                            strokeWidth="3"
+                            strokeDasharray="5,5"
+                            strokeLinecap="round"
+                        />
+                    </svg>
                 )}
 
-                {/* Inspector Panel (N) */}
-                <InspectorPanel
-                    isOpen={showInspector}
-                    onClose={() => setShowInspector(false)}
-                />
-            </ReactFlow>
-
-
-            {/* Knife Cut Path Overlay */}
-            {mode === 'CUTTING' && cutPath.length > 0 && (
-                <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-50 overflow-visible">
-                    <polyline
-                        points={cutPath.map(p => `${p.x},${p.y}`).join(' ')}
-                        fill="none"
-                        stroke="#ef4444"
-                        strokeWidth="3"
-                        strokeDasharray="5,5"
-                        strokeLinecap="round"
-                    />
-                </svg>
-            )}
-
-            {/* Mode Indicator */}
-            {mode === 'GRABBING' && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                    MOVE
-                </div>
-            )}
-            {mode === 'SCALING' && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                    SCALE
-                </div>
-            )}
-            {mode === 'ROTATING' && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                    ROTATE
-                </div>
-            )}
-            {mode === 'CUTTING' && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                    CUTTING
-                </div>
-            )}
-        </div>
+                {/* Mode Indicator */}
+                {mode === 'GRABBING' && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                        MOVE
+                    </div>
+                )}
+                {mode === 'SCALING' && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                        SCALE
+                    </div>
+                )}
+                {mode === 'ROTATING' && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+                        ROTATE
+                    </div>
+                )}
+                {mode === 'CUTTING' && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        CUTTING
+                    </div>
+                )}
+            </div>
+        </RelinkContext.Provider>
     );
 }

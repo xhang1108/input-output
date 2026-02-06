@@ -116,6 +116,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable }: NodeProps) 
                         type={h.type}
                         position={h.position}
                         id={h.id}
+                        nodeId={id}
                         className={`
                             border-zinc-900! z-50 pointer-events-auto origin-center
                             ${h.variant === 'capsule'
@@ -137,6 +138,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable }: NodeProps) 
                 type="source"
                 position={Position.Right}
                 id="out"
+                nodeId={id}
                 className="bg-emerald-500! w-3! h-3! border-zinc-900! z-50 origin-center"
                 isConnectable={isConnectable}
             />
