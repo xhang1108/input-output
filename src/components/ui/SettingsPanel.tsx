@@ -14,6 +14,10 @@ interface SettingsPanelProps {
     setShowInspector: (visible: boolean) => void;
     edgeType: string;
     setEdgeType: (type: string) => void;
+    layoutAlgorithm: string;
+    setLayoutAlgorithm: (type: string) => void;
+    layoutDirection: string;
+    setLayoutDirection: (dir: string) => void;
     edgeAnimation: boolean;
     setEdgeAnimation: (enabled: boolean) => void;
     onReset: () => void;
@@ -25,6 +29,8 @@ export function SettingsPanel({
     showDebug, setShowDebug,
     showInspector, setShowInspector,
     edgeType, setEdgeType,
+    layoutAlgorithm, setLayoutAlgorithm,
+    layoutDirection, setLayoutDirection,
     edgeAnimation, setEdgeAnimation,
     onReset
 }: SettingsPanelProps) {
@@ -82,6 +88,52 @@ export function SettingsPanel({
                                     `}
                                 >
                                     {type.replace('smooth', 'S-')}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-zinc-800 my-1" />
+
+                    {/* Layout Controls */}
+                    <div className="px-3 py-2">
+                        <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Auto Layout</div>
+
+                        {/* Algorithm Selector */}
+                        <div className="grid grid-cols-2 gap-1.5 mb-2">
+                            {['layered', 'force', 'tree', 'radial'].map(algo => (
+                                <button
+                                    key={algo}
+                                    onClick={() => setLayoutAlgorithm(algo)}
+                                    className={`
+                                        text-xs py-1.5 px-2 rounded-md border text-center capitalize transition-colors
+                                        ${layoutAlgorithm === algo
+                                            ? 'bg-zinc-700 border-zinc-500 text-cyan-400 font-medium'
+                                            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}
+                                    `}
+                                >
+                                    {algo}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Direction Selector (Only for Layered and Tree) */}
+                        <div className="flex gap-1">
+                            {['RIGHT', 'DOWN'].map(dir => (
+                                <button
+                                    key={dir}
+                                    onClick={() => setLayoutDirection(dir)}
+                                    disabled={layoutAlgorithm === 'force' || layoutAlgorithm === 'radial'}
+                                    className={`
+                                        flex-1 text-[10px] py-1 px-2 rounded border text-center uppercase transition-colors
+                                        ${(layoutAlgorithm === 'force' || layoutAlgorithm === 'radial')
+                                            ? 'opacity-30 cursor-not-allowed bg-zinc-900 border-zinc-900 text-zinc-600'
+                                            : layoutDirection === dir
+                                                ? 'bg-zinc-700 border-zinc-500 text-cyan-400'
+                                                : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}
+                                    `}
+                                >
+                                    {dir}
                                 </button>
                             ))}
                         </div>

@@ -3,12 +3,54 @@ import { Node, Edge, Position } from '@xyflow/react';
 
 const elk = new ELK();
 
-const layoutOptions = {
-    'elk.algorithm': 'layered',
-    'elk.direction': 'RIGHT',
-    'elk.layered.spacing.nodeNodeBetweenLayers': '100', // Layer spacing (Horizontal)
-    'elk.spacing.nodeNode': '60', // Sibling spacing (Vertical)
-    'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+export type LayoutAlgorithm = 'layered' | 'force' | 'tree' | 'radial';
+export type LayoutDirection = 'RIGHT' | 'DOWN' | 'LEFT' | 'UP';
+
+interface LayoutConfig {
+    algorithm?: LayoutAlgorithm;
+    direction?: LayoutDirection;
+    spacing?: number;
+}
+
+const getOptions = (cfg: LayoutConfig = {}) => {
+    const direction = cfg.direction || 'RIGHT';
+    const spacing = (cfg.spacing || 80).toString();
+
+    // Base options
+    const options: Record<string, string> = {
+        'elk.direction': direction,
+        'elk.spacing.nodeNode': spacing,
+    };
+
+    switch (cfg.algorithm) {
+        case 'force':
+            // "Force Layout" (Stress)
+            options['elk.algorithm'] = 'org.eclipse.elk.stress';
+            options['elk.stress.desiredEdgeLength'] = '200';
+            break;
+
+        case 'tree':
+            // "Tree Layout" (Mr. Tree)
+            options['elk.algorithm'] = 'org.eclipse.elk.mrtree';
+            options['elk.spacing.edgeNode'] = '40';
+            break;
+
+        case 'radial':
+            // "Radial Layout"
+            options['elk.algorithm'] = 'org.eclipse.elk.radial';
+            options['elk.radial.radius'] = '300';
+            break;
+
+        case 'layered':
+        default:
+            // Standard Flowchart
+            options['elk.algorithm'] = 'layered';
+            options['elk.layered.spacing.nodeNodeBetweenLayers'] = '100';
+            options['elk.layered.nodePlacement.strategy'] = 'BRANDES_KOEPF';
+            break;
+    }
+
+    return options;
 };
 
 // Map XYFlow nodes to Elk nodes
@@ -25,12 +67,12 @@ const toElkEdge = (edge: Edge): ElkPrimitiveEdge => ({
     target: edge.target,
 });
 
-export const getLayoutedElements = async (nodes: Node[], edges: Edge[]) => {
+export const getLayoutedElements = async (nodes: Node[], edges: Edge[], config: LayoutConfig = {}) => {
     const graph: ElkNode = {
         id: 'root',
-        layoutOptions: layoutOptions,
+        layoutOptions: getOptions(config),
         children: nodes.map(toElkNode),
-        edges: edges.map(toElkEdge) as any, // Cast to any or ElkExtendedEdge to satisfy the interface mismatch
+        edges: edges.map(toElkEdge) as any,
     };
 
     try {

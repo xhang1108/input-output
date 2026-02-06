@@ -26,6 +26,7 @@ import { FrameNode } from './nodes/FrameNode';
 import { MagneticEdge } from './edges/MagneticEdge';
 import { useEar } from '../nerves/useEar';
 import { useHand } from '../nerves/useHand';
+import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { useRelink } from '../hooks/useRelink';
 import { CommandPalette } from './ui/CommandPalette';
 import { DebugOverlay } from './ui/DebugOverlay';
@@ -64,6 +65,8 @@ export function Body() {
     const [showDebug, setShowDebug] = useState(true);
     const [edgeType, setEdgeType] = useState('bezier');
     const [edgeAnimation, setEdgeAnimation] = useState(true);
+    const [layoutAlgorithm, setLayoutAlgorithm] = useState<any>('layered');
+    const [layoutDirection, setLayoutDirection] = useState<any>('RIGHT');
 
     const effectiveSnap = isSnapping || manualSnap;
 
@@ -72,7 +75,8 @@ export function Body() {
 
 
     // Get flow helpers
-    const { screenToFlowPosition, fitView, getZoom } = useReactFlow();
+    const { fitView, getZoom } = useReactFlow();
+    const { project } = useCanvasProjection();
 
     // Action Log State
     const [actionLog, setActionLog] = useState<string[]>([]);
@@ -110,6 +114,8 @@ export function Body() {
                 if (s.showInspector !== undefined) setShowInspector(s.showInspector);
                 if (s.edgeType !== undefined) setEdgeType(s.edgeType);
                 if (s.edgeAnimation !== undefined) setEdgeAnimation(s.edgeAnimation);
+                if (s.layoutAlgorithm !== undefined) setLayoutAlgorithm(s.layoutAlgorithm);
+                if (s.layoutDirection !== undefined) setLayoutDirection(s.layoutDirection);
                 logAction('Settings Loaded');
             } catch (e) {
                 console.error('Failed to load settings:', e);
@@ -119,9 +125,9 @@ export function Body() {
 
     // Save Settings on Change
     useEffect(() => {
-        const settings = { manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation };
+        const settings = { manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation, layoutAlgorithm, layoutDirection };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    }, [manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation]);
+    }, [manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation, layoutAlgorithm, layoutDirection]);
 
     // Auto-Load Flow Data on Mount
     useEffect(() => {
@@ -179,7 +185,10 @@ export function Body() {
             originalCenter = { x: xSum / nodesToLayout.length, y: ySum / nodesToLayout.length };
         }
 
-        const layouted = await getLayoutedElements(nodesToLayout, edgesToLayout);
+        const layouted = await getLayoutedElements(nodesToLayout, edgesToLayout, {
+            algorithm: layoutAlgorithm,
+            direction: layoutDirection
+        });
 
         // Restore center for partial layout
         let finalNodes = layouted.nodes;
@@ -267,7 +276,7 @@ export function Body() {
     const spawnNode = useCallback((type: string, label: string, extraData?: Record<string, any>) => {
         logAction(`Spawn Node: ${type}`);
         // Project screen coordinates (palette position) to flow coordinates
-        const flowPos = screenToFlowPosition({
+        const flowPos = project({
             x: palettePosition.x,
             y: palettePosition.y
         });
@@ -284,7 +293,7 @@ export function Body() {
         };
 
         setNodes((nds) => nds.concat(newNode));
-    }, [setNodes, palettePosition, screenToFlowPosition]);
+    }, [setNodes, palettePosition, project]);
 
     // --- Custom Handle Interactions State ---
     const {
@@ -324,97 +333,12 @@ export function Body() {
 
     // --- FEEL NERVES (Input Handling) ---
     useEar({
-        onKeyDown: useCallback((e: KeyboardEvent) => {
-            const key = e.key.toLowerCase();
-
-
-            // Interaction: Creation Gate (Shift + A)
-            if (key === 'a' && e.shiftKey) {
-                e.preventDefault();
-                setPalettePosition(mousePosRef.current);
-                setShowPalette(true);
-                logAction('Show Palette (Shift+A)');
-                return;
-            }
-
-            // Interaction: Swap (Alt + S)
-            if (key === 's' && e.altKey) {
-                e.preventDefault();
-                swapConnections();
-                logAction('Swap Inputs (Alt+S)');
-                return;
-            }
-
-            // Interaction: Grab / Scale / Rotate
-            if (key === 'g') {
-                startGrab(mousePosRef.current, e.altKey);
-                logAction('Start Grab (G)');
-            }
-            if (key === 's') {
-                startScale(mousePosRef.current);
-                logAction('Start Scale (S)');
-            }
-            if (key === 'r') {
-                startRotate(mousePosRef.current);
-                logAction('Start Rotate (R)');
-            }
-
-            // Interaction: Duplicate
-            if (key === 'd' && e.shiftKey) {
-                e.preventDefault();
-                if (duplicateSelected()) {
-                    startGrab(mousePosRef.current);
-                    logAction('Duplicate Selected (Shift+D)');
-                }
-            }
-
-            // Interaction: Group (Frames)
-            if (key === 'f') {
-                e.preventDefault();
-                groupSelected();
-                logAction('Group Selected (F)');
-            }
-
-            // Interaction: Inspector
-            if (key === 'n') {
-                e.preventDefault();
-                setShowInspector(prev => !prev);
-                logAction('Toggle Inspector (N)');
-            }
-
-            // Interaction: Delete (X or Del)
-            if (key === 'delete' || (key === 'x' && mode !== 'GRABBING')) {
-                const active = document.activeElement?.tagName;
-                if (active !== 'INPUT' && active !== 'TEXTAREA') {
-                    deleteSelected();
-                    logAction('Delete Selected');
-                }
-            }
-
-            // Interaction: Reset Data (Backspace)
-            if (key === 'backspace') {
-                const active = document.activeElement?.tagName;
-                if (active !== 'INPUT' && active !== 'TEXTAREA') {
-                    resetSelected();
-                    logAction('Reset Selected');
-                }
-            }
-
-            // Interaction: Select All (A)
-            if (key === 'a' && !e.shiftKey && !e.ctrlKey) {
-                setNodes(nds => nds.map(n => ({ ...n, selected: true })));
-                logAction('Select All (A)');
-            }
-
-            // Interaction: Auto Layout (L)
-            if (key === 'l' && !e.ctrlKey) {
-                // Prevent L if editing text? Active element check already handles INPUT/TEXTAREA generally at top of useEar?
-                // Yes, useEar checks activeElement for INPUT/TEXTAREA global skip.
-                handleAutoLayout();
-            }
-
-            // Interaction: Focus (.)
-            if (key === '.') {
+        shortcuts: {
+            // Creation & Layout
+            'shift+a': (e) => { e.preventDefault(); setPalettePosition(mousePosRef.current); setShowPalette(true); logAction('Show Palette (Shift+A)'); },
+            'alt+s': (e) => { e.preventDefault(); swapConnections(); logAction('Swap Inputs (Alt+S)'); },
+            'l': () => { handleAutoLayout(); },
+            '.': (e) => {
                 const selected = nodes.filter(n => n.selected).map(n => ({ id: n.id }));
                 if (selected.length > 0) {
                     fitView({ nodes: selected, duration: 400, padding: 0.2 });
@@ -423,37 +347,70 @@ export function Body() {
                     fitView({ duration: 400, padding: 0.2 });
                     logAction('Reset View (.)');
                 }
-            }
+            },
 
-            // Interaction: Axis Lock (X/Y)
-            if (mode === 'GRABBING') {
-                if (key === 'x') { setAxisLock('X'); logAction('Axis Lock X'); }
-                if (key === 'y') { setAxisLock('Y'); logAction('Axis Lock Y'); }
-            }
+            // Transform Commands
+            'g': (e) => { startGrab(mousePosRef.current, e.altKey); logAction('Start Grab (G)'); },
+            's': (e) => { startScale(mousePosRef.current); logAction('Start Scale (S)'); },
+            'r': (e) => { startRotate(mousePosRef.current); logAction('Start Rotate (R)'); },
+            'shift+d': (e) => { e.preventDefault(); if (duplicateSelected()) { startGrab(mousePosRef.current); logAction('Duplicate Selected (Shift+D)'); } },
+            'f': (e) => { e.preventDefault(); groupSelected(); logAction('Group Selected (F)'); },
 
-            // Interaction: Clipboard
-            if (key === 'c' && (e.ctrlKey || e.metaKey)) {
-                copyToClipboard();
-                logAction('Copy (Ctrl+C)');
-            }
-            if (key === 'v' && (e.ctrlKey || e.metaKey)) {
-                pasteFromClipboard();
-                logAction('Paste (Ctrl+V)');
-            }
+            // Node Operations
+            'delete': () => {
+                const active = document.activeElement?.tagName;
+                if (active !== 'INPUT' && active !== 'TEXTAREA') {
+                    deleteSelected();
+                    logAction('Delete Selected');
+                }
+            },
+            'x': () => {
+                const active = document.activeElement?.tagName;
+                if (active === 'INPUT' || active === 'TEXTAREA') return;
 
-            if (key === 'enter') {
-                confirmGrab();
-                logAction('Confirm (Enter)');
-            }
+                if (mode === 'GRABBING') {
+                    setAxisLock('X');
+                    logAction('Axis Lock X');
+                } else {
+                    deleteSelected();
+                    logAction('Delete Selected');
+                }
+            },
+            'backspace': () => {
+                const active = document.activeElement?.tagName;
+                if (active !== 'INPUT' && active !== 'TEXTAREA') {
+                    resetSelected();
+                    logAction('Reset Selected');
+                }
+            },
+            'a': (e) => {
+                if (!e.shiftKey && !e.ctrlKey) {
+                    setNodes(nds => nds.map(n => ({ ...n, selected: true })));
+                    logAction('Select All (A)');
+                }
+            },
+            'n': (e) => { e.preventDefault(); setShowInspector(prev => !prev); logAction('Toggle Inspector (N)'); },
 
-            if (key === 'escape') {
+            // Axis Lock (While Grabbing)
+            'y': () => { if (mode === 'GRABBING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
+
+            // Clipboard
+            'ctrl+c': () => { copyToClipboard(); logAction('Copy (Ctrl+C)'); },
+            'cmd+c': () => { copyToClipboard(); logAction('Copy (Cmd+C)'); },
+            'ctrl+v': () => { pasteFromClipboard(); logAction('Paste (Ctrl+V)'); },
+            'cmd+v': () => { pasteFromClipboard(); logAction('Paste (Cmd+V)'); },
+
+            // Confirmation & Navigation
+            'enter': () => { confirmGrab(); logAction('Confirm (Enter)'); },
+            'escape': () => {
                 cancelGrab();
                 setShowPalette(false);
                 setShowInspector(false);
-                setNodes(nds => nds.map(n => ({ ...n, selected: false }))); // Deselect All
+                setNodes(nds => nds.map(n => ({ ...n, selected: false })));
                 logAction('Cancel/Deselect (Esc)');
             }
-        }, [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, fitView, nodes, setNodes, mode, setAxisLock, swapConnections, logAction])
+        },
+        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, fitView, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowInspector, handleAutoLayout]
     });
 
 
@@ -578,6 +535,10 @@ export function Body() {
                         setShowInspector={setShowInspector}
                         edgeType={edgeType}
                         setEdgeType={setEdgeType}
+                        layoutAlgorithm={layoutAlgorithm}
+                        setLayoutAlgorithm={setLayoutAlgorithm}
+                        layoutDirection={layoutDirection}
+                        setLayoutDirection={setLayoutDirection}
                         edgeAnimation={edgeAnimation}
                         setEdgeAnimation={setEdgeAnimation}
                         onReset={handleReset}

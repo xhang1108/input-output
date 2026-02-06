@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useReactFlow, Node, XYPosition, Edge } from '@xyflow/react';
+import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { nanoid } from 'nanoid';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
@@ -7,7 +8,8 @@ type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 const CLIPBOARD_KEY = 'calctopus_clipboard';
 
 export function useHand() {
-    const { getNodes, setNodes, getEdges, setEdges, screenToFlowPosition, getZoom } = useReactFlow();
+    const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
+    const { getEventFlowPos, getCurrentZoom, project } = useCanvasProjection();
     const [mode, setMode] = useState<InteractionMode>('IDLE');
 
     // Formatting for "Ghost" movement
@@ -119,32 +121,47 @@ export function useHand() {
     }, [setNodes]);
 
 
+    // --- Helper: Clone Nodes (Internal) ---
+    const cloneNodes = useCallback((nodesToClone: Node[], offset: { x: number, y: number } = { x: 0, y: 0 }) => {
+        const idMap = new Map<string, string>();
+
+        const newNodes = nodesToClone.map(node => {
+            const newId = nanoid();
+            idMap.set(node.id, newId);
+            return {
+                ...node,
+                id: newId,
+                selected: true,
+                position: {
+                    x: node.position.x + offset.x,
+                    y: node.position.y + offset.y
+                },
+                data: JSON.parse(JSON.stringify(node.data)),
+                style: node.style ? JSON.parse(JSON.stringify(node.style)) : undefined
+            };
+        });
+
+        // Handle Parent/Child relationships for Frames
+        newNodes.forEach(node => {
+            if (node.parentId && idMap.has(node.parentId)) {
+                node.parentId = idMap.get(node.parentId);
+            }
+        });
+
+        return newNodes;
+    }, []);
+
     // --- Command: Duplicate (Immediate) ---
     const duplicateSelected = useCallback(() => {
         const nodes = getNodes();
         const selectedNodes = nodes.filter(n => n.selected);
         if (selectedNodes.length === 0) return false;
 
-        const idMap = new Map<string, string>();
+        const newNodes = cloneNodes(selectedNodes, { x: 0, y: 0 }); // Start at same pos for Grab to take over
 
-        // 1. Clone Nodes
-        const newNodes = selectedNodes.map(node => {
-            const newId = nanoid();
-            idMap.set(node.id, newId);
-            return {
-                ...node,
-                id: newId,
-                selected: true, // Select new ones
-                position: { ...node.position }, // Start at same pos (offset applied later via Grab)
-                data: { ...node.data, label: `${node.data.label} (Copy)` }
-            };
-        });
-
-        // 3. Update State
         setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat(newNodes));
-
         return true;
-    }, [getNodes, setNodes]);
+    }, [getNodes, setNodes, cloneNodes]);
 
     // --- Command: Delete Selected ---
     const deleteSelected = useCallback(() => {
@@ -188,19 +205,13 @@ export function useHand() {
         try {
             const clipboardNodes = JSON.parse(payload) as Node[];
             if (!Array.isArray(clipboardNodes)) return;
-            const newNodes = clipboardNodes.map(node => ({
-                ...node,
-                id: nanoid(),
-                position: { x: node.position.x + 20, y: node.position.y + 20 },
-                selected: true,
-                data: JSON.parse(JSON.stringify(node.data)), // Deep copy data
-                style: node.style ? JSON.parse(JSON.stringify(node.style)) : undefined // Deep copy style
-            }));
+
+            const newNodes = cloneNodes(clipboardNodes, { x: 20, y: 20 });
             setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat(newNodes));
         } catch (e) {
             console.error("Failed to paste nodes", e);
         }
-    }, [setNodes]);
+    }, [setNodes, cloneNodes]);
 
 
 
@@ -287,7 +298,8 @@ export function useHand() {
             const edgesToRemove: string[] = [];
 
             // Convert Screen Path to Flow Path for Intersection Check
-            const flowPath = path.map(p => screenToFlowPosition({ x: p.x, y: p.y }));
+            const flowPath = path.map(p => ({ x: p.x, y: p.y })); // This path is actually screen-space
+            const projectedPath = path.map(p => project({ x: p.x, y: p.y }));
 
             edges.forEach(edge => {
                 const sourceNode = nodes.find(n => n.id === edge.source);
@@ -307,9 +319,9 @@ export function useHand() {
                 const ty = targetNode.position.y + (targetNode.measured?.height || 50) / 2;
 
                 // Check intersection between Edge Line (sx,sy)->(tx,ty) and any segment in Knife Path (Flow Space)
-                for (let i = 0; i < flowPath.length - 1; i++) {
-                    const p1 = flowPath[i];
-                    const p2 = flowPath[i + 1];
+                for (let i = 0; i < projectedPath.length - 1; i++) {
+                    const p1 = projectedPath[i];
+                    const p2 = projectedPath[i + 1];
                     if (linesIntersect(sx, sy, tx, ty, p1.x, p1.y, p2.x, p2.y)) {
                         edgesToRemove.push(edge.id);
                         break; // Cut this edge
@@ -325,7 +337,7 @@ export function useHand() {
         setMode('IDLE');
         cutPathRef.current = [];
         setCutPath([]);
-    }, [getEdges, getNodes, setEdges, screenToFlowPosition]);
+    }, [getEdges, getNodes, setEdges, getEventFlowPos]);
 
     // --- Command: Swap Inputs (Alt + S) ---
     const swapConnections = useCallback(() => {
@@ -471,7 +483,7 @@ export function useHand() {
         if (mode === 'CUTTING') {
             updateCut(currentMousePos);
         } else if (mode === 'GRABBING' && startMousePos.current) {
-            const zoom = getZoom();
+            const zoom = getCurrentZoom();
             let dx = (currentMousePos.x - startMousePos.current.x) / zoom;
             let dy = (currentMousePos.y - startMousePos.current.y) / zoom;
 
@@ -487,28 +499,20 @@ export function useHand() {
             }
 
             applyMove(dx, dy);
-        } else if (mode === 'SCALING' && startMousePos.current && centerRef.current) {
-            // Calculate distance to center
-            // We are in screen space for mouse, but center is Flow space? 
-            // Wait, interaction calculations usually better in same space.
-            // startScale sets centerRef (Flow Space).
-            // startMousePos is Screen Space.
-            // We need mouse in Flow Space to compare with Center.
-
-            const flowMouse = screenToFlowPosition({ x: currentMousePos.x, y: currentMousePos.y });
-            const flowStartMouse = screenToFlowPosition({ x: startMousePos.current.x, y: startMousePos.current.y });
+            const flowMouse = getEventFlowPos(e);
+            if (!startMousePos.current || !centerRef.current) return;
+            const flowStartMouse = project({ x: startMousePos.current.x, y: startMousePos.current.y });
             const center = centerRef.current;
 
             const startDist = Math.hypot(flowStartMouse.x - center.x, flowStartMouse.y - center.y);
             const currentDist = Math.hypot(flowMouse.x - center.x, flowMouse.y - center.y);
 
-            // Avoid div by zero
             const scale = startDist > 0 ? currentDist / startDist : 1;
             applyScale(scale);
 
         } else if (mode === 'ROTATING' && startMousePos.current && centerRef.current) {
-            const flowMouse = screenToFlowPosition({ x: currentMousePos.x, y: currentMousePos.y });
-            const flowStartMouse = screenToFlowPosition({ x: startMousePos.current.x, y: startMousePos.current.y });
+            const flowMouse = getEventFlowPos(e);
+            const flowStartMouse = project({ x: startMousePos.current.x, y: startMousePos.current.y });
             const center = centerRef.current;
 
             const startAngle = Math.atan2(flowStartMouse.y - center.y, flowStartMouse.x - center.x);
@@ -517,7 +521,7 @@ export function useHand() {
             const angleDiff = currentAngle - startAngle;
             applyRotate(angleDiff);
         }
-    }, [mode, getZoom, applyMove, applyScale, applyRotate, updateCut, axisLock, screenToFlowPosition]);
+    }, [mode, getCurrentZoom, applyMove, applyScale, applyRotate, updateCut, axisLock, getEventFlowPos]);
 
     const handleMouseUp = useCallback((e: MouseEvent) => {
         if (mode === 'CUTTING') {

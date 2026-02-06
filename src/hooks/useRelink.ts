@@ -46,7 +46,8 @@ export function useRelink({
         if (!state.active || !anchorNodeId) return;
 
         // 1. ABSOLUTE GUARD: Final edge cannot connect a node to itself
-        if (targetN === anchorNodeId) {
+        const isSelfLoop = state.targetNodeId === targetN || state.anchors?.some(a => a.nodeId === targetN);
+        if (isSelfLoop) {
             logAction(`Relink blocked: Attempted self-connection on ${targetN}`);
             return;
         }
@@ -163,12 +164,9 @@ export function useRelink({
             const state = relinkStateRef.current;
 
             if (state.active) {
-                const anchorNodeId = (state.targetNodeId || (state.anchors && state.anchors[0]?.nodeId));
-
-                // 1. Self-Loop Guard: In Relink, the resulting edge is [Anchor] <-> [Hovered Node].
-                // Since the drag-start node is NEVER the anchor (we unplugged the other end),
-                // if either node in the 'connection' is the anchor, it must be the hovered node.
-                if (connection.source === anchorNodeId || connection.target === anchorNodeId) {
+                // 1. Self-Loop Guard: Check if the hovered node is ANY of our anchors
+                const isAnchor = (id: string) => state.targetNodeId === id || state.anchors?.some(a => a.nodeId === id);
+                if (isAnchor(connection.source) || isAnchor(connection.target)) {
                     return false;
                 }
 

@@ -1,4 +1,5 @@
 import { useStore, Position } from '@xyflow/react';
+import { getNearestHandle } from '../utils/geometry';
 
 export function useHandleMagnet(targetX: number, targetY: number) {
     const nodeLookup = useStore((s) => s.nodeLookup);
@@ -8,61 +9,33 @@ export function useHandleMagnet(targetX: number, targetY: number) {
     // Default: No snap
     let effectiveX = targetX;
     let effectiveY = targetY;
-    let effectivePos: Position | undefined = undefined; // Undefined means let consumer decide default
+    let effectivePos: Position | undefined = undefined;
     let isSnapped = false;
+    let snappedHandleId: string | null = connectionHandleId;
+    let snappedNodeId: string | null = connectionNodeId;
 
-    // A: Check React Flow Store (Native Snapping)
-    let snappedHandleId = connectionHandleId;
-    let snappedNodeId = connectionNodeId;
-
-    // B: Manual Collision Detection (Universal)
-    // Find the CLOSEST handle within the snap radius if native didn't catch it
+    // Manual Collision Detection (using unified geometry helper)
     if (!snappedHandleId) {
-        let minDistance = Infinity;
-        let closestHandleId = null;
-        let closestNodeId = null;
-        const SNAP_RADIUS = 20; // Flow units
-
-        for (const [id, node] of nodeLookup) {
-            if (node.hidden) continue;
-            const handleBounds = node.internals?.handleBounds;
-            if (!handleBounds) continue;
-
-            const allHandles = [...(handleBounds.source || []), ...(handleBounds.target || [])];
-
-            for (const h of allHandles) {
-                // Handle Center in World Space
-                const hCenterX = node.internals.positionAbsolute.x + h.x + h.width / 2;
-                const hCenterY = node.internals.positionAbsolute.y + h.y + h.height / 2;
-
-                // Euclidean Distance
-                const dist = Math.sqrt(Math.pow(targetX - hCenterX, 2) + Math.pow(targetY - hCenterY, 2));
-
-                if (dist <= SNAP_RADIUS && dist < minDistance) {
-                    minDistance = dist;
-                    closestHandleId = h.id;
-                    closestNodeId = id;
-                }
-            }
+        const result = getNearestHandle(targetX, targetY, nodeLookup, 20);
+        if (result) {
+            effectiveX = result.x;
+            effectiveY = result.y;
+            effectivePos = result.position;
+            snappedHandleId = result.handleId;
+            snappedNodeId = result.nodeId;
+            isSnapped = true;
         }
-
-        if (closestHandleId && closestNodeId) {
-            snappedHandleId = closestHandleId;
-            snappedNodeId = closestNodeId;
-        }
-    }
-
-    // Resolve Coordinates
-    if (snappedHandleId && snappedNodeId) {
+    } else if (snappedNodeId) {
+        // Resolve Coordinates for native snapping
         const hoveredNode = nodeLookup.get(snappedNodeId);
         if (hoveredNode) {
-            const handleBounds = hoveredNode.internals?.handleBounds;
+            const handleBounds = (hoveredNode as any).internals?.handleBounds;
             if (handleBounds) {
                 const allHandles = [...(handleBounds.source || []), ...(handleBounds.target || [])];
                 const handle = allHandles.find(h => h.id === snappedHandleId);
                 if (handle) {
-                    effectiveX = hoveredNode.internals.positionAbsolute.x + handle.x + (handle.width / 2);
-                    effectiveY = hoveredNode.internals.positionAbsolute.y + handle.y + (handle.height / 2);
+                    effectiveX = (hoveredNode as any).internals.positionAbsolute.x + handle.x + (handle.width / 2);
+                    effectiveY = (hoveredNode as any).internals.positionAbsolute.y + handle.y + (handle.height / 2);
                     effectivePos = handle.position;
                     isSnapped = true;
                 }
