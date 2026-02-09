@@ -35,6 +35,8 @@ import { InspectorPanel } from './ui/InspectorPanel';
 import { SettingsPanel } from './ui/SettingsPanel'; // Import SettingsPanel
 import { getLayoutedElements } from '../nerves/layoutEngine';
 import { useMemory, initialNodes } from '../engine/useMemory';
+import { ContextMenu, ContextMenuItem } from './ui/ContextMenu';
+import { StatusBar } from './ui/StatusBar';
 
 const nodeTypes = {
     baseNode: BaseNode,
@@ -63,6 +65,15 @@ export function Body() {
     const [edgeAnimation, setEdgeAnimation] = useState(true);
     const [layoutAlgorithm, setLayoutAlgorithm] = useState<any>('layered');
     const [layoutDirection, setLayoutDirection] = useState<any>('RIGHT');
+
+    // Context Menu State
+    const [contextMenu, setContextMenu] = useState<{
+        isOpen: boolean;
+        x: number;
+        y: number;
+        type: 'CANVAS' | 'NODE';
+        nodeId?: string;
+    } | null>(null);
 
     const effectiveSnap = isSnapping || manualSnap;
 
@@ -204,7 +215,10 @@ export function Body() {
         swapConnections, // Imported
         detachSelected, // Imported
         clearSelection, // Imported
-        selectNode // Imported
+        selectNode, // Imported
+        handleTypeNum, // New Import
+        transformBuffer, // New Import
+        transformValue // New Import
     } = useHand();
 
     // Debug: Log Mode Changes (To catch flickering)
@@ -303,9 +317,13 @@ export function Body() {
             'alt+s': (e) => { e.preventDefault(); swapConnections(); logAction('Swap Inputs (Alt+S)'); },
             'l': () => { handleAutoLayout(); },
             '.': (e) => {
-                const selected = nodes.filter(n => n.selected);
-                const actionName = focusOn(selected);
-                logAction(`${actionName} (.)`);
+                if (mode === 'GRABBING' || mode === 'SCALING' || mode === 'ROTATING') {
+                    handleTypeNum('.');
+                } else {
+                    const selected = nodes.filter(n => n.selected);
+                    const actionName = focusOn(selected);
+                    logAction(`${actionName} (.)`);
+                }
             },
 
             // Transform Commands
@@ -318,7 +336,7 @@ export function Body() {
             // Node Operations
             'delete': () => {
                 const active = document.activeElement?.tagName;
-                if (active !== 'INPUT' && active !== 'TEXTAREA') {
+                if (active !== 'INPUT' && active !== 'TEXTAREA' && mode === 'IDLE') {
                     deleteSelected();
                     logAction('Delete Selected');
                 }
@@ -327,21 +345,16 @@ export function Body() {
                 const active = document.activeElement?.tagName;
                 if (active === 'INPUT' || active === 'TEXTAREA') return;
 
-                if (mode === 'GRABBING') {
+                if (mode === 'GRABBING' || mode === 'SCALING') {
                     setAxisLock('X');
                     logAction('Axis Lock X');
-                } else {
+                } else if (mode === 'IDLE') {
                     deleteSelected();
                     logAction('Delete Selected');
                 }
+                // During ROTATING or CUTTING, 'x' does nothing (doesn't delete)
             },
-            'backspace': () => {
-                const active = document.activeElement?.tagName;
-                if (active !== 'INPUT' && active !== 'TEXTAREA') {
-                    resetSelected();
-                    logAction('Reset Selected');
-                }
-            },
+
             'a': (e) => {
                 if (!e.shiftKey && !e.ctrlKey) {
                     setNodes(nds => nds.map(n => ({ ...n, selected: true })));
@@ -350,8 +363,8 @@ export function Body() {
             },
             'n': (e) => { e.preventDefault(); setShowInspector(prev => !prev); logAction('Toggle Inspector (N)'); },
 
-            // Axis Lock (While Grabbing)
-            'y': () => { if (mode === 'GRABBING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
+            // Axis Lock (While Grabbing/Scaling)
+            'y': () => { if (mode === 'GRABBING' || mode === 'SCALING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
 
             // Clipboard
             'ctrl+c': () => { copyToClipboard(); logAction('Copy (Ctrl+C)'); },
@@ -367,9 +380,35 @@ export function Body() {
                 setShowInspector(false);
                 setNodes(nds => nds.map(n => ({ ...n, selected: false })));
                 logAction('Cancel/Deselect (Esc)');
-            }
+            },
+
+            // Numeric Inputs for Transform
+            '0': () => handleTypeNum('0'),
+            '1': () => handleTypeNum('1'),
+            '2': () => handleTypeNum('2'),
+            '3': () => handleTypeNum('3'),
+            '4': () => handleTypeNum('4'),
+            '5': () => handleTypeNum('5'),
+            '6': () => handleTypeNum('6'),
+            '7': () => handleTypeNum('7'),
+            '8': () => handleTypeNum('8'),
+            '9': () => handleTypeNum('9'),
+
+            '-': () => handleTypeNum('-'),
+            'backspace': () => {
+                const active = document.activeElement?.tagName;
+                if (active !== 'INPUT' && active !== 'TEXTAREA') {
+                    if (transformBuffer) {
+                        handleTypeNum('Backspace');
+                    } else {
+                        // Standard Backspace Logic (Reset)
+                        resetSelected();
+                        logAction('Reset Selected');
+                    }
+                }
+            },
         },
-        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowInspector, handleAutoLayout]
+        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowInspector, handleAutoLayout, handleTypeNum, transformBuffer]
     });
 
 
@@ -380,15 +419,8 @@ export function Body() {
     }, [handleMouseMove]);
 
     const onMouseDown = useCallback((e: React.MouseEvent) => {
-        // Right Click Cancel Logic
-        if (e.button === 2 && mode !== 'IDLE') {
-            e.preventDefault();
-            e.stopPropagation();
-            cancelGrab();
-            return;
-        }
         handleMouseDown(e.nativeEvent);
-    }, [handleMouseDown, mode, cancelGrab]);
+    }, [handleMouseDown]);
 
     const onMouseUp = useCallback((e: React.MouseEvent) => {
         handleMouseUp(e.nativeEvent);
@@ -396,8 +428,9 @@ export function Body() {
 
     const onClick = useCallback((e: React.MouseEvent) => {
         if (showPalette) setShowPalette(false);
+        if (contextMenu) setContextMenu(null);
         if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) confirmGrab();
-    }, [mode, confirmGrab, showPalette]);
+    }, [mode, confirmGrab, showPalette, contextMenu]);
 
     return (
         <RelinkContext.Provider value={relinkValue}>
@@ -429,36 +462,50 @@ export function Body() {
 
                     snapToGrid={effectiveSnap}
 
-                    onPaneContextMenu={(e) => e.preventDefault()}
+                    onPaneContextMenu={(e) => {
+                        e.preventDefault();
+                        if (mode !== 'IDLE') {
+                            cancelGrab();
+                            return;
+                        }
+                        setContextMenu({
+                            isOpen: true,
+                            x: e.clientX,
+                            y: e.clientY,
+                            type: 'CANVAS'
+                        });
+                    }}
 
-                    onNodeContextMenu={(e) => e.preventDefault()}
+                    onNodeContextMenu={(e, node) => {
+                        e.preventDefault();
+                        if (mode !== 'IDLE') {
+                            cancelGrab();
+                            return;
+                        }
+                        // Auto-select if not selected
+                        if (!node.selected) {
+                            selectNode(node.id, true);
+                        }
+                        setContextMenu({
+                            isOpen: true,
+                            x: e.clientX,
+                            y: e.clientY,
+                            type: 'NODE',
+                            nodeId: node.id
+                        });
+                    }}
                     onEdgeContextMenu={(e) => e.preventDefault()}
 
 
-
-                    onNodeDragStart={(e, node) => {
-                        // 1. Detach Logic (Alt + Drag)
-                        if (e.altKey) {
-                            detachSelected();
-                            logAction('Detach Selected');
-                        }
-
-                        // 2. Selection Polish (Drag unselected -> Select Exclusive)
-                        // If dragging a node that isn't selected, it should become the ONLY selection
-                        // unless Shift/Ctrl is held (standard multi-select behavior)
-                        if (!node.selected && !e.shiftKey && !e.ctrlKey) {
-                            selectNode(node.id, true);
-                            logAction(`Select Node ${node.id}`);
-                        }
-                    }}
-
+                    nodesDraggable={false} // Disable native drag to use our custom system
                     panOnDrag={[1]}
                     selectionOnDrag={true}
-                    panOnScroll={false}
-                    zoomOnScroll={true}
+                    panOnScroll={true}
+                    zoomOnScroll={false}
                     zoomOnPinch={true}
                     zoomOnDoubleClick={false}
                     preventScrolling={true}
+                    panOnScrollSpeed={1}
                     selectionMode={SelectionMode.Partial}
                     connectionLineType={{
                         bezier: ConnectionLineType.Bezier,
@@ -518,6 +565,28 @@ export function Body() {
                         isOpen={showInspector}
                         onClose={() => setShowInspector(false)}
                     />
+
+                    {/* Context Menu */}
+                    {contextMenu && (
+                        <ContextMenu
+                            x={contextMenu.x}
+                            y={contextMenu.y}
+                            onClose={() => setContextMenu(null)}
+                            items={contextMenu.type === 'CANVAS' ? [
+                                { label: 'Command Palette', shortcut: 'Shift+A', action: () => { setPalettePosition({ x: contextMenu.x, y: contextMenu.y }); setShowPalette(true); } },
+                                { label: 'Reset View', action: () => resetView() },
+                                { label: 'Paste', shortcut: 'Ctrl+V', action: () => pasteFromClipboard() },
+                                { label: 'Select All', shortcut: 'A', action: () => { setNodes(nds => nds.map(n => ({ ...n, selected: true }))); } },
+                            ] : [
+                                { label: 'Rename', shortcut: 'Enter', action: () => { /* Trigger Rename? Needs Focus Logic */ logAction('Rename via Menu (Todo)'); } },
+                                { label: 'Duplicate', shortcut: 'Shift+D', action: () => { if (duplicateSelected()) startGrab({ x: contextMenu.x, y: contextMenu.y }); } },
+                                { label: 'Copy', shortcut: 'Ctrl+C', action: () => copyToClipboard() },
+                                { label: 'Colors', action: () => { logAction('Colors via Menu (Todo)'); } },
+                                { label: 'Detach', shortcut: 'Alt+Drag', action: () => detachSelected() },
+                                { label: 'Delete', shortcut: 'Del', danger: true, action: () => deleteSelected() },
+                            ]}
+                        />
+                    )}
                 </ReactFlow>
 
 
@@ -535,32 +604,13 @@ export function Body() {
                     </svg>
                 )}
 
-                {/* Mode Indicator */}
-                {mode === 'GRABBING' && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
-                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                        MOVE
-                    </div>
-                )}
-                {mode === 'SCALING' && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                        SCALE
-                    </div>
-                )}
-                {mode === 'ROTATING' && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                        ROTATE
-                    </div>
-                )}
-                {mode === 'CUTTING' && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-4 py-2 rounded-full shadow-lg border border-zinc-700 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                        CUTTING
-                    </div>
-                )}
+                <StatusBar
+                    mode={mode}
+                    nodeCount={nodes.length}
+                    selectionCount={nodes.filter(n => n.selected).length}
+                    transformValue={transformValue}
+                />
             </div>
-        </RelinkContext.Provider>
+        </RelinkContext.Provider >
     );
 }

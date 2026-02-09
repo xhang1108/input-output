@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useReactFlow, Node, XYPosition, Edge } from '@xyflow/react';
 import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { nanoid } from 'nanoid';
@@ -21,6 +21,10 @@ export function useHand() {
     // Knife Path Data
     const cutPathRef = useRef<XYPosition[]>([]);
     const [cutPath, setCutPath] = useState<XYPosition[]>([]);
+
+    // Numeric Transform Buffer
+    const [transformBuffer, setTransformBuffer] = useState<string>('');
+    const [transformValue, setTransformValue] = useState<string>(''); // Display value (Buffer or Mouse)
 
     // --- Command: Move (Internal Helper) ---
     const applyMove = useCallback((dx: number, dy: number) => {
@@ -57,6 +61,13 @@ export function useHand() {
         const center = centerRef.current;
         if (!center) return;
 
+        // Determine effective scale per axis based on lock
+        let sx = scaleFactor;
+        let sy = scaleFactor;
+
+        if (axisLock === 'X') sy = 1; // Lock Y axis (scale only X)
+        if (axisLock === 'Y') sx = 1; // Lock X axis (scale only Y)
+
         setNodes((nodes) => nodes.map(((node) => {
             const initialPos = initialPositions.current.get(node.id);
             if (!initialPos) return node;
@@ -72,8 +83,8 @@ export function useHand() {
             const dy = initialCenterY - center.y;
 
             // Scale distance from center
-            const newCenterX = center.x + dx * scaleFactor;
-            const newCenterY = center.y + dy * scaleFactor;
+            const newCenterX = center.x + dx * sx;
+            const newCenterY = center.y + dy * sy;
 
             return {
                 ...node,
@@ -83,7 +94,7 @@ export function useHand() {
                 }
             };
         })));
-    }, [setNodes]);
+    }, [setNodes, axisLock]);
 
     const applyRotate = useCallback((angleRad: number) => {
         const center = centerRef.current;
@@ -427,6 +438,8 @@ export function useHand() {
         startMousePos.current = null;
         centerRef.current = null;
         setAxisLock(null);
+        setTransformBuffer('');
+        setTransformValue('');
     }, []);
 
     const cancelGrab = useCallback(() => {
@@ -445,6 +458,8 @@ export function useHand() {
         startMousePos.current = null;
         centerRef.current = null;
         setAxisLock(null);
+        setTransformBuffer('');
+        setTransformValue('');
     }, [setNodes]);
 
     // --- Selection Helpers ---
@@ -461,21 +476,57 @@ export function useHand() {
 
     // --- Event Handlers (to be attached to Body) ---
 
-    // We need to handle Mouse Down for Knife
+    // We need to handle Mouse Down for Knife AND Click-to-Grab
     const handleMouseDown = useCallback((e: MouseEvent) => {
-        // Ignore if clicking on a UI element (Handle, etc) to allow connections
-        if ((e.target as HTMLElement).classList.contains('react-flow__handle')) {
+        const target = e.target as HTMLElement;
+
+        // Ignore handles
+        if (target.classList.contains('react-flow__handle')) {
             return;
         }
 
-        // Ctrl + Right Click (or just Right Click if we disabled context menu?)
-        // User asked for "Ctrl + Right Click".
-        // e.button === 2 is Right Click.
+        // 1. Knife Logic (Ctrl + Right Click)
         if (e.ctrlKey && e.button === 2) {
-            // Store Screen Pos for drawing
             startCut({ x: e.clientX, y: e.clientY });
+            return;
         }
-    }, [startCut, startGrab]);
+
+        // 2. Click-to-Grab Logic (Left Click on Node)
+        if (e.button === 0) {
+            const nodeElement = target.closest('.react-flow__node');
+            if (nodeElement) {
+                const nodeId = nodeElement.getAttribute('data-id');
+                if (nodeId) {
+                    const nodes = getNodes();
+                    const clickedNode = nodes.find(n => n.id === nodeId);
+
+                    if (clickedNode) {
+                        // Selection Logic
+                        // If holding Shift/Ctrl, toggle/add selection
+                        // If not, select exclusive (unless already selected, then keep selection separate from grab init?)
+                        // Standard behavior: 
+                        // - Click unselected -> Select Exclusive
+                        // - Click selected -> Keep selection (for multi-drag)
+
+                        if (!e.shiftKey && !e.ctrlKey) {
+                            if (!clickedNode.selected) {
+                                selectNode(nodeId, true);
+                            }
+                        } else {
+                            // Toggle or Add? Standard is toggle or add.
+                            // React Flow standard: Click selected with shift -> deselect? 
+                            // userHand doesn't have toggle helper yet.
+                            // Let's implement simple Add for now.
+                            selectNode(nodeId, false);
+                        }
+
+                        // Trigger Grab
+                        startGrab({ x: e.clientX, y: e.clientY }, e.altKey);
+                    }
+                }
+            }
+        }
+    }, [startCut, startGrab, getNodes, selectNode]);
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         const currentMousePos = { x: e.clientX, y: e.clientY };
@@ -483,6 +534,12 @@ export function useHand() {
         if (mode === 'CUTTING') {
             updateCut(currentMousePos);
         } else if (mode === 'GRABBING' && startMousePos.current) {
+            // Priority: Transform Buffer > Mouse
+            if (transformBuffer !== '') {
+                // Buffer exists, ignore mouse for positioning (but we might want to update display if we were doing something else? No, buffer is truth)
+                return;
+            };
+
             const zoom = getCurrentZoom();
             let dx = (currentMousePos.x - startMousePos.current.x) / zoom;
             let dy = (currentMousePos.y - startMousePos.current.y) / zoom;
@@ -498,9 +555,26 @@ export function useHand() {
                 dy = Math.round(dy / GRID_SIZE) * GRID_SIZE;
             }
 
+            // Update Display Value
+            // Calculate Euclidean distance or Axis distance?
+            // User likely wants "Distance Moved". 
+            // If Axis Locked, show that axis distance.
+            // If Free, show X or Distance? 
+            // Let's show Distance for now, or tuple if needed.
+            // Actually, Blender shows "D: 1.0000 (1.0000, 0.0000, 0.0000)"
+            // Simple: just show Delta.
+            let displayVal = '';
+            if (axisLock === 'X') displayVal = `${Math.round(dx)}`;
+            else if (axisLock === 'Y') displayVal = `${Math.round(dy)}`;
+            else displayVal = `${Math.round(dx)}, ${Math.round(dy)}`; // Show Tuple
+
+            setTransformValue(displayVal);
             applyMove(dx, dy);
+
+        } else if (mode === 'SCALING' && startMousePos.current && centerRef.current) {
+            if (transformBuffer !== '') return;
+
             const flowMouse = getEventFlowPos(e);
-            if (!startMousePos.current || !centerRef.current) return;
             const flowStartMouse = project({ x: startMousePos.current.x, y: startMousePos.current.y });
             const center = centerRef.current;
 
@@ -508,9 +582,12 @@ export function useHand() {
             const currentDist = Math.hypot(flowMouse.x - center.x, flowMouse.y - center.y);
 
             const scale = startDist > 0 ? currentDist / startDist : 1;
+            setTransformValue(scale.toFixed(2));
             applyScale(scale);
 
         } else if (mode === 'ROTATING' && startMousePos.current && centerRef.current) {
+            if (transformBuffer !== '') return;
+
             const flowMouse = getEventFlowPos(e);
             const flowStartMouse = project({ x: startMousePos.current.x, y: startMousePos.current.y });
             const center = centerRef.current;
@@ -519,9 +596,11 @@ export function useHand() {
             const currentAngle = Math.atan2(flowMouse.y - center.y, flowMouse.x - center.x);
 
             const angleDiff = currentAngle - startAngle;
+            const deg = (angleDiff * 180 / Math.PI) % 360;
+            setTransformValue(deg.toFixed(1) + '°');
             applyRotate(angleDiff);
         }
-    }, [mode, getCurrentZoom, applyMove, applyScale, applyRotate, updateCut, axisLock, getEventFlowPos]);
+    }, [mode, getCurrentZoom, applyMove, applyScale, applyRotate, updateCut, axisLock, getEventFlowPos, transformBuffer]);
 
     const handleMouseUp = useCallback((e: MouseEvent) => {
         if (mode === 'CUTTING') {
@@ -532,9 +611,83 @@ export function useHand() {
     }, [mode, endCut, confirmGrab]);
 
 
+    // --- Numeric Type Handler ---
+    const handleTypeNum = useCallback((char: string) => {
+        if (!['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) return;
+
+        setTransformBuffer(prev => {
+            if (char === 'Backspace') return prev.slice(0, -1);
+            if (char === '.' && prev.includes('.')) return prev;
+            if (char === '-' && prev.includes('-')) return prev.replace('-', '');
+            if (char === '-' && !prev.includes('-')) return '-' + prev;
+            return prev + char;
+        });
+
+        // We set transformValue to buffer content immediately?
+        // Actually, let's derive it in useEffect or just set it here too?
+        // Issue: 'setTransformBuffer' state update is async.
+        // But we can let the useEffect handle it.
+        // Wait, if I type '2', buffer is '2'. useEffect runs.
+        // useEffect should also update 'transformValue' to match Buffer?
+        // Yes.
+    }, [mode]);
+
+    // Apply Transform Buffer Effect
+    // We need a separate effect to apply the buffer when it changes, 
+    // OR we can just call the apply functions here?
+    // Better to apply in useEffect so it updates even if mouse doesn't move.
+
+    // Actually, let's just make handleMouseMove apply it if buffer exists,
+    // AND create a useEffect that triggers when buffer changes.
+    // wait, we can't call applyMove inside useEffect easily if it depends on other refs? 
+    // Actually applyMove only depends on setNodes and initialPositions (ref). Safe.
+
+    // 2026-02-09: We will use a dedicated effect for buffer application
+    useEffect(() => {
+        if (transformBuffer === '' && mode !== 'IDLE') {
+            // Buffer Cleared -> We do NOT reset Position here, 
+            // because mouseMove logic will pick up from where it was? 
+            // Or should we reset to mouse pos?
+            // Currently, handleMouseMove recalculates from startPos using current mouse pos.
+            // So if buffer clears, next mouse move event will "snap" to mouse position.
+            // This is acceptable behavior (Blender does this).
+            return;
+        }
+
+        const val = parseFloat(transformBuffer);
+        if (isNaN(val)) return;
+
+        // Update Display Value to match Buffer
+        setTransformValue(transformBuffer);
+
+        if (mode === 'GRABBING') {
+            // ... existing logic ...
+            let dx = 0;
+            let dy = 0;
+
+            if (axisLock === 'Y') {
+                dy = val; // Pixels
+            } else {
+                dx = val; // Pixels (Default to X if no lock or X lock)
+            }
+            applyMove(dx, dy);
+
+        } else if (mode === 'SCALING') {
+            applyScale(val);
+
+        } else if (mode === 'ROTATING') {
+            const rad = val * (Math.PI / 180);
+            applyRotate(rad);
+        }
+
+    }, [transformBuffer, mode, axisLock, applyMove, applyScale, applyRotate]);
+
+
     return {
         mode,
         cutPath,
+        transformBuffer, // Export Buffer (Deprecate if we switch to value?)
+        transformValue, // Export Value for UI
         startGrab,
         startScale,
         startRotate,
@@ -551,6 +704,7 @@ export function useHand() {
         clearSelection, // New Export
         selectNode, // New Export
         setAxisLock,
+        handleTypeNum, // New Export
         handleMouseMove,
         handleMouseDown,
         handleMouseUp
