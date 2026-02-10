@@ -74,7 +74,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable }: NodeProps) 
     return (
         <div
             className={`
-                relative min-w-[150px] bg-zinc-900 rounded-xl border transition-all duration-200 group
+                relative min-w-[150px] bg-zinc-900 rounded-xl border transition duration-200 group
                 ${selected ? 'border-zinc-400 ring-1 ring-zinc-400 shadow-2xl scale-[1.02]' : 'border-zinc-700 hover:border-zinc-500 shadow-xl'}
             `}
             style={{ minHeight: `${minHeight}px` }}

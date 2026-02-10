@@ -14,6 +14,10 @@ body {
 /* Custom React Flow overrides */
 .react-flow__node {
   cursor: grab;
+  /* Prevent blur/shift during transitions by enforcing GPU layer */
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .react-flow__node:active {

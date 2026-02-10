@@ -26,6 +26,14 @@ export function useHand() {
     const [transformBuffer, setTransformBuffer] = useState<string>('');
     const [transformValue, setTransformValue] = useState<string>(''); // Display value (Buffer or Mouse)
 
+    // Rotation Winding Logic
+    const accumulatedRotation = useRef(0);
+    const lastAngleRef = useRef(0);
+
+    // Drag Initiation Logic
+    const pendingGrabStart = useRef<{ x: number, y: number, altKey: boolean } | null>(null);
+
+
     // --- Command: Move (Internal Helper) ---
     const applyMove = useCallback((dx: number, dy: number) => {
         setNodes((nodes) => nodes.map((node) => {
@@ -427,9 +435,13 @@ export function useHand() {
 
         initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
         centerRef.current = getCentroid(selected);
+        const flowStartMouse = project({ x: mousePos.x, y: mousePos.y });
+        accumulatedRotation.current = 0;
+        lastAngleRef.current = Math.atan2(flowStartMouse.y - centerRef.current.y, flowStartMouse.x - centerRef.current.x);
+
         startMousePos.current = mousePos;
         setMode('ROTATING');
-    }, [getNodes]);
+    }, [getNodes, project]);
 
 
     const confirmGrab = useCallback(() => {
@@ -476,7 +488,9 @@ export function useHand() {
 
     // --- Event Handlers (to be attached to Body) ---
 
-    // We need to handle Mouse Down for Knife AND Click-to-Grab
+
+    // ...
+
     const handleMouseDown = useCallback((e: MouseEvent) => {
         const target = e.target as HTMLElement;
 
@@ -502,34 +516,40 @@ export function useHand() {
 
                     if (clickedNode) {
                         // Selection Logic
-                        // If holding Shift/Ctrl, toggle/add selection
-                        // If not, select exclusive (unless already selected, then keep selection separate from grab init?)
-                        // Standard behavior: 
-                        // - Click unselected -> Select Exclusive
-                        // - Click selected -> Keep selection (for multi-drag)
-
                         if (!e.shiftKey && !e.ctrlKey) {
                             if (!clickedNode.selected) {
                                 selectNode(nodeId, true);
                             }
                         } else {
-                            // Toggle or Add? Standard is toggle or add.
-                            // React Flow standard: Click selected with shift -> deselect? 
-                            // userHand doesn't have toggle helper yet.
-                            // Let's implement simple Add for now.
                             selectNode(nodeId, false);
                         }
 
-                        // Trigger Grab
-                        startGrab({ x: e.clientX, y: e.clientY }, e.altKey);
+                        // Prepare for Grab, but wait for drag threshold
+                        pendingGrabStart.current = { x: e.clientX, y: e.clientY, altKey: e.altKey };
                     }
                 }
             }
         }
-    }, [startCut, startGrab, getNodes, selectNode]);
+    }, [startCut, getNodes, selectNode]);
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         const currentMousePos = { x: e.clientX, y: e.clientY };
+
+        // Check for Drag Initiation (Threshold)
+        if (mode === 'IDLE' && pendingGrabStart.current) {
+            const dist = Math.hypot(
+                currentMousePos.x - pendingGrabStart.current.x,
+                currentMousePos.y - pendingGrabStart.current.y
+            );
+            if (dist > 5) {
+                startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey);
+                pendingGrabStart.current = null;
+                // Note: mode will only update next render, so we won't enter the GRABBING block below immediately.
+                // This prevents a 1-frame jump if the threshold was large? 
+                // With 5px, it's fine. Next frame will handle the delta.
+                return;
+            }
+        }
 
         if (mode === 'CUTTING') {
             updateCut(currentMousePos);
@@ -585,24 +605,37 @@ export function useHand() {
             setTransformValue(scale.toFixed(2));
             applyScale(scale);
 
+
+
         } else if (mode === 'ROTATING' && startMousePos.current && centerRef.current) {
             if (transformBuffer !== '') return;
 
             const flowMouse = getEventFlowPos(e);
-            const flowStartMouse = project({ x: startMousePos.current.x, y: startMousePos.current.y });
+
+            // We don't use flowStartMouse for angle diff anymore, we use frame-to-frame delta
             const center = centerRef.current;
 
-            const startAngle = Math.atan2(flowStartMouse.y - center.y, flowStartMouse.x - center.x);
+            // Current angle from center
             const currentAngle = Math.atan2(flowMouse.y - center.y, flowMouse.x - center.x);
 
-            const angleDiff = currentAngle - startAngle;
-            const deg = (angleDiff * 180 / Math.PI) % 360;
+            // Describe Delta
+            let delta = currentAngle - lastAngleRef.current;
+
+            // Normalize Delta to avoid jumps (-PI to PI)
+            if (delta > Math.PI) delta -= 2 * Math.PI;
+            if (delta < -Math.PI) delta += 2 * Math.PI;
+
+            accumulatedRotation.current += delta;
+            lastAngleRef.current = currentAngle;
+
+            const deg = (accumulatedRotation.current * 180 / Math.PI);
             setTransformValue(deg.toFixed(1) + '°');
-            applyRotate(angleDiff);
+            applyRotate(accumulatedRotation.current);
         }
     }, [mode, getCurrentZoom, applyMove, applyScale, applyRotate, updateCut, axisLock, getEventFlowPos, transformBuffer]);
 
     const handleMouseUp = useCallback((e: MouseEvent) => {
+        pendingGrabStart.current = null;
         if (mode === 'CUTTING') {
             endCut();
         } else if (mode === 'GRABBING') {
