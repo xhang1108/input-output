@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { Edge, Connection, addEdge, useStore, ReactFlowState } from '@xyflow/react';
+import { Edge, Connection, addEdge } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import { RelinkState } from '../components/edges/RelinkLine';
+import { Brain } from '../engine/Brain';
+import { Transaction } from '../engine/types';
 
 type UseRelinkProps = {
     edges: Edge[];
@@ -26,10 +28,7 @@ export function useRelink({
         anchors: []
     });
 
-    // React Flow Store to detect hovered handle during drop
-    const connectionStatus = useStore((s: ReactFlowState) => s.connection.isValid);
-    const hoveredNodeId = useStore((s: ReactFlowState) => s.connection.toNode?.id);
-    const hoveredHandleId = useStore((s: ReactFlowState) => s.connection.toHandle?.id);
+    const removedEdgeIds = useRef<string[]>([]);
 
     // Ref for synchronous access in callbacks
     const relinkStateRef = useRef<RelinkState>(relinkState);
@@ -37,7 +36,15 @@ export function useRelink({
         relinkStateRef.current = relinkState;
     }, [relinkState]);
 
-    const isReconnecting = useRef(false);
+    /** Submit atomic DISCONNECT+CONNECT via Brain BATCH */
+    const submitRelinkBatch = useCallback((newEdges: Edge[]) => {
+        const brain = Brain.getInstance();
+        const txs: Transaction[] = [
+            ...removedEdgeIds.current.map(eid => ({ type: 'DISCONNECT' as const, payload: eid })),
+            ...newEdges.map(e => ({ type: 'CONNECT' as const, payload: e }))
+        ];
+        brain.applyTransaction({ type: 'BATCH', payload: txs });
+    }, []);
 
     const performRelink = useCallback((targetN: string, targetH: string | null) => {
         const state = relinkStateRef.current;
@@ -45,12 +52,7 @@ export function useRelink({
 
         if (!state.active || !anchorNodeId) return;
 
-        // 1. ABSOLUTE GUARD: Final edge cannot connect a node to itself
-        const isSelfLoop = state.targetNodeId === targetN || state.anchors?.some(a => a.nodeId === targetN);
-        if (isSelfLoop) {
-            logAction(`Relink blocked: Attempted self-connection on ${targetN}`);
-            return;
-        }
+        // No manual checks here. We will check in the loop.
 
         const dropSide = { n: targetN, h: targetH };
 
@@ -60,24 +62,62 @@ export function useRelink({
                 ? state.anchors
                 : [{ nodeId: state.targetNodeId!, handleId: state.targetHandleId }];
 
-            const newEdges = anchorsToConnect.map(anchor => ({
-                id: nanoid(),
-                source: dropSide.n!,
-                sourceHandle: dropSide.h,
-                target: anchor.nodeId,
-                targetHandle: anchor.handleId,
-                type: 'magnetic' as const,
-                data: { pathType: edgeType, animate: edgeAnimation }
-            }));
+            // Validate all potential connections individually
+            const validNewEdges = anchorsToConnect
+                .map(anchor => {
+                    // Check against Brain
+                    // Anchor is Input (Target of new edge), DropSide is Output (Source of new edge)
+                    // Edge: Output(DropSide) -> Input(Anchor)
+                    const validation = Brain.getInstance().validateConnection(
+                        dropSide.n!,
+                        dropSide.h,
+                        anchor.nodeId,
+                        anchor.handleId,
+                        edges
+                    );
 
-            setEdges((eds) => [...eds, ...(newEdges as any[])]);
+                    if (!validation.isValid) {
+                        logAction(`Relink Blocked: ${validation.reason}`);
+                        return null;
+                    }
 
-            const detail = newEdges.length > 1
-                ? `${newEdges.length} wires`
+                    return {
+                        id: nanoid(),
+                        source: dropSide.n!,
+                        sourceHandle: dropSide.h,
+                        target: anchor.nodeId,
+                        targetHandle: anchor.handleId,
+                        type: 'magnetic' as const,
+                        data: { pathType: edgeType, animate: edgeAnimation }
+                    };
+                })
+                .filter(Boolean) as Edge[];
+
+            if (validNewEdges.length === 0) return;
+
+            submitRelinkBatch(validNewEdges);
+
+            const detail = validNewEdges.length > 1
+                ? `${validNewEdges.length} wires`
                 : `${dropSide.n}:${dropSide.h} -> ${anchorsToConnect[0].nodeId}:${anchorsToConnect[0].handleId}`;
             logAction(`Relinked: ${detail}`);
         } else {
             // Anchor is Source (Output) -> Moving the Target end -> Should land on a new Target (Input)
+            // Edge: Output(Anchor) -> Input(DropSide)
+
+            const validation = Brain.getInstance().validateConnection(
+                state.targetNodeId!,
+                state.targetHandleId,
+                dropSide.n!,
+                dropSide.h,
+                edges
+            );
+
+            if (!validation.isValid) {
+                logAction(`Relink Blocked: ${validation.reason}`);
+                return;
+            }
+
             const newEdge = {
                 id: nanoid(),
                 source: state.targetNodeId!,
@@ -88,17 +128,16 @@ export function useRelink({
                 data: { pathType: edgeType, animate: edgeAnimation }
             };
 
-            setEdges((eds) => {
-                const filtered = eds.filter(e =>
-                    !(e.target === newEdge.target && e.targetHandle === newEdge.targetHandle)
-                );
-                return addEdge(newEdge as any, filtered);
-            });
+            submitRelinkBatch([newEdge]);
+
             logAction(`Relinked: ${newEdge.source}:${newEdge.sourceHandle} -> ${newEdge.target}:${newEdge.targetHandle}`);
         }
-    }, [edgeType, edgeAnimation, setEdges, logAction]);
+    }, [edgeType, edgeAnimation, setEdges, logAction, edges]);
 
     const resetRelink = useCallback(() => {
+        const brain = Brain.getInstance();
+        brain.isReconnecting = false;
+        removedEdgeIds.current = [];
         const emptyState: RelinkState = {
             active: false,
             targetNodeId: null,
@@ -111,7 +150,7 @@ export function useRelink({
     }, []);
 
     const onRelinkStart = useCallback((event: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
-        if (isReconnecting.current) return;
+        if (relinkStateRef.current.active) return;
 
         const { nodeId, handleId, handleType } = params;
         if (!nodeId || !handleId) return;
@@ -122,6 +161,8 @@ export function useRelink({
         if (handleType === 'source' && isCtrl) {
             const outboundEdges = edges.filter(e => e.source === nodeId && e.sourceHandle === handleId);
             if (outboundEdges.length > 0) {
+                Brain.getInstance().isReconnecting = true;
+                removedEdgeIds.current = outboundEdges.map(e => e.id);
                 const anchors = outboundEdges.map(e => ({ nodeId: e.target, handleId: e.targetHandle || null }));
                 const newState: RelinkState = { active: true, targetNodeId: anchors[0].nodeId, targetHandleId: anchors[0].handleId, type: 'target', anchors: anchors };
                 setRelinkState(newState);
@@ -133,6 +174,8 @@ export function useRelink({
         else if (handleType === 'target') {
             const inboundEdges = edges.filter(e => e.target === nodeId && e.targetHandle === handleId);
             if (inboundEdges.length > 0) {
+                Brain.getInstance().isReconnecting = true;
+                removedEdgeIds.current = inboundEdges.map(e => e.id);
                 const sourceEdge = inboundEdges[0];
                 const newState: RelinkState = { active: true, targetNodeId: sourceEdge.source, targetHandleId: sourceEdge.sourceHandle || null, type: 'source' };
                 setRelinkState(newState);
@@ -147,10 +190,18 @@ export function useRelink({
         const state = relinkStateRef.current;
         if (state && state.active) {
             const { toNode, toHandle, isValid } = connectionState || {};
-            if (toNode && toHandle && (isValid || isValid === null)) {
+            console.log('[Relink] End:', { toNode: toNode?.id, toHandle: toHandle?.id, isValid });
+
+            if (toNode && toHandle) {
                 performRelink(toNode.id, toHandle.id);
             } else {
-                logAction(`Relink canceled`);
+                // Cancelled: Delete the removed edges via Brain
+                const brain = Brain.getInstance();
+                removedEdgeIds.current.forEach(eid => {
+                    brain.applyTransaction({ type: 'DISCONNECT', payload: eid });
+                });
+                logAction(`Relink canceled — wire deleted`);
+                console.log('[Relink] Canceled: Wire deleted');
             }
             resetRelink();
         }
@@ -158,40 +209,37 @@ export function useRelink({
 
     const isValidRelinkConnection = useCallback(
         (connection: Edge | Connection) => {
-            const isInput = (id: string | null) =>
-                !!id && (id.toLowerCase().startsWith('in') || id === 'target' || id.includes('input'));
-
-            const state = relinkStateRef.current;
-
-            if (state.active) {
-                // 1. Self-Loop Guard: Check if the hovered node is ANY of our anchors
-                const isAnchor = (id: string) => state.targetNodeId === id || state.anchors?.some(a => a.nodeId === id);
-                if (isAnchor(connection.source) || isAnchor(connection.target)) {
-                    return false;
-                }
-
-                // 2. Type Mismatch Guard: If both handles are present, they must match types (In-to-In or Out-to-Out)
-                // to preserve the Relink intent. Standard RF rule (In-to-Out) is inverted during Relink drag.
-                if (connection.sourceHandle && connection.targetHandle) {
-                    const sIn = isInput(connection.sourceHandle as string | null);
-                    const tIn = isInput(connection.targetHandle as string | null);
-                    if (sIn !== tIn) return false;
-                }
-
-                return true;
-            }
-
-            // Normal Connection: Source (Out) -> Target (In)
-            if (connection.source === connection.target) return false;
-            return isInput(connection.sourceHandle as string | null) !== isInput(connection.targetHandle as string | null);
+            const validation = Brain.getInstance().validateConnection(
+                connection.source!,
+                connection.sourceHandle,
+                connection.target!,
+                connection.targetHandle,
+                edges
+            );
+            return validation.isValid;
         },
-        []
+        [edges]
     );
 
     const onRelinkConnect = useCallback(
         (params: Connection) => {
             const state = relinkStateRef.current;
             if (state.active) return; // Relink handled in onConnectEnd
+
+            // Final Brain Check (The Firewall)
+            // Even if UI said yes, we double check here before committing to state.
+            const validation = Brain.getInstance().validateConnection(
+                params.source,
+                params.sourceHandle,
+                params.target,
+                params.targetHandle,
+                edges
+            );
+
+            if (!validation.isValid) {
+                logAction(`Blocked: ${validation.reason}`);
+                return;
+            }
 
             setEdges((eds) => {
                 const targetHandle = params.targetHandle;
@@ -204,7 +252,7 @@ export function useRelink({
 
             logAction(`Connect: ${params.source}:${params.sourceHandle} -> ${params.target}:${params.targetHandle}`);
         },
-        [setEdges, logAction]
+        [edges, setEdges, logAction]
     );
 
     return {

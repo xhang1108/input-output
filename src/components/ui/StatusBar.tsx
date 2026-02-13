@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { useAppStore } from '../../store/useStore';
+
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -11,6 +13,8 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ mode, nodeCount, selectionCount, transformValue }: StatusBarProps) {
+    const actionLog = useAppStore(s => s.actionLog);
+
     // Hints Configuration
     const hints: Record<InteractionMode, string[]> = {
         IDLE: ['LMB: Select', 'MMB: Pan', 'Shift+A: Add', 'G: Grab', 'F: Group', 'Shift+D: Duplicate'],

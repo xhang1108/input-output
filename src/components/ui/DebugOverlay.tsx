@@ -1,13 +1,17 @@
 'use client';
 
-import { useStore } from '@xyflow/react';
+import { useStore as useRFStore } from '@xyflow/react';
+import { useAppStore } from '../../store/useStore';
 
-export function DebugOverlay({ mode, actionLog }: { mode: string, actionLog: string[] }) {
+export function DebugOverlay({ mode }: { mode: string }) {
+    const actionLog = useAppStore(s => s.actionLog);
+    const logAction = useAppStore(s => s.logAction);
+
     // Access React Flow internal store for stats
-    const nodeCount = useStore(s => s.nodeLookup.size);
-    const edgeCount = useStore(s => s.edges.length);
-    const transform = useStore(s => s.transform);
-    const selectedNodes = useStore(s => s.nodes.filter(n => n.selected).length);
+    const nodeCount = useRFStore(s => s.nodeLookup.size);
+    const edgeCount = useRFStore(s => s.edges.length);
+    const transform = useRFStore(s => s.transform);
+    const selectedNodes = useRFStore(s => s.nodes.filter(n => n.selected).length);
 
     return (
         <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md border border-zinc-800 text-zinc-400 p-3 rounded-lg text-xs font-mono z-50 shadow-xl pointer-events-none select-none max-h-[80vh] flex flex-col">

@@ -20,9 +20,13 @@ import { RelinkLine, RelinkContext, RelinkState, RelinkAnchor } from './edges/Re
 import '@xyflow/react/dist/style.css';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { nanoid } from 'nanoid';
+import { generateNodeId } from '../utils/idGenerator';
 import { BaseNode } from './nodes/BaseNode';
 import { FrameNode } from './nodes/FrameNode';
+import { InputNode } from './nodes/InputNode';
+import { MathNode } from './nodes/MathNode';
+import { ResultNode } from './nodes/ResultNode';
+import { SliderNode } from './nodes/SliderNode';
 import { MagneticEdge } from './edges/MagneticEdge';
 import { useEar } from '../nerves/useEar';
 import { useHand } from '../nerves/useHand';
@@ -35,12 +39,20 @@ import { InspectorPanel } from './ui/InspectorPanel';
 import { SettingsPanel } from './ui/SettingsPanel'; // Import SettingsPanel
 import { getLayoutedElements } from '../nerves/layoutEngine';
 import { useMemory, initialNodes } from '../engine/useMemory';
+import { useBrainSync } from '../hooks/useBrainSync';
 import { ContextMenu, ContextMenuItem } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
+import { Brain } from '../engine/Brain';
+import { useBrainUpdates } from '../hooks/useBrainUpdates';
+import { useAppStore } from '../store/useStore';
 
 const nodeTypes = {
     baseNode: BaseNode,
     frame: FrameNode,
+    'MA-01': MathNode,
+    'IO-01': InputNode,
+    'IO-02': SliderNode,
+    'IO-11': ResultNode,
 };
 
 const edgeTypes = {
@@ -50,21 +62,25 @@ const edgeTypes = {
 export function Body() {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-    const [showPalette, setShowPalette] = useState(false);
-    const [palettePosition, setPalettePosition] = useState({ x: 0, y: 0 });
-    const [showInspector, setShowInspector] = useState(false);
 
+    // UI Helpers
     const mousePosRef = useRef({ x: 0, y: 0 });
     const [isSnapping, setIsSnapping] = useState(false);
 
-    // Settings States
-    const [manualSnap, setManualSnap] = useState(false);
-    const [showGrid, setShowGrid] = useState(true);
-    const [showDebug, setShowDebug] = useState(true);
-    const [edgeType, setEdgeType] = useState('bezier');
-    const [edgeAnimation, setEdgeAnimation] = useState(true);
-    const [layoutAlgorithm, setLayoutAlgorithm] = useState<any>('layered');
-    const [layoutDirection, setLayoutDirection] = useState<any>('RIGHT');
+    const {
+        showPalette, setShowPalette,
+        palettePosition, setPalettePosition,
+        showInspector, setShowInspector,
+        manualSnap, setManualSnap,
+        showGrid, setShowGrid,
+        showDebug, setShowDebug,
+        edgeType, setEdgeType,
+        edgeAnimation, setEdgeAnimation,
+        layoutAlgorithm, setLayoutAlgorithm,
+        layoutDirection, setLayoutDirection,
+        panOnScroll, setPanOnScroll,
+        actionLog, logAction
+    } = useAppStore();
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState<{
@@ -85,12 +101,8 @@ export function Body() {
     const { project } = useCanvasProjection();
     const { focusOn, resetView, getZoom } = useEye();
 
-    // Action Log State
-    const [actionLog, setActionLog] = useState<string[]>([]);
+    // Action Log is handled by useAppStore
 
-    const logAction = useCallback((action: string) => {
-        setActionLog(prev => [action, ...prev].slice(0, 20));
-    }, []);
 
     // Sync Edge Type for existing edges (Moved here to use logAction)
     useEffect(() => {
@@ -105,40 +117,27 @@ export function Body() {
         logAction(`Edge Type: ${edgeType} | Anim: ${edgeAnimation}`);
     }, [edgeType, edgeAnimation, setEdges, logAction]);
 
+
     // --- Persistence Logic ---
-    const SETTINGS_KEY = 'calctopus-settings-v1';
+    // Settings are handled by Zustand persist middleware.
 
     // Memory (Nodes & Edges Persistence)
     const { clearMemory } = useMemory(nodes, edges, setNodes, setEdges, logAction);
 
-    // Load Settings on Mount
-    useEffect(() => {
-        const stored = localStorage.getItem(SETTINGS_KEY);
-        if (stored) {
-            try {
-                const s = JSON.parse(stored);
-                if (s.manualSnap !== undefined) setManualSnap(s.manualSnap);
-                if (s.showGrid !== undefined) setShowGrid(s.showGrid);
-                if (s.showDebug !== undefined) setShowDebug(s.showDebug);
-                if (s.showInspector !== undefined) setShowInspector(s.showInspector);
-                if (s.edgeType !== undefined) setEdgeType(s.edgeType);
-                if (s.edgeAnimation !== undefined) setEdgeAnimation(s.edgeAnimation);
-                if (s.layoutAlgorithm !== undefined) setLayoutAlgorithm(s.layoutAlgorithm);
-                if (s.layoutDirection !== undefined) setLayoutDirection(s.layoutDirection);
-                logAction('Settings Loaded');
-            } catch (e) {
-                console.error('Failed to load settings:', e);
-            }
-        }
-    }, [logAction]);
+    // Brain Sync (Shadow Mirror)
+    useBrainSync(nodes, edges);
+    // Brain Updates (Reverse Sync: Brain -> UI)
+    useBrainUpdates(setNodes, setEdges);
 
-    // Save Settings on Change
-    useEffect(() => {
-        const settings = { manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation, layoutAlgorithm, layoutDirection };
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    }, [manualSnap, showGrid, showDebug, showInspector, edgeType, edgeAnimation, layoutAlgorithm, layoutDirection]);
 
     // Auto-Load Flow Data on Mount
+
+    // Connect Brain Log to UI Log
+    useEffect(() => {
+        const brain = Brain.getInstance();
+        const cleanup = brain.on('log', (msg: string) => logAction(msg));
+        return cleanup;
+    }, [logAction]);
 
     const handleAutoLayout = useCallback(async () => {
         const selectedNodes = nodes.filter(n => n.selected);
@@ -259,7 +258,7 @@ export function Body() {
         });
 
         const newNode: Node = {
-            id: nanoid(),
+            id: generateNodeId(type),
             type: type || 'baseNode',
             position: flowPos,
             data: {
@@ -361,7 +360,7 @@ export function Body() {
                     logAction('Select All (A)');
                 }
             },
-            'n': (e) => { e.preventDefault(); setShowInspector(prev => !prev); logAction('Toggle Inspector (N)'); },
+            'n': (e) => { e.preventDefault(); setShowInspector((prev: boolean) => !prev); logAction('Toggle Inspector (N)'); },
 
             // Axis Lock (While Grabbing/Scaling)
             'y': () => { if (mode === 'GRABBING' || mode === 'SCALING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
@@ -451,7 +450,8 @@ export function Body() {
                     onConnect={onRelinkConnect}
                     onConnectStart={onRelinkStart}
                     onConnectEnd={onRelinkEnd}
-                    isValidConnection={isValidRelinkConnection}
+                    // isValidConnection removed to allow full Code Judgment (Brain)
+
                     nodeTypes={nodeTypes}
                     fitView
                     colorMode="dark"
@@ -500,8 +500,8 @@ export function Body() {
                     nodesDraggable={false} // Disable native drag to use our custom system
                     panOnDrag={[1]}
                     selectionOnDrag={true}
-                    panOnScroll={true}
-                    zoomOnScroll={false}
+                    panOnScroll={panOnScroll}
+                    zoomOnScroll={!panOnScroll}
                     zoomOnPinch={true}
                     zoomOnDoubleClick={false}
                     preventScrolling={true}
@@ -512,7 +512,7 @@ export function Body() {
                         straight: ConnectionLineType.Straight,
                         step: ConnectionLineType.Step,
                         smoothstep: ConnectionLineType.SmoothStep,
-                    }[edgeType] || ConnectionLineType.Bezier}
+                    }[edgeType as 'bezier' | 'straight' | 'step' | 'smoothstep'] || ConnectionLineType.Bezier}
                     connectionLineStyle={{ stroke: '#71717a', strokeWidth: 2 }}
                     edgeTypes={edgeTypes}
                     defaultEdgeOptions={{
@@ -528,7 +528,7 @@ export function Body() {
                     maxZoom={4}
                 >
                     {showGrid && <Background color="#555" gap={20} size={1} />}
-                    {showDebug && <DebugOverlay mode={mode} actionLog={actionLog} />}
+                    {showDebug && <DebugOverlay mode={mode} />}
 
                     <SettingsPanel
                         isSnapping={manualSnap}
@@ -547,6 +547,8 @@ export function Body() {
                         setLayoutDirection={setLayoutDirection}
                         edgeAnimation={edgeAnimation}
                         setEdgeAnimation={setEdgeAnimation}
+                        panOnScroll={panOnScroll}
+                        setPanOnScroll={setPanOnScroll}
                         onReset={clearMemory}
                     />
 
@@ -576,7 +578,7 @@ export function Body() {
                                 { label: 'Command Palette', shortcut: 'Shift+A', action: () => { setPalettePosition({ x: contextMenu.x, y: contextMenu.y }); setShowPalette(true); } },
                                 { label: 'Reset View', action: () => resetView() },
                                 { label: 'Paste', shortcut: 'Ctrl+V', action: () => pasteFromClipboard() },
-                                { label: 'Select All', shortcut: 'A', action: () => { setNodes(nds => nds.map(n => ({ ...n, selected: true }))); } },
+                                { label: 'Select All', shortcut: 'A', action: () => { setNodes((nds: Node[]) => nds.map(n => ({ ...n, selected: true }))); } },
                             ] : [
                                 { label: 'Rename', shortcut: 'Enter', action: () => { /* Trigger Rename? Needs Focus Logic */ logAction('Rename via Menu (Todo)'); } },
                                 { label: 'Duplicate', shortcut: 'Shift+D', action: () => { if (duplicateSelected()) startGrab({ x: contextMenu.x, y: contextMenu.y }); } },

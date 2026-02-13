@@ -1,41 +1,24 @@
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
 
-
 @custom-variant dark (&:is(.dark *));
 
+/* ═══════════════════════════════════════════════════════
+   Calctopus Design System v1.0
+   ═══════════════════════════════════════════════════════ */
+
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom React Flow overrides */
-.react-flow__node {
-  cursor: grab;
-  /* Prevent blur/shift during transitions by enforcing GPU layer */
-  backface-visibility: hidden;
-  transform: translateZ(0);
-  will-change: transform;
-}
-
-.react-flow__node:active {
-  cursor: grabbing;
-}
-
-.nodrag {
-  cursor: auto;
-}
-
-.react-flow__handle {
-  cursor: crosshair;
-}
-
-.react-flow__nodesselection-rect {
-  display: none;
-}
-
+/* ───────────────────────────────────────
+   § Design Tokens
+   ─────────────────────────────────────── */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -44,16 +27,34 @@ body {
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
-  /* Data Type Tokens */
-  --color-scalar: #f59e0b;
-  --color-matrix: #3b82f6;
-  --color-soul: #a855f7;
-  
-  /* System Colors */
+
+  /* ── Data Type Color Tokens (§0.1.2) ── */
+  --color-scalar:  hsl(38, 92%, 55%);   /* Amber Gold  – Number/Float  */
+  --color-matrix:  hsl(217, 91%, 60%);  /* Electric Blue – Matrix/Array */
+  --color-soul:    hsl(270, 60%, 62%);  /* Violet       – AST/Symbol   */
+  --color-vector:  hsl(160, 84%, 45%);  /* Emerald      – Vector       */
+  --color-string:  hsl(340, 75%, 60%);  /* Rose         – String       */
+  --color-boolean: hsl(30, 100%, 55%);  /* Orange       – Boolean      */
+  --color-unit:    hsl(195, 85%, 48%);  /* Cyan         – Unit/SI      */
+  --color-error:   hsl(0, 72%, 55%);    /* Red          – Error State  */
+
+  /* ── Node Category Tokens ── */
+  --color-input:   hsl(38, 92%, 55%);   /* Match scalar input */
+  --color-output:  hsl(160, 84%, 45%);  /* Match vector/result */
+  --color-math:    hsl(217, 91%, 60%);  /* Match matrix/compute */
+  --color-logic:   hsl(270, 60%, 62%);  /* Match soul/logic */
+
+  /* ── Surface Tokens (Node Chrome) ── */
+  --node-bg:          hsl(240, 6%, 10%);
+  --node-bg-header:   hsl(240, 5%, 14%);
+  --node-border:      hsl(240, 4%, 22%);
+  --node-border-hover: hsl(240, 4%, 34%);
+  --node-border-selected: hsl(0, 0%, 70%);
+
+  /* System */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
 }
@@ -79,33 +80,250 @@ body {
   }
 }
 
-/* Animations */
-@keyframes breathing {
-  0% { box-shadow: 0 0 0 0px rgba(255, 255, 255, 0.1); }
-  50% { box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.2); }
-  100% { box-shadow: 0 0 0 0px rgba(255, 255, 255, 0.1); }
+/* ───────────────────────────────────────
+   § Node Performance & Base Styles
+   ─────────────────────────────────────── */
+
+.react-flow__node {
+  cursor: grab;
+  /* GPU compositing hints - selective, not blanket will-change */
+  backface-visibility: hidden;
+  /* Layout isolation: prevents node internals from triggering parent reflow */
+  contain: layout style;
 }
 
-.animate-breathing {
-  animation: breathing 3s infinite ease-in-out;
+.react-flow__node:active {
+  cursor: grabbing;
 }
 
-/* Node Depth Shadow */
-.node-depth-shadow {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+/* Only promote to compositor layer during active drag (saves GPU memory at rest) */
+.react-flow__node.dragging {
+  will-change: transform;
+  z-index: 10 !important;
 }
-@keyframes flow { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } } .animate-flow { animation: flow 0.5s linear infinite; }
 
-/* Magnet Effect Styles */
-.react-flow__handle-connecting {
+.nodrag {
+  cursor: auto;
+}
+
+.react-flow__handle {
   cursor: crosshair;
 }
 
-.react-flow__handle-valid {
-  cursor: copy;
+.react-flow__nodesselection-rect {
+  display: none;
 }
+
+/* ───────────────────────────────────────
+   § Node Depth Shadows (3 Levels)
+   ─────────────────────────────────────── */
+
+/* Level 1: Resting state */
+.node-shadow-1 {
+  box-shadow:
+    0 2px 8px -2px rgba(0, 0, 0, 0.4),
+    0 1px 2px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Level 2: Hover / Focus */
+.node-shadow-2 {
+  box-shadow:
+    0 8px 24px -4px rgba(0, 0, 0, 0.5),
+    0 4px 8px -2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+/* Level 3: Selected / Lifted */
+.node-shadow-3 {
+  box-shadow:
+    0 16px 40px -8px rgba(0, 0, 0, 0.6),
+    0 8px 16px -4px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Legacy alias (backward compat) */
+.node-depth-shadow {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.5),
+    0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* ───────────────────────────────────────
+   § Animations
+   ─────────────────────────────────────── */
+
+/* Breathing Glow (§0.1.2) - Subtle pulsing aura for live nodes */
+@keyframes breathing {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0px rgba(255, 255, 255, 0.0),
+      0 2px 8px -2px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 12px 2px rgba(255, 255, 255, 0.08),
+      0 2px 8px -2px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.animate-breathing {
+  animation: breathing 4s infinite ease-in-out;
+}
+
+/* Data-typed breathing: scalar gold pulse */
+@keyframes breathing-scalar {
+  0%, 100% { box-shadow: 0 0 0 0 hsla(38, 92%, 55%, 0); }
+  50%      { box-shadow: 0 0 16px 3px hsla(38, 92%, 55%, 0.15); }
+}
+.animate-breathing-scalar {
+  animation: breathing-scalar 3s infinite ease-in-out;
+}
+
+/* Data-typed breathing: output emerald pulse */
+@keyframes breathing-output {
+  0%, 100% { box-shadow: 0 0 0 0 hsla(160, 84%, 45%, 0); }
+  50%      { box-shadow: 0 0 16px 3px hsla(160, 84%, 45%, 0.15); }
+}
+.animate-breathing-output {
+  animation: breathing-output 3s infinite ease-in-out;
+}
+
+/* Edge flow animation (energy particles) */
+@keyframes flow {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0; }
+}
+.animate-flow {
+  animation: flow 0.5s linear infinite;
+}
+
+/* Selected ring pulse */
+@keyframes ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.15); }
+  50%      { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08); }
+}
+.animate-ring-pulse {
+  animation: ring-pulse 2s infinite ease-in-out;
+}
+
+/* ───────────────────────────────────────
+   § Handle Styles (Pure CSS - No JS subscriptions)
+   ─────────────────────────────────────── */
+
+/* Handle glow on hover - pure CSS, no React re-render.
+   IMPORTANT: Do NOT use transform here — React Flow positions handles
+   with transform: translate(-50%, -50%). Overriding it causes displacement. */
+/* Handle hover: subtle scale using standalone `scale` property
+   (does NOT override React Flow's transform: translate(-50%, -50%)) */
+.react-flow__handle:hover {
+  scale: 1.15;
+  transform-origin: center center;
+}
+
+
+/* During active connection (React Flow v12 class names) */
+.react-flow__handle.connectingfrom {
+  scale: 1.15;
+  transform-origin: center center;
+}
+
+.react-flow__handle.connectingto {
+  scale: 1.15;
+  transform-origin: center center;
+  filter: brightness(1.3);
+}
+
+.react-flow__handle.valid {
+  scale: 1.15;
+  transform-origin: center center;
+  filter: brightness(1.5) drop-shadow(0 0 8px currentColor);
+  box-shadow: 0 0 12px 2px currentColor;
+}
+
+/* ───────────────────────────────────────
+   § Custom Slider (Range Input)
+   ─────────────────────────────────────── */
+
+/* Webkit (Chrome, Safari, Edge) */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: hsl(240, 5%, 18%);
+  border: 1px solid hsl(240, 4%, 25%);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: hsl(195, 85%, 48%);
+  border: 2px solid hsl(240, 6%, 10%);
+  margin-top: -5px;
+  cursor: grab;
+  box-shadow: 0 0 6px hsla(195, 85%, 48%, 0.4);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 10px hsla(195, 85%, 48%, 0.6);
+  transform: scale(1.15);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  box-shadow: 0 0 14px hsla(195, 85%, 48%, 0.8);
+  transform: scale(1.1);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: hsl(240, 5%, 18%);
+  border: 1px solid hsl(240, 4%, 25%);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: hsl(195, 85%, 48%);
+  border: 2px solid hsl(240, 6%, 10%);
+  cursor: grab;
+  box-shadow: 0 0 6px hsla(195, 85%, 48%, 0.4);
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  box-shadow: 0 0 10px hsla(195, 85%, 48%, 0.6);
+}
+
+/* ───────────────────────────────────────
+   § Edge & Connection Styles
+   ─────────────────────────────────────── */
 
 .edge-unplugged {
   opacity: 0.1 !important;
   pointer-events: none !important;
+}
+
+/* ───────────────────────────────────────
+   § Utility Animations
+   ─────────────────────────────────────── */
+
+/* Smooth fade in for spawned nodes */
+@keyframes node-spawn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-node-spawn {
+  animation: node-spawn 0.2s ease-out;
 }

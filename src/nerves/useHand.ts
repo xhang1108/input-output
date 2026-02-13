@@ -1,7 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useReactFlow, Node, XYPosition, Edge } from '@xyflow/react';
 import { useCanvasProjection } from '../hooks/useCanvasProjection';
-import { nanoid } from 'nanoid';
+import { generateNodeId } from '../utils/idGenerator';
+import { Brain } from '../engine/Brain';
+import { Transaction } from '../engine/types';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -145,7 +147,7 @@ export function useHand() {
         const idMap = new Map<string, string>();
 
         const newNodes = nodesToClone.map(node => {
-            const newId = nanoid();
+            const newId = generateNodeId(node.type || 'baseNode');
             idMap.set(node.id, newId);
             return {
                 ...node,
@@ -263,7 +265,7 @@ export function useHand() {
         const width = maxX - minX;
         const height = maxY - minY;
 
-        const frameId = nanoid();
+        const frameId = generateNodeId('frame');
         const frameNode: Node = {
             id: frameId,
             type: 'frame',
@@ -445,6 +447,41 @@ export function useHand() {
 
 
     const confirmGrab = useCallback(() => {
+        // Record History (Phase 1.4)
+        const nodes = getNodes();
+        const txs: Transaction[] = [];
+
+        initialPositions.current.forEach((initPos, id) => {
+            const node = nodes.find(n => n.id === id);
+            if (node) {
+                // Check for actual movement
+                const dx = node.position.x - initPos.x;
+                const dy = node.position.y - initPos.y;
+                if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                    txs.push({
+                        type: 'MOVE_NODE',
+                        payload: {
+                            id: node.id,
+                            position: { ...node.position },
+                            oldPosition: { ...initPos }
+                        }
+                    });
+                }
+            }
+        });
+
+        if (txs.length > 0) {
+            const brain = Brain.getInstance();
+            if (txs.length === 1) {
+                brain.applyTransaction(txs[0]);
+            } else {
+                brain.applyTransaction({
+                    type: 'BATCH',
+                    payload: txs
+                });
+            }
+        }
+
         setMode('IDLE');
         initialPositions.current.clear();
         startMousePos.current = null;
@@ -452,7 +489,7 @@ export function useHand() {
         setAxisLock(null);
         setTransformBuffer('');
         setTransformValue('');
-    }, []);
+    }, [getNodes]);
 
     const cancelGrab = useCallback(() => {
         // Create a snapshot because setNodes callback is async and we clear the ref below

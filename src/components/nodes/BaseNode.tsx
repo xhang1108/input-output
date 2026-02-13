@@ -21,7 +21,7 @@ const DEFAULT_HANDLES: HandleConfig[] = [
     { id: 'in-b', type: 'target', position: Position.Left, variant: 'single' },
 ];
 
-export const BaseNode = memo(({ id, data, selected, isConnectable }: NodeProps) => {
+export const BaseNode = memo(({ id, data, selected, isConnectable, children }: NodeProps & { children?: React.ReactNode }) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [title, setTitle] = useState((data.label as string) || 'Node');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -74,14 +74,17 @@ export const BaseNode = memo(({ id, data, selected, isConnectable }: NodeProps) 
     return (
         <div
             className={`
-                relative min-w-[150px] bg-zinc-900 rounded-xl border transition duration-200 group
-                ${selected ? 'border-zinc-400 ring-1 ring-zinc-400 shadow-2xl scale-[1.02]' : 'border-zinc-700 hover:border-zinc-500 shadow-xl'}
+                relative min-w-[150px] rounded-xl border transition-all duration-200 group
+                ${selected
+                    ? 'border-zinc-400 node-shadow-3 animate-ring-pulse scale-[1.02]'
+                    : 'border-zinc-700 hover:border-zinc-500 node-shadow-1 hover:node-shadow-2'}
             `}
-            style={{ minHeight: `${minHeight}px` }}
+            style={{ minHeight: `${minHeight}px`, background: 'var(--node-bg)' }}
         >
             {/* Header */}
             <div
-                className="px-3 py-2 border-b border-zinc-800 bg-zinc-800/50 rounded-t-xl flex items-center justify-between"
+                className="px-3 py-2 border-b border-zinc-800/60 rounded-t-xl flex items-center justify-between"
+                style={{ background: 'var(--node-bg-header)' }}
                 onDoubleClick={handleRename}
             >
                 {isRenaming ? (
@@ -99,14 +102,16 @@ export const BaseNode = memo(({ id, data, selected, isConnectable }: NodeProps) 
 
                 {/* Visual Hint for Editable */}
                 {!isRenaming && (
-                    <Pencil className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <Pencil className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 )}
             </div>
 
-            {/* Content Body Placeholder */}
+            {/* Content Body */}
             <div className="p-3">
-                {/* This would be where specific node content goes */}
-                <div className="text-[10px] text-zinc-500 font-mono">ID: {id}</div>
+                {/* Render children (custom UI) or fallback to ID */}
+                {children ? children : (
+                    <div className="text-[10px] text-zinc-500 font-mono">ID: {id}</div>
+                )}
             </div>
 
             {/* Dynamic Input Handles */}
@@ -120,13 +125,16 @@ export const BaseNode = memo(({ id, data, selected, isConnectable }: NodeProps) 
                         className={`
                             border-zinc-900! z-50 pointer-events-auto origin-center
                             ${h.variant === 'capsule'
-                                ? 'bg-purple-500! w-3! h-6! rounded-full!'
-                                : 'bg-blue-500! w-3! h-3!'}
-                            ${h.id === 'in-b' ? 'bg-cyan-500!' : ''} 
+                                ? 'w-3! h-6! rounded-full!'
+                                : 'w-3! h-3!'}
                         `}
-                        // Note: Tailwind arbitrary values in className don't support dynamic ${} well for layout in some internal tools, 
-                        // but hit testing relies on the component. 
-                        // We use inline style for robust layout engine.
+                        color={
+                            h.variant === 'capsule'
+                                ? 'var(--color-soul)'
+                                : h.id === 'in-b'
+                                    ? 'var(--color-unit)'
+                                    : 'var(--color-matrix)'
+                        }
                         style={{ top: `${h.top}px` }}
                         isConnectable={isConnectable}
                     />
@@ -139,7 +147,8 @@ export const BaseNode = memo(({ id, data, selected, isConnectable }: NodeProps) 
                 position={Position.Right}
                 id="out"
                 nodeId={id}
-                className="bg-emerald-500! w-3! h-3! border-zinc-900! z-50 origin-center"
+                className="w-3! h-3! border-zinc-900! z-50 origin-center"
+                color="var(--color-vector)"
                 isConnectable={isConnectable}
             />
         </div>

@@ -1,7 +1,8 @@
 'use client';
 
-import { Settings, Check, Grid, Magnet, Bug, PanelRight } from 'lucide-react';
+import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse } from 'lucide-react';
 import { useState } from 'react';
+import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
 
 interface SettingsPanelProps {
     isSnapping: boolean;
@@ -14,12 +15,14 @@ interface SettingsPanelProps {
     setShowInspector: (visible: boolean) => void;
     edgeType: string;
     setEdgeType: (type: string) => void;
-    layoutAlgorithm: string;
-    setLayoutAlgorithm: (type: string) => void;
-    layoutDirection: string;
-    setLayoutDirection: (dir: string) => void;
+    layoutAlgorithm: LayoutAlgorithm;
+    setLayoutAlgorithm: (type: LayoutAlgorithm) => void;
+    layoutDirection: LayoutDirection;
+    setLayoutDirection: (dir: LayoutDirection) => void;
     edgeAnimation: boolean;
     setEdgeAnimation: (enabled: boolean) => void;
+    panOnScroll: boolean;
+    setPanOnScroll: (enabled: boolean) => void;
     onReset: () => void;
 }
 
@@ -32,6 +35,7 @@ export function SettingsPanel({
     layoutAlgorithm, setLayoutAlgorithm,
     layoutDirection, setLayoutDirection,
     edgeAnimation, setEdgeAnimation,
+    panOnScroll, setPanOnScroll,
     onReset
 }: SettingsPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -101,7 +105,7 @@ export function SettingsPanel({
 
                         {/* Algorithm Selector */}
                         <div className="grid grid-cols-2 gap-1.5 mb-2">
-                            {['layered', 'force', 'tree', 'radial'].map(algo => (
+                            {(['layered', 'force', 'tree', 'radial'] as LayoutAlgorithm[]).map(algo => (
                                 <button
                                     key={algo}
                                     onClick={() => setLayoutAlgorithm(algo)}
@@ -119,7 +123,7 @@ export function SettingsPanel({
 
                         {/* Direction Selector (Only for Layered and Tree) */}
                         <div className="flex gap-1">
-                            {['RIGHT', 'DOWN'].map(dir => (
+                            {(['RIGHT', 'DOWN'] as LayoutDirection[]).map(dir => (
                                 <button
                                     key={dir}
                                     onClick={() => setLayoutDirection(dir)}
@@ -147,6 +151,14 @@ export function SettingsPanel({
                         icon={<span className="text-amber-400 font-bold">~</span>}
                         active={edgeAnimation}
                         onClick={() => setEdgeAnimation(!edgeAnimation)}
+                    />
+
+                    {/* Scroll to Pan */}
+                    <ToggleRow
+                        label="Scroll to Pan"
+                        icon={<Mouse className="w-4 h-4" />}
+                        active={panOnScroll}
+                        onClick={() => setPanOnScroll(!panOnScroll)}
                     />
 
                     {/* Inspector */}
