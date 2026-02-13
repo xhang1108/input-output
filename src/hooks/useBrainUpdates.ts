@@ -1,7 +1,8 @@
-
 import { useEffect } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
+import { NodePayload } from '../types/payload';
+import { PayloadUtils } from '../utils/PayloadUtils';
 
 /**
  * useBrainUpdates

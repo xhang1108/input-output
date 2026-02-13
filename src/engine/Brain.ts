@@ -2,6 +2,9 @@
 import { Edge, Node } from '@xyflow/react';
 import { GraphState, ComputationMode, NodeLogic, Transaction } from './types';
 import { HistoryManager } from './HistoryManager';
+import { NodePayload, DataType } from '../types/payload';
+import { PayloadUtils } from '../utils/PayloadUtils';
+import { NodeRegistry } from './NodeRegistry'; // Static Import
 
 export class Brain {
     private static instance: Brain;
@@ -33,7 +36,6 @@ export class Brain {
             this.listeners.set(eventType, new Set());
         }
         this.listeners.get(eventType)?.add(callback);
-        console.log(`[Brain] Listener added for ${eventType}. Total: ${this.listeners.get(eventType)?.size}`);
 
         // Return cleanup function
         return () => this.off(eventType, callback);
@@ -49,14 +51,8 @@ export class Brain {
     }
 
     private log(msg: string) {
-        // Emit log event instead of direct calling
         this.emit('log', msg);
     }
-
-    // Deprecated: use on('modeChanged', ...)
-    // Keeping for temporary compat if needed, but better to remove to force refactor
-    // public subscribe(...) 
-
 
     // --- State Accessors ---
 
@@ -96,14 +92,10 @@ export class Brain {
         while (queue.length > 0) {
             const currentId = queue.shift()!;
 
-            // Should we mark startNode dirty? 
-            // If it's an INPUT node receiving a value, it's NOT dirty (it has the value).
-            // If it's a Logic node, it IS dirty.
             if (currentId !== startNodeId) {
                 const node = this.state.nodes.get(currentId);
                 if (node) {
                     node.isDirty = true;
-                    // Optional: emit event for UI debug
                 }
             }
 
@@ -124,67 +116,53 @@ export class Brain {
     }
 
     // 2. Pull Evaluation (The Calculation)
-    public getValue(nodeId: string): any {
+    // Phase 2.1: Updated to return NodePayload
+    public getValue(nodeId: string): NodePayload {
         const node = this.state.nodes.get(nodeId);
-        if (!node) return 0;
+        if (!node) return PayloadUtils.createError('Node not found');
 
-        // If clean, return cache
+        // If clean, return cache (NodeLogic.value is now NodePayload)
         if (!node.isDirty) {
             return node.value;
         }
 
         // If dirty, calculate!
         const inputs = this.reverseAdjacency.get(nodeId) || [];
-        const inputValues: Record<string, any> = {};
+        const inputPayloads: Record<string, NodePayload> = {};
 
         for (const input of inputs) {
-            const val = this.getValue(input.nodeId);
+            const payload = this.getValue(input.nodeId);
+
+            // Phase 2.1: Error Propagation (Railroad)
+            if (PayloadUtils.isType(payload, DataType.Error)) {
+                // If any input is error, propagate it (unless node handles errors?)
+                // For now, propagate.
+                // We could potentially just pass it to computeNode and let logic decide.
+                // But fast-fail is better for most nodes.
+                // inputPayloads[input.targetHandle!] = payload;
+            }
+
             if (input.targetHandle) {
-                inputValues[input.targetHandle] = val;
+                inputPayloads[input.targetHandle] = payload;
             }
         }
 
         // Compute
-        const result = this.computeNode(node, inputValues);
+        const resultPayload = this.computeNode(node, inputPayloads);
 
         // Update & Clean
-        node.value = result;
+        node.value = resultPayload;
         node.isDirty = false;
 
-        return result;
+        return resultPayload;
     }
 
     /**
      * Recalculates all dirty nodes in the graph.
-     * Use topological sort or simple iteration?
-     * Since getValue is recursive/memoized (Pull), we just need to trigger it on all nodes?
-     * Actually, if we just call getValue on all nodes, it works.
-     * But better: call getValue on nodes that are dirty?
-     * Yes.
      */
-    private async recalculateDirty(): Promise<any[]> {
-        const patches: any[] = [];
+    private async recalculateDirty(): Promise<{ id: string, value: NodePayload }[]> {
+        const patches: { id: string, value: NodePayload }[] = [];
 
-        // We iterate specifically over dirty nodes? 
-        // Or just all nodes?
-        // If we iterate all nodes and call getValue, it resolves via recursion.
-        // But we want to know which ones *actually* updated to send patches.
-
-        // Strategy:
-        // 1. Snapshot dirty state? No, just iterate.
-        // 2. For each node, if dirty:
-        //    a. Get old value (if we tracked it) -> Actually we don't store old value strictly, just current.
-        //    b. Call getValue() -> updates node.value
-        //    c. Add { id, value } to patches.
-
-        // Issue: recursing calls getValue() on inputs first. 
-        // Those inputs might be dirty too. They get updated & cleaned.
-        // When we later iterate to that input node, it is now CLEAN.
-        // So we won't add it to patches if we check `isDirty` inside the loop *after* it was cleaned by a child?
-        // NO.
-
-        // Correct Approach:
-        // Identify ALL currently dirty nodes into a set.
         const dirtyNodeIds = Array.from(this.state.nodes.values())
             .filter(n => n.isDirty)
             .map(n => n.id);
@@ -193,32 +171,28 @@ export class Brain {
             const node = this.state.nodes.get(id);
             if (!node) continue;
 
-            // If it's already clean (because a downstream node pulled it), we still want to report its new value?
-            // Yes, because UI needs to know it changed.
-            // But if it was clean *before* we started? No.
-            // It WAS dirty at start of pulse.
+            // Trigger Pull
+            const newPayload = this.getValue(id);
 
-            const newValue = this.getValue(id); // This might trigger computation if still dirty.
-
-            // We should ideally check if value DIFFERENT from pre-computation?
-            // For now, assume if it was dirty, we send update.
             patches.push({
                 id: id,
-                value: newValue
+                value: newPayload
             });
         }
 
         return patches;
     }
 
-    // 3. Primitve Node Registry (Placeholder for Phase 2)
-    private computeNode(node: NodeLogic, inputs: Record<string, any>): any {
-        // Dynamic import to avoid circular dependency issues during this phase
-        // in a real setup we'd import at top, but NodeRegistry might need types from here?
-        // Actually types are in types.ts, so it should be fine.
-        // But for safety in this tool execution:
-        const { NodeRegistry } = require('./NodeRegistry');
-        return NodeRegistry.evaluate(node, inputs);
+    // 3. Primitve Node Registry
+    private computeNode(node: NodeLogic, inputs: Record<string, NodePayload>): NodePayload {
+        // Use Registry for evaluation
+        // This decouples specific node logic from the Brain
+        try {
+            return NodeRegistry.evaluate(node, inputs);
+        } catch (error) {
+            console.error(`Error computing node ${node.id}:`, error);
+            return PayloadUtils.createError('Computation Failed');
+        }
     }
 
     public getEdges(): Edge[] {
@@ -239,11 +213,10 @@ export class Brain {
     public isReconnecting = false;
 
     public moveNode(id: string, position: { x: number; y: number }, oldPosition?: { x: number; y: number }) {
-        // Optimization: Check if position actually changed?
-        // The UI might send same position on click-release.
         const node = this.state.nodes.get(id);
+        // Optimization: Ignore micro-moves
         if (node && node.position && Math.abs(node.position.x - position.x) < 1 && Math.abs(node.position.y - position.y) < 1) {
-            return; // Ignore micro-moves
+            return;
         }
 
         this.applyTransaction({
@@ -260,9 +233,7 @@ export class Brain {
         const entry = this.history.undo();
         if (entry) {
             this.log(`Undoing: ${entry.undo.type}`);
-            // Apply the UNDO transaction, but DO NOT record it in history again!
             this.applyTransaction(entry.undo, false, true);
-            // Force Reflow (Topology Change)
             this.emit('graphChanged', null);
         }
     }
@@ -271,9 +242,7 @@ export class Brain {
         const entry = this.history.redo();
         if (entry) {
             this.log(`Redoing: ${entry.do.type}`);
-            // Apply the DO transaction without recording (already in history)
             this.applyTransaction(entry.do, false, true);
-            // Force Reflow (Topology Change)
             this.emit('graphChanged', null);
         }
     }
@@ -281,7 +250,6 @@ export class Brain {
     // --- Transaction Handling ---
 
     public applyTransaction(tx: Transaction, record: boolean = true, silent: boolean = false): void {
-        // Record History (if enabled)
         if (record) {
             const inverseTx = this.createInverseTransaction(tx);
             if (inverseTx) {
@@ -299,12 +267,15 @@ export class Brain {
 
             case 'ADD_NODE':
                 // Payload: { id, initialValue, type, data }
+                // Phase 2.1: Ensure initialValue is wrapped
+                const initialPayload = PayloadUtils.wrap(tx.payload.initialValue);
+
                 const newNode: NodeLogic = {
                     id: tx.payload.id,
                     type: tx.payload.type || 'baseNode',
-                    value: tx.payload.initialValue,
+                    value: initialPayload,
                     data: tx.payload.data || {},
-                    position: tx.payload.position, // Phase 1.4: Validation of position
+                    position: tx.payload.position,
                     isDirty: true
                 };
                 this.state.nodes.set(tx.payload.id, newNode);
@@ -316,8 +287,6 @@ export class Brain {
                 const node = this.state.nodes.get(tx.payload.id);
                 if (node) {
                     node.position = tx.payload.position;
-                    // Position change doesn't strictly make it dirty for calculation, 
-                    // unless we have spatial nodes. For now, just update state.
                 }
                 break;
             }
@@ -334,14 +303,14 @@ export class Brain {
 
                 if (validation.isValid) {
                     this.state.edges.push(newEdge);
-
-                    // Update Indices
                     this.updateAdjacency(newEdge, 'ADD');
-                    // Mark Target Dirty
                     this.propagateDirty(newEdge.target);
 
                     this.log(`Connected ${newEdge.source} -> ${newEdge.target}`);
-                    if (!silent) this.emit('graphChanged', null);
+                    if (!silent) {
+                        this.emit('graphChanged', null);
+                        this.triggerCalculation();
+                    }
                 } else {
                     this.log(`Blocked: ${validation.reason}`);
                 }
@@ -350,12 +319,9 @@ export class Brain {
 
             case 'REMOVE_NODE':
                 this.state.nodes.delete(tx.payload);
-
                 const connectedEdges = this.state.edges.filter(e => e.source === tx.payload || e.target === tx.payload);
-
                 connectedEdges.forEach(e => this.updateAdjacency(e, 'REMOVE'));
                 this.state.edges = this.state.edges.filter(e => e.source !== tx.payload && e.target !== tx.payload);
-
                 this.adjacency.delete(tx.payload);
                 this.reverseAdjacency.delete(tx.payload);
                 break;
@@ -366,43 +332,46 @@ export class Brain {
                     this.updateAdjacency(edgeToRemove, 'REMOVE');
                     this.state.edges = this.state.edges.filter(e => e.id !== tx.payload);
                     this.propagateDirty(edgeToRemove.target);
-                    if (!silent) this.emit('graphChanged', null);
+                    if (!silent) {
+                        this.emit('graphChanged', null);
+                        this.triggerCalculation();
+                    }
                 }
                 break;
 
             case 'UPDATE_VALUE':
                 // Payload: { id, value }
-                const node = this.state.nodes.get(tx.payload.id);
-                if (node) {
-                    node.value = tx.payload.value;
-                    node.isDirty = false; // Input is fresh
-                    this.propagateDirty(node.id); // Propagate changes
+                const targetId = tx.payload.id;
+                const rawValue = tx.payload.value;
+                const node = this.state.nodes.get(targetId);
 
-                    // Rule #4: Debounce Calculation
+                if (node) {
+                    // Phase 2.1: Wrap raw value into Payload
+                    // This handles Input nodes receiving numbers/strings from UI
+                    node.value = PayloadUtils.wrap(rawValue);
+                    node.isDirty = false; // Input is fresh
+                    this.propagateDirty(node.id);
+
                     if (!silent) this.triggerCalculation();
                 }
                 break;
 
             case 'UPDATE_NODE_DATA':
-                // Payload: { id, data: Partial<NodeData> }
-                const targetNode = this.state.nodes.get(tx.payload.id);
-                if (targetNode) {
-                    targetNode.data = { ...targetNode.data, ...tx.payload.data };
-                    // Changing config (like Op) makes node dirty
-                    targetNode.isDirty = true;
-                    this.propagateDirty(targetNode.id);
-                    this.log(`Updated Node Data ${targetNode.id}`);
+                const tNode = this.state.nodes.get(tx.payload.id);
+                if (tNode) {
+                    tNode.data = { ...tNode.data, ...tx.payload.data };
+                    tNode.isDirty = true;
+                    this.propagateDirty(tNode.id);
+                    this.log(`Updated Node Data ${tNode.id}`);
 
-                    // Rule #4: Debounce Calculation
                     if (!silent) this.triggerCalculation();
                 }
                 break;
 
             case 'BATCH':
                 (tx.payload as Transaction[]).forEach(t => {
-                    this.applyTransaction(t, false, true); // Don't record sub-transactions, Silent
+                    this.applyTransaction(t, false, true);
                 });
-                // Force Update after batch
                 this.emit('graphChanged', null);
                 this.triggerCalculation();
                 break;
@@ -412,7 +381,7 @@ export class Brain {
     // --- Async Engine (Rule #4 & Protocol Law) ---
 
     private calculationTimeout: NodeJS.Timeout | null = null;
-    private readonly DEBOUNCE_MS = 50; // Rule #4
+    private readonly DEBOUNCE_MS = 50;
 
     private triggerCalculation() {
         if (this.calculationTimeout) {
@@ -422,14 +391,19 @@ export class Brain {
         this.calculationTimeout = setTimeout(async () => {
             const patches = await this.recalculateDirty();
             if (patches.length > 0) {
-                this.emit('graphChanged', patches); // Send patches!
+                this.emit('graphChanged', patches);
             }
         }, this.DEBOUNCE_MS);
     }
 
+    // ... createInverseTransaction and validateConnection remain mostly unchanged logic ...
+    // But verify they don't depend on 'value' internal structure deeply.
+    // createInverseTransaction uses node.value, which is now NodePayload.
+    // ADD_NODE transaction payload.initialValue will be NodePayload.
+    // When re-applying ADD_NODE, PayloadUtils.wrap is idempotent, so it works.
+
     /**
      * Generates the inverse transaction for Undo.
-     * Must be called BEFORE the transaction is applied (Pre-mutation state).
      */
     private createInverseTransaction(tx: Transaction): Transaction | null {
         switch (tx.type) {
@@ -437,23 +411,20 @@ export class Brain {
                 return { type: 'REMOVE_NODE', payload: tx.payload.id };
 
             case 'REMOVE_NODE': {
-                // Need to restore the node AND its connected edges.
-                // createInverseTransaction is called BEFORE mutation, so edges still exist.
                 const node = this.state.nodes.get(tx.payload);
-                if (!node) return null; // Can't undo removal of non-existent node
+                if (!node) return null;
 
                 const addNodeTx: Transaction = {
                     type: 'ADD_NODE',
                     payload: {
                         id: node.id,
-                        initialValue: node.value,
+                        initialValue: node.value, // This is NodePayload
                         type: node.type,
-                        data: { ...node.data }, // Clone data
-                        position: node.position // Restore position
+                        data: { ...node.data },
+                        position: node.position
                     }
                 };
 
-                // Capture connected edges (they will be cascade-deleted with the node)
                 const connectedEdges = this.state.edges.filter(
                     e => e.source === tx.payload || e.target === tx.payload
                 );
@@ -462,14 +433,13 @@ export class Brain {
                     return addNodeTx;
                 }
 
-                // BATCH: first add node, then reconnect all edges
                 return {
                     type: 'BATCH',
                     payload: [
                         addNodeTx,
                         ...connectedEdges.map(e => ({
                             type: 'CONNECT' as const,
-                            payload: { ...e } // Clone edge
+                            payload: { ...e }
                         }))
                     ]
                 };
@@ -481,14 +451,12 @@ export class Brain {
             case 'DISCONNECT': {
                 const edge = this.state.edges.find(e => e.id === tx.payload);
                 if (!edge) return null;
-                return { type: 'CONNECT', payload: { ...edge } }; // Clone edge
+                return { type: 'CONNECT', payload: { ...edge } };
             }
 
             case 'MOVE_NODE': {
                 const node = this.state.nodes.get(tx.payload.id);
                 if (!node) return null;
-                // Inverse is moving back to old position
-                // Use explicit oldPosition if provided (more reliable), else current state
                 const restorePos = tx.payload.oldPosition || node.position || { x: 0, y: 0 };
 
                 return {
@@ -528,22 +496,32 @@ export class Brain {
             case 'SET_MODE':
                 return { type: 'SET_MODE', payload: this.state.mode };
 
+            case 'UPDATE_VALUE': {
+                // Inverse of value update is... restoring old value.
+                // We need the OLD value to undo. 
+                // Currently Transaction only has NEW value.
+                // This is a known issue in my HistoryManager if we don't capture state *before* apply.
+                // createInverseTransaction is called BEFORE apply, so node.value is OLD value.
+                const node = this.state.nodes.get(tx.payload.id);
+                if (!node) return null;
+
+                return {
+                    type: 'UPDATE_VALUE',
+                    payload: {
+                        id: node.id,
+                        value: node.value // This is the OLD value (NodePayload)
+                        // Wait, applyTransaction for UPDATE_VALUE expects raw value or Payload?
+                        // It wraps it via PayloadUtils.wrap().
+                        // So passing NodePayload is fine (wrap is idempotent).
+                    }
+                };
+            }
+
             default:
                 return null;
         }
     }
 
-
-    /**
-     * Validates a potential connection.
-     * Can be used statically (helper) or via instance (using internal state if edges not provided).
-     * 
-     * @param source Source Node ID
-     * @param sourceHandle Source Handle ID
-     * @param target Target Node ID
-     * @param targetHandle Target Handle ID
-     * @param edges (Optional) Edges to check against. If omitted, uses Brain's internal state.
-     */
     public validateConnection(
         source: string,
         sourceHandle: string | null | undefined,
@@ -554,22 +532,15 @@ export class Brain {
 
         const edgesToCheck = edges || this.state.edges;
 
-        // DEBUG LOGGING
-        // console.log(`[Brain] Validate: ${source}:${sourceHandle} -> ${target}:${targetHandle}`);
-
-        // 1. Basic Existence Check
         if (!source || !target || !sourceHandle || !targetHandle) {
             return { isValid: false, reason: 'Incomplete connection data' };
         }
 
-        // 2. Self-Loop Guard
         if (source === target) {
             return { isValid: false, reason: 'Cannot connect node to itself' };
         }
 
-        // 3. Type Compatibility (Input/Output Direction)
         const isInput = (id: string) =>
-            // Handle null/undefined gracefully
             !!id && (id.toLowerCase().startsWith('in') || id === 'target' || id.includes('input'));
 
         const sourceIsInput = isInput(sourceHandle);
@@ -579,7 +550,6 @@ export class Brain {
             return { isValid: false, reason: 'Must connect Output to Input' };
         }
 
-        // 4. Anti-Cycle Check (DFS)
         const fromNode = sourceIsInput ? target : source;
         const toNode = sourceIsInput ? source : target;
 
@@ -590,9 +560,6 @@ export class Brain {
         return { isValid: true };
     }
 
-    /**
-     * Detects if there is a path from `startNode` to `targetNode` using existing edges.
-     */
     private detectCycle(sourceNode: string, targetNode: string, edges: Edge[]): boolean {
         const graph = new Map<string, string[]>();
 
@@ -625,3 +592,4 @@ export class Brain {
         return false;
     }
 }
+

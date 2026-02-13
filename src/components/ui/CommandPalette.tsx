@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { Position } from '@xyflow/react';
+import { getDefinitionsByCategory } from '../../definitions/nodeDefinitions';
 
 interface CommandPaletteProps {
     isOpen: boolean;
@@ -11,125 +11,22 @@ interface CommandPaletteProps {
     onSelect: (type: string, label: string, data?: any) => void;
 }
 
-const MENU_ITEMS = [
-    {
-        category: 'Input', items: [
-            {
-                label: 'Number (IO-01)',
-                type: 'IO-01',
-                data: {
-                    type: 'number',
-                    value: 0,
-                    handles: [
-                        { id: 'out', type: 'source', position: Position.Right, variant: 'single' }
-                    ]
-                }
-            },
-            {
-                label: 'Slider (IO-02)',
-                type: 'IO-02',
-                data: {
-                    type: 'slider',
-                    value: 50,
-                    min: 0,
-                    max: 100,
-                    step: 1,
-                    handles: [
-                        { id: 'out', type: 'source', position: Position.Right, variant: 'single' }
-                    ]
-                }
-            },
-        ]
-    },
-    {
-        category: 'Math', items: [
-            {
-                label: 'Add (MA-01)',
-                type: 'MA-01',
-                data: {
-                    op: 'ADD',
-                    label: 'Add',
-                    handles: [
-                        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', label: 'A' },
-                        { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', label: 'B' },
-                        { id: 'out', type: 'source', position: Position.Right, variant: 'single' }
-                    ]
-                }
-            },
-            {
-                label: 'Subtract',
-                type: 'MA-01',
-                data: {
-                    op: 'SUB',
-                    label: 'Sub',
-                    handles: [
-                        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', label: 'A' },
-                        { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', label: 'B' },
-                        { id: 'out', type: 'source', position: Position.Right, variant: 'single' }
-                    ]
-                }
-            },
-            {
-                label: 'Multiply',
-                type: 'MA-01',
-                data: {
-                    op: 'MUL',
-                    label: 'Mul',
-                    handles: [
-                        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', label: 'A' },
-                        { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', label: 'B' },
-                        { id: 'out', type: 'source', position: Position.Right, variant: 'single' }
-                    ]
-                }
-            },
-            {
-                label: 'Divide',
-                type: 'MA-01',
-                data: {
-                    op: 'DIV',
-                    label: 'Div',
-                    handles: [
-                        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', label: 'A' },
-                        { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', label: 'B' },
-                        { id: 'out', type: 'source', position: Position.Right, variant: 'single' }
-                    ]
-                }
-            },
-        ]
-    },
-    {
-        category: 'Output', items: [
-            {
-                label: 'Result (IO-11)',
-                type: 'IO-11',
-                data: {
-                    type: 'result',
-                    handles: [
-                        { id: 'in', type: 'target', position: Position.Left, variant: 'capsule' }
-                    ]
-                }
-            },
-        ]
-    },
-    {
-        category: 'Debug', items: [
-            {
-                label: 'Multi-Handle (5 Inputs)',
-                type: 'baseNode',
-                data: {
-                    label: 'Dynamic Node',
-                    handles: [
-                        { id: 'in-0', type: 'target', position: Position.Left, variant: 'capsule', label: 'Main' },
-                        { id: 'in-1', type: 'target', position: Position.Left, variant: 'single' },
-                        { id: 'in-2', type: 'target', position: Position.Left, variant: 'single' },
-                        { id: 'in-3', type: 'target', position: Position.Left, variant: 'single' },
-                        { id: 'in-4', type: 'target', position: Position.Left, variant: 'single' },
-                    ]
-                }
-            },
-        ]
-    },
-];
+// Transform NodeDefinitions → Menu format
+function buildMenuItems() {
+    return getDefinitionsByCategory().map(({ category, items }) => ({
+        category,
+        items: items.map(def => ({
+            label: def.label,
+            type: def.id,
+            data: {
+                ...def.defaultData,
+                handles: def.handles,
+            }
+        }))
+    }));
+}
+
+const MENU_ITEMS = buildMenuItems();
 
 export function CommandPalette({ isOpen, position, onClose, onSelect }: CommandPaletteProps) {
     const [search, setSearch] = useState('');

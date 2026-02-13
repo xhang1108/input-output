@@ -1,14 +1,16 @@
-
 import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { PayloadUtils } from '../../utils/PayloadUtils';
 
 export const SliderNode = memo((props: NodeProps) => {
     const { id, data } = props;
 
     // Internal state for immediate UI feedback
-    const [localValue, setLocalValue] = useState(Number(data.value) || 0);
+    // Unwrap payload to get numeric value
+    const initialValue = Number(PayloadUtils.unwrap(data.value)) || 0;
+    const [localValue, setLocalValue] = useState(initialValue);
 
     const min = typeof data.min === 'number' ? data.min : 0;
     const max = typeof data.max === 'number' ? data.max : 100;

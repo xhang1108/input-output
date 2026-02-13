@@ -153,6 +153,7 @@ export function useRelink({
         if (relinkStateRef.current.active) return;
 
         const { nodeId, handleId, handleType } = params;
+
         if (!nodeId || !handleId) return;
 
         const nativeEvent = event as any;

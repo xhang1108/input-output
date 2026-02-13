@@ -1,17 +1,17 @@
 
 import { Edge, Node } from '@xyflow/react';
+import { NodePayload } from '../types/payload';
 
 export type ComputationMode = 'scientific' | 'engineering';
 
 export interface NodeLogic {
     id: string;
-    type?: string; // Phase 1.2: Added type for evaluation registry
-    value: any; // Will be BigNumber or number depending on mode
-    data?: any; // Phase 2.0: For storing node-specific settings (e.g. Op type)
-    position?: { x: number; y: number }; // Phase 1.4: UI Position for Undo/Redo
+    type?: string;
+    value: NodePayload; // Phase 2.1: Switched to Payload System
+    data?: any;
+    position?: { x: number; y: number };
     formula?: string;
     isDirty: boolean;
-    // We can add more logic-specific fields here (e.g. AST segment)
 }
 
 export interface GraphState {

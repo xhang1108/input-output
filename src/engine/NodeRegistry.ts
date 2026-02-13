@@ -1,8 +1,10 @@
-
 import { NodeLogic } from './types';
 import { MathEngine } from './MathEngine';
+import { NodePayload } from '../types/payload';
+import { PayloadUtils } from '../utils/PayloadUtils';
 
-type NodeEvaluator = (node: NodeLogic, inputs: Record<string, any>) => any;
+// Phase 2.1: Elevate Evaluator to work with Payloads
+type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => NodePayload;
 
 export class NodeRegistry {
     private static evaluators: Map<string, NodeEvaluator> = new Map();
@@ -15,13 +17,14 @@ export class NodeRegistry {
         return this.evaluators.get(type);
     }
 
-    public static evaluate(node: NodeLogic, inputs: Record<string, any>): any {
+    public static evaluate(node: NodeLogic, inputs: Record<string, NodePayload>): NodePayload {
         const evaluator = this.evaluators.get(node.type || 'baseNode');
 
         if (!evaluator) {
-            // Fallback: If it's an INPUT node (no inputs, has value), return value.
-            // But usually INPUT nodes have type 'IO-01'...
-            // If unknown type, return current value (Identity).
+            // Fallback: Return current value (Identity), ensuring it's a Payload
+            // If node.value is already a Payload (it should be), return it.
+            // But we need to be safe during migration.
+            // Actually node.value IS a NodePayload now per interface.
             return node.value;
         }
 
@@ -33,44 +36,61 @@ export class NodeRegistry {
 
 // IO-01: Input (Scalar)
 NodeRegistry.register('IO-01', (node, inputs) => {
-    const engine = MathEngine.getInstance();
-    return engine.processInput(node.value);
+    // Input node just holds value. 
+    // It shouldn't need to process input, but user might type in it.
+    // The value stored in node.value IS the source of truth.
+    // Ensure it is a valid Payload.
+    return node.value;
 });
 
 // IO-11: Result (Display)
 NodeRegistry.register('IO-11', (node, inputs) => {
-    const engine = MathEngine.getInstance();
-    const val = inputs['in'] ?? 0;
-    return engine.processInput(val);
+    // Result node simply passes through the input for connected nodes,
+    // or arguably it doesn't output anything useful for downstream?
+    // It acts as a Identity for 'out' checks if needed.
+    const inputPayload = inputs['in'];
+    if (!inputPayload) return PayloadUtils.createScalar(0);
+
+    // We might want to format it or attach metadata here?
+    // For now, identity.
+    return inputPayload;
 });
 
 // IO-02: Slider (Input)
 NodeRegistry.register('IO-02', (node, inputs) => {
-    const engine = MathEngine.getInstance();
-    return engine.processInput(node.value);
+    return node.value;
 });
+
 
 // MA-01: Math (Add/Sub/Mul/Div)
 NodeRegistry.register('MA-01', (node, inputs) => {
     const engine = MathEngine.getInstance();
 
-    // Inputs are mapped by Handle ID. 
-    // Standard Math Node usually has 'A' and 'B' handles? 
-    // Or 'in_0', 'in_1'?
-    // Let's assume standard names for now: 'A' and 'B'.
-    // If inputs are array-based (dynamic), we might need to iterate.
+    // 1. Unwrap Inputs — match handle IDs from nodeDefinitions (in_a, in_b)
+    const payloadA = inputs['in_a'];
+    const payloadB = inputs['in_b'];
 
-    const a = inputs['A'] ?? 0;
-    const b = inputs['B'] ?? 0;
+    // Default to 0 for unconnected inputs
+    const rawA = payloadA ? PayloadUtils.unwrap(payloadA) : 0;
+    const rawB = payloadB ? PayloadUtils.unwrap(payloadB) : 0;
 
-    // Operation is stored in node.data? 
-    // We need to access node.data.op. 
-    // But NodeLogic interface currently only has `value`, `id`, `type`, `isDirty`.
-    // We need to extend NodeLogic to include `data`.
+    // 2. Convert to engine-compatible type (BigNumber in scientific mode)
+    //    Raw JS numbers crash mathjs's tree-shaken addScalar in BigNumber mode.
+    const valA = engine.processInput(rawA);
+    const valB = engine.processInput(rawB);
 
-    // HACK: For now, we assume 'op' is in `node['data']`.
-    const op = (node as any).data?.op || 'ADD';
+    // 3. Compute via MathEngine
+    const op = node.data?.op || 'ADD';
+    let result;
+    try {
+        result = engine.evaluate(op, valA, valB);
+    } catch (e) {
+        return PayloadUtils.createError((e as Error).message);
+    }
 
-    return engine.evaluate(op, engine.processInput(a), engine.processInput(b));
+    // 4. Wrap Result — convert back to plain number for payload storage
+    const numResult = typeof result === 'object' && result !== null && 'toNumber' in result
+        ? result.toNumber()
+        : Number(result);
+    return PayloadUtils.createScalar(numResult);
 });
-

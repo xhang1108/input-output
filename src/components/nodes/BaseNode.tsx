@@ -4,21 +4,15 @@ import { memo, useState, useRef, useEffect } from 'react';
 import { NodeProps, NodeResizer, Position, useReactFlow, useUpdateNodeInternals } from '@xyflow/react';
 import { Pencil } from 'lucide-react';
 import { NodeHandle } from './NodeHandle';
+import { HandleConfig, getHandleColor } from '../../types/NodeDefinition';
 
-// Handle Configuration Types
-export interface HandleConfig {
-    id: string;
-    type: 'source' | 'target';
-    position: Position;
-    variant: 'single' | 'capsule'; // Determines size/styling
-    label?: string;
-}
+// Re-export HandleConfig for backward compatibility
+export type { HandleConfig } from '../../types/NodeDefinition';
 
-// Default Configuration (Fallback)
+// Default fallback handles (used when data.handles is not provided)
 const DEFAULT_HANDLES: HandleConfig[] = [
-    { id: 'in-capsule', type: 'target', position: Position.Left, variant: 'capsule', label: 'Multi' },
-    { id: 'in-a', type: 'target', position: Position.Left, variant: 'single' },
-    { id: 'in-b', type: 'target', position: Position.Left, variant: 'single' },
+    { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar' },
+    { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' },
 ];
 
 export const BaseNode = memo(({ id, data, selected, isConnectable, children }: NodeProps & { children?: React.ReactNode }) => {
@@ -53,23 +47,36 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
         if (e.key === 'Enter') handleSubmit();
     };
 
-    // Auto-Layout Calculation for Left Handles
-    // Start below header (approx 52px)
-    let currentTop = 52;
-    const SPACING = 8; // Unified 8px spacing
+    // ─── Handle Layout Engine ─────────────────────────────────
+    // Separate handles by position (left vs right)
+    const allHandles = (data.handles as HandleConfig[]) || DEFAULT_HANDLES;
+    const leftHandles = allHandles.filter(h => h.position === Position.Left);
+    const rightHandles = allHandles.filter(h => h.position === Position.Right);
 
-    // Calculate positions and total height
-    const handles = (data.handles as HandleConfig[]) || DEFAULT_HANDLES;
-    const renderedHandles = handles.map((h) => {
-        const height = h.variant === 'capsule' ? 24 : 12; // h-6 vs h-3
-        const top = currentTop + (height / 2); // Center of handle
-        currentTop += height + SPACING;
+    // Auto-Layout: Calculate vertical positions for left-side handles
+    const HEADER_HEIGHT = 52;
+    const SPACING = 8;
 
-        return { ...h, top, height };
-    });
+    const layoutHandles = (handles: HandleConfig[]) => {
+        let currentTop = HEADER_HEIGHT;
+        return handles.map((h) => {
+            const height = h.variant === 'capsule' ? 24 : 12;
+            const top = currentTop + (height / 2);
+            currentTop += height + SPACING;
+            return { ...h, top, height };
+        });
+    };
+
+    const renderedLeftHandles = layoutHandles(leftHandles);
+    const renderedRightHandles = layoutHandles(rightHandles);
+
+    // If only one right handle, center it vertically
+    const leftContentHeight = renderedLeftHandles.length > 0
+        ? renderedLeftHandles[renderedLeftHandles.length - 1].top + 12
+        : HEADER_HEIGHT + 40;
 
     // Minimum height to fit all handles + bottom padding
-    const minHeight = Math.max(100, currentTop + 12);
+    const minHeight = Math.max(100, leftContentHeight + 12);
 
     return (
         <div
@@ -108,15 +115,14 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
 
             {/* Content Body */}
             <div className="p-3">
-                {/* Render children (custom UI) or fallback to ID */}
                 {children ? children : (
                     <div className="text-[10px] text-zinc-500 font-mono">ID: {id}</div>
                 )}
             </div>
 
-            {/* Dynamic Input Handles */}
-            {renderedHandles.map((h) => (
-                <div key={h.id}>
+            {/* ─── Left Handles (Targets/Inputs) ───────────────── */}
+            {renderedLeftHandles.map((h) => (
+                <div key={h.id} className="contents">
                     <NodeHandle
                         type={h.type}
                         position={h.position}
@@ -128,29 +134,54 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
                                 ? 'w-3! h-6! rounded-full!'
                                 : 'w-3! h-3!'}
                         `}
-                        color={
-                            h.variant === 'capsule'
-                                ? 'var(--color-soul)'
-                                : h.id === 'in-b'
-                                    ? 'var(--color-unit)'
-                                    : 'var(--color-matrix)'
-                        }
+                        color={getHandleColor(h)}
                         style={{ top: `${h.top}px` }}
                         isConnectable={isConnectable}
                     />
                 </div>
             ))}
 
-            {/* Output - Right Center */}
-            <NodeHandle
-                type="source"
-                position={Position.Right}
-                id="out"
-                nodeId={id}
-                className="w-3! h-3! border-zinc-900! z-50 origin-center"
-                color="var(--color-vector)"
-                isConnectable={isConnectable}
-            />
+            {/* ─── Right Handles (Sources/Outputs) ─────────────── */}
+            {renderedRightHandles.length === 1 ? (
+                // Single output: center vertically
+                <div className="contents">
+                    <NodeHandle
+                        type={renderedRightHandles[0].type}
+                        position={renderedRightHandles[0].position}
+                        id={renderedRightHandles[0].id}
+                        nodeId={id}
+                        className={`
+                            border-zinc-900! z-50 origin-center
+                            ${renderedRightHandles[0].variant === 'capsule'
+                                ? 'w-3! h-6! rounded-full!'
+                                : 'w-3! h-3!'}
+                        `}
+                        color={getHandleColor(renderedRightHandles[0])}
+                        isConnectable={isConnectable}
+                    />
+                </div>
+            ) : (
+                // Multiple outputs: layout vertically
+                renderedRightHandles.map((h) => (
+                    <div key={h.id} className="contents">
+                        <NodeHandle
+                            type={h.type}
+                            position={h.position}
+                            id={h.id}
+                            nodeId={id}
+                            className={`
+                                border-zinc-900! z-50 pointer-events-auto origin-center
+                                ${h.variant === 'capsule'
+                                    ? 'w-3! h-6! rounded-full!'
+                                    : 'w-3! h-3!'}
+                            `}
+                            color={getHandleColor(h)}
+                            style={{ top: `${h.top}px` }}
+                            isConnectable={isConnectable}
+                        />
+                    </div>
+                ))
+            )}
         </div>
     );
 });
