@@ -10,13 +10,14 @@ type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 const CLIPBOARD_KEY = 'calctopus_clipboard';
 
 export function useHand() {
-    const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
+    const { getNodes, setNodes, getEdges, setEdges, getViewport, setViewport } = useReactFlow();
     const { getEventFlowPos, getCurrentZoom, project } = useCanvasProjection();
     const [mode, setMode] = useState<InteractionMode>('IDLE');
 
     // Formatting for "Ghost" movement
     const initialPositions = useRef<Map<string, XYPosition>>(new Map());
     const startMousePos = useRef<XYPosition | null>(null);
+    const startFlowPos = useRef<XYPosition | null>(null); // Canvas-space start pos
     const centerRef = useRef<XYPosition | null>(null); // Pivot for Scale/Rotate
     const [axisLock, setAxisLock] = useState<'X' | 'Y' | null>(null);
 
@@ -34,6 +35,10 @@ export function useHand() {
 
     // Drag Initiation Logic
     const pendingGrabStart = useRef<{ x: number, y: number, altKey: boolean } | null>(null);
+
+    // Autopan Logic
+    const mousePosRef = useRef<XYPosition | null>(null);
+    const rafRef = useRef<number | null>(null);
 
 
     // --- Command: Move (Internal Helper) ---
@@ -287,16 +292,95 @@ export function useHand() {
             style: { ...node.style, zIndex: 100 } // Ensure on top of frame
         }));
 
-        // Important: Add Frame FIRST, then children? 
-        // Or remove old children instances and add updated ones.
-        // We filter out original selectedNodes, then add updatedChildren + frameNode.
-
         setNodes(nds => {
             const others = nds.filter(n => !selectedNodes.find(sn => sn.id === n.id));
             return [...others, frameNode, ...updatedChildren];
         });
 
     }, [getNodes, setNodes]);
+
+    // --- Command: Detach (Alt + Drag) ---
+    const detachSelected = useCallback(() => {
+        const nodes = getNodes();
+        const selected = nodes.filter(n => n.selected);
+        if (selected.length === 0) return;
+
+        const selectedIds = new Set(selected.map(n => n.id));
+        setEdges(eds => eds.filter(e => !selectedIds.has(e.source) && !selectedIds.has(e.target)));
+    }, [getNodes, setEdges]);
+
+    // --- Command: Swap Inputs (Alt + S) ---
+    const swapConnections = useCallback(() => {
+        const selectedNodes = getNodes().filter(n => n.selected);
+        if (selectedNodes.length !== 1) return;
+
+        const targetId = selectedNodes[0].id;
+        const edges = getEdges();
+
+        const edgeA = edges.find(e => e.target === targetId && e.targetHandle === 'in_a');
+        const edgeB = edges.find(e => e.target === targetId && e.targetHandle === 'in_b');
+
+        if (edgeA && edgeB) {
+            const txs: Transaction[] = [
+                { type: 'DISCONNECT', payload: edgeA.id },
+                { type: 'DISCONNECT', payload: edgeB.id },
+                {
+                    type: 'CONNECT',
+                    payload: { ...edgeA, id: `edge-${Date.now()}-a`, source: edgeB.source, sourceHandle: edgeB.sourceHandle }
+                },
+                {
+                    type: 'CONNECT',
+                    payload: { ...edgeB, id: `edge-${Date.now()}-b`, source: edgeA.source, sourceHandle: edgeA.sourceHandle }
+                }
+            ];
+            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+
+        } else if (edgeA && !edgeB) {
+            const txs: Transaction[] = [
+                { type: 'DISCONNECT', payload: edgeA.id },
+                {
+                    type: 'CONNECT',
+                    payload: { ...edgeA, id: `edge-${Date.now()}-mov`, targetHandle: 'in_b' }
+                }
+            ];
+            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+
+        } else if (!edgeA && edgeB) {
+            const txs: Transaction[] = [
+                { type: 'DISCONNECT', payload: edgeB.id },
+                {
+                    type: 'CONNECT',
+                    payload: { ...edgeB, id: `edge-${Date.now()}-mov`, targetHandle: 'in_a' }
+                }
+            ];
+            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+        }
+
+    }, [getNodes, getEdges]);
+
+
+    // --- Selection Helpers ---
+    const clearSelection = useCallback(() => {
+        setNodes(nds => nds.map(n => ({ ...n, selected: false })));
+    }, [setNodes]);
+
+    const selectNode = useCallback((id: string, exclusive: boolean = true) => {
+        setNodes(nds => {
+            const targetNode = nds.find(n => n.id === id);
+            if (!targetNode) return nds;
+
+            const currentlySelectedIds = new Set(nds.filter(n => n.selected).map(n => n.id));
+            const newSelectedIds = new Set(exclusive ? [id] : [...currentlySelectedIds, id]);
+
+            const unselected = nds.filter(n => !newSelectedIds.has(n.id)).map(n => ({ ...n, selected: false }));
+            const selected = nds.filter(n => newSelectedIds.has(n.id)).map(n => ({ ...n, selected: true }));
+
+            const selectedOthers = selected.filter(n => n.id !== id);
+            const target = selected.find(n => n.id === id)!;
+
+            return [...unselected, ...selectedOthers, target];
+        });
+    }, [setNodes]);
 
 
     // --- Knife Tool Logic ---
@@ -318,8 +402,6 @@ export function useHand() {
             const nodes = getNodes();
             const edgesToRemove: string[] = [];
 
-            // Convert Screen Path to Flow Path for Intersection Check
-            const flowPath = path.map(p => ({ x: p.x, y: p.y })); // This path is actually screen-space
             const projectedPath = path.map(p => project({ x: p.x, y: p.y }));
 
             edges.forEach(edge => {
@@ -327,25 +409,17 @@ export function useHand() {
                 const targetNode = nodes.find(n => n.id === edge.target);
                 if (!sourceNode || !targetNode) return;
 
-                // For interactions with Frames or Kids, we need absolute positions?
-                // Standard nodes have absolute positions if no parent. 
-                // If parent, we need to calculate absolute?
-                // For now, let's assume knife only cuts top-level or check absolute.
-                // NOTE: This knife logic might break for child nodes if we don't handle parent offset.
-                // Phase 0.6 fix: Ignore complex parent transforms for knife for now or update later.
-
                 const sx = sourceNode.position.x + (sourceNode.measured?.width || 150);
                 const sy = sourceNode.position.y + (sourceNode.measured?.height || 50) / 2;
                 const tx = targetNode.position.x;
                 const ty = targetNode.position.y + (targetNode.measured?.height || 50) / 2;
 
-                // Check intersection between Edge Line (sx,sy)->(tx,ty) and any segment in Knife Path (Flow Space)
                 for (let i = 0; i < projectedPath.length - 1; i++) {
                     const p1 = projectedPath[i];
                     const p2 = projectedPath[i + 1];
                     if (linesIntersect(sx, sy, tx, ty, p1.x, p1.y, p2.x, p2.y)) {
                         edgesToRemove.push(edge.id);
-                        break; // Cut this edge
+                        break;
                     }
                 }
             });
@@ -358,71 +432,121 @@ export function useHand() {
         setMode('IDLE');
         cutPathRef.current = [];
         setCutPath([]);
-    }, [getEdges, getNodes, setEdges, getEventFlowPos]);
+    }, [getEdges, getNodes, setEdges, project]);
 
-    // --- Command: Swap Inputs (Alt + S) ---
-    const swapConnections = useCallback(() => {
-        const selectedNodes = getNodes().filter(n => n.selected);
-        if (selectedNodes.length !== 1) return; // Only support single node swap for now
 
-        const targetId = selectedNodes[0].id;
-        const edges = getEdges();
+    // --- Interaction Core (Shared) ---
+    const updateInteraction = useCallback((mousePos: XYPosition, ctrlKey: boolean = false) => {
+        if (mode === 'GRABBING' && startFlowPos.current) {
+            if (transformBuffer !== '') return;
 
-        // Find edges connected to Input A and Input B
-        const edgeA = edges.find(e => e.target === targetId && e.targetHandle === 'in_a');
-        const edgeB = edges.find(e => e.target === targetId && e.targetHandle === 'in_b');
+            const currentFlowPos = project(mousePos);
+            let dx = currentFlowPos.x - startFlowPos.current.x;
+            let dy = currentFlowPos.y - startFlowPos.current.y;
 
-        if (edgeA && edgeB) {
-            // Atomic Swap via Brain
-            const txs: Transaction[] = [
-                { type: 'DISCONNECT', payload: edgeA.id },
-                { type: 'DISCONNECT', payload: edgeB.id },
-                {
-                    type: 'CONNECT',
-                    payload: { ...edgeA, id: `edge-${Date.now()}-a`, source: edgeB.source, sourceHandle: edgeB.sourceHandle }
-                },
-                {
-                    type: 'CONNECT',
-                    payload: { ...edgeB, id: `edge-${Date.now()}-b`, source: edgeA.source, sourceHandle: edgeA.sourceHandle }
-                }
-            ];
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+            if (axisLock === 'X') dy = 0;
+            if (axisLock === 'Y') dx = 0;
 
-        } else if (edgeA && !edgeB) {
-            // Move A to B
-            const txs: Transaction[] = [
-                { type: 'DISCONNECT', payload: edgeA.id },
-                {
-                    type: 'CONNECT',
-                    payload: { ...edgeA, id: `edge-${Date.now()}-mov`, targetHandle: 'in_b' }
-                }
-            ];
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+            if (ctrlKey) {
+                const GRID_SIZE = 20;
+                dx = Math.round(dx / GRID_SIZE) * GRID_SIZE;
+                dy = Math.round(dy / GRID_SIZE) * GRID_SIZE;
+            }
 
-        } else if (!edgeA && edgeB) {
-            // Move B to A
-            const txs: Transaction[] = [
-                { type: 'DISCONNECT', payload: edgeB.id },
-                {
-                    type: 'CONNECT',
-                    payload: { ...edgeB, id: `edge-${Date.now()}-mov`, targetHandle: 'in_a' }
-                }
-            ];
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+            let displayVal = '';
+            if (axisLock === 'X') displayVal = `${Math.round(dx)}`;
+            else if (axisLock === 'Y') displayVal = `${Math.round(dy)}`;
+            else displayVal = `${Math.round(dx)}, ${Math.round(dy)}`;
+
+            setTransformValue(displayVal);
+            applyMove(dx, dy);
+
+        } else if (mode === 'SCALING' && startFlowPos.current && centerRef.current) {
+            if (transformBuffer !== '') return;
+
+            const currentFlowPos = project(mousePos);
+            const flowStartMouse = startFlowPos.current;
+            const center = centerRef.current;
+
+            const startDist = Math.hypot(flowStartMouse.x - center.x, flowStartMouse.y - center.y);
+            const currentDist = Math.hypot(currentFlowPos.x - center.x, currentFlowPos.y - center.y);
+
+            const scale = startDist > 0 ? currentDist / startDist : 1;
+            setTransformValue(scale.toFixed(2));
+            applyScale(scale);
+
+        } else if (mode === 'ROTATING' && startMousePos.current && centerRef.current) {
+            if (transformBuffer !== '') return;
+
+            const currentFlowPos = project(mousePos);
+            const center = centerRef.current;
+            const currentAngle = Math.atan2(currentFlowPos.y - center.y, currentFlowPos.x - center.x);
+
+            let delta = currentAngle - lastAngleRef.current;
+
+            if (delta > Math.PI) delta -= 2 * Math.PI;
+            if (delta < -Math.PI) delta += 2 * Math.PI;
+
+            accumulatedRotation.current += delta;
+            lastAngleRef.current = currentAngle;
+
+            const deg = (accumulatedRotation.current * 180 / Math.PI);
+            setTransformValue(deg.toFixed(1) + '°');
+            applyRotate(accumulatedRotation.current);
+        }
+    }, [mode, project, axisLock, transformBuffer, applyMove, applyScale, applyRotate]);
+
+    // --- Autopan Loop ---
+    const autopan = useCallback(() => {
+        if (!['GRABBING', 'SCALING', 'ROTATING'].includes(mode) || !mousePosRef.current) {
+            rafRef.current = null;
+            return;
         }
 
-    }, [getNodes, getEdges, setEdges]);
+        const { x, y } = mousePosRef.current;
+        const pad = 100;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
 
+        let panX = 0;
+        let panY = 0;
 
-    // --- Command: Detach (Alt + Drag) ---
-    const detachSelected = useCallback(() => {
-        const nodes = getNodes();
-        const selected = nodes.filter(n => n.selected);
-        if (selected.length === 0) return;
+        const getSpeed = (dist: number) => {
+            const normalized = Math.max(0, dist / pad);
+            return Math.pow(normalized, 1.5) * 20;
+        };
 
-        const selectedIds = new Set(selected.map(n => n.id));
-        setEdges(eds => eds.filter(e => !selectedIds.has(e.source) && !selectedIds.has(e.target)));
-    }, [getNodes, setEdges]);
+        if (x < pad) panX = getSpeed(pad - x);
+        else if (x > w - pad) panX = -getSpeed(x - (w - pad));
+
+        if (y < pad) panY = getSpeed(pad - y);
+        else if (y > h - pad) panY = -getSpeed(y - (h - pad));
+
+        if (panX !== 0 || panY !== 0) {
+            const vp = getViewport();
+            setViewport({
+                ...vp,
+                x: vp.x + panX,
+                y: vp.y + panY
+            });
+            updateInteraction(mousePosRef.current);
+        }
+
+        rafRef.current = requestAnimationFrame(autopan);
+    }, [mode, getViewport, setViewport, updateInteraction]);
+
+    useEffect(() => {
+        if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
+            rafRef.current = requestAnimationFrame(autopan);
+        } else if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+        return () => {
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+    }, [mode, autopan]);
+
 
     // --- Interaction Triggers ---
 
@@ -438,7 +562,6 @@ export function useHand() {
 
         if (selected.length === 0) return;
 
-        // Detach Logic (Alt + Drag)
         if (isAltHeld && !overrideNodes) {
             detachSelected();
         }
@@ -446,9 +569,10 @@ export function useHand() {
         initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
 
         startMousePos.current = mousePos;
-        setAxisLock(null); // Reset axis lock
+        startFlowPos.current = project(mousePos);
+        setAxisLock(null);
         setMode('GRABBING');
-    }, [getNodes, detachSelected]);
+    }, [getNodes, detachSelected, project]);
 
     const startScale = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
@@ -458,8 +582,9 @@ export function useHand() {
         initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
         centerRef.current = getCentroid(selected);
         startMousePos.current = mousePos;
+        startFlowPos.current = project(mousePos);
         setMode('SCALING');
-    }, [getNodes]);
+    }, [getNodes, project]);
 
     const startRotate = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
@@ -478,14 +603,12 @@ export function useHand() {
 
 
     const confirmGrab = useCallback(() => {
-        // Record History (Phase 1.4)
         const nodes = getNodes();
         const txs: Transaction[] = [];
 
         initialPositions.current.forEach((initPos, id) => {
             const node = nodes.find(n => n.id === id);
             if (node) {
-                // Check for actual movement
                 const dx = node.position.x - initPos.x;
                 const dy = node.position.y - initPos.y;
                 if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
@@ -506,16 +629,14 @@ export function useHand() {
             if (txs.length === 1) {
                 brain.applyTransaction(txs[0]);
             } else {
-                brain.applyTransaction({
-                    type: 'BATCH',
-                    payload: txs
-                });
+                brain.applyTransaction({ type: 'BATCH', payload: txs });
             }
         }
 
         setMode('IDLE');
         initialPositions.current.clear();
         startMousePos.current = null;
+        startFlowPos.current = null;
         centerRef.current = null;
         setAxisLock(null);
         setTransformBuffer('');
@@ -523,7 +644,6 @@ export function useHand() {
     }, [getNodes]);
 
     const cancelGrab = useCallback(() => {
-        // Create a snapshot because setNodes callback is async and we clear the ref below
         const positionsToRestore = new Map(initialPositions.current);
 
         setNodes(nodes => nodes.map(n => {
@@ -536,65 +656,25 @@ export function useHand() {
         setMode('IDLE');
         initialPositions.current.clear();
         startMousePos.current = null;
+        startFlowPos.current = null;
         centerRef.current = null;
         setAxisLock(null);
         setTransformBuffer('');
         setTransformValue('');
     }, [setNodes]);
 
-    // --- Selection Helpers ---
-    const clearSelection = useCallback(() => {
-        setNodes(nds => nds.map(n => ({ ...n, selected: false })));
-    }, [setNodes]);
 
-    const selectNode = useCallback((id: string, exclusive: boolean = true) => {
-        setNodes(nds => {
-            const targetNode = nds.find(n => n.id === id);
-            if (!targetNode) return nds;
-
-            // Determine the final set of selected IDs
-            const currentlySelectedIds = new Set(nds.filter(n => n.selected).map(n => n.id));
-            const newSelectedIds = new Set(exclusive ? [id] : [...currentlySelectedIds, id]);
-
-            // Separate nodes into "Selected" (to be moved to end) and "Unselected" (remain at start)
-            const unselected = nds.filter(n => !newSelectedIds.has(n.id)).map(n => ({
-                ...n,
-                selected: false // Ensure unselected
-            }));
-
-            const selected = nds.filter(n => newSelectedIds.has(n.id)).map(n => ({
-                ...n,
-                selected: true
-            }));
-
-            const selectedOthers = selected.filter(n => n.id !== id);
-            const target = selected.find(n => n.id === id)!;
-
-            // Order: Unselected -> SelectedOthers -> Target
-            return [...unselected, ...selectedOthers, target];
-        });
-    }, [setNodes]);
-
-    // --- Event Handlers (to be attached to Body) ---
-
-
-    // ...
+    // --- Event Handlers ---
 
     const handleMouseDown = useCallback((e: MouseEvent) => {
         const target = e.target as HTMLElement;
+        if (target.classList.contains('react-flow__handle')) return;
 
-        // Ignore handles
-        if (target.classList.contains('react-flow__handle')) {
-            return;
-        }
-
-        // 1. Knife Logic (Ctrl + Right Click)
         if (e.ctrlKey && e.button === 2) {
             startCut({ x: e.clientX, y: e.clientY });
             return;
         }
 
-        // 2. Click-to-Grab Logic (Left Click on Node)
         if (e.button === 0) {
             const nodeElement = target.closest('.react-flow__node');
             if (nodeElement) {
@@ -602,18 +682,12 @@ export function useHand() {
                 if (nodeId) {
                     const nodes = getNodes();
                     const clickedNode = nodes.find(n => n.id === nodeId);
-
                     if (clickedNode) {
-                        // Selection Logic
                         if (!e.shiftKey && !e.ctrlKey) {
-                            if (!clickedNode.selected) {
-                                selectNode(nodeId, true);
-                            }
+                            if (!clickedNode.selected) selectNode(nodeId, true);
                         } else {
                             selectNode(nodeId, false);
                         }
-
-                        // Prepare for Grab, but wait for drag threshold
                         pendingGrabStart.current = { x: e.clientX, y: e.clientY, altKey: e.altKey };
                     }
                 }
@@ -623,8 +697,8 @@ export function useHand() {
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         const currentMousePos = { x: e.clientX, y: e.clientY };
+        mousePosRef.current = currentMousePos;
 
-        // Check for Drag Initiation (Threshold)
         if (mode === 'IDLE' && pendingGrabStart.current) {
             const dist = Math.hypot(
                 currentMousePos.x - pendingGrabStart.current.x,
@@ -633,110 +707,25 @@ export function useHand() {
             if (dist > 5) {
                 startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey);
                 pendingGrabStart.current = null;
-                // Note: mode will only update next render, so we won't enter the GRABBING block below immediately.
-                // This prevents a 1-frame jump if the threshold was large? 
-                // With 5px, it's fine. Next frame will handle the delta.
                 return;
             }
         }
 
         if (mode === 'CUTTING') {
             updateCut(currentMousePos);
-        } else if (mode === 'GRABBING' && startMousePos.current) {
-            // Priority: Transform Buffer > Mouse
-            if (transformBuffer !== '') {
-                // Buffer exists, ignore mouse for positioning (but we might want to update display if we were doing something else? No, buffer is truth)
-                return;
-            };
-
-            const zoom = getCurrentZoom();
-            let dx = (currentMousePos.x - startMousePos.current.x) / zoom;
-            let dy = (currentMousePos.y - startMousePos.current.y) / zoom;
-
-            // Axis Lock Logic
-            if (axisLock === 'X') dy = 0;
-            if (axisLock === 'Y') dx = 0;
-
-            // Intelligent Snapping (Ctrl held)
-            if (e.ctrlKey) {
-                const GRID_SIZE = 20;
-                dx = Math.round(dx / GRID_SIZE) * GRID_SIZE;
-                dy = Math.round(dy / GRID_SIZE) * GRID_SIZE;
-            }
-
-            // Update Display Value
-            // Calculate Euclidean distance or Axis distance?
-            // User likely wants "Distance Moved". 
-            // If Axis Locked, show that axis distance.
-            // If Free, show X or Distance? 
-            // Let's show Distance for now, or tuple if needed.
-            // Actually, Blender shows "D: 1.0000 (1.0000, 0.0000, 0.0000)"
-            // Simple: just show Delta.
-            let displayVal = '';
-            if (axisLock === 'X') displayVal = `${Math.round(dx)}`;
-            else if (axisLock === 'Y') displayVal = `${Math.round(dy)}`;
-            else displayVal = `${Math.round(dx)}, ${Math.round(dy)}`; // Show Tuple
-
-            setTransformValue(displayVal);
-            applyMove(dx, dy);
-
-        } else if (mode === 'SCALING' && startMousePos.current && centerRef.current) {
-            if (transformBuffer !== '') return;
-
-            const flowMouse = getEventFlowPos(e);
-            const flowStartMouse = project({ x: startMousePos.current.x, y: startMousePos.current.y });
-            const center = centerRef.current;
-
-            const startDist = Math.hypot(flowStartMouse.x - center.x, flowStartMouse.y - center.y);
-            const currentDist = Math.hypot(flowMouse.x - center.x, flowMouse.y - center.y);
-
-            const scale = startDist > 0 ? currentDist / startDist : 1;
-            setTransformValue(scale.toFixed(2));
-            applyScale(scale);
-
-
-
-        } else if (mode === 'ROTATING' && startMousePos.current && centerRef.current) {
-            if (transformBuffer !== '') return;
-
-            const flowMouse = getEventFlowPos(e);
-
-            // We don't use flowStartMouse for angle diff anymore, we use frame-to-frame delta
-            const center = centerRef.current;
-
-            // Current angle from center
-            const currentAngle = Math.atan2(flowMouse.y - center.y, flowMouse.x - center.x);
-
-            // Describe Delta
-            let delta = currentAngle - lastAngleRef.current;
-
-            // Normalize Delta to avoid jumps (-PI to PI)
-            if (delta > Math.PI) delta -= 2 * Math.PI;
-            if (delta < -Math.PI) delta += 2 * Math.PI;
-
-            accumulatedRotation.current += delta;
-            lastAngleRef.current = currentAngle;
-
-            const deg = (accumulatedRotation.current * 180 / Math.PI);
-            setTransformValue(deg.toFixed(1) + '°');
-            applyRotate(accumulatedRotation.current);
+        } else {
+            updateInteraction(currentMousePos, e.ctrlKey);
         }
-    }, [mode, getCurrentZoom, applyMove, applyScale, applyRotate, updateCut, axisLock, getEventFlowPos, transformBuffer]);
+    }, [mode, updateCut, updateInteraction, startGrab]);
 
     const handleMouseUp = useCallback((e: MouseEvent) => {
         pendingGrabStart.current = null;
-        if (mode === 'CUTTING') {
-            endCut();
-        } else if (mode === 'GRABBING') {
-            confirmGrab();
-        }
+        if (mode === 'CUTTING') endCut();
+        else if (mode === 'GRABBING') confirmGrab();
     }, [mode, endCut, confirmGrab]);
 
-
-    // --- Numeric Type Handler ---
     const handleTypeNum = useCallback((char: string) => {
         if (!['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) return;
-
         setTransformBuffer(prev => {
             if (char === 'Backspace') return prev.slice(0, -1);
             if (char === '.' && prev.includes('.')) return prev;
@@ -744,72 +733,30 @@ export function useHand() {
             if (char === '-' && !prev.includes('-')) return '-' + prev;
             return prev + char;
         });
-
-        // We set transformValue to buffer content immediately?
-        // Actually, let's derive it in useEffect or just set it here too?
-        // Issue: 'setTransformBuffer' state update is async.
-        // But we can let the useEffect handle it.
-        // Wait, if I type '2', buffer is '2'. useEffect runs.
-        // useEffect should also update 'transformValue' to match Buffer?
-        // Yes.
     }, [mode]);
 
-    // Apply Transform Buffer Effect
-    // We need a separate effect to apply the buffer when it changes, 
-    // OR we can just call the apply functions here?
-    // Better to apply in useEffect so it updates even if mouse doesn't move.
-
-    // Actually, let's just make handleMouseMove apply it if buffer exists,
-    // AND create a useEffect that triggers when buffer changes.
-    // wait, we can't call applyMove inside useEffect easily if it depends on other refs? 
-    // Actually applyMove only depends on setNodes and initialPositions (ref). Safe.
-
-    // 2026-02-09: We will use a dedicated effect for buffer application
     useEffect(() => {
-        if (transformBuffer === '' && mode !== 'IDLE') {
-            // Buffer Cleared -> We do NOT reset Position here, 
-            // because mouseMove logic will pick up from where it was? 
-            // Or should we reset to mouse pos?
-            // Currently, handleMouseMove recalculates from startPos using current mouse pos.
-            // So if buffer clears, next mouse move event will "snap" to mouse position.
-            // This is acceptable behavior (Blender does this).
-            return;
-        }
-
+        if (transformBuffer === '' && mode !== 'IDLE') return;
         const val = parseFloat(transformBuffer);
         if (isNaN(val)) return;
-
-        // Update Display Value to match Buffer
         setTransformValue(transformBuffer);
-
         if (mode === 'GRABBING') {
-            // ... existing logic ...
-            let dx = 0;
-            let dy = 0;
-
-            if (axisLock === 'Y') {
-                dy = val; // Pixels
-            } else {
-                dx = val; // Pixels (Default to X if no lock or X lock)
-            }
+            let dx = 0, dy = 0;
+            if (axisLock === 'Y') dy = val;
+            else dx = val;
             applyMove(dx, dy);
-
         } else if (mode === 'SCALING') {
             applyScale(val);
-
         } else if (mode === 'ROTATING') {
-            const rad = val * (Math.PI / 180);
-            applyRotate(rad);
+            applyRotate(val * (Math.PI / 180));
         }
-
     }, [transformBuffer, mode, axisLock, applyMove, applyScale, applyRotate]);
-
 
     return {
         mode,
         cutPath,
-        transformBuffer, // Export Buffer (Deprecate if we switch to value?)
-        transformValue, // Export Value for UI
+        transformBuffer,
+        transformValue,
         startGrab,
         startScale,
         startRotate,
@@ -823,25 +770,20 @@ export function useHand() {
         resetSelected,
         swapConnections,
         detachSelected,
-        clearSelection, // New Export
-        selectNode, // New Export
+        clearSelection,
+        selectNode,
         setAxisLock,
-        handleTypeNum, // New Export
+        handleTypeNum,
         handleMouseMove,
         handleMouseDown,
         handleMouseUp
     };
 }
 
-// Minimal Intersection Helper
 function linesIntersect(a: number, b: number, c: number, d: number, p: number, q: number, r: number, s: number) {
-    var det, gamma, lambda;
-    det = (c - a) * (s - q) - (r - p) * (d - b);
-    if (det === 0) {
-        return false;
-    } else {
-        lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
-        gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
-        return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
-    }
+    const det = (c - a) * (s - q) - (r - p) * (d - b);
+    if (det === 0) return false;
+    const lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+    const gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+    return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
 }
