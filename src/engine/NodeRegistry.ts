@@ -48,12 +48,45 @@ NodeRegistry.register('IO-11', (node, inputs) => {
     // Result node simply passes through the input for connected nodes,
     // or arguably it doesn't output anything useful for downstream?
     // It acts as a Identity for 'out' checks if needed.
-    const inputPayload = inputs['in'];
+    let inputPayload = inputs['in'];
+    // Fallback: Use the first available input if 'in' is missing
+    if (!inputPayload) {
+        const keys = Object.keys(inputs);
+        if (keys.length > 0) inputPayload = inputs[keys[0]];
+    }
+
+    if (!inputPayload) return PayloadUtils.createScalar(0);
+
     if (!inputPayload) return PayloadUtils.createScalar(0);
 
     // We might want to format it or attach metadata here?
     // For now, identity.
     return inputPayload;
+});
+
+// IO-05: Unit Assigner
+NodeRegistry.register('IO-05', (node, inputs) => {
+    const inputPayload = inputs['in'] || PayloadUtils.createScalar(0);
+    const val = PayloadUtils.unwrap(inputPayload);
+    const unit = node.data?.unit as string || 'm';
+
+    // Check for existing unit in input
+    const inputUnit = inputPayload.meta?.unit;
+
+    let finalVal = Number(val);
+
+    if (inputUnit && inputUnit !== unit) {
+        // Attempt conversion
+        const engine = MathEngine.getInstance();
+        try {
+            finalVal = engine.convertUnit(finalVal, inputUnit, unit);
+        } catch (e) {
+            return PayloadUtils.createError(`Cannot convert ${inputUnit} to ${unit}`);
+        }
+    }
+
+    // Create new scalar with the assigned (or converted) unit
+    return PayloadUtils.createScalar(finalVal, unit);
 });
 
 // IO-02: Slider (Input)
@@ -76,21 +109,97 @@ NodeRegistry.register('MA-01', (node, inputs) => {
 
     // 2. Convert to engine-compatible type (BigNumber in scientific mode)
     //    Raw JS numbers crash mathjs's tree-shaken addScalar in BigNumber mode.
-    const valA = engine.processInput(rawA);
-    const valB = engine.processInput(rawB);
-
+    // 3. Compute via MathEngine
     // 3. Compute via MathEngine
     const op = node.data?.op || 'ADD';
     let result;
     try {
+        // Phase 2.4: Physics-Aware Math
+        // Pass unit metadata to MathEngine to create Unit objects
+        const unitA = payloadA?.meta?.unit;
+        const unitB = payloadB?.meta?.unit;
+
+        const valA = engine.processInput(rawA, unitA);
+        const valB = engine.processInput(rawB, unitB);
+
         result = engine.evaluate(op, valA, valB);
     } catch (e) {
         return PayloadUtils.createError((e as Error).message);
     }
 
-    // 4. Wrap Result — convert back to plain number for payload storage
-    const numResult = typeof result === 'object' && result !== null && 'toNumber' in result
-        ? result.toNumber()
-        : Number(result);
-    return PayloadUtils.createScalar(numResult);
+    // 4. Wrap Result
+    let numResult: number;
+    let finalUnit: string | undefined;
+
+    // Handle Unit Logic Result (math.Unit)
+    if (result && typeof result === 'object' && result.isUnit) {
+        // If result is a Unit, we need to extract value and unit string
+        try {
+            numResult = result.toNumber(result.formatUnits()); // Convert to base?
+            // Actually, let's keep it simple.
+            // mathjs result.toString() -> "2 m"
+            // result.toNumber('unit') -> value
+
+            // We want to preserve the unit structure.
+            // result.toJSON() -> { mathjs: 'Unit', value, unit, fixPrefix? }
+            // Let's use toNumeric if possible? No.
+
+            // Strategy:
+            // 1. Get Value in canonical unit? Or first input's unit?
+            // Let's normalize to the unit of the first operand if compatible, or SI.
+            // For now, let mathjs decide, then extract.
+
+            // Extract Unit String
+            const unitStr = result.formatUnits(); // e.g. "m" or "m / s"
+            finalUnit = unitStr;
+
+            // Extract Number
+            numResult = result.toNumber(unitStr);
+        } catch (err) {
+            // Fallback for complex units
+            numResult = result.toNumber(); // Might fail if unit exists?
+            finalUnit = result.formatUnits();
+        }
+    } else if (typeof result === 'object' && result !== null && 'toNumber' in (result as any)) {
+        // BigNumber
+        numResult = (result as any).toNumber();
+        finalUnit = undefined; // No unit from mathjs (scalars)
+    } else {
+        numResult = Number(result);
+        finalUnit = undefined;
+    }
+
+    // 5. Unit Propagation (Phase 2.0.4 -> 2.4)
+    // If mathjs returned a unit, use it.
+    // If NOT (e.g. 5m / 5m = 1), finalUnit is empty string or undefined.
+    // However, if we fall back to manual merge (for scalar ops), usage is:
+    if (!finalUnit) {
+        const unitA = payloadA?.meta?.unit;
+        const unitB = payloadB?.meta?.unit;
+        // If we had units but lost them (e.g. cancellation), that's fine.
+        // But if we processed as scalars (no units in inputs), we attempt mergeUnits?
+        // MathEngine.processInput(rawA, unitA) handles unit creation.
+        // If units were present, result WOULD be a Unit (or scalar if cancelled).
+        // So manual mergeUnits might be redundant or conflicting.
+        // Let's rely on mathjs for now.
+    }
+
+    // 6. AST Generation
+    const unitA = payloadA?.meta?.unit;
+    const unitB = payloadB?.meta?.unit;
+
+    // ... (AST generation logic remains similar, maybe update to reflect units) ...
+    const astA = payloadA?.symbol || PayloadUtils.createSymbol('Literal', { value: rawA, unit: unitA });
+    const astB = payloadB?.symbol || PayloadUtils.createSymbol('Literal', { value: rawB, unit: unitB });
+
+    const newSymbol = PayloadUtils.createSymbol('BinaryExpression', {
+        operator: op,
+        left: astA,
+        right: astB
+    });
+
+    const outputPayload = PayloadUtils.createScalar(numResult, finalUnit);
+    outputPayload.symbol = newSymbol;
+
+    return outputPayload;
 });

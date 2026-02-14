@@ -369,22 +369,46 @@ export function useHand() {
         const edges = getEdges();
 
         // Find edges connected to Input A and Input B
-        const edgeA = edges.find(e => e.target === targetId && e.targetHandle === 'in-a');
-        const edgeB = edges.find(e => e.target === targetId && e.targetHandle === 'in-b');
+        const edgeA = edges.find(e => e.target === targetId && e.targetHandle === 'in_a');
+        const edgeB = edges.find(e => e.target === targetId && e.targetHandle === 'in_b');
 
         if (edgeA && edgeB) {
-            // Swap their sources
-            setEdges(eds => eds.map(e => {
-                if (e.id === edgeA.id) return { ...e, source: edgeB.source, sourceHandle: edgeB.sourceHandle };
-                if (e.id === edgeB.id) return { ...e, source: edgeA.source, sourceHandle: edgeA.sourceHandle };
-                return e;
-            }));
+            // Atomic Swap via Brain
+            const txs: Transaction[] = [
+                { type: 'DISCONNECT', payload: edgeA.id },
+                { type: 'DISCONNECT', payload: edgeB.id },
+                {
+                    type: 'CONNECT',
+                    payload: { ...edgeA, id: `edge-${Date.now()}-a`, source: edgeB.source, sourceHandle: edgeB.sourceHandle }
+                },
+                {
+                    type: 'CONNECT',
+                    payload: { ...edgeB, id: `edge-${Date.now()}-b`, source: edgeA.source, sourceHandle: edgeA.sourceHandle }
+                }
+            ];
+            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+
         } else if (edgeA && !edgeB) {
             // Move A to B
-            setEdges(eds => eds.map(e => e.id === edgeA.id ? { ...e, targetHandle: 'in-b' } : e));
+            const txs: Transaction[] = [
+                { type: 'DISCONNECT', payload: edgeA.id },
+                {
+                    type: 'CONNECT',
+                    payload: { ...edgeA, id: `edge-${Date.now()}-mov`, targetHandle: 'in_b' }
+                }
+            ];
+            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+
         } else if (!edgeA && edgeB) {
             // Move B to A
-            setEdges(eds => eds.map(e => e.id === edgeB.id ? { ...e, targetHandle: 'in-a' } : e));
+            const txs: Transaction[] = [
+                { type: 'DISCONNECT', payload: edgeB.id },
+                {
+                    type: 'CONNECT',
+                    payload: { ...edgeB, id: `edge-${Date.now()}-mov`, targetHandle: 'in_a' }
+                }
+            ];
+            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
         }
 
     }, [getNodes, getEdges, setEdges]);

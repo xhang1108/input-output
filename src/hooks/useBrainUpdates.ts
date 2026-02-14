@@ -74,9 +74,10 @@ export function useBrainUpdates(
                             let newPos = uiNode.position;
                             let needsUpdate = false;
 
-                            // Sync Value
-                            if (uiNode.data.value !== logicNode.value) {
-                                newData = { ...uiNode.data, value: logicNode.value };
+                            // Sync Data & Value
+                            const targetData = { ...logicNode.data, value: logicNode.value };
+                            if (JSON.stringify(uiNode.data) !== JSON.stringify(targetData)) {
+                                newData = targetData;
                                 needsUpdate = true;
                             }
 

@@ -26,6 +26,11 @@ export const ResultNode = memo((props: NodeProps) => {
                 } else {
                     displayValue = String(rawValue);
                 }
+
+                // Append Unit if present
+                if (payload.meta?.unit) {
+                    displayValue += ` ${payload.meta.unit}`;
+                }
             }
         }
     }

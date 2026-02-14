@@ -92,11 +92,9 @@ export class Brain {
         while (queue.length > 0) {
             const currentId = queue.shift()!;
 
-            if (currentId !== startNodeId) {
-                const node = this.state.nodes.get(currentId);
-                if (node) {
-                    node.isDirty = true;
-                }
+            const node = this.state.nodes.get(currentId);
+            if (node) {
+                node.isDirty = true;
             }
 
             if (visited.has(currentId)) continue;
@@ -364,7 +362,10 @@ export class Brain {
                     this.propagateDirty(tNode.id);
                     this.log(`Updated Node Data ${tNode.id}`);
 
-                    if (!silent) this.triggerCalculation();
+                    if (!silent) {
+                        this.emit('graphChanged', null); // Force full sync (Phase 2.3 Unit & Data Sync)
+                        this.triggerCalculation();
+                    }
                 }
                 break;
 

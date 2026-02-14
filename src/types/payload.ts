@@ -7,7 +7,17 @@
  */
 
 // Placeholder for Future Phases
-export type ASTNode = any; // Will be defined in Phase 3
+// Phase 3: Symbolic AST Structure
+export type ASTNode = {
+    type: 'BinaryExpression' | 'UnaryExpression' | 'FunctionCall' | 'Identifier' | 'Literal';
+    operator?: string;
+    left?: ASTNode;
+    right?: ASTNode;
+    argument?: ASTNode;
+    name?: string;
+    value?: number | string;
+    unit?: string; // Symbolic unit
+};
 export type Matrix = any;  // Will be mathjs.Matrix in Phase 2.3
 
 export enum DataType {

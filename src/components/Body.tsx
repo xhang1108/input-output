@@ -24,6 +24,7 @@ import { generateNodeId } from '../utils/idGenerator';
 import { BaseNode } from './nodes/BaseNode';
 import { FrameNode } from './nodes/FrameNode';
 import { InputNode } from './nodes/InputNode';
+import { UnitNode } from './nodes/UnitNode';
 import { MathNode } from './nodes/MathNode';
 import { ResultNode } from './nodes/ResultNode';
 import { SliderNode } from './nodes/SliderNode';
@@ -52,6 +53,7 @@ const nodeTypes = {
     'MA-01': MathNode,
     'IO-01': InputNode,
     'IO-02': SliderNode,
+    'IO-05': UnitNode,
     'IO-11': ResultNode,
 };
 

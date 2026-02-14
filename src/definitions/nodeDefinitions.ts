@@ -39,6 +39,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
 
     // ─── Output Family ──────────────────────────────────────────
     {
+        id: 'IO-05',
+        label: 'Unit',
+        category: 'Input',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { type: 'unit', unit: 'm' }
+    },
+    {
         id: 'IO-11',
         label: 'Result',
         category: 'Output',
