@@ -53,7 +53,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Result',
         category: 'Output',
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar' }
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { type: 'result' }
     },
@@ -104,23 +104,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { op: 'DIV', label: 'Div' }
     },
-
-    // ─── Debug ──────────────────────────────────────────────────
-    {
-        id: 'baseNode',
-        label: 'Multi-Handle (5 Inputs)',
-        category: 'Debug',
-        handles: [
-            { id: 'in-0', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'soul', label: 'Main' },
-            { id: 'in-1', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
-            { id: 'in-2', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix' },
-            { id: 'in-3', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector' },
-            { id: 'in-4', type: 'target', position: Position.Left, variant: 'single', dataType: 'unit' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
-        ],
-        defaultData: { label: 'Dynamic Node' }
-    },
 ];
+
+
 
 // Helper: Get definitions grouped by category (for menu rendering)
 export function getDefinitionsByCategory(): { category: string; items: NodeDefinition[] }[] {

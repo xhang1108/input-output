@@ -71,7 +71,7 @@ export function MagneticEdge({
                     path={edgePath}
                     style={{
                         strokeWidth: 2,
-                        stroke: '#fbbf24', // Amber-400 (Energy Flow)
+                        stroke: 'var(--color-scalar)', // Amber-400 (Energy Flow)
                         fill: 'none',
                         strokeDasharray: 10,
                         strokeDashoffset: 0,

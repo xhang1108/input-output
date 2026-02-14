@@ -24,7 +24,7 @@ export function NodeHandle({ className, color, style, id, nodeId, ...props }: Cu
         <Handle
             id={id}
             className={cn(
-                "w-3 h-3 rounded-full border-2 border-zinc-900 transition-all duration-150 z-50",
+                "w-(--handle-size-sm) h-(--handle-size-sm) rounded-full border-2 border-zinc-900 transition-all duration-150 z-50",
                 className
             )}
             style={{

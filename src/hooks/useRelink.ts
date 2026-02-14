@@ -3,6 +3,7 @@ import { Edge, Connection, addEdge } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import { RelinkState } from '../components/edges/RelinkLine';
 import { Brain } from '../engine/Brain';
+import { BrainHelper } from '../engine/BrainHelper';
 import { Transaction } from '../engine/types';
 
 type UseRelinkProps = {
@@ -52,33 +53,42 @@ export function useRelink({
 
         if (!state.active || !anchorNodeId) return;
 
-        // No manual checks here. We will check in the loop.
-
         const dropSide = { n: targetN, h: targetH };
+        let newEdgesToCreate: Edge[] = [];
+        let edgesToRemove: string[] = [...removedEdgeIds.current]; // Start with the dragged wire(s)
 
         if (state.type === 'target') {
-            // Anchor is Target (Input) -> Moving the Source end -> Should land on a new Source (Output)
+            // Anchor is Target (Input). Dragging Source.
+            // Usually Inputs don't have existing connections (except the one we are dragging, which is in removedEdgeIds).
+            // But we must validate the new Source->Target connection.
+            // Note: If we had a Fan-In restriction on Source (Output), we'd check it here.
+
             const anchorsToConnect = state.anchors && state.anchors.length > 0
                 ? state.anchors
                 : [{ nodeId: state.targetNodeId!, handleId: state.targetHandleId }];
 
-            // Validate all potential connections individually
-            const validNewEdges = anchorsToConnect
+            newEdgesToCreate = anchorsToConnect
                 .map(anchor => {
-                    // Check against Brain
-                    // Anchor is Input (Target of new edge), DropSide is Output (Source of new edge)
-                    // Edge: Output(DropSide) -> Input(Anchor)
-                    const validation = Brain.getInstance().validateConnection(
-                        dropSide.n!,
-                        dropSide.h,
-                        anchor.nodeId,
-                        anchor.handleId,
-                        edges
-                    );
+                    // Proposed: DropSide (Source) -> Anchor (Target)
+                    const proposed = { source: dropSide.n!, sourceHandle: dropSide.h, target: anchor.nodeId, targetHandle: anchor.handleId };
 
-                    if (!validation.isValid) {
-                        logAction(`Relink Blocked: ${validation.reason}`);
+                    // Exclude dragged wires from validation to avoid false conflicts
+                    // (The wire passed as 'edges' to checkConnectionWithReplacement should NOT include the one we are moving)
+                    // We can just filter `edges` right now.
+
+                    const edgesWithoutDragged = edges.filter(e => !removedEdgeIds.current.includes(e.id));
+
+                    const check = BrainHelper.checkConnectionWithReplacement(proposed as Edge, edgesWithoutDragged);
+
+                    if (!check.isValid) {
+                        logAction(`Relink Blocked: ${check.reason}`);
                         return null;
+                    }
+
+                    // If BrainHelper says we need to replace an edge (on the Anchor Input),
+                    // we must add it to the removal list.
+                    if (check.edgeToReplace) {
+                        edgesToRemove.push(check.edgeToReplace.id);
                     }
 
                     return {
@@ -93,46 +103,63 @@ export function useRelink({
                 })
                 .filter(Boolean) as Edge[];
 
-            if (validNewEdges.length === 0) return;
-
-            submitRelinkBatch(validNewEdges);
-
-            const detail = validNewEdges.length > 1
-                ? `${validNewEdges.length} wires`
-                : `${dropSide.n}:${dropSide.h} -> ${anchorsToConnect[0].nodeId}:${anchorsToConnect[0].handleId}`;
-            logAction(`Relinked: ${detail}`);
         } else {
-            // Anchor is Source (Output) -> Moving the Target end -> Should land on a new Target (Input)
-            // Edge: Output(Anchor) -> Input(DropSide)
+            // Anchor is Source (Output). Dragging Target (Input).
+            // DropSide is the NEW Input.
 
-            const validation = Brain.getInstance().validateConnection(
-                state.targetNodeId!,
-                state.targetHandleId,
-                dropSide.n!,
-                dropSide.h,
-                edges
-            );
-
-            if (!validation.isValid) {
-                logAction(`Relink Blocked: ${validation.reason}`);
-                return;
-            }
-
-            const newEdge = {
-                id: nanoid(),
+            // Proposed: Anchor (Source) -> DropSide (Target)
+            const proposed = {
                 source: state.targetNodeId!,
                 sourceHandle: state.targetHandleId ?? null,
                 target: dropSide.n!,
-                targetHandle: dropSide.h,
-                type: 'magnetic' as const,
-                data: { pathType: edgeType, animate: edgeAnimation }
+                targetHandle: dropSide.h
             };
 
-            submitRelinkBatch([newEdge]);
+            const edgesWithoutDragged = edges.filter(e => !removedEdgeIds.current.includes(e.id));
 
-            logAction(`Relinked: ${newEdge.source}:${newEdge.sourceHandle} -> ${newEdge.target}:${newEdge.targetHandle}`);
+            const check = BrainHelper.checkConnectionWithReplacement(proposed as Edge, edgesWithoutDragged);
+
+            if (check.isValid) {
+                const newEdge = {
+                    id: nanoid(),
+                    source: state.targetNodeId!,
+                    sourceHandle: state.targetHandleId ?? null,
+                    target: dropSide.n!,
+                    targetHandle: dropSide.h,
+                    type: 'magnetic' as const,
+                    data: { pathType: edgeType, animate: edgeAnimation }
+                };
+                newEdgesToCreate.push(newEdge);
+
+                if (check.edgeToReplace) {
+                    edgesToRemove.push(check.edgeToReplace.id);
+                }
+            } else {
+                logAction(`Relink Blocked: ${check.reason}`);
+            }
         }
-    }, [edgeType, edgeAnimation, setEdges, logAction, edges]);
+
+        if (newEdgesToCreate.length === 0) return;
+
+        // Perform Batch
+        // Update removedEdgeIds ref so the submit function works?
+        // Actually submitRelinkBatch uses removedEdgeIds.current.
+        // We should update it or pass it.
+        // Let's modify submitRelinkBatch to accept explicit removals to be cleaner.
+        // For now, updating the ref is the minimal change that works with existing architecture.
+
+        // Deduplicate removal IDs
+        removedEdgeIds.current = Array.from(new Set(edgesToRemove));
+
+        submitRelinkBatch(newEdgesToCreate);
+
+        const detail = newEdgesToCreate.length > 1
+            ? `${newEdgesToCreate.length} wires`
+            : `${newEdgesToCreate[0].source}:${newEdgesToCreate[0].sourceHandle} -> ${newEdgesToCreate[0].target}:${newEdgesToCreate[0].targetHandle}`;
+
+        logAction(`Relinked: ${detail}`);
+
+    }, [edgeType, edgeAnimation, setEdges, logAction, edges, submitRelinkBatch]);
 
     const resetRelink = useCallback(() => {
         const brain = Brain.getInstance();
@@ -227,20 +254,75 @@ export function useRelink({
             const state = relinkStateRef.current;
             if (state.active) return; // Relink handled in onConnectEnd
 
+            // Check for existing connection to replace
+            const targetHandle = params.targetHandle;
+            const existingEdge = edges.find(e =>
+                e.target === params.target &&
+                e.targetHandle === targetHandle
+            );
+
+            // Filter out the existing edge for validation purposes
+            // We want to know if the NEW connection is valid *assuming* the old one is gone.
+            const edgesForValidation = existingEdge
+                ? edges.filter(e => e.id !== existingEdge.id)
+                : edges;
+
             // Final Brain Check (The Firewall)
-            // Even if UI said yes, we double check here before committing to state.
             const validation = Brain.getInstance().validateConnection(
                 params.source,
                 params.sourceHandle,
                 params.target,
                 params.targetHandle,
-                edges
+                edgesForValidation
             );
 
             if (!validation.isValid) {
                 logAction(`Blocked: ${validation.reason}`);
                 return;
             }
+
+            // If we are replacing, we should probably record the DISCONNECT of the old edge
+            // so History is correct? 
+            // Brain 'CONNECT' transaction automatically validates. 
+            // If we send raw 'CONNECT', Brain will block if we didn't send 'DISCONNECT' first in a BATCH.
+
+            // To be safe and atomic, we should dispatch a BATCH to Brain.
+            // But here we are manipulating `setEdges` for local state?
+            // `Body.tsx` logic seems to rely on `setEdges` locally, and `useBrainSync` picks it up?
+            // OR `useBrainUpdates`?
+            // Actually `Brain.ts` has `applyTransaction` which updates local state if we use it?
+            // Body.tsx currently uses `setEdges` directly (lines 245-252).
+            // AND it has `useBrainSync` (line 130) which watches `edges` and syncs to Brain?
+            // Let's look at `useBrainSync.ts`... (I can't see it but I recall it).
+            // IF `Body.tsx` is the source of truth for UI, updates here trigger side-effects.
+
+            // Wait, if `Brain.validateConnection` is now strict, checking `this.state.edges` (which might be in sync).
+            // If we update `setEdges` locally, `Brain` might not know yet?
+            // `useBrainSync` likely pushes changes to Brain.
+
+            // HOWEVER, the `validateConnection` call on line 232 uses `edges` from state.
+            // So my manual filter above works for that check.
+
+            // BUT, `Brain.ts` internal state might still have the old edge.
+            // If we rely on `useBrainSync` to update Brain, there's a lag.
+            // If we want atomic validity, we should probably use `Brain.applyTransaction` here instead of `setEdges`.
+            // But `Body.tsx` seems to be Hybrid.
+
+            // Let's Stick to the Plan:
+            // 1. Validate with hypothetical removal.
+            // 2. Update `setEdges` (which already does replacement filtering).
+            // 3. `useBrainSync` will detect the difference and update Brain?
+            //    If `useBrainSync` sends a "Diff", it might send "Remove Old, Add New".
+            //    If it just sends "Here is new list", Brain might re-validate?
+
+            // CRITIAL: `Brain.ts` `CONNECT` transaction calls `validateConnection`.
+            // If `Brain` has the old edge, and we send `CONNECT`, it will BLOCK.
+            // We MUST send `DISCONNECT` (old) then `CONNECT` (new) in a BATCH to Brain.
+            // OR, rely on `useBrainSync` handling this?
+            // If `useBrainSync` is smart, it sends DISCONNECT then CONNECT.
+
+            // Assuming `useBrainSync` handles synchronization. 
+            // The `validateConnection` here is just for UI feedback.
 
             setEdges((eds) => {
                 const targetHandle = params.targetHandle;

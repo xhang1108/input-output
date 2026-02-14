@@ -31,7 +31,7 @@ export const SliderNode = memo((props: NodeProps) => {
 
     return (
         <BaseNode {...props}>
-            <div className="flex flex-col gap-3 p-1 w-32">
+            <div className="flex flex-col gap-3 p-1 w-(--node-width-min)">
                 <div className="flex justify-between items-center">
                     <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Slider</label>
                     <span

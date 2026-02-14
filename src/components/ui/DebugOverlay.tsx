@@ -14,12 +14,12 @@ export function DebugOverlay({ mode }: { mode: string }) {
     const selectedNodes = useRFStore(s => s.nodes.filter(n => n.selected).length);
 
     return (
-        <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md border border-zinc-800 text-zinc-400 p-3 rounded-lg text-xs font-mono z-50 shadow-xl pointer-events-none select-none max-h-[80vh] flex flex-col">
+        <div className="absolute top-4 right-4 bg-(--node-bg)/80 backdrop-blur-md border border-zinc-800 text-zinc-400 p-3 rounded-lg text-xs font-mono z-50 shadow-xl pointer-events-none select-none max-h-[80vh] flex flex-col">
             <h3 className="text-zinc-500 font-bold mb-2 uppercase tracking-wider">Debug Stats</h3>
 
             <div className="grid grid-cols-2 gap-x-6 gap-y-1">
                 <span>Mode:</span>
-                <span className={mode !== 'IDLE' ? 'text-amber-400 font-bold' : 'text-zinc-300'}>
+                <span className={mode !== 'IDLE' ? 'text-(--color-scalar) font-bold' : 'text-zinc-300'}>
                     {mode}
                 </span>
 

@@ -153,9 +153,9 @@ export const RelinkLine = ({
                 <path
                     fill="none"
                     strokeWidth={2}
-                    stroke="#b1b1b7"
+                    stroke="#71717a" // zinc-500 to match MagneticEdge
                     d={d}
-                    style={connectionLineStyle}
+                    style={{ ...connectionLineStyle, opacity: 0.8 }}
                 />
             </g>
         );
@@ -169,13 +169,12 @@ export const RelinkLine = ({
                     key={i}
                     fill="none"
                     strokeWidth={2}
-                    stroke="#b1b1b7"
+                    stroke="#71717a"
                     d={d}
-                    className="animated"
-                    style={{ strokeDasharray: 5, animation: 'dashdraw 0.5s linear infinite' }}
+                    style={{ opacity: 0.8 }}
                 />
             ))}
-            <circle cx={effectiveToX} cy={effectiveToY} r={4} fill="#b1b1b7" />
+            <circle cx={effectiveToX} cy={effectiveToY} r={4} fill="#71717a" />
         </g>
     );
 };

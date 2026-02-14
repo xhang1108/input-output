@@ -6,6 +6,19 @@ import { PayloadUtils } from '../../utils/PayloadUtils';
 export const ResultNode = memo((props: NodeProps) => {
     const { id, data } = props;
 
+    // Define custom handles: Single Input (Dot), No Output (Sink)
+    const handles = [
+        {
+            id: 'in',
+            type: 'target',
+            position: 'left',
+            variant: 'single'
+        }
+    ];
+
+    // Merge handles into data
+    const nodeData = { ...data, handles };
+
     // Brain updates node.value with calculation result (NodePayload)
     // Phase 2.1: Unwrap payload for basic scalar display
     const payload = data.value as import('../../types/payload').NodePayload;
@@ -36,7 +49,7 @@ export const ResultNode = memo((props: NodeProps) => {
     }
 
     return (
-        <BaseNode {...props}>
+        <BaseNode {...props} data={nodeData}>
             <div className="flex flex-col gap-2 p-1 min-w-[120px]">
                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Result</label>
                 <div

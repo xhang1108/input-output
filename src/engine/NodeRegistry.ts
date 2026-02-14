@@ -103,6 +103,12 @@ NodeRegistry.register('MA-01', (node, inputs) => {
     const payloadA = inputs['in_a'];
     const payloadB = inputs['in_b'];
 
+    // Fix: If no inputs are connected, return 0 data immediately
+    // This prevents 0/0 = NaN for DIV/MOD operations when disconnected
+    if (!payloadA && !payloadB) {
+        return PayloadUtils.createScalar(0);
+    }
+
     // Default to 0 for unconnected inputs
     const rawA = payloadA ? PayloadUtils.unwrap(payloadA) : 0;
     const rawB = payloadB ? PayloadUtils.unwrap(payloadB) : 0;
@@ -119,8 +125,19 @@ NodeRegistry.register('MA-01', (node, inputs) => {
         const unitA = payloadA?.meta?.unit;
         const unitB = payloadB?.meta?.unit;
 
-        const valA = engine.processInput(rawA, unitA);
-        const valB = engine.processInput(rawB, unitB);
+        // Auto-fix for Unit + 0 or Unit - 0
+        // If one side is a Unit and the other is 0 (missing input), mathjs fails.
+        // We must treat the 0 as "0 [unit]".
+        let valA = engine.processInput(rawA, unitA);
+        let valB = engine.processInput(rawB, unitB);
+
+        if (unitA && !unitB && rawB === 0 && (op === 'ADD' || op === 'SUB')) {
+            // A is Unit, B is 0. Treat B as 0 [unitA]
+            valB = engine.processInput(0, unitA);
+        } else if (!unitA && unitB && rawA === 0 && (op === 'ADD' || op === 'SUB')) {
+            // A is 0, B is Unit. Treat A as 0 [unitB]
+            valA = engine.processInput(0, unitB);
+        }
 
         result = engine.evaluate(op, valA, valB);
     } catch (e) {

@@ -87,7 +87,7 @@ export function SettingsPanel({
                                     className={`
                                         text-xs py-1.5 px-2 rounded-md border text-center capitalize transition-colors
                                         ${edgeType === type
-                                            ? 'bg-zinc-700 border-zinc-500 text-cyan-400 font-medium'
+                                            ? 'bg-zinc-700 border-zinc-500 text-(--color-unit) font-medium'
                                             : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}
                                     `}
                                 >
@@ -112,7 +112,7 @@ export function SettingsPanel({
                                     className={`
                                         text-xs py-1.5 px-2 rounded-md border text-center capitalize transition-colors
                                         ${layoutAlgorithm === algo
-                                            ? 'bg-zinc-700 border-zinc-500 text-cyan-400 font-medium'
+                                            ? 'bg-zinc-700 border-zinc-500 text-(--color-unit) font-medium'
                                             : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}
                                     `}
                                 >
@@ -133,7 +133,7 @@ export function SettingsPanel({
                                         ${(layoutAlgorithm === 'force' || layoutAlgorithm === 'radial')
                                             ? 'opacity-30 cursor-not-allowed bg-zinc-900 border-zinc-900 text-zinc-600'
                                             : layoutDirection === dir
-                                                ? 'bg-zinc-700 border-zinc-500 text-cyan-400'
+                                                ? 'bg-zinc-700 border-zinc-500 text-(--color-unit)'
                                                 : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}
                                     `}
                                 >
@@ -148,7 +148,7 @@ export function SettingsPanel({
                     {/* Edge Animation */}
                     <ToggleRow
                         label="Flow Animation"
-                        icon={<span className="text-amber-400 font-bold">~</span>}
+                        icon={<span className="text-(--color-scalar) font-bold">~</span>}
                         active={edgeAnimation}
                         onClick={() => setEdgeAnimation(!edgeAnimation)}
                     />
@@ -203,10 +203,10 @@ function ToggleRow({ label, icon, active, onClick }: { label: string, icon: Reac
             `}
         >
             <div className="flex items-center gap-3">
-                <span className={active ? 'text-cyan-400' : 'text-zinc-500'}>{icon}</span>
+                <span className={active ? 'text-(--color-unit)' : 'text-zinc-500'}>{icon}</span>
                 {label}
             </div>
-            {active && <Check className="w-3 h-3 text-emerald-400" />}
+            {active && <Check className="w-3 h-3 text-(--color-vector)" />}
         </button>
     );
 }

@@ -57,6 +57,14 @@ body {
   /* System */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
+
+  /* ── Layout & Geometry Tokens ── */
+  --node-width-min: 150px;
+  --gap-node-socket: 8px;
+  
+  /* Handles */
+  --handle-size-sm: 16px; /* Was 12px, too small */
+  --handle-size-lg: 32px; /* Was 24px, too small */
 }
 
 :root {

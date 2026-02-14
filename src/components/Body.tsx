@@ -331,7 +331,14 @@ export function Body() {
             'g': (e) => { startGrab(mousePosRef.current, e.altKey); logAction('Start Grab (G)'); },
             's': (e) => { startScale(mousePosRef.current); logAction('Start Scale (S)'); },
             'r': (e) => { startRotate(mousePosRef.current); logAction('Start Rotate (R)'); },
-            'shift+d': (e) => { e.preventDefault(); if (duplicateSelected()) { startGrab(mousePosRef.current); logAction('Duplicate Selected (Shift+D)'); } },
+            'shift+d': (e) => {
+                e.preventDefault();
+                const newNodes = duplicateSelected();
+                if (newNodes) {
+                    startGrab(mousePosRef.current, false, newNodes as Node[]);
+                    logAction('Duplicate Selected (Shift+D)');
+                }
+            },
             'f': (e) => { e.preventDefault(); groupSelected(); logAction('Group Selected (F)'); },
 
             // Node Operations
@@ -509,6 +516,7 @@ export function Body() {
                     preventScrolling={true}
                     panOnScrollSpeed={1}
                     selectionMode={SelectionMode.Partial}
+                    multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
                     connectionLineType={{
                         bezier: ConnectionLineType.Bezier,
                         straight: ConnectionLineType.Straight,
@@ -583,7 +591,12 @@ export function Body() {
                                 { label: 'Select All', shortcut: 'A', action: () => { setNodes((nds: Node[]) => nds.map(n => ({ ...n, selected: true }))); } },
                             ] : [
                                 { label: 'Rename', shortcut: 'Enter', action: () => { /* Trigger Rename? Needs Focus Logic */ logAction('Rename via Menu (Todo)'); } },
-                                { label: 'Duplicate', shortcut: 'Shift+D', action: () => { if (duplicateSelected()) startGrab({ x: contextMenu.x, y: contextMenu.y }); } },
+                                {
+                                    label: 'Duplicate', shortcut: 'Shift+D', action: () => {
+                                        const newNodes = duplicateSelected();
+                                        if (newNodes) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, newNodes as Node[]);
+                                    }
+                                },
                                 { label: 'Copy', shortcut: 'Ctrl+C', action: () => copyToClipboard() },
                                 { label: 'Colors', action: () => { logAction('Colors via Menu (Todo)'); } },
                                 { label: 'Detach', shortcut: 'Alt+Drag', action: () => detachSelected() },

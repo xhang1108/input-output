@@ -558,6 +558,20 @@ export class Brain {
             return { isValid: false, reason: 'Connection would create a cycle' };
         }
 
+        const inputNodeId = sourceIsInput ? source : target;
+        const inputHandleId = sourceIsInput ? sourceHandle : targetHandle;
+
+        if (inputNodeId && inputHandleId) {
+            const existingEdge = edgesToCheck.find(e =>
+                e.target === inputNodeId &&
+                e.targetHandle === inputHandleId
+            );
+
+            if (existingEdge) {
+                return { isValid: false, reason: 'Input already occupied' };
+            }
+        }
+
         return { isValid: true };
     }
 

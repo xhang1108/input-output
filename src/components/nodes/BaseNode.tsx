@@ -55,36 +55,27 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
 
     // Auto-Layout: Calculate vertical positions for left-side handles
     const HEADER_HEIGHT = 52;
-    const SPACING = 8;
 
-    const layoutHandles = (handles: HandleConfig[]) => {
-        let currentTop = HEADER_HEIGHT;
-        return handles.map((h) => {
-            const height = h.variant === 'capsule' ? 24 : 12;
-            const top = currentTop + (height / 2);
-            currentTop += height + SPACING;
-            return { ...h, top, height };
-        });
-    };
-
-    const renderedLeftHandles = layoutHandles(leftHandles);
-    const renderedRightHandles = layoutHandles(rightHandles);
+    const renderedLeftHandles = leftHandles;
+    const renderedRightHandles = rightHandles;
 
     // If only one right handle, center it vertically
-    const leftContentHeight = renderedLeftHandles.length > 0
-        ? renderedLeftHandles[renderedLeftHandles.length - 1].top + 12
-        : HEADER_HEIGHT + 40;
+    // If only one right handle, center it vertically
+    // Use dynamic height or min-height based on handles count + Header
+    // 52 (Header) + (Count * (Height + Gap))?
+    // For now, just ensuring minHeight is enough.
+    const approximateHeight = HEADER_HEIGHT + Math.max(leftHandles.length, rightHandles.length) * 40;
 
     // Minimum height to fit all handles + bottom padding
-    const minHeight = Math.max(100, leftContentHeight + 12);
+    const minHeight = Math.max(100, approximateHeight + 12);
 
     return (
         <div
             className={`
-                relative min-w-[150px] rounded-xl border transition-all duration-200 group
+                relative min-w-[var(--node-width-min)] rounded-xl border transition-all duration-200 group
                 ${selected
-                    ? 'border-zinc-400 node-shadow-3 animate-ring-pulse scale-[1.02]'
-                    : 'border-zinc-700 hover:border-zinc-500 node-shadow-1 hover:node-shadow-2'}
+                    ? 'border-zinc-400 animate-ring-pulse scale-[1.02]'
+                    : 'border-zinc-700 hover:border-zinc-500'}
             `}
             style={{ minHeight: `${minHeight}px`, background: 'var(--node-bg)' }}
         >
@@ -121,67 +112,103 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
             </div>
 
             {/* ─── Left Handles (Targets/Inputs) ───────────────── */}
-            {renderedLeftHandles.map((h) => (
-                <div key={h.id} className="contents">
-                    <NodeHandle
-                        type={h.type}
-                        position={h.position}
-                        id={h.id}
-                        nodeId={id}
-                        className={`
-                            border-zinc-900! z-50 pointer-events-auto origin-center
-                            ${h.variant === 'capsule'
-                                ? 'w-3! h-6! rounded-full!'
-                                : 'w-3! h-3!'}
-                        `}
-                        color={getHandleColor(h)}
-                        style={{ top: `${h.top}px` }}
-                        isConnectable={isConnectable}
-                    />
-                </div>
-            ))}
-
-            {/* ─── Right Handles (Sources/Outputs) ─────────────── */}
-            {renderedRightHandles.length === 1 ? (
-                // Single output: center vertically
-                <div className="contents">
-                    <NodeHandle
-                        type={renderedRightHandles[0].type}
-                        position={renderedRightHandles[0].position}
-                        id={renderedRightHandles[0].id}
-                        nodeId={id}
-                        className={`
-                            border-zinc-900! z-50 origin-center
-                            ${renderedRightHandles[0].variant === 'capsule'
-                                ? 'w-3! h-6! rounded-full!'
-                                : 'w-3! h-3!'}
-                        `}
-                        color={getHandleColor(renderedRightHandles[0])}
-                        isConnectable={isConnectable}
-                    />
-                </div>
-            ) : (
-                // Multiple outputs: layout vertically
-                renderedRightHandles.map((h) => (
-                    <div key={h.id} className="contents">
+            <div className="absolute left-0 w-0 flex flex-col items-center" style={{ top: '52px', gap: 'var(--gap-node-socket)' }}>
+                {renderedLeftHandles.length === 1 ? (
+                    // Single input: center vertically relative to node (special case)
+                    // But if we want NO hardcoding, we might just let it flow or use a specific class
+                    // For now, let's keep the single centered logic but use CSS centering
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 h-0 flex items-center">
                         <NodeHandle
-                            type={h.type}
-                            position={h.position}
-                            id={h.id}
+                            type={renderedLeftHandles[0].type}
+                            position={renderedLeftHandles[0].position}
+                            id={renderedLeftHandles[0].id}
                             nodeId={id}
                             className={`
                                 border-zinc-900! z-50 pointer-events-auto origin-center
-                                ${h.variant === 'capsule'
-                                    ? 'w-3! h-6! rounded-full!'
-                                    : 'w-3! h-3!'}
+                                ${renderedLeftHandles[0].variant === 'capsule'
+                                    ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
+                                    : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
                             `}
-                            color={getHandleColor(h)}
-                            style={{ top: `${h.top}px` }}
+                            color={getHandleColor(renderedLeftHandles[0])}
+                            isConnectable={isConnectable}
+                        // Removing style={{ top }} – allowing flex/absolute centering to work
+                        />
+                    </div>
+                ) : (
+                    leftHandles.map((h) => (
+                        <div key={h.id} className="relative flex items-center justify-center">
+                            <NodeHandle
+                                type={h.type}
+                                position={h.position}
+                                id={h.id}
+                                nodeId={id}
+                                className={`
+                                    border-zinc-900! z-50 pointer-events-auto origin-center
+                                    ${h.variant === 'capsule'
+                                        ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
+                                        : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
+                                `}
+                                color={getHandleColor(h)}
+                                isConnectable={isConnectable}
+                            />
+                            {/* Placeholder for the handle's space in the flex column */}
+                            <div
+                                style={{
+                                    width: '1px',
+                                    height: h.variant === 'capsule' ? 'var(--handle-size-lg)' : 'var(--handle-size-sm)'
+                                }}
+                            />
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* ─── Right Handles (Sources/Outputs) ─────────────── */}
+            <div className="absolute right-0 w-0 flex flex-col items-center" style={{ top: '52px', gap: 'var(--gap-node-socket)' }}>
+                {renderedRightHandles.length === 1 ? (
+                    <div className="absolute top-1/2 -translate-y-1/2 right-0 h-0 flex items-center">
+                        <NodeHandle
+                            type={renderedRightHandles[0].type}
+                            position={renderedRightHandles[0].position}
+                            id={renderedRightHandles[0].id}
+                            nodeId={id}
+                            className={`
+                                border-zinc-900! z-50 origin-center
+                                ${renderedRightHandles[0].variant === 'capsule'
+                                    ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
+                                    : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
+                            `}
+                            color={getHandleColor(renderedRightHandles[0])}
                             isConnectable={isConnectable}
                         />
                     </div>
-                ))
-            )}
+                ) : (
+                    rightHandles.map((h) => (
+                        <div key={h.id} className="relative flex items-center justify-center">
+                            <NodeHandle
+                                type={h.type}
+                                position={h.position}
+                                id={h.id}
+                                nodeId={id}
+                                className={`
+                                    border-zinc-900! z-50 pointer-events-auto origin-center
+                                    ${h.variant === 'capsule'
+                                        ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
+                                        : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
+                                `}
+                                color={getHandleColor(h)}
+                                isConnectable={isConnectable}
+                            />
+                            <div
+                                style={{
+                                    width: '1px',
+                                    height: h.variant === 'capsule' ? 'var(--handle-size-lg)' : 'var(--handle-size-sm)'
+                                }}
+                            />
+                        </div>
+                    ))
+                )}
+            </div>
         </div>
     );
 });

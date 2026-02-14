@@ -67,21 +67,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
         // --- Sync Edges ---
         const currentEdges = new Set(edges.map(e => e.id));
 
-        // 3. New Connections
-        edges.forEach(edge => {
-            if (!prevEdgesRef.current.has(edge.id)) {
-                // Check if Brain already has this edge (to avoid duplicate logs/logic if we double-sync)
-                const existing = brain.getEdges().find(e => e.id === edge.id);
-                if (!existing) {
-                    brain.applyTransaction({
-                        type: 'CONNECT',
-                        payload: edge
-                    });
-                }
-            }
-        });
-
-        // 4. Disconnections
+        // 3. Disconnections (Must happen BEFORE connections to free up slots)
         prevEdgesRef.current.forEach(id => {
             if (!currentEdges.has(id)) {
                 // Guard: Skip if Brain already removed this edge (e.g. from Undo)
@@ -90,6 +76,20 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                     brain.applyTransaction({
                         type: 'DISCONNECT',
                         payload: id
+                    });
+                }
+            }
+        });
+
+        // 4. New Connections
+        edges.forEach(edge => {
+            if (!prevEdgesRef.current.has(edge.id)) {
+                // Check if Brain already has this edge (to avoid duplicate logs/logic if we double-sync)
+                const existing = brain.getEdges().find(e => e.id === edge.id);
+                if (!existing) {
+                    brain.applyTransaction({
+                        type: 'CONNECT',
+                        payload: edge
                     });
                 }
             }

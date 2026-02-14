@@ -173,7 +173,7 @@ export function useHand() {
     }, []);
 
     // --- Command: Duplicate (Immediate) ---
-    const duplicateSelected = useCallback(() => {
+    const duplicateSelected = useCallback((): Node[] | false => {
         const nodes = getNodes();
         const selectedNodes = nodes.filter(n => n.selected);
         if (selectedNodes.length === 0) return false;
@@ -181,7 +181,7 @@ export function useHand() {
         const newNodes = cloneNodes(selectedNodes, { x: 0, y: 0 }); // Start at same pos for Grab to take over
 
         setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat(newNodes));
-        return true;
+        return newNodes;
     }, [getNodes, setNodes, cloneNodes]);
 
     // --- Command: Delete Selected ---
@@ -426,13 +426,20 @@ export function useHand() {
 
     // --- Interaction Triggers ---
 
-    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false) => {
+    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[]) => {
         const nodes = getNodes();
-        const selected = nodes.filter(n => n.selected);
+        let selected: Node[] = [];
+
+        if (overrideNodes) {
+            selected = overrideNodes;
+        } else {
+            selected = nodes.filter(n => n.selected);
+        }
+
         if (selected.length === 0) return;
 
         // Detach Logic (Alt + Drag)
-        if (isAltHeld) {
+        if (isAltHeld && !overrideNodes) {
             detachSelected();
         }
 
@@ -541,10 +548,31 @@ export function useHand() {
     }, [setNodes]);
 
     const selectNode = useCallback((id: string, exclusive: boolean = true) => {
-        setNodes(nds => nds.map(n => {
-            if (n.id === id) return { ...n, selected: true };
-            return { ...n, selected: exclusive ? false : n.selected };
-        }));
+        setNodes(nds => {
+            const targetNode = nds.find(n => n.id === id);
+            if (!targetNode) return nds;
+
+            // Determine the final set of selected IDs
+            const currentlySelectedIds = new Set(nds.filter(n => n.selected).map(n => n.id));
+            const newSelectedIds = new Set(exclusive ? [id] : [...currentlySelectedIds, id]);
+
+            // Separate nodes into "Selected" (to be moved to end) and "Unselected" (remain at start)
+            const unselected = nds.filter(n => !newSelectedIds.has(n.id)).map(n => ({
+                ...n,
+                selected: false // Ensure unselected
+            }));
+
+            const selected = nds.filter(n => newSelectedIds.has(n.id)).map(n => ({
+                ...n,
+                selected: true
+            }));
+
+            const selectedOthers = selected.filter(n => n.id !== id);
+            const target = selected.find(n => n.id === id)!;
+
+            // Order: Unselected -> SelectedOthers -> Target
+            return [...unselected, ...selectedOthers, target];
+        });
     }, [setNodes]);
 
     // --- Event Handlers (to be attached to Body) ---

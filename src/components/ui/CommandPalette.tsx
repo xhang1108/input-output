@@ -75,7 +75,7 @@ export function CommandPalette({ isOpen, position, onClose, onSelect }: CommandP
 
     return (
         <div
-            className="fixed z-100 w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
+            className="fixed z-100 w-48 bg-(--node-bg) border border-(--node-border) rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
             style={{
                 left: position?.x ?? '50%',
                 top: position?.y ?? '50%',
@@ -83,8 +83,8 @@ export function CommandPalette({ isOpen, position, onClose, onSelect }: CommandP
             }}
             onClick={e => e.stopPropagation()}
         >
-            <div className="p-2 border-b border-zinc-700">
-                <div className="flex items-center px-2 py-1 bg-zinc-950 rounded border border-zinc-800">
+            <div className="p-2 border-b border-(--node-border)">
+                <div className="flex items-center px-2 py-1 bg-zinc-950 rounded border border-(--node-border)">
                     <Search className="w-3 h-3 text-zinc-500 mr-2" />
                     <input
                         ref={inputRef}
