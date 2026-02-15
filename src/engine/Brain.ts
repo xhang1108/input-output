@@ -606,5 +606,41 @@ export class Brain {
 
         return false;
     }
+    // --- On-Demand AST Generation (Phase 3 Foundation) ---
+
+    /**
+     * Recursive function to generate AST for a specific node.
+     * This is cold-path logic (only runs when UI requests formula).
+     */
+    public getSymbol(nodeId: string): import('../types/payload').ASTNode | null {
+        const node = this.state.nodes.get(nodeId);
+        if (!node) return null;
+
+        // 1. If node has a cached symbol, return it (e.g. Factor nodes might cache)
+        if (node.value.symbol) {
+            return node.value.symbol;
+        }
+
+        // 2. If no symbol, we must construct it from inputs
+        const inputs = this.reverseAdjacency.get(nodeId) || [];
+        const inputSymbols: Record<string, import('../types/payload').ASTNode> = {};
+
+        // Recurse inputs
+        for (const input of inputs) {
+            const childSymbol = this.getSymbol(input.nodeId);
+            if (childSymbol && input.targetHandle) {
+                inputSymbols[input.targetHandle] = childSymbol;
+            }
+        }
+
+        // 3. Ask Registry to construct AST using input symbols
+        // We need a new Registry method: `getSymbol(nodeType, nodeData, inputSymbols)`
+        // Or we can simple reuse `evaluate` but passing Symbols instead of values?
+        // No, `evaluate` is for Values. We need a `symbolize` method in Registry.
+
+        // For now, let's implement a basic default symbolizers here or in Registry.
+        // Let's defer to Registry static method.
+        return NodeRegistry.getSymbol(node, inputSymbols);
+    }
 }
 

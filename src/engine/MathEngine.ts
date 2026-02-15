@@ -57,6 +57,10 @@ export class MathEngine implements IMathEngine {
         return MathEngine.instance;
     }
 
+    public getMathInstance(): MathJsStatic {
+        return this.math;
+    }
+
     public setMode(mode: ComputationMode) {
         this.mode = mode;
         console.log(`[MathEngine] Mode set to ${mode}`);

@@ -12,6 +12,7 @@ type UseRelinkProps = {
     logAction: (action: string) => void;
     edgeType: string;
     edgeAnimation: boolean;
+    onSmartLinkSearch?: (params: { nodeId: string; handleId: string; handleType: 'source' | 'target'; position: { x: number; y: number } }) => void;
 };
 
 export function useRelink({
@@ -19,7 +20,8 @@ export function useRelink({
     setEdges,
     logAction,
     edgeType,
-    edgeAnimation
+    edgeAnimation,
+    onSmartLinkSearch
 }: UseRelinkProps) {
     const [relinkState, setRelinkState] = useState<RelinkState>({
         active: false,
@@ -30,6 +32,9 @@ export function useRelink({
     });
 
     const removedEdgeIds = useRef<string[]>([]);
+
+    // Track start of ANY connection (New or Relink)
+    const connectionStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null } | null>(null);
 
     // Ref for synchronous access in callbacks
     const relinkStateRef = useRef<RelinkState>(relinkState);
@@ -177,6 +182,9 @@ export function useRelink({
     }, []);
 
     const onRelinkStart = useCallback((event: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
+        // Always track start params for potential Smart Link
+        connectionStartRef.current = params;
+
         if (relinkStateRef.current.active) return;
 
         const { nodeId, handleId, handleType } = params;
@@ -216,9 +224,11 @@ export function useRelink({
 
     const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
         const state = relinkStateRef.current;
-        if (state && state.active) {
+        const wasRelinking = state.active; // Capture state before potential reset
+
+        if (wasRelinking) {
             const { toNode, toHandle, isValid } = connectionState || {};
-            console.log('[Relink] End:', { toNode: toNode?.id, toHandle: toHandle?.id, isValid });
+            // console.log('[Relink] End:', { toNode: toNode?.id, toHandle: toHandle?.id, isValid });
 
             if (toNode && toHandle) {
                 performRelink(toNode.id, toHandle.id);
@@ -229,11 +239,39 @@ export function useRelink({
                     brain.applyTransaction({ type: 'DISCONNECT', payload: eid });
                 });
                 logAction(`Relink canceled — wire deleted`);
-                console.log('[Relink] Canceled: Wire deleted');
+                // console.log('[Relink] Canceled: Wire deleted');
             }
             resetRelink();
+        } else {
+            // NOT Relinking. Could be a Smart Link Search (Air Drop).
+            if (!connectionState.toNode && connectionStartRef.current && connectionStartRef.current.nodeId && onSmartLinkSearch) {
+                let screenX, screenY;
+                if ('clientX' in event) {
+                    const mouseEvent = event as MouseEvent;
+                    screenX = mouseEvent.clientX;
+                    screenY = mouseEvent.clientY;
+                } else {
+                    const touchEvent = event as TouchEvent;
+                    const touch = touchEvent.changedTouches[0];
+                    screenX = touch.clientX;
+                    screenY = touch.clientY;
+                }
+
+                onSmartLinkSearch({
+                    nodeId: connectionStartRef.current.nodeId!,
+                    handleId: connectionStartRef.current.handleId!,
+                    handleType: connectionStartRef.current.handleType as 'source' | 'target',
+                    position: { x: screenX, y: screenY }
+                });
+            }
         }
-    }, [resetRelink, performRelink, logAction]);
+
+        // Always clear start ref
+        connectionStartRef.current = null;
+
+    }, [resetRelink, performRelink, logAction, onSmartLinkSearch]);
+
+    // ... (rest of the file)
 
     const isValidRelinkConnection = useCallback(
         (connection: Edge | Connection) => {
@@ -343,6 +381,7 @@ export function useRelink({
         onRelinkStart,
         onRelinkEnd,
         onRelinkConnect,
-        isValidRelinkConnection
+        isValidRelinkConnection,
+        isRelinkActive: () => relinkStateRef.current.active
     };
 }

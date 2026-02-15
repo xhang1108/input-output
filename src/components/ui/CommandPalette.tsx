@@ -9,6 +9,7 @@ interface CommandPaletteProps {
     position?: { x: number, y: number };
     onClose: () => void;
     onSelect: (type: string, label: string, data?: any) => void;
+    pendingConnection?: { nodeId: string; handleId: string | null; handleType: 'source' | 'target' } | null;
 }
 
 // Transform NodeDefinitions → Menu format
@@ -28,25 +29,44 @@ function buildMenuItems() {
 
 const MENU_ITEMS = buildMenuItems();
 
-export function CommandPalette({ isOpen, position, onClose, onSelect }: CommandPaletteProps) {
+export function CommandPalette({ isOpen, position, onClose, onSelect, pendingConnection }: CommandPaletteProps) {
     const [search, setSearch] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Flatten items for search/navigation
-    const flattenedItems = MENU_ITEMS.flatMap(cat =>
-        cat.items.map(item => ({ ...item, category: cat.category }))
-    ).filter(item =>
-        item.label.toLowerCase().includes(search.toLowerCase())
-    );
+    const flattenedItems = useMemo(() => {
+        let items = MENU_ITEMS.flatMap(cat =>
+            cat.items.map(item => ({ ...item, category: cat.category }))
+        );
+
+        // Filter by Pending Connection (Smart Link)
+        if (pendingConnection) {
+            const requiredHandleType = pendingConnection.handleType === 'source' ? 'target' : 'source';
+            console.log('Filtering for:', requiredHandleType);
+
+            items = items.filter(item => {
+                // Check if node definition has a compatible handle
+                const nodeHandles = item.data.handles || [];
+                const hasCompatibleHandle = nodeHandles.some((h: any) => h.type === requiredHandleType);
+                return hasCompatibleHandle;
+            });
+        }
+
+        // Filter by Search Term
+        return items.filter(item =>
+            item.label.toLowerCase().includes(search.toLowerCase())
+        );
+    }, [search, pendingConnection]);
 
     useEffect(() => {
         if (isOpen) {
+            console.log('CommandPalette MOUNTED/OPENED at:', position);
             setSearch('');
             setSelectedIndex(0);
             setTimeout(() => inputRef.current?.focus(), 50);
         }
-    }, [isOpen]);
+    }, [isOpen, position]);
 
     useEffect(() => {
         setSelectedIndex(0);
@@ -75,7 +95,7 @@ export function CommandPalette({ isOpen, position, onClose, onSelect }: CommandP
 
     return (
         <div
-            className="fixed z-100 w-48 bg-(--node-bg) border border-(--node-border) rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
+            className="fixed z-10000 w-48 bg-(--node-bg) border border-(--node-border) rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
             style={{
                 left: position?.x ?? '50%',
                 top: position?.y ?? '50%',

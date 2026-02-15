@@ -137,5 +137,111 @@ export const PayloadUtils = {
             symbol: null,
             meta: {}
         };
+    },
+
+    /**
+     * 🧊 Dehydrate: MathJS Object -> JSON
+     * Prepares value for storage or transport (Web Worker).
+     */
+    dehydrate(value: any): PayloadValue {
+        if (!value) return value;
+
+        // BigNumber -> String
+        if (value.isBigNumber) {
+            return { mathjs: 'BigNumber', value: value.toString() };
+        }
+
+        // Fraction -> String
+        if (value.isFraction) {
+            return { mathjs: 'Fraction', n: value.n, d: value.d }; // or toString
+        }
+
+        // Complex -> {re, im}
+        if (value.isComplex) {
+            return { mathjs: 'Complex', re: value.re, im: value.im };
+        }
+
+        // Unit -> String (simplest for now) or Object
+        if (value.isUnit) {
+            return {
+                mathjs: 'Unit',
+                value: value.toNumber ? value.toNumber(value.formatUnits()) : value.value,
+                unit: value.formatUnits()
+            };
+        }
+
+        // Matrix -> Array (Recursive) or JSON
+        if (value.isMatrix) {
+            return {
+                mathjs: 'Matrix',
+                data: value.toArray(), // Recursively dehydrates? No, toArray returns primitives usually
+                type: value.type // 'DenseMatrix' or 'SparseMatrix'
+            };
+        }
+
+        return value;
+    },
+
+    /**
+     * 💧 Hydrate: JSON -> MathJS Object
+     * Restores objects for calculation.
+     * Note: Requires math instance to create objects.
+     */
+    hydrate(value: PayloadValue, math: any): any {
+        if (!value || typeof value !== 'object') return value;
+
+        if ('mathjs' in value) {
+            const type = (value as any).mathjs;
+            switch (type) {
+                case 'BigNumber':
+                    return math.bignumber((value as any).value);
+                case 'Fraction':
+                    return math.fraction((value as any).n, (value as any).d);
+                case 'Complex':
+                    return math.complex((value as any).re, (value as any).im);
+                case 'Unit':
+                    // value.value might be number, value.unit is string
+                    return math.unit((value as any).value, (value as any).unit);
+                case 'Matrix':
+                    return math.matrix((value as any).data);
+            }
+        }
+
+        return value;
+    },
+
+    /**
+     * 🛡️ Strict Typing: Validate & Coerce
+     * Ensures payload matches expected type, or throws.
+     */
+    validateType(payload: NodePayload, expected: DataType): NodePayload {
+        if (payload.type === DataType.Error) return payload; // Pass errors through
+
+        // Exact match
+        if (payload.type === expected) return payload;
+
+        // Coercion Rules
+
+        // 1. Matrix -> Scalar (if 1x1)
+        if (payload.type === DataType.Matrix && expected === DataType.Scalar) {
+            const val = payload.value;
+            if (Array.isArray(val) && val.length === 1) {
+                // Very naive check for now. dehydration makes matrix arrays.
+            }
+            // For now, let's just return Error if mismatch.
+            return this.createError(`Type Mismatch: Expected ${expected}, got ${payload.type}`);
+        }
+
+        // 2. Scalar -> String
+        if (payload.type === DataType.Scalar && expected === DataType.String) {
+            return {
+                ...payload,
+                type: DataType.String,
+                value: String(payload.value)
+            };
+        }
+
+        // Fail
+        return this.createError(`Type Mismatch: Expected ${expected}, got ${payload.type}`);
     }
 };

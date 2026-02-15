@@ -668,7 +668,7 @@ export function useHand() {
 
     const handleMouseDown = useCallback((e: MouseEvent) => {
         const target = e.target as HTMLElement;
-        if (target.classList.contains('react-flow__handle')) return;
+        if (target.closest('.react-flow__handle') || target.closest('.react-flow__edge')) return;
 
         if (e.ctrlKey && e.button === 2) {
             startCut({ x: e.clientX, y: e.clientY });

@@ -21,6 +21,7 @@ import '@xyflow/react/dist/style.css';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { generateNodeId } from '../utils/idGenerator';
+import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { BaseNode } from './nodes/BaseNode';
 import { FrameNode } from './nodes/FrameNode';
 import { InputNode } from './nodes/InputNode';
@@ -91,6 +92,18 @@ export function Body() {
         y: number;
         type: 'CANVAS' | 'NODE';
         nodeId?: string;
+    } | null>(null);
+
+    const [pendingConnection, setPendingConnection] = useState<{
+        nodeId: string;
+        handleId: string | null;
+        handleType: 'source' | 'target';
+    } | null>(null);
+
+    const connectionStartRef = useRef<{
+        nodeId: string | null;
+        handleId: string | null;
+        handleType: string | null;
     } | null>(null);
 
     const effectiveSnap = isSnapping || manualSnap;
@@ -259,8 +272,9 @@ export function Body() {
             y: palettePosition.y
         });
 
+        const newId = generateNodeId(type);
         const newNode: Node = {
-            id: generateNodeId(type),
+            id: newId,
             type: type || 'baseNode',
             position: flowPos,
             data: {
@@ -271,7 +285,35 @@ export function Body() {
         };
 
         setNodes((nds) => nds.concat(newNode));
-    }, [setNodes, palettePosition, project]);
+
+        // Auto-Link if we have a pending connection
+        if (pendingConnection) {
+            const nodeDef = NODE_DEFINITIONS.find(d => d.id === type);
+            if (nodeDef) {
+                // If pending was a source, we need a target on the new node
+                const targetType = pendingConnection.handleType === 'source' ? 'target' : 'source';
+                const companionHandle = nodeDef.handles.find(h => h.type === targetType);
+
+                if (companionHandle) {
+                    const newEdge: Edge = {
+                        id: generateNodeId('edge'),
+                        source: pendingConnection.handleType === 'source' ? pendingConnection.nodeId : newId,
+                        sourceHandle: pendingConnection.handleType === 'source' ? pendingConnection.handleId : companionHandle.id,
+                        target: pendingConnection.handleType === 'target' ? pendingConnection.nodeId : newId,
+                        targetHandle: pendingConnection.handleType === 'target' ? pendingConnection.handleId : companionHandle.id,
+                        type: 'magnetic',
+                        data: { pathType: edgeType, animate: edgeAnimation }
+                    };
+
+                    // Delay slightly to ensure handles are registered
+                    setTimeout(() => {
+                        setEdges(eds => addEdge(newEdge, eds));
+                    }, 50);
+                }
+            }
+            setPendingConnection(null);
+        }
+    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, edgeAnimation, logAction]);
 
     // --- Custom Handle Interactions State ---
     const {
@@ -279,14 +321,38 @@ export function Body() {
         onRelinkStart,
         onRelinkEnd,
         onRelinkConnect,
-        isValidRelinkConnection
+        isValidRelinkConnection,
+        isRelinkActive
     } = useRelink({
         edges,
         setEdges,
         logAction,
         edgeType,
-        edgeAnimation: edgeAnimation
+        edgeAnimation: edgeAnimation,
+        onSmartLinkSearch: (params) => {
+            console.log('Smart Link Search Triggered via useRelink:', params);
+            setPalettePosition(params.position);
+            setShowPalette(true);
+            paletteGuardRef.current = true; // Block immediate close from background click
+
+            // Store for auto-link
+            setPendingConnection({
+                nodeId: params.nodeId,
+                handleId: params.handleId,
+                handleType: params.handleType
+            });
+
+            logAction(`Smart Search: from ${params.nodeId}`);
+        }
     });
+
+    const onConnectStart = useCallback((event: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
+        onRelinkStart(event, params);
+    }, [onRelinkStart]);
+
+    const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
+        onRelinkEnd(event, connectionState);
+    }, [onRelinkEnd]);
 
     const relinkValue = {
         ...relinkState,
@@ -306,8 +372,7 @@ export function Body() {
      2. Update JSX (Lines 504-600).
     */
     // Guard: Prevent onConnectStart from interfering with native Reconnect
-
-
+    const paletteGuardRef = useRef(false);
 
     // --- FEEL NERVES (Input Handling) ---
 
@@ -420,7 +485,6 @@ export function Body() {
     });
 
 
-
     const onMouseMove = useCallback((e: React.MouseEvent) => {
         mousePosRef.current = { x: e.clientX, y: e.clientY };
         handleMouseMove(e.nativeEvent);
@@ -435,6 +499,10 @@ export function Body() {
     }, [handleMouseUp]);
 
     const onClick = useCallback((e: React.MouseEvent) => {
+        if (paletteGuardRef.current) {
+            paletteGuardRef.current = false;
+            return;
+        }
         if (showPalette) setShowPalette(false);
         if (contextMenu) setContextMenu(null);
         if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) confirmGrab();
@@ -457,8 +525,8 @@ export function Body() {
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onRelinkConnect}
-                    onConnectStart={onRelinkStart}
-                    onConnectEnd={onRelinkEnd}
+                    onConnectStart={onConnectStart}
+                    onConnectEnd={onConnectEnd}
                     // isValidConnection removed to allow full Code Judgment (Brain)
 
                     nodeTypes={nodeTypes}
@@ -562,15 +630,6 @@ export function Body() {
                         onReset={clearMemory}
                     />
 
-                    {/* Command Palette (Shift + A) */}
-                    {showPalette && (
-                        <CommandPalette
-                            isOpen={true}
-                            position={palettePosition}
-                            onClose={() => setShowPalette(false)}
-                            onSelect={spawnNode}
-                        />
-                    )}
 
                     {/* Inspector Panel (N) */}
                     <InspectorPanel
@@ -627,6 +686,20 @@ export function Body() {
                     selectionCount={nodes.filter(n => n.selected).length}
                     transformValue={transformValue}
                 />
+
+                {/* Command Palette (Shift + A) - Moved outside ReactFlow to avoid transform scaling issues */}
+                {showPalette && (
+                    <CommandPalette
+                        isOpen={true}
+                        position={palettePosition}
+                        onClose={() => {
+                            setShowPalette(false);
+                            setPendingConnection(null);
+                        }}
+                        onSelect={spawnNode}
+                        pendingConnection={pendingConnection}
+                    />
+                )}
             </div>
         </RelinkContext.Provider >
     );

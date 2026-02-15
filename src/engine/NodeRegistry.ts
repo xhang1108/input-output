@@ -1,16 +1,24 @@
 import { NodeLogic } from './types';
 import { MathEngine } from './MathEngine';
-import { NodePayload } from '../types/payload';
+import { NodePayload, DataType } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
 
 // Phase 2.1: Elevate Evaluator to work with Payloads
 type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => NodePayload;
 
+// Phase 3: AST Generator
+import { ASTNode } from '../types/payload';
+type NodeSymbolizer = (node: NodeLogic, inputs: Record<string, ASTNode>) => ASTNode;
+
 export class NodeRegistry {
     private static evaluators: Map<string, NodeEvaluator> = new Map();
+    private static symbolizers: Map<string, NodeSymbolizer> = new Map();
 
-    public static register(type: string, evaluator: NodeEvaluator) {
+    public static register(type: string, evaluator: NodeEvaluator, symbolizer?: NodeSymbolizer) {
         this.evaluators.set(type, evaluator);
+        if (symbolizer) {
+            this.symbolizers.set(type, symbolizer);
+        }
     }
 
     public static getEvaluator(type: string): NodeEvaluator | undefined {
@@ -30,6 +38,23 @@ export class NodeRegistry {
 
         return evaluator(node, inputs);
     }
+
+    public static getSymbol(node: NodeLogic, inputs: Record<string, ASTNode>): ASTNode {
+        const symbolizer = this.symbolizers.get(node.type || 'baseNode');
+
+        if (symbolizer) {
+            return symbolizer(node, inputs);
+        }
+
+        // Default: If no symbolizer, return a Literal of the current value?
+        // Or if inputs exist, maybe we can't do anything.
+        // For Input Nodes (IO-01), they usually don't have inputs, so they are Literals or Identifiers.
+
+        // If node has value, return Literal
+        const val = PayloadUtils.unwrap(node.value);
+        // Warning: val might be complex object.
+        return PayloadUtils.createSymbol('Literal', { value: typeof val === 'object' ? 'Complex' : val });
+    }
 }
 
 // --- Standard Node Implementations ---
@@ -41,6 +66,16 @@ NodeRegistry.register('IO-01', (node, inputs) => {
     // The value stored in node.value IS the source of truth.
     // Ensure it is a valid Payload.
     return node.value;
+}, (node, inputs) => {
+    // AST: Identifier (e.g. "x" or "5")
+    // If user named it, use name. If not, use value.
+    const name = node.data.label as string;
+    const value = PayloadUtils.unwrap(node.value);
+
+    if (name) {
+        return PayloadUtils.createSymbol('Identifier', { name, value });
+    }
+    return PayloadUtils.createSymbol('Literal', { value });
 });
 
 // IO-11: Result (Display)
@@ -87,6 +122,30 @@ NodeRegistry.register('IO-05', (node, inputs) => {
 
     // Create new scalar with the assigned (or converted) unit
     return PayloadUtils.createScalar(finalVal, unit);
+}, (node, inputs) => {
+    // AST: Unit Conversion? Or just Unit Assignment.
+    // Let's represent as value * unit for now?
+    // Or a specific Unit Node in AST?
+    // ASTNode has 'unit' field.
+
+    const inputSymbol = inputs['in'];
+    const targetUnit = node.data?.unit as string;
+
+    // If input is already a symbol, we wrap it or modify it?
+    // Let's wrap in a "Conversion" or just attach unit if it's a Literal.
+
+    if (inputSymbol && inputSymbol.type === 'Literal') {
+        return { ...inputSymbol, unit: targetUnit };
+    }
+
+    // If expression, maybe (Expr) [unit]?
+    // For now, return input symbol but with unit overridden?
+    // Or wrap in a function call `toUnit(expr, unit)`?
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'toUnit',
+        argument: inputSymbol, // TODO: Array for arguments
+        unit: targetUnit
+    });
 });
 
 // IO-02: Slider (Input)
@@ -96,127 +155,91 @@ NodeRegistry.register('IO-02', (node, inputs) => {
 
 
 // MA-01: Math (Add/Sub/Mul/Div)
+// MA-01: Math (Add/Sub/Mul/Div)
 NodeRegistry.register('MA-01', (node, inputs) => {
     const engine = MathEngine.getInstance();
+    // Access the raw mathjs instance for manual hydration
+    // We need to expose it from MathEngine or import it.
+    // Assuming MathEngine has a public getter or we can use a static import if available.
+    // For now, let's assume engine.math is available or we add it to MathEngine.
+    // Actually, looking at MathEngine, it probably encapsulates it. 
+    // Let's add a public accessor to MathEngine for 'math' instance in the next step if needed.
+    // BUT! engine.evaluate takes numbers/units.
+    // Let's stick to using PayloadUtils.hydrate -> engine.evaluate -> PayloadUtils.dehydrate.
 
-    // 1. Unwrap Inputs — match handle IDs from nodeDefinitions (in_a, in_b)
+    // 1. Unwrap Inputs
     const payloadA = inputs['in_a'];
     const payloadB = inputs['in_b'];
 
-    // Fix: If no inputs are connected, return 0 data immediately
-    // This prevents 0/0 = NaN for DIV/MOD operations when disconnected
     if (!payloadA && !payloadB) {
         return PayloadUtils.createScalar(0);
     }
 
-    // Default to 0 for unconnected inputs
     const rawA = payloadA ? PayloadUtils.unwrap(payloadA) : 0;
     const rawB = payloadB ? PayloadUtils.unwrap(payloadB) : 0;
 
-    // 2. Convert to engine-compatible type (BigNumber in scientific mode)
-    //    Raw JS numbers crash mathjs's tree-shaken addScalar in BigNumber mode.
-    // 3. Compute via MathEngine
-    // 3. Compute via MathEngine
+    // 2. Hydrate for Calculation (Phase 2.6 Serialization)
+    // We need the math instance to hydrate properly.
+    const mathInstance = engine.getMathInstance(); // We will add this to MathEngine
+    const valA = PayloadUtils.hydrate(rawA, mathInstance);
+    // Auto-fix for Unit + 0
+    // If valA is Unit and rawB is 0, we might need to treat B as 0 Unit.
+    // But hydrate handles the structure.
+    const valB = PayloadUtils.hydrate(rawB, mathInstance);
+
+    // 3. Compute
     const op = node.data?.op || 'ADD';
     let result;
     try {
-        // Phase 2.4: Physics-Aware Math
-        // Pass unit metadata to MathEngine to create Unit objects
-        const unitA = payloadA?.meta?.unit;
-        const unitB = payloadB?.meta?.unit;
+        // We need to be careful. engine.evaluate expects... what?
+        // It expects primitives or mathjs objects? 
+        // In previous code `engine.processInput` created Units.
+        // Now `hydrate` creates Units/BigNumbers.
 
-        // Auto-fix for Unit + 0 or Unit - 0
-        // If one side is a Unit and the other is 0 (missing input), mathjs fails.
-        // We must treat the 0 as "0 [unit]".
-        let valA = engine.processInput(rawA, unitA);
-        let valB = engine.processInput(rawB, unitB);
+        // Let's ensure compatibility.
+        // If we pass hydrated objects to engine.evaluate, it should work if evaluate uses math.add(a, b).
 
-        if (unitA && !unitB && rawB === 0 && (op === 'ADD' || op === 'SUB')) {
-            // A is Unit, B is 0. Treat B as 0 [unitA]
-            valB = engine.processInput(0, unitA);
-        } else if (!unitA && unitB && rawA === 0 && (op === 'ADD' || op === 'SUB')) {
-            // A is 0, B is Unit. Treat A as 0 [unitB]
-            valA = engine.processInput(0, unitB);
-        }
+        // Unit + 0 Logic (Legacy Support for mixed types)
+        // If valA is Unit and valB is number 0, mathjs might fail on add.
+        // Let's keep the engine.processInput logic OR move it here?
+        // Better to rely on valid hydration.
+
+        // Use engine.evaluateRaw? Or just engine.evaluate?
+        // engine.evaluate does: return this.math[op](a, b);
+        // So passing hydrated objects is correct.
 
         result = engine.evaluate(op, valA, valB);
     } catch (e) {
         return PayloadUtils.createError((e as Error).message);
     }
 
-    // 4. Wrap Result
-    let numResult: number;
+    // 4. Dehydrate Result (Serialization First)
+    const safeResult = PayloadUtils.dehydrate(result);
+
+    // 5. Construct Payload (No AST by default)
+    // We still want to extract a clean Unit string for the UI 'meta' if possible.
     let finalUnit: string | undefined;
-
-    // Handle Unit Logic Result (math.Unit)
     if (result && typeof result === 'object' && result.isUnit) {
-        // If result is a Unit, we need to extract value and unit string
-        try {
-            numResult = result.toNumber(result.formatUnits()); // Convert to base?
-            // Actually, let's keep it simple.
-            // mathjs result.toString() -> "2 m"
-            // result.toNumber('unit') -> value
-
-            // We want to preserve the unit structure.
-            // result.toJSON() -> { mathjs: 'Unit', value, unit, fixPrefix? }
-            // Let's use toNumeric if possible? No.
-
-            // Strategy:
-            // 1. Get Value in canonical unit? Or first input's unit?
-            // Let's normalize to the unit of the first operand if compatible, or SI.
-            // For now, let mathjs decide, then extract.
-
-            // Extract Unit String
-            const unitStr = result.formatUnits(); // e.g. "m" or "m / s"
-            finalUnit = unitStr;
-
-            // Extract Number
-            numResult = result.toNumber(unitStr);
-        } catch (err) {
-            // Fallback for complex units
-            numResult = result.toNumber(); // Might fail if unit exists?
-            finalUnit = result.formatUnits();
-        }
-    } else if (typeof result === 'object' && result !== null && 'toNumber' in (result as any)) {
-        // BigNumber
-        numResult = (result as any).toNumber();
-        finalUnit = undefined; // No unit from mathjs (scalars)
-    } else {
-        numResult = Number(result);
-        finalUnit = undefined;
+        finalUnit = result.formatUnits();
     }
 
-    // 5. Unit Propagation (Phase 2.0.4 -> 2.4)
-    // If mathjs returned a unit, use it.
-    // If NOT (e.g. 5m / 5m = 1), finalUnit is empty string or undefined.
-    // However, if we fall back to manual merge (for scalar ops), usage is:
-    if (!finalUnit) {
-        const unitA = payloadA?.meta?.unit;
-        const unitB = payloadB?.meta?.unit;
-        // If we had units but lost them (e.g. cancellation), that's fine.
-        // But if we processed as scalars (no units in inputs), we attempt mergeUnits?
-        // MathEngine.processInput(rawA, unitA) handles unit creation.
-        // If units were present, result WOULD be a Unit (or scalar if cancelled).
-        // So manual mergeUnits might be redundant or conflicting.
-        // Let's rely on mathjs for now.
-    }
+    return {
+        type: (safeResult && typeof safeResult === 'object' && 'mathjs' in safeResult)
+            ? DataType.Object // Or specific type like Matrix?
+            : DataType.Scalar, // Simplification
+        value: safeResult,
+        symbol: null, // On-Demand AST: Null by default!
+        meta: { unit: finalUnit }
+    };
+}, (node, inputs) => {
+    // AST: Binary Expression
+    const L = inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 });
+    const R = inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 });
+    const op = node.data?.op || 'ADD';
 
-    // 6. AST Generation
-    const unitA = payloadA?.meta?.unit;
-    const unitB = payloadB?.meta?.unit;
-
-    // ... (AST generation logic remains similar, maybe update to reflect units) ...
-    const astA = payloadA?.symbol || PayloadUtils.createSymbol('Literal', { value: rawA, unit: unitA });
-    const astB = payloadB?.symbol || PayloadUtils.createSymbol('Literal', { value: rawB, unit: unitB });
-
-    const newSymbol = PayloadUtils.createSymbol('BinaryExpression', {
+    return PayloadUtils.createSymbol('BinaryExpression', {
         operator: op,
-        left: astA,
-        right: astB
+        left: L,
+        right: R
     });
-
-    const outputPayload = PayloadUtils.createScalar(numResult, finalUnit);
-    outputPayload.symbol = newSymbol;
-
-    return outputPayload;
 });
