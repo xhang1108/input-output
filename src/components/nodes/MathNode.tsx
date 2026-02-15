@@ -37,13 +37,6 @@ export const MathNode = memo((props: NodeProps) => {
                     <option value="MUL">Multiply (*)</option>
                     <option value="DIV">Divide (/)</option>
                 </select>
-                {/* Visual Op Indicator */}
-                <div
-                    className="absolute right-3 top-3 px-1.5 py-0.5 rounded text-[10px] font-mono pointer-events-none"
-                    style={{ background: 'var(--node-bg-header)', color: 'var(--color-math)' }}
-                >
-                    {op}
-                </div>
             </div>
         </BaseNode>
     );

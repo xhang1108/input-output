@@ -14,6 +14,7 @@ export type ASTNode = {
     left?: ASTNode;
     right?: ASTNode;
     argument?: ASTNode;
+    args?: ASTNode[];
     name?: string;
     value?: number | string;
     unit?: string; // Symbolic unit

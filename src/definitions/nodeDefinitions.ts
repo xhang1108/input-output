@@ -57,6 +57,52 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'result' }
     },
+    {
+        id: 'IO-17',
+        label: 'Formula Result',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { type: 'formula' }
+    },
+    {
+        id: 'IO-16',
+        label: 'Matrix Result',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix', label: 'Matrix' }
+        ],
+        defaultData: {}
+    },
+
+    {
+        id: 'IO-06',
+        label: 'Random',
+        category: 'Input',
+        handles: [
+            { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: {
+            type: 'random',
+            mode: 'float', // float, int, matrix
+            itemMode: 'float', // float, int (used for matrix items)
+            min: 0,
+            max: 1,
+            rows: 3,
+            cols: 3,
+            seed: Date.now()
+        }
+    },
+    {
+        id: 'IO-08',
+        label: 'Matrix Input',
+        category: 'Input',
+        handles: [
+            { id: 'result', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]' }
+    },
 
     // ─── Math Family ────────────────────────────────────────────
     // All share nodeType 'MA-01' but differ by `op` in defaultData
@@ -103,6 +149,25 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'DIV', label: 'Div' }
+    },
+    {
+        id: 'MA-03',
+        label: 'Constant',
+        category: 'Math',
+        handles: [
+            { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { val: 'pi', label: 'Constant' }
+    },
+    {
+        id: 'MA-12',
+        label: 'Round',
+        category: 'Math',
+        handles: [
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Input' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { precision: 0 }
     },
 ];
 

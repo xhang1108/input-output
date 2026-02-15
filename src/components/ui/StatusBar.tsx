@@ -13,7 +13,7 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ mode, nodeCount, selectionCount, transformValue }: StatusBarProps) {
-    const actionLog = useAppStore(s => s.actionLog);
+    const { actionLog, saveStatus } = useAppStore();
 
     // Hints Configuration
     const hints: Record<InteractionMode, string[]> = {
@@ -47,7 +47,23 @@ export function StatusBar({ mode, nodeCount, selectionCount, transformValue }: S
             </div>
 
             {/* Right: Stats */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-center">
+                {/* Save Status Indicator */}
+                <span className={`transition-all duration-300 flex items-center gap-1.5 px-1.5 py-0.5 rounded ${saveStatus === 'SAVING' ? 'text-blue-400 bg-blue-400/10' :
+                    saveStatus === 'SAVED' ? 'text-green-400 bg-green-400/10' :
+                        'text-zinc-600'
+                    }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${saveStatus === 'SAVING' ? 'bg-blue-400 animate-pulse' :
+                        saveStatus === 'SAVED' ? 'bg-green-400' :
+                            'bg-zinc-700'
+                        }`} />
+                    <span className="text-[9px] font-medium tracking-tight">
+                        {saveStatus === 'SAVING' ? 'SYNCING...' : saveStatus === 'SAVED' ? 'SAVED' : 'CLOUD SYNCED'}
+                    </span>
+                </span>
+
+                <div className="w-px h-3 bg-zinc-800 mx-1" />
+
                 <span>Nodes: {nodeCount}</span>
                 {selectionCount > 0 && <span className="text-zinc-200">Selected: {selectionCount}</span>}
                 <span>Ver 0.8.3</span>

@@ -66,6 +66,18 @@ export const PayloadUtils = {
     },
 
     /**
+     * Safe Matrix Creator
+     */
+    createMatrix(value: Matrix): NodePayload {
+        return {
+            type: DataType.Matrix,
+            value,
+            symbol: null,
+            meta: {}
+        };
+    },
+
+    /**
      * Checks if payload is of a specific type
      */
     isType(payload: NodePayload, type: DataType): boolean {
@@ -170,11 +182,20 @@ export const PayloadUtils = {
             };
         }
 
+        // Array -> Array (Recursive)
+        if (Array.isArray(value)) {
+            return value.map(item => this.dehydrate(item));
+        }
+
         // Matrix -> Array (Recursive) or JSON
         if (value.isMatrix) {
             return {
                 mathjs: 'Matrix',
-                data: value.toArray(), // Recursively dehydrates? No, toArray returns primitives usually
+                data: value.toArray().map((item: any) =>
+                    Array.isArray(item)
+                        ? item.map((sub: any) => this.dehydrate(sub))
+                        : this.dehydrate(item)
+                ),
                 type: value.type // 'DenseMatrix' or 'SparseMatrix'
             };
         }
@@ -243,5 +264,38 @@ export const PayloadUtils = {
 
         // Fail
         return this.createError(`Type Mismatch: Expected ${expected}, got ${payload.type}`);
-    }
+    },
+    /**
+     * 🔠 Stringify Symbol: AST -> Formula String
+     * Recursively converts an AST node into a human-readable formula.
+     */
+    stringifySymbol(node: ASTNode | null): string {
+        if (!node) return '';
+
+        switch (node.type) {
+            case 'Literal':
+                return String(node.value);
+            case 'Identifier':
+                return node.name || String(node.value);
+            case 'UnaryExpression':
+                return `${node.operator}${this.stringifySymbol(node.argument!)}`;
+            case 'BinaryExpression': {
+                const left = this.stringifySymbol(node.left!);
+                const right = this.stringifySymbol(node.right!);
+                // Use parenthesis for lower precedence operators if needed?
+                // Simple version for now: always wrap Binary unless Top Level?
+                // Actually, let's just use operator mappings.
+                const op = node.operator === 'ADD' ? '+' :
+                    node.operator === 'SUB' ? '-' :
+                        node.operator === 'MUL' ? '*' :
+                            node.operator === 'DIV' ? '/' : node.operator;
+
+                return `(${left} ${op} ${right})`;
+            }
+            case 'FunctionCall':
+                return `${node.name}(${node.args?.map(a => this.stringifySymbol(a)).join(', ')})`;
+            default:
+                return '';
+        }
+    },
 };

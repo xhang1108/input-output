@@ -14,7 +14,12 @@ import {
     powDependencies,
     piDependencies,
     eDependencies,
+    phiDependencies,
     unitDependencies, // Added for Phase 2.4
+    randomDependencies, // Added for Random Node
+    randomIntDependencies, // Explicitly added for randomInt
+    matrixDependencies,
+    onesDependencies,
     MathJsStatic
 } from 'mathjs';
 import { ComputationMode } from './types';
@@ -43,7 +48,12 @@ export class MathEngine implements IMathEngine {
             powDependencies,
             piDependencies,
             eDependencies,
-            unitDependencies // Added for Phase 2.4
+            phiDependencies,
+            unitDependencies, // Added for Phase 2.4
+            randomDependencies, // Added for Random Node
+            randomIntDependencies, // Explicitly added for randomInt
+            matrixDependencies,
+            onesDependencies
         }, {
             number: 'BigNumber', // Default to high precision
             precision: 64
@@ -64,6 +74,10 @@ export class MathEngine implements IMathEngine {
     public setMode(mode: ComputationMode) {
         this.mode = mode;
         console.log(`[MathEngine] Mode set to ${mode}`);
+    }
+
+    public getComputationMode(): ComputationMode {
+        return this.mode;
     }
 
     public evaluate(op: string, ...args: any[]): any {

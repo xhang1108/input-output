@@ -1,13 +1,16 @@
 import { NodeLogic } from './types';
 import { MathEngine } from './MathEngine';
-import { NodePayload, DataType } from '../types/payload';
+import { NodePayload, DataType, ASTNode } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
 
-// Phase 2.1: Elevate Evaluator to work with Payloads
-type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => NodePayload;
+/**
+ * 💡 NodeRegistry: The Brain's Cortex
+ * 
+ * Manages the registration and execution of node evaluators and symbolizers.
+ * Supports auto-propagation of symbolic ASTs for formula generation.
+ */
 
-// Phase 3: AST Generator
-import { ASTNode } from '../types/payload';
+type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => NodePayload;
 type NodeSymbolizer = (node: NodeLogic, inputs: Record<string, ASTNode>) => ASTNode;
 
 export class NodeRegistry {
@@ -21,22 +24,33 @@ export class NodeRegistry {
         }
     }
 
-    public static getEvaluator(type: string): NodeEvaluator | undefined {
-        return this.evaluators.get(type);
-    }
-
     public static evaluate(node: NodeLogic, inputs: Record<string, NodePayload>): NodePayload {
-        const evaluator = this.evaluators.get(node.type || 'baseNode');
-
-        if (!evaluator) {
-            // Fallback: Return current value (Identity), ensuring it's a Payload
-            // If node.value is already a Payload (it should be), return it.
-            // But we need to be safe during migration.
-            // Actually node.value IS a NodePayload now per interface.
-            return node.value;
+        // Mute Bypass Logic: If muted, pass through the primary input
+        if (node.data?.muted) {
+            const primaryInput = inputs['in'] || inputs['in_a'] || Object.values(inputs)[0];
+            if (primaryInput) return primaryInput;
+            return node.value || PayloadUtils.createScalar(0);
         }
 
-        return evaluator(node, inputs);
+        const evaluator = this.evaluators.get(node.type || 'baseNode');
+        const result = evaluator ? evaluator(node, inputs) : node.value;
+
+        // Auto-attach symbol if not already present
+        if (result && typeof result === 'object' && result.symbol === null) {
+            const inputSymbols: Record<string, ASTNode> = {};
+            for (const [key, p] of Object.entries(inputs)) {
+                if (p.symbol) {
+                    inputSymbols[key] = p.symbol;
+                } else {
+                    // Fallback for unconnected or raw inputs: Literal of their value
+                    const val = PayloadUtils.unwrap(p);
+                    inputSymbols[key] = PayloadUtils.createSymbol('Literal', { value: typeof val === 'object' ? 'Object' : val });
+                }
+            }
+            result.symbol = this.getSymbol(node, inputSymbols);
+        }
+
+        return result;
     }
 
     public static getSymbol(node: NodeLogic, inputs: Record<string, ASTNode>): ASTNode {
@@ -46,57 +60,41 @@ export class NodeRegistry {
             return symbolizer(node, inputs);
         }
 
-        // Default: If no symbolizer, return a Literal of the current value?
-        // Or if inputs exist, maybe we can't do anything.
-        // For Input Nodes (IO-01), they usually don't have inputs, so they are Literals or Identifiers.
-
-        // If node has value, return Literal
+        // Default Symbolizer: Identifier vs Literal
         const val = PayloadUtils.unwrap(node.value);
-        // Warning: val might be complex object.
+        const label = node.data?.label || node.data?.name;
+
+        if (label) {
+            return PayloadUtils.createSymbol('Identifier', { name: String(label), value: typeof val === 'object' ? 'Complex' : val });
+        }
         return PayloadUtils.createSymbol('Literal', { value: typeof val === 'object' ? 'Complex' : val });
     }
 }
 
-// --- Standard Node Implementations ---
+// --- IO Nodes ---
 
 // IO-01: Input (Scalar)
-NodeRegistry.register('IO-01', (node, inputs) => {
-    // Input node just holds value. 
-    // It shouldn't need to process input, but user might type in it.
-    // The value stored in node.value IS the source of truth.
-    // Ensure it is a valid Payload.
-    return node.value;
-}, (node, inputs) => {
-    // AST: Identifier (e.g. "x" or "5")
-    // If user named it, use name. If not, use value.
+NodeRegistry.register('IO-01', (node) => node.value, (node) => {
     const name = node.data.label as string;
     const value = PayloadUtils.unwrap(node.value);
-
-    if (name) {
-        return PayloadUtils.createSymbol('Identifier', { name, value });
-    }
-    return PayloadUtils.createSymbol('Literal', { value });
+    return name
+        ? PayloadUtils.createSymbol('Identifier', { name, value })
+        : PayloadUtils.createSymbol('Literal', { value });
 });
 
 // IO-11: Result (Display)
 NodeRegistry.register('IO-11', (node, inputs) => {
-    // Result node simply passes through the input for connected nodes,
-    // or arguably it doesn't output anything useful for downstream?
-    // It acts as a Identity for 'out' checks if needed.
-    let inputPayload = inputs['in'];
-    // Fallback: Use the first available input if 'in' is missing
-    if (!inputPayload) {
-        const keys = Object.keys(inputs);
-        if (keys.length > 0) inputPayload = inputs[keys[0]];
-    }
+    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
+}, (node, inputs) => {
+    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
+});
 
-    if (!inputPayload) return PayloadUtils.createScalar(0);
-
-    if (!inputPayload) return PayloadUtils.createScalar(0);
-
-    // We might want to format it or attach metadata here?
-    // For now, identity.
-    return inputPayload;
+// IO-16: Matrix View
+NodeRegistry.register('IO-16', (node, inputs) => {
+    // Pass-through payload for display
+    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createMatrix([]);
+}, (node, inputs) => {
+    return inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'Matrix' });
 });
 
 // IO-05: Unit Assigner
@@ -104,142 +102,240 @@ NodeRegistry.register('IO-05', (node, inputs) => {
     const inputPayload = inputs['in'] || PayloadUtils.createScalar(0);
     const val = PayloadUtils.unwrap(inputPayload);
     const unit = node.data?.unit as string || 'm';
-
-    // Check for existing unit in input
     const inputUnit = inputPayload.meta?.unit;
 
-    let finalVal = Number(val);
+    const math = MathEngine.getInstance().getMathInstance();
+    const hydratedInput = PayloadUtils.hydrate(val, math);
+
+    let finalVal: number;
+    if (typeof hydratedInput === 'number') {
+        finalVal = hydratedInput;
+    } else if (hydratedInput && hydratedInput.isBigNumber) {
+        finalVal = hydratedInput.toNumber();
+    } else if (hydratedInput && hydratedInput.isUnit) {
+        finalVal = hydratedInput.toNumber();
+    } else {
+        finalVal = Number(hydratedInput);
+    }
 
     if (inputUnit && inputUnit !== unit) {
-        // Attempt conversion
-        const engine = MathEngine.getInstance();
         try {
-            finalVal = engine.convertUnit(finalVal, inputUnit, unit);
+            finalVal = MathEngine.getInstance().convertUnit(finalVal, inputUnit, unit);
         } catch (e) {
             return PayloadUtils.createError(`Cannot convert ${inputUnit} to ${unit}`);
         }
     }
 
-    // Create new scalar with the assigned (or converted) unit
     return PayloadUtils.createScalar(finalVal, unit);
 }, (node, inputs) => {
-    // AST: Unit Conversion? Or just Unit Assignment.
-    // Let's represent as value * unit for now?
-    // Or a specific Unit Node in AST?
-    // ASTNode has 'unit' field.
-
-    const inputSymbol = inputs['in'];
+    const inputSymbol = inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 });
     const targetUnit = node.data?.unit as string;
-
-    // If input is already a symbol, we wrap it or modify it?
-    // Let's wrap in a "Conversion" or just attach unit if it's a Literal.
-
-    if (inputSymbol && inputSymbol.type === 'Literal') {
-        return { ...inputSymbol, unit: targetUnit };
-    }
-
-    // If expression, maybe (Expr) [unit]?
-    // For now, return input symbol but with unit overridden?
-    // Or wrap in a function call `toUnit(expr, unit)`?
-    return PayloadUtils.createSymbol('FunctionCall', {
-        name: 'toUnit',
-        argument: inputSymbol, // TODO: Array for arguments
-        unit: targetUnit
-    });
+    return { ...inputSymbol, unit: targetUnit };
 });
 
-// IO-02: Slider (Input)
-NodeRegistry.register('IO-02', (node, inputs) => {
-    return node.value;
+// IO-02: Slider
+NodeRegistry.register('IO-02', (node) => node.value, (node) => {
+    return PayloadUtils.createSymbol('Literal', { value: PayloadUtils.unwrap(node.value) });
 });
 
-
-// MA-01: Math (Add/Sub/Mul/Div)
-// MA-01: Math (Add/Sub/Mul/Div)
-NodeRegistry.register('MA-01', (node, inputs) => {
+// IO-06: Random
+NodeRegistry.register('IO-06', (node) => {
     const engine = MathEngine.getInstance();
-    // Access the raw mathjs instance for manual hydration
-    // We need to expose it from MathEngine or import it.
-    // Assuming MathEngine has a public getter or we can use a static import if available.
-    // For now, let's assume engine.math is available or we add it to MathEngine.
-    // Actually, looking at MathEngine, it probably encapsulates it. 
-    // Let's add a public accessor to MathEngine for 'math' instance in the next step if needed.
-    // BUT! engine.evaluate takes numbers/units.
-    // Let's stick to using PayloadUtils.hydrate -> engine.evaluate -> PayloadUtils.dehydrate.
+    const math = engine.getMathInstance();
+    const data = node.data || {};
+    const mode = data.mode || 'float';
+    const rows = data.rows || 3;
+    const cols = data.cols || 3;
+    let result: any;
 
-    // 1. Unwrap Inputs
-    const payloadA = inputs['in_a'];
-    const payloadB = inputs['in_b'];
-
-    if (!payloadA && !payloadB) {
-        return PayloadUtils.createScalar(0);
-    }
-
-    const rawA = payloadA ? PayloadUtils.unwrap(payloadA) : 0;
-    const rawB = payloadB ? PayloadUtils.unwrap(payloadB) : 0;
-
-    // 2. Hydrate for Calculation (Phase 2.6 Serialization)
-    // We need the math instance to hydrate properly.
-    const mathInstance = engine.getMathInstance(); // We will add this to MathEngine
-    const valA = PayloadUtils.hydrate(rawA, mathInstance);
-    // Auto-fix for Unit + 0
-    // If valA is Unit and rawB is 0, we might need to treat B as 0 Unit.
-    // But hydrate handles the structure.
-    const valB = PayloadUtils.hydrate(rawB, mathInstance);
-
-    // 3. Compute
-    const op = node.data?.op || 'ADD';
-    let result;
     try {
-        // We need to be careful. engine.evaluate expects... what?
-        // It expects primitives or mathjs objects? 
-        // In previous code `engine.processInput` created Units.
-        // Now `hydrate` creates Units/BigNumbers.
+        const nMin = (data.min !== undefined && data.min !== null) ? Number(math.number(data.min)) : 0;
+        const nMax = (data.max !== undefined && data.max !== null) ? Number(math.number(data.max)) : 1;
+        const [realMin, realMax] = nMin <= nMax ? [nMin, nMax] : [nMax, nMin];
+        const itemMode = data.itemMode || 'float';
 
-        // Let's ensure compatibility.
-        // If we pass hydrated objects to engine.evaluate, it should work if evaluate uses math.add(a, b).
+        if (mode === 'matrix') {
+            const size = [rows, cols];
+            result = (itemMode === 'int')
+                ? math.randomInt(size, realMin, realMax + 1)
+                : math.random(size, realMin, realMax);
+        } else {
+            result = (mode === 'int')
+                ? math.randomInt(realMin, realMax + 1)
+                : math.random(realMin, realMax);
+        }
 
-        // Unit + 0 Logic (Legacy Support for mixed types)
-        // If valA is Unit and valB is number 0, mathjs might fail on add.
-        // Let's keep the engine.processInput logic OR move it here?
-        // Better to rely on valid hydration.
-
-        // Use engine.evaluateRaw? Or just engine.evaluate?
-        // engine.evaluate does: return this.math[op](a, b);
-        // So passing hydrated objects is correct.
-
-        result = engine.evaluate(op, valA, valB);
+        const isBigNumber = engine.getComputationMode() === 'scientific';
+        if (isBigNumber && typeof result === 'number') result = math.bignumber(result);
     } catch (e) {
-        return PayloadUtils.createError((e as Error).message);
-    }
-
-    // 4. Dehydrate Result (Serialization First)
-    const safeResult = PayloadUtils.dehydrate(result);
-
-    // 5. Construct Payload (No AST by default)
-    // We still want to extract a clean Unit string for the UI 'meta' if possible.
-    let finalUnit: string | undefined;
-    if (result && typeof result === 'object' && result.isUnit) {
-        finalUnit = result.formatUnits();
+        return PayloadUtils.createError('Random Failed');
     }
 
     return {
-        type: (safeResult && typeof safeResult === 'object' && 'mathjs' in safeResult)
-            ? DataType.Object // Or specific type like Matrix?
-            : DataType.Scalar, // Simplification
-        value: safeResult,
-        symbol: null, // On-Demand AST: Null by default!
-        meta: { unit: finalUnit }
+        type: mode === 'matrix' ? DataType.Matrix : DataType.Scalar,
+        value: PayloadUtils.dehydrate(result),
+        symbol: null,
+        meta: {}
     };
-}, (node, inputs) => {
-    // AST: Binary Expression
-    const L = inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 });
-    const R = inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 });
-    const op = node.data?.op || 'ADD';
-
-    return PayloadUtils.createSymbol('BinaryExpression', {
-        operator: op,
-        left: L,
-        right: R
+}, (node) => {
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'random',
+        args: [
+            PayloadUtils.createSymbol('Literal', { value: node.data.min ?? 0 }),
+            PayloadUtils.createSymbol('Literal', { value: node.data.max ?? 1 })
+        ]
     });
 });
+
+// IO-08: Matrix Input
+NodeRegistry.register('IO-08', (node) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    // Re-hydrate matrix from raw expression if available, else zero
+    const raw = node.data.rawExpression ? JSON.parse(node.data.rawExpression as string) : [[0]];
+    try {
+        return PayloadUtils.createMatrix(math.matrix(raw));
+    } catch (e) {
+        return PayloadUtils.createError('Invalid Matrix');
+    }
+}, (node) => {
+    return PayloadUtils.createSymbol('Literal', { value: 'Matrix' });
+});
+
+// --- Math Nodes ---
+
+// MA-01: Standard Math Operators
+NodeRegistry.register('MA-01', (node, inputs) => {
+    const engine = MathEngine.getInstance();
+    const mathInstance = engine.getMathInstance();
+
+    const getHydrated = (key: string) => {
+        const p = inputs[key];
+        if (!p) return 0;
+        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(p), mathInstance);
+        if (p.meta?.unit && (typeof hydrated === 'number' || (hydrated && hydrated.isBigNumber))) {
+            try { return mathInstance.unit(hydrated, p.meta.unit); } catch (e) { return hydrated; }
+        }
+        return hydrated;
+    };
+
+    const valA = getHydrated('in_a');
+    const valB = getHydrated('in_b');
+    const op = node.data?.op || 'ADD';
+
+    let procA = valA, procB = valB;
+    if (op === 'ADD' || op === 'SUB') {
+        const isUnitA = procA && (procA.isUnit || procA.constructor.name === 'Unit');
+        const isUnitB = procB && (procB.isUnit || procB.constructor.name === 'Unit');
+
+        // STRICT MODE: Check for Matrix <-> Scalar mismatch
+        // mathjs matrices have isMatrix=true or constructor.name='Matrix'
+        // Scalars are numbers or BigNumbers (but not Units here if handled above, though we should be careful)
+        const isMatrixA = procA && (Array.isArray(procA) || procA.isMatrix || procA.constructor.name === 'Matrix');
+        const isMatrixB = procB && (Array.isArray(procB) || procB.isMatrix || procB.constructor.name === 'Matrix');
+
+        if ((isMatrixA && !isMatrixB) || (!isMatrixA && isMatrixB)) {
+            // If one is matrix and other is scalar (and not a unit-based matrix which is rare)
+            return PayloadUtils.createError("Strict Mode: Cannot add/sub Matrix and Scalar");
+        }
+
+        if (isUnitA && !isUnitB && mathInstance.equal(procB, 0)) procB = mathInstance.unit(0, procA.formatUnits());
+        else if (!isUnitA && isUnitB && mathInstance.equal(procA, 0)) procA = mathInstance.unit(0, procB.formatUnits());
+    }
+
+    try {
+        const fn = op === 'ADD' ? 'add' : op === 'SUB' ? 'subtract' : op === 'MUL' ? 'multiply' : 'divide';
+        const result = mathInstance[fn](procA, procB);
+        let finalValue = result;
+        let finalUnit: string | undefined;
+
+        if (result && typeof result === 'object' && ('isUnit' in result || result.constructor.name === 'Unit')) {
+            const unitResult = result as any; // Cast to access Unit methods safely
+            if (unitResult.isUnit || unitResult.constructor.name === 'Unit') {
+                finalUnit = unitResult.formatUnits();
+                try { finalValue = unitResult.toNumber(finalUnit); } catch (e) { finalValue = unitResult.value; }
+                return PayloadUtils.createScalar(
+                    PayloadUtils.dehydrate(finalValue),
+                    finalUnit
+                );
+            }
+        }
+
+        // Auto-wrap result (handles Matrix, Scalar, BigNumber, etc.)
+        return PayloadUtils.wrap(result);
+    } catch (e: any) {
+        let msg = e.message;
+        // Improve Matrix Error Messages
+        if (msg.includes('Dimension mismatch')) {
+            if (op === 'ADD' || op === 'SUB') {
+                msg = `Size Mismatch: Cannot ${op === 'ADD' ? 'Add' : 'Subtract'} different sized matrices`;
+            } else if (op === 'MUL') {
+                msg = `Size Mismatch: Cols A must match Rows B`;
+            } else if (op === 'DIV') {
+                msg = `Matrix Division is not supported`;
+            }
+        } else if (msg.includes('Units do not match')) {
+            msg = `Unit Mismatch: Cannot combine different physical quantities (e.g. mass + length)`;
+        }
+        return PayloadUtils.createError(msg);
+    }
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('BinaryExpression', {
+        operator: node.data?.op || 'ADD',
+        left: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
+        right: inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 })
+    });
+});
+
+// MA-03: Constants
+NodeRegistry.register('MA-03', (node) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const label = node.data.val as string || 'pi';
+    let value = (math as any)[label] ?? (label === 'Infinity' ? Infinity : 0);
+
+    const precision = node.data.precision as number | undefined;
+    if (precision !== undefined && precision !== -1) {
+        value = math.round(value, precision);
+    }
+
+    return {
+        type: DataType.Scalar,
+        value: PayloadUtils.dehydrate(value),
+        symbol: null,
+        meta: {}
+    };
+}, (node) => PayloadUtils.createSymbol('Identifier', { name: node.data.val || 'pi' }));
+
+// IO-17: Formula Result
+NodeRegistry.register('IO-17', (node, inputs) => {
+    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
+});
+
+// MA-12: Rounding
+NodeRegistry.register('MA-12', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
+    const prec = node.data.precision as number ?? 0;
+
+    const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+
+    try {
+        const result = math.round(val, prec);
+        return {
+            type: DataType.Scalar,
+            value: PayloadUtils.dehydrate(result),
+            symbol: null,
+            meta: { unit: valPayload.meta?.unit }
+        };
+    } catch (e) {
+        return PayloadUtils.createError('Round Failed');
+    }
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'round',
+        args: [
+            inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
+            PayloadUtils.createSymbol('Literal', { value: node.data.precision ?? 0 })
+        ]
+    });
+});
+

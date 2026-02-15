@@ -19,7 +19,7 @@ interface CustomHandleProps extends HandleProps {
  * Now: ALL hover/glow effects use pure CSS (`:hover`, `.react-flow__handle-valid`).
  * React Flow already applies these classes natively. Zero JS overhead.
  */
-export function NodeHandle({ className, color, style, id, nodeId, ...props }: CustomHandleProps) {
+export function NodeHandle({ className, color, id, nodeId, ...props }: CustomHandleProps) {
     return (
         <Handle
             id={id}
@@ -28,8 +28,7 @@ export function NodeHandle({ className, color, style, id, nodeId, ...props }: Cu
                 className
             )}
             style={{
-                background: color || 'var(--color-scalar)',
-                ...style
+                background: color || 'var(--color-scalar)'
             }}
             {...props}
         />

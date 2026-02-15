@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
+import { useAppStore } from '../store/useStore';
 
 const STORAGE_KEY = 'calctopus-flow-storage-v1';
 
@@ -42,14 +43,37 @@ export function useMemory(
         }
     }, [setNodes, setEdges, onLog]);
 
-    // 2. Potentiation (Save on Change)
-    useEffect(() => {
-        if (nodes.length === 0 && edges.length === 0) return; // Don't encode void
+    // 2. Potentiation (Debounced Save on Change)
+    const { setSaveStatus } = useAppStore();
 
-        const flow = { nodes, edges };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(flow));
-        // We don't log every save to avoid noise
-    }, [nodes, edges]);
+    useEffect(() => {
+        if (nodes.length === 0 && edges.length === 0) return;
+
+        // Mark as saving immediately when changes detected
+        setSaveStatus('SAVING');
+
+        const handler = setTimeout(() => {
+            try {
+                const flow = { nodes, edges };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(flow));
+                setSaveStatus('SAVED');
+
+                // Revert to IDLE after showing SAVED for a bit
+                const idleHandler = setTimeout(() => {
+                    setSaveStatus('IDLE');
+                }, 2000);
+
+                return () => clearTimeout(idleHandler);
+            } catch (error) {
+                console.error('Failed to save memory:', error);
+                setSaveStatus('IDLE');
+            }
+        }, 800); // 800ms debounce
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [nodes, edges, setSaveStatus]);
 
     // 3. Tabula Rasa (Reset)
     const clearMemory = useCallback(() => {

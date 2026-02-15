@@ -18,6 +18,7 @@ interface AppState {
     layoutAlgorithm: LayoutAlgorithm;
     layoutDirection: LayoutDirection;
     panOnScroll: boolean;
+    saveStatus: 'IDLE' | 'SAVING' | 'SAVED';
 
     // State
     actionLog: string[];
@@ -36,6 +37,7 @@ interface AppState {
     setLayoutAlgorithm: (algo: LayoutAlgorithm | ((prev: LayoutAlgorithm) => LayoutAlgorithm)) => void;
     setLayoutDirection: (dir: LayoutDirection | ((prev: LayoutDirection) => LayoutDirection)) => void;
     setPanOnScroll: (enabled: boolean | ((prev: boolean) => boolean)) => void;
+    setSaveStatus: (status: 'IDLE' | 'SAVING' | 'SAVED') => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -54,6 +56,7 @@ export const useAppStore = create<AppState>()(
             layoutAlgorithm: 'layered',
             layoutDirection: 'RIGHT',
             panOnScroll: typeof navigator !== 'undefined' ? /Mac|iPad|iPhone/.test(navigator.platform) : false,
+            saveStatus: 'IDLE',
             actionLog: [],
 
             // Setters
@@ -70,6 +73,7 @@ export const useAppStore = create<AppState>()(
             setLayoutAlgorithm: (algo) => set((s) => ({ layoutAlgorithm: typeof algo === 'function' ? algo(s.layoutAlgorithm) : algo })),
             setLayoutDirection: (dir) => set((s) => ({ layoutDirection: typeof dir === 'function' ? dir(s.layoutDirection) : dir })),
             setPanOnScroll: (enabled) => set((s) => ({ panOnScroll: typeof enabled === 'function' ? enabled(s.panOnScroll) : enabled })),
+            setSaveStatus: (status) => set({ saveStatus: status }),
         }),
         {
             name: 'calctopus-settings-v2',

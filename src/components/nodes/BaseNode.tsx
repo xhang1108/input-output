@@ -47,56 +47,82 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
         if (e.key === 'Enter') handleSubmit();
     };
 
-    // ─── Handle Layout Engine ─────────────────────────────────
-    // Separate handles by position (left vs right)
+    // ─── Smart Layout Constants ──────────────────────────────
+    const NODE_LAYOUT = {
+        headerH: 52, // Match --node-header-h
+        socketGap: 8,
+        socketSize: 12,
+    };
+
+    // Separate handles by position
     const allHandles = (data.handles as HandleConfig[]) || DEFAULT_HANDLES;
     const leftHandles = allHandles.filter(h => h.position === Position.Left);
     const rightHandles = allHandles.filter(h => h.position === Position.Right);
 
-    // Auto-Layout: Calculate vertical positions for left-side handles
-    const HEADER_HEIGHT = 52;
-
-    const renderedLeftHandles = leftHandles;
-    const renderedRightHandles = rightHandles;
-
-    // If only one right handle, center it vertically
-    // If only one right handle, center it vertically
-    // Use dynamic height or min-height based on handles count + Header
-    // 52 (Header) + (Count * (Height + Gap))?
-    // For now, just ensuring minHeight is enough.
-    const approximateHeight = HEADER_HEIGHT + Math.max(leftHandles.length, rightHandles.length) * 40;
-
-    // Minimum height to fit all handles + bottom padding
+    // Calculate dynamic node height based on handles
+    const approximateHeight = NODE_LAYOUT.headerH + Math.max(leftHandles.length, rightHandles.length) * 40;
     const minHeight = Math.max(100, approximateHeight + 12);
+
+    /**
+     * Calculate Y position for a handle or bypass line anchor relative to body section.
+     */
+    const calculateY = (index: number, total: number) => {
+        if (total === 1) return `calc(${NODE_LAYOUT.headerH}px + (100% - ${NODE_LAYOUT.headerH}px) / 2)`;
+        return `calc(${NODE_LAYOUT.headerH}px + ${index * (NODE_LAYOUT.socketSize + NODE_LAYOUT.socketGap) + NODE_LAYOUT.socketSize / 2}px)`;
+    };
 
     return (
         <div
             className={`
-                relative min-w-[var(--node-width-min)] rounded-xl border transition-all duration-200 group
+                relative min-w-(--node-width-min) rounded-xl border transition-all duration-200 group
                 ${selected
                     ? 'border-zinc-400 animate-ring-pulse scale-[1.02]'
                     : 'border-zinc-700 hover:border-zinc-500'}
+                ${data.muted ? 'opacity-40 grayscale-40 shadow-none!' : 'node-shadow-1'}
             `}
             style={{ minHeight: `${minHeight}px`, background: 'var(--node-bg)' }}
         >
+            {/* Muted Bypass Visual */}
+            {!!data.muted && (
+                <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-xl">
+                    <svg className="w-full h-full">
+                        <line
+                            x1="0"
+                            y1={calculateY(0, leftHandles.length)}
+                            x2="100%"
+                            y2={calculateY(0, rightHandles.length)}
+                            stroke="var(--color-scalar)"
+                            strokeWidth="2"
+                            strokeDasharray="4 4"
+                            className="animate-mute-bypass opacity-60"
+                        />
+                    </svg>
+                </div>
+            )}
+
             {/* Header */}
             <div
                 className="px-3 py-2 border-b border-zinc-800/60 rounded-t-xl flex items-center justify-between"
                 style={{ background: 'var(--node-bg-header)' }}
                 onDoubleClick={handleRename}
             >
-                {isRenaming ? (
-                    <input
-                        ref={inputRef}
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        onBlur={handleSubmit}
-                        onKeyDown={handleKeyDown}
-                        className="bg-transparent text-xs font-bold text-zinc-200 outline-none w-full"
-                    />
-                ) : (
-                    <span className="text-xs font-bold text-zinc-300 select-none">{title}</span>
-                )}
+                <div className="flex items-center gap-2 overflow-hidden flex-1">
+                    {isRenaming ? (
+                        <input
+                            ref={inputRef}
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            onBlur={handleSubmit}
+                            onKeyDown={handleKeyDown}
+                            className="bg-transparent text-xs font-bold text-zinc-200 outline-none w-full"
+                        />
+                    ) : (
+                        <span className="text-xs font-bold text-zinc-300 select-none truncate">{title}</span>
+                    )}
+                    {!!data.muted && (
+                        <span className="text-[8px] bg-zinc-800 text-zinc-500 px-1 rounded uppercase tracking-tighter font-black border border-zinc-700/50 leading-tight">Muted</span>
+                    )}
+                </div>
 
                 {/* Visual Hint for Editable */}
                 {!isRenaming && (
@@ -112,28 +138,25 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
             </div>
 
             {/* ─── Left Handles (Targets/Inputs) ───────────────── */}
-            <div className="absolute left-0 w-0 flex flex-col items-center" style={{ top: '52px', gap: 'var(--gap-node-socket)' }}>
-                {renderedLeftHandles.length === 1 ? (
-                    // Single input: center vertically relative to node (special case)
-                    // But if we want NO hardcoding, we might just let it flow or use a specific class
-                    // For now, let's keep the single centered logic but use CSS centering
+            <div className="absolute left-0 w-0 bottom-0 flex flex-col items-center" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
+                {leftHandles.length === 1 ? (
                     <div className="absolute top-1/2 -translate-y-1/2 left-0 h-0 flex items-center">
                         <NodeHandle
-                            type={renderedLeftHandles[0].type}
-                            position={renderedLeftHandles[0].position}
-                            id={renderedLeftHandles[0].id}
+                            type={leftHandles[0].type}
+                            position={leftHandles[0].position}
+                            id={leftHandles[0].id}
                             nodeId={id}
                             className={`
                                 border-zinc-900! z-50 pointer-events-auto origin-center
-                                ${renderedLeftHandles[0].variant === 'capsule'
+                                ${leftHandles[0].variant === 'capsule'
                                     ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
                                     : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
                             `}
-                            color={getHandleColor(renderedLeftHandles[0])}
+                            color={getHandleColor(leftHandles[0])}
                             isConnectable={isConnectable}
-                        // Removing style={{ top }} – allowing flex/absolute centering to work
                         />
                     </div>
+
                 ) : (
                     leftHandles.map((h) => (
                         <div key={h.id} className="relative flex items-center justify-center">
@@ -164,24 +187,25 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
             </div>
 
             {/* ─── Right Handles (Sources/Outputs) ─────────────── */}
-            <div className="absolute right-0 w-0 flex flex-col items-center" style={{ top: '52px', gap: 'var(--gap-node-socket)' }}>
-                {renderedRightHandles.length === 1 ? (
+            <div className="absolute right-0 w-0 bottom-0 flex flex-col items-center" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
+                {rightHandles.length === 1 ? (
                     <div className="absolute top-1/2 -translate-y-1/2 right-0 h-0 flex items-center">
                         <NodeHandle
-                            type={renderedRightHandles[0].type}
-                            position={renderedRightHandles[0].position}
-                            id={renderedRightHandles[0].id}
+                            type={rightHandles[0].type}
+                            position={rightHandles[0].position}
+                            id={rightHandles[0].id}
                             nodeId={id}
                             className={`
                                 border-zinc-900! z-50 origin-center
-                                ${renderedRightHandles[0].variant === 'capsule'
+                                ${rightHandles[0].variant === 'capsule'
                                     ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
                                     : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
                             `}
-                            color={getHandleColor(renderedRightHandles[0])}
+                            color={getHandleColor(rightHandles[0])}
                             isConnectable={isConnectable}
                         />
                     </div>
+
                 ) : (
                     rightHandles.map((h) => (
                         <div key={h.id} className="relative flex items-center justify-center">

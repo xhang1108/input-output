@@ -95,11 +95,11 @@ export function CommandPalette({ isOpen, position, onClose, onSelect, pendingCon
 
     return (
         <div
-            className="fixed z-10000 w-48 bg-(--node-bg) border border-(--node-border) rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
+            className="fixed z-10000 w-56 bg-(--node-bg) border border-(--node-border) rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
             style={{
                 left: position?.x ?? '50%',
                 top: position?.y ?? '50%',
-                maxHeight: '300px'
+                maxHeight: '400px'
             }}
             onClick={e => e.stopPropagation()}
         >
@@ -118,30 +118,51 @@ export function CommandPalette({ isOpen, position, onClose, onSelect, pendingCon
                 </div>
             </div>
 
-            <div className="overflow-y-auto py-1">
+            <div className="overflow-y-auto py-1 max-h-[inherit] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {flattenedItems.length === 0 ? (
-                    <div className="px-4 py-2 text-zinc-500 text-xs text-center">No nodes</div>
+                    <div className="px-4 py-2 text-zinc-500 text-xs text-center">No nodes found</div>
                 ) : (
-                    flattenedItems.map((item, index) => (
-                        <button
-                            key={`${item.category}-${item.label}`}
-                            className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between group ${index === selectedIndex ? 'bg-blue-600 text-white' : 'text-zinc-300 hover:bg-zinc-800'
-                                }`}
-                            onClick={() => {
-                                onSelect(item.type, item.label, item.data);
-                                onClose();
-                            }}
-                            onMouseEnter={() => setSelectedIndex(index)}
-                        >
-                            <span>{item.label}</span>
-                            {/* Only show category if searching to avoid clutter in full list? Or small tag */}
-                            {search && (
-                                <span className={`text-[9px] px-1 py-0.5 rounded opacity-50 ${index === selectedIndex ? 'text-white' : 'text-zinc-500'
-                                    }`}>
-                                    {item.category}
-                                </span>
-                            )}
-                        </button>
+                    Object.entries(
+                        flattenedItems.reduce((acc, item) => {
+                            if (!acc[item.category]) acc[item.category] = [];
+                            acc[item.category].push(item);
+                            return acc;
+                        }, {} as Record<string, typeof flattenedItems>)
+                    ).map(([category, items]) => (
+                        <div key={category} className="mb-1">
+                            {/* Category Header */}
+                            <div className="px-3 py-1 text-[9px] uppercase tracking-wider font-bold text-zinc-500 bg-zinc-900/50 flex items-center gap-2">
+                                <span className="h-px flex-1 bg-zinc-800" />
+                                {category}
+                                <span className="h-px flex-1 bg-zinc-800" />
+                            </div>
+
+                            {/* Category Items */}
+                            {items.map((item) => {
+                                // Find global index for highlight/selection logic
+                                const globalIndex = flattenedItems.indexOf(item);
+                                return (
+                                    <button
+                                        key={`${item.type}-${item.label}`}
+                                        className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between group transition-colors ${globalIndex === selectedIndex
+                                                ? 'bg-blue-600/90 text-white shadow-sm'
+                                                : 'text-zinc-300 hover:bg-zinc-800'
+                                            }`}
+                                        onClick={() => {
+                                            onSelect(item.type, item.label, item.data);
+                                            onClose();
+                                        }}
+                                        onMouseEnter={() => setSelectedIndex(globalIndex)}
+                                    >
+                                        <span className="flex-1">{item.label}</span>
+                                        <span className={`text-[8px] opacity-40 font-mono ${globalIndex === selectedIndex ? 'text-blue-100' : 'text-zinc-500'
+                                            }`}>
+                                            {item.type}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     ))
                 )}
             </div>

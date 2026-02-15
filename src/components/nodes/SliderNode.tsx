@@ -1,8 +1,9 @@
 import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps } from '@xyflow/react';
+import { NodeProps, useReactFlow } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { Settings2 } from 'lucide-react';
 
 export const SliderNode = memo((props: NodeProps) => {
     const { id, data } = props;
@@ -11,6 +12,9 @@ export const SliderNode = memo((props: NodeProps) => {
     // Unwrap payload to get numeric value
     const initialValue = Number(PayloadUtils.unwrap(data.value)) || 0;
     const [localValue, setLocalValue] = useState(initialValue);
+
+    const [showSettings, setShowSettings] = useState(false);
+    const { updateNodeData } = useReactFlow();
 
     const min = typeof data.min === 'number' ? data.min : 0;
     const max = typeof data.max === 'number' ? data.max : 100;
@@ -29,11 +33,30 @@ export const SliderNode = memo((props: NodeProps) => {
         }
     }, [id]);
 
+    const handleSettingChange = (key: string, value: string) => {
+        const numVal = parseFloat(value);
+        if (!isNaN(numVal)) {
+            updateNodeData(id, { [key]: numVal });
+            Brain.getInstance().applyTransaction({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id, data: { [key]: numVal } }
+            });
+        }
+    };
+
     return (
         <BaseNode {...props}>
             <div className="flex flex-col gap-3 p-1 w-(--node-width-min)">
                 <div className="flex justify-between items-center">
-                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Slider</label>
+                    <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Slider</label>
+                        <button
+                            onClick={() => setShowSettings(!showSettings)}
+                            className={`p-1 rounded hover:bg-zinc-800 transition-colors ${showSettings ? 'text-cyan-400' : 'text-zinc-600'}`}
+                        >
+                            <Settings2 size={12} />
+                        </button>
+                    </div>
                     <span
                         className="text-xs font-mono px-1.5 py-0.5 rounded border border-zinc-800"
                         style={{ background: 'var(--node-bg)', color: 'var(--color-unit)' }}
@@ -42,24 +65,61 @@ export const SliderNode = memo((props: NodeProps) => {
                     </span>
                 </div>
 
-                <input
-                    type="range"
-                    min={min}
-                    max={max}
-                    step={step}
-                    value={localValue}
-                    onChange={handleChange}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className="nodrag w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400 transition-all"
-                />
+                {showSettings && (
+                    <div className="flex flex-col gap-2 p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[8px] text-zinc-500 uppercase font-bold">Min</span>
+                                <input
+                                    type="number"
+                                    value={min}
+                                    onChange={(e) => handleSettingChange('min', e.target.value)}
+                                    className="bg-zinc-950 border border-zinc-800 rounded px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[8px] text-zinc-500 uppercase font-bold">Max</span>
+                                <input
+                                    type="number"
+                                    value={max}
+                                    onChange={(e) => handleSettingChange('max', e.target.value)}
+                                    className="bg-zinc-950 border border-zinc-800 rounded px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[8px] text-zinc-500 uppercase font-bold">Step</span>
+                                <input
+                                    type="number"
+                                    value={step}
+                                    onChange={(e) => handleSettingChange('step', e.target.value)}
+                                    className="bg-zinc-950 border border-zinc-800 rounded px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
 
-                <div className="flex justify-between text-[8px] text-zinc-600 font-medium">
+                <div className="relative group">
+                    <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={step}
+                        value={localValue}
+                        onChange={handleChange}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="nodrag w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400 transition-all"
+                    />
+                </div>
+
+                <div className="flex justify-between text-[8px] text-zinc-600 font-medium px-0.5">
                     <span>{min}</span>
                     <span>{max}</span>
                 </div>
             </div>
         </BaseNode>
     );
+
 });
 
 SliderNode.displayName = 'SliderNode';

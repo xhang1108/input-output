@@ -60,11 +60,12 @@ body {
 
   /* ── Layout & Geometry Tokens ── */
   --node-width-min: 150px;
+  --node-header-h: 52px;
   --gap-node-socket: 8px;
   
   /* Handles */
-  --handle-size-sm: 16px; /* Was 12px, too small */
-  --handle-size-lg: 32px; /* Was 24px, too small */
+  --handle-size-sm: 12px;
+  --handle-size-lg: 24px;
 }
 
 :root {
@@ -334,4 +335,28 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .animate-node-spawn {
   animation: node-spawn 0.2s ease-out;
+}
+/* ───────────────────────────────────────
+   § Utility - Hide Number Spinners
+   ─────────────────────────────────────── */
+
+/* Hide number input spinners (up/down arrows) */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+  appearance: textfield;
+}
+
+/* Mute bypass flow animation */
+@keyframes mute-bypass-flow {
+  from { stroke-dashoffset: 8; }
+  to   { stroke-dashoffset: 0; }
+}
+.animate-mute-bypass {
+  animation: mute-bypass-flow 1s linear infinite;
 }
