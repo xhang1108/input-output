@@ -9,14 +9,17 @@
 // Placeholder for Future Phases
 // Phase 3: Symbolic AST Structure
 export type ASTNode = {
-    type: 'BinaryExpression' | 'UnaryExpression' | 'FunctionCall' | 'Identifier' | 'Literal';
+    type: 'BinaryExpression' | 'UnaryExpression' | 'FunctionCall' | 'Identifier' | 'Literal' | 'ConditionalExpression';
     operator?: string;
     left?: ASTNode;
     right?: ASTNode;
+    test?: ASTNode;       // For ternary/conditional
+    consequent?: ASTNode; // For ternary/conditional
+    alternate?: ASTNode;  // For ternary/conditional
     argument?: ASTNode;
     args?: ASTNode[];
     name?: string;
-    value?: number | string;
+    value?: number | string | boolean;
     unit?: string; // Symbolic unit
 };
 export type Matrix = any;  // Will be mathjs.Matrix in Phase 2.3

@@ -60,6 +60,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'unit', unit: 'm' }
     },
     {
+        id: 'IO-19',
+        label: 'Color Result',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector', label: 'Color' }
+        ],
+        defaultData: { type: 'colorResult' }
+    },
+    {
         id: 'IO-11',
         label: 'Result',
         category: 'Output',
@@ -180,6 +189,63 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { precision: 0 }
     },
+
+    // ─── Logic Family ───────────────────────────────────────────
+    {
+        id: 'MA-05',
+        label: 'Logic Gate',
+        category: 'Logic',
+        handles: [
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'A' },
+            { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'B' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'boolean' }
+        ],
+        defaultData: { op: 'AND', label: 'AND' }
+    },
+
+    {
+        id: 'MA-13',
+        label: 'Logic Split',
+        category: 'Logic',
+        handles: [
+            { id: 'condition', type: 'target', position: Position.Left, variant: 'single', dataType: 'boolean', label: 'If' },
+            { id: 'data', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'Data' },
+            { id: 'out_true', type: 'source', position: Position.Right, variant: 'single', dataType: 'any', label: 'True' },
+            { id: 'out_false', type: 'source', position: Position.Right, variant: 'single', dataType: 'any', label: 'False' }
+        ],
+        defaultData: { type: 'logicSplit' }
+    },
+    {
+        id: 'MA-04',
+        label: 'Switch',
+        category: 'Logic',
+        handles: [
+            { id: 'condition', type: 'target', position: Position.Left, variant: 'single', dataType: 'boolean', label: 'Select' },
+            { id: 'in_true', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'True' },
+            { id: 'in_false', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'False' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
+        ],
+        defaultData: { type: 'switch' }
+    },
+    {
+        id: 'MA-08',
+        label: 'Toggle',
+        category: 'Logic',
+        handles: [
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'boolean' }
+        ],
+        defaultData: { type: 'toggle', value: false }
+    },
+    {
+        id: 'MA-09',
+        label: 'Button',
+        category: 'Logic',
+        handles: [
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'boolean' }
+        ],
+        defaultData: { type: 'button', value: false }
+    },
+
 ];
 
 

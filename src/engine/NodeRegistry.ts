@@ -10,7 +10,7 @@ import { PayloadUtils } from '../utils/PayloadUtils';
  * Supports auto-propagation of symbolic ASTs for formula generation.
  */
 
-type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => NodePayload;
+type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => Promise<NodePayload> | NodePayload;
 type NodeSymbolizer = (node: NodeLogic, inputs: Record<string, ASTNode>) => ASTNode;
 
 export class NodeRegistry {
@@ -24,7 +24,7 @@ export class NodeRegistry {
         }
     }
 
-    public static evaluate(node: NodeLogic, inputs: Record<string, NodePayload>): NodePayload {
+    public static async evaluate(node: NodeLogic, inputs: Record<string, NodePayload>): Promise<NodePayload> {
         // Mute Bypass Logic: If muted, pass through the primary input
         if (node.data?.muted) {
             const primaryInput = inputs['in'] || inputs['in_a'] || Object.values(inputs)[0];
@@ -33,7 +33,7 @@ export class NodeRegistry {
         }
 
         const evaluator = this.evaluators.get(node.type || 'baseNode');
-        const result = evaluator ? evaluator(node, inputs) : node.value;
+        const result = evaluator ? await evaluator(node, inputs) : node.value;
 
         // Auto-attach symbol if not already present
         if (result && typeof result === 'object' && result.symbol === null) {
@@ -91,18 +91,142 @@ NodeRegistry.register('IO-11', (node, inputs) => {
 
 // IO-18: Color Picker
 NodeRegistry.register('IO-18', (node) => {
-    const val = PayloadUtils.unwrap(node.value);
-    const hex = (typeof val === 'string' ? val : node.data.value) || '#3b82f6';
+    // Priority: node.data.value (fresh user input from UPDATE_NODE_DATA)
+    //           > node.value (cached evaluator output)
+    //           > default fallback
+    const dataVal = node.data?.value; // Set by UPDATE_NODE_DATA from UI
+    const cachedVal = PayloadUtils.unwrap(node.value); // Previous evaluator output
 
-    // Parse Hex
-    const r = parseInt(hex.slice(1, 3), 16) || 0;
-    const g = parseInt(hex.slice(3, 5), 16) || 0;
-    const b = parseInt(hex.slice(5, 7), 16) || 0;
+    let hex = '#3b82f6';
+    let rNorm = 0, gNorm = 0, bNorm = 0;
+
+    // 1. Try data.value first (user input from RGB/Vec3 editing)
+    if (dataVal && typeof dataVal === 'object' && !Array.isArray(dataVal) && 'vec3' in dataVal) {
+        // User edited via channel inputs — { hex, vec3 } format
+        hex = dataVal.hex || '#000000';
+        if (Array.isArray(dataVal.vec3)) {
+            [rNorm, gNorm, bNorm] = dataVal.vec3;
+        }
+    } else if (typeof dataVal === 'string' && dataVal.startsWith('#')) {
+        // User picked from color picker — raw hex string
+        hex = dataVal;
+        rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
+        gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
+        bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
+    } else if (cachedVal && typeof cachedVal === 'object' && !Array.isArray(cachedVal) && 'vec3' in cachedVal) {
+        // Fallback to cached evaluator output (e.g. first render, undo/redo)
+        hex = cachedVal.hex || '#000000';
+        if (Array.isArray(cachedVal.vec3)) {
+            [rNorm, gNorm, bNorm] = cachedVal.vec3;
+        }
+    } else if (typeof cachedVal === 'string' && cachedVal.startsWith('#')) {
+        hex = cachedVal;
+        rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
+        gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
+        bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
+    }
+    // else: keep defaults (#3b82f6, 0,0,0)
+
+    // 2. Bit Depth Scaling logic
+    const depth = node.data?.depth || '8bit';
+    const scaler = depth === '10bit' ? 1023 : depth === '12bit' ? 4095 : 255;
+
+    const rOut = Math.round(rNorm * scaler);
+    const gOut = Math.round(gNorm * scaler);
+    const bOut = Math.round(bNorm * scaler);
 
     return {
         type: DataType.Object,
         value: {
             hex: hex,
+            rgb: [rOut, gOut, bOut],
+            vec3: [rNorm, gNorm, bNorm] // Preserve infinite precision
+        },
+        symbol: null,
+        meta: {
+            role: 'color',
+            handleMeta: {
+                // 'rgb' handle uses 'rgb' unit (integer range depends on depth)
+                rgb: { role: 'color', unit: 'rgb' },
+                // 'vec3' handle uses 'vec3' unit (0-1)
+                vec3: { role: 'color', unit: 'vec3' }
+            }
+        }
+    };
+});
+
+// IO-19: Color Result (Display)
+NodeRegistry.register('IO-19', (node, inputs) => {
+    const payload = inputs['in'] || Object.values(inputs)[0];
+    if (!payload) return PayloadUtils.createError('No input');
+
+    const val = PayloadUtils.unwrap(payload);
+
+    // If it's already a color object (from IO-18), pass it through
+    if (val && typeof val === 'object' && !Array.isArray(val) && 'hex' in val) {
+        return payload;
+    }
+
+    // Otherwise, try to interpret the input as a color (HEX string or RGB vector)
+    let hex = '#000000';
+    let r = 0, g = 0, b = 0;
+
+    if (typeof val === 'string' && (val.startsWith('#') || val.length === 6)) {
+        hex = val.startsWith('#') ? val : '#' + val;
+        r = parseInt(hex.slice(1, 3), 16) || 0;
+        g = parseInt(hex.slice(3, 5), 16) || 0;
+        b = parseInt(hex.slice(5, 7), 16) || 0;
+    } else if (Array.isArray(val) && val.length >= 3) {
+        let vr = 0, vg = 0, vb = 0;
+        let r = 0, g = 0, b = 0;
+
+        // Determination Logic
+        const depth = node.data?.depth || '8bit';
+        const unit = payload.meta?.unit;
+
+        // Helper to apply scaling
+        const applyScale = (div: number) => {
+            vr = val[0] / div;
+            vg = val[1] / div;
+            vb = val[2] / div;
+            r = Math.round(vr * 255);
+            g = Math.round(vg * 255);
+            b = Math.round(vb * 255);
+        };
+
+        if (unit === 'vec3') {
+            // Already normalized (0-1)
+            applyScale(1);
+        } else if (depth === '10bit') {
+            applyScale(1023);
+        } else if (depth === '12bit') {
+            applyScale(4095);
+        } else {
+            // Default to 8-bit (255)
+            // Heuristic catch: if range implies 0-1, we might want to default to 1?
+            // For now, strict 'vec3' unit is required for 0-1, otherwise we assume integer RGB.
+            applyScale(255);
+        }
+
+        const toHex = (c: number) => Math.max(0, Math.min(255, c)).toString(16).padStart(2, '0');
+        hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+
+        return {
+            type: DataType.Object,
+            value: {
+                hex,
+                rgb: [r, g, b],
+                vec3: [vr, vg, vb]
+            },
+            symbol: null,
+            meta: {}
+        };
+    }
+
+    return {
+        type: DataType.Object,
+        value: {
+            hex,
             rgb: [r, g, b],
             vec3: [Number((r / 255).toFixed(3)), Number((g / 255).toFixed(3)), Number((b / 255).toFixed(3))]
         },
@@ -244,19 +368,37 @@ NodeRegistry.register('MA-01', (node, inputs) => {
     const valB = getHydrated('in_b');
     const op = node.data?.op || 'ADD';
 
-    let procA = valA, procB = valB;
+    // SPECIAL HANDLING: Color Objects (or other complex types)
+    // If we receive a Color Object, extract its vector representation for math.
+    // We prefer 'vec3' (normalized) for math, but if user specifically wants RGB math, we might need a setting.
+    // For now, let's default to extracting 'vec3' if available.
+
+    // Helper to unwrap complex objects for math
+    const extractValue = (v: any) => {
+        if (v && typeof v === 'object' && !Array.isArray(v) && !v.isMatrix && !v.isUnit && !v.isBigNumber) {
+            if ('vec3' in v) return v.vec3; // Color Object -> vec3
+            if ('value' in v) return v.value; // Generic Wrapper
+        }
+        return v;
+    };
+
+    let procA = extractValue(valA);
+    let procB = extractValue(valB);
+
+    // DEBUG LOGGING
+    if (op === 'MUL') {
+        console.log('MA-01 MUL Debug:', { procA, procB, typeA: typeof procA });
+    }
+
     if (op === 'ADD' || op === 'SUB') {
         const isUnitA = procA && (procA.isUnit || procA.constructor.name === 'Unit');
         const isUnitB = procB && (procB.isUnit || procB.constructor.name === 'Unit');
 
         // STRICT MODE: Check for Matrix <-> Scalar mismatch
-        // mathjs matrices have isMatrix=true or constructor.name='Matrix'
-        // Scalars are numbers or BigNumbers (but not Units here if handled above, though we should be careful)
         const isMatrixA = procA && (Array.isArray(procA) || procA.isMatrix || procA.constructor.name === 'Matrix');
         const isMatrixB = procB && (Array.isArray(procB) || procB.isMatrix || procB.constructor.name === 'Matrix');
 
         if ((isMatrixA && !isMatrixB) || (!isMatrixA && isMatrixB)) {
-            // If one is matrix and other is scalar (and not a unit-based matrix which is rare)
             return PayloadUtils.createError("Strict Mode: Cannot add/sub Matrix and Scalar");
         }
 
@@ -270,33 +412,52 @@ NodeRegistry.register('MA-01', (node, inputs) => {
         let finalValue = result;
         let finalUnit: string | undefined;
 
-        if (result && typeof result === 'object' && ('isUnit' in result || result.constructor.name === 'Unit')) {
-            const unitResult = result as any; // Cast to access Unit methods safely
-            if (unitResult.isUnit || unitResult.constructor.name === 'Unit') {
-                finalUnit = unitResult.formatUnits();
-                try { finalValue = unitResult.toNumber(finalUnit); } catch (e) { finalValue = unitResult.value; }
-                return PayloadUtils.createScalar(
-                    PayloadUtils.dehydrate(finalValue),
-                    finalUnit
-                );
+        // Propagate Metadata
+        // If inputs had 'role: color', preserve it?
+        const metaA = inputs['in_a']?.meta || {};
+        const metaB = inputs['in_b']?.meta || {};
+        const combinedMeta: any = {};
+
+        if (finalUnit) combinedMeta.unit = finalUnit;
+        else {
+            // Manual Unit Propagation for Arrays or complex types (where mathjs didn't return a Unit object)
+            // If inputs share a unit, propagate it.
+            // If only one has a unit, propagate it (unless op implies unit change? ADD/SUB requires match, MUL doesn't)
+            // For now, simple inheritance:
+            if (metaA.unit && metaB.unit && metaA.unit === metaB.unit) {
+                combinedMeta.unit = metaA.unit;
+            } else if (metaA.unit && !metaB.unit) {
+                combinedMeta.unit = metaA.unit;
+            } else if (!metaA.unit && metaB.unit) {
+                combinedMeta.unit = metaB.unit;
             }
         }
 
-        // Auto-wrap result (handles Matrix, Scalar, BigNumber, etc.)
-        return PayloadUtils.wrap(result);
+        if (result && typeof result === 'object' && ('isUnit' in result || result.constructor.name === 'Unit')) {
+            const unitResult = result as any;
+            if (unitResult.isUnit || unitResult.constructor.name === 'Unit') {
+                finalUnit = unitResult.formatUnits();
+                try { finalValue = unitResult.toNumber(finalUnit); } catch (e) { finalValue = unitResult.value; }
+                return {
+                    ...PayloadUtils.createScalar(PayloadUtils.dehydrate(finalValue), finalUnit),
+                    meta: { ...combinedMeta, unit: finalUnit }
+                };
+            }
+        }
+
+        // Auto-wrap result with metadata
+        return {
+            ...PayloadUtils.wrap(result),
+            meta: combinedMeta
+        };
     } catch (e: any) {
         let msg = e.message;
-        // Improve Matrix Error Messages
         if (msg.includes('Dimension mismatch')) {
-            if (op === 'ADD' || op === 'SUB') {
-                msg = `Size Mismatch: Cannot ${op === 'ADD' ? 'Add' : 'Subtract'} different sized matrices`;
-            } else if (op === 'MUL') {
-                msg = `Size Mismatch: Cols A must match Rows B`;
-            } else if (op === 'DIV') {
-                msg = `Matrix Division is not supported`;
-            }
+            if (op === 'ADD' || op === 'SUB') msg = `Size Mismatch: Cannot ${op === 'ADD' ? 'Add' : 'Subtract'} different sized matrices`;
+            else if (op === 'MUL') msg = `Size Mismatch: Cols A must match Rows B`;
+            else if (op === 'DIV') msg = `Matrix Division is not supported`;
         } else if (msg.includes('Units do not match')) {
-            msg = `Unit Mismatch: Cannot combine different physical quantities (e.g. mass + length)`;
+            msg = `Unit Mismatch: Cannot combine different physical quantities`;
         }
         return PayloadUtils.createError(msg);
     }
@@ -360,4 +521,114 @@ NodeRegistry.register('MA-12', (node, inputs) => {
         ]
     });
 });
+
+
+// --- Logic Nodes ---
+
+// MA-05: Logic Gates & Comparisons
+NodeRegistry.register('MA-05', (node, inputs) => {
+    const engine = MathEngine.getInstance();
+    const math = engine.getMathInstance();
+    const op = node.data?.op || 'AND';
+
+    const getVal = (key: string) => {
+        const p = inputs[key];
+        if (!p) return null;
+        return PayloadUtils.unwrap(p);
+    };
+
+    const valA = getVal('in_a');
+    const valB = getVal('in_b');
+
+    // Bool conversion helper
+    const toBool = (v: any) => !!v;
+
+    try {
+        let result: boolean;
+        switch (op) {
+            // Comparisons
+            case 'GT': result = math.larger(valA, valB) as boolean; break;
+            case 'LT': result = math.smaller(valA, valB) as boolean; break;
+            case 'GTE': result = math.largerEq(valA, valB) as boolean; break;
+            case 'LTE': result = math.smallerEq(valA, valB) as boolean; break;
+            case 'NEQ': result = !math.equal(valA, valB) as boolean; break;
+            case 'EQ': result = math.equal(valA, valB) as boolean; break;
+
+            // Boolean Gates
+            case 'NOT': result = !toBool(valA); break;
+            case 'AND': result = toBool(valA) && toBool(valB); break;
+            case 'OR': result = toBool(valA) || toBool(valB); break;
+            case 'XOR': result = (toBool(valA) !== toBool(valB)); break;
+
+            default: result = false;
+        }
+        return PayloadUtils.createBoolean(result);
+    } catch (e) {
+        return PayloadUtils.createError(`${op} Failed`);
+    }
+}, (node, inputs) => {
+    const op = node.data?.op || 'AND';
+    const ops: Record<string, string> = {
+        EQ: '==', GT: '>', LT: '<', GTE: '>=', LTE: '<=', NEQ: '!=',
+        AND: '&&', OR: '||'
+    };
+
+    if (op === 'NOT') {
+        return PayloadUtils.createSymbol('UnaryExpression', {
+            operator: '!',
+            argument: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: false })
+        });
+    }
+
+    if (['AND', 'OR'].includes(op) || ops[op]) {
+        return PayloadUtils.createSymbol('BinaryExpression', {
+            operator: ops[op] || op,
+            left: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
+            right: inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 })
+        });
+    }
+
+    return PayloadUtils.createSymbol('Literal', { value: 'Logic' });
+});
+
+// MA-13: Logic Split (Renamed from MA-03)
+NodeRegistry.register('MA-13', (node, inputs) => {
+    const condition = !!PayloadUtils.unwrap(inputs['condition'] || PayloadUtils.createBoolean(false));
+    const data = inputs['data'] || PayloadUtils.createScalar(0);
+
+    return {
+        type: DataType.Object,
+        value: {
+            out_true: condition ? data : null,
+            out_false: !condition ? data : null
+        },
+        symbol: null,
+        meta: {
+            handleMeta: {
+                out_true: data.meta,
+                out_false: data.meta
+            }
+        }
+    };
+});
+
+// MA-04: Switch
+// MA-04: Switch
+NodeRegistry.register('MA-04', (node, inputs) => {
+    const condition = !!PayloadUtils.unwrap(inputs['condition'] || PayloadUtils.createBoolean(false));
+    const valTrue = inputs['in_true'];
+    const valFalse = inputs['in_false'];
+
+    const result = condition ? valTrue : valFalse;
+    return result || PayloadUtils.createError('No Input');
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('ConditionalExpression', {
+        test: inputs['condition'] || PayloadUtils.createSymbol('Literal', { value: false }),
+        consequent: inputs['in_true'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
+        alternate: inputs['in_false'] || PayloadUtils.createSymbol('Literal', { value: 0 })
+    });
+});
+
+// MA-08: Toggle
+
 

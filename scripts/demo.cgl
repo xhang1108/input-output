@@ -1,0 +1,24 @@
+
+# CGL Demonstration File
+# Calculates: (A + B) * C
+
+# Inputs
+InputA:Input:num @100,100 = 10
+InputB:Input:Slider @100,250 = 5
+InputC:Input:num @100,400 = 2
+
+# Math Operations
+AddAB:Math:ADD @300,175
+MultABC:Math:MUL @500,300
+
+# Results
+FinalRes:Result:res @700,300
+
+# Connections
+InputA -- AddAB:a
+InputB -- AddAB:b
+
+AddAB -- MultABC:a
+InputC -- MultABC:b
+
+MultABC -- FinalRes:in

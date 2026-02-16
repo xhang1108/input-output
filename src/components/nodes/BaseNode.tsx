@@ -76,7 +76,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
             className={`
                 relative min-w-(--node-width-min) rounded-xl border transition-all duration-200 group
                 ${selected
-                    ? 'border-zinc-400 animate-ring-pulse scale-[1.02]'
+                    ? 'border-zinc-400 animate-ring-pulse'
                     : 'border-zinc-700 hover:border-zinc-500'}
                 ${data.muted ? 'opacity-40 grayscale-40 shadow-none!' : 'node-shadow-1'}
             `}

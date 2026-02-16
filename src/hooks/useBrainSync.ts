@@ -10,7 +10,7 @@ import { Brain } from '../engine/Brain';
  * This ensures Brain always has an up-to-date topology model.
  */
 export function useBrainSync(nodes: Node[], edges: Edge[]) {
-    const prevNodesRef = useRef<Set<string>>(new Set());
+    const prevNodesRef = useRef<Map<string, Node>>(new Map());
     const prevEdgesRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
@@ -20,28 +20,48 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
         // The relink system removes edges from UI for visual feedback,
         // but the actual DISCONNECT+CONNECT should be atomic via useRelink's BATCH
         if (brain.isReconnecting) {
-            prevNodesRef.current = new Set(nodes.map(n => n.id));
+            prevNodesRef.current = new Map(nodes.map(n => [n.id, n]));
             prevEdgesRef.current = new Set(edges.map(e => e.id));
             return;
         }
 
-        // --- Sync Nodes ---
-        const currentNodes = new Set(nodes.map(n => n.id));
+        // Fix: HMR Safety - ensure prevNodesRef is a Map
+        if (!(prevNodesRef.current instanceof Map)) {
+            prevNodesRef.current = new Map();
+        }
 
-        // 1. Additions
+        // --- Sync Nodes ---
+        const currentNodesMap = new Map(nodes.map(n => [n.id, n]));
+
+        // 1. Additions & Updates
         nodes.forEach(node => {
-            if (!prevNodesRef.current.has(node.id)) {
-                // Guard: Skip if Brain already has this node (e.g. from Undo)
+            const prevNode = prevNodesRef.current.get(node.id);
+
+            if (!prevNode) {
+                // New Node
                 const existing = brain.getNode(node.id);
                 if (!existing) {
                     brain.applyTransaction({
                         type: 'ADD_NODE',
                         payload: {
                             id: node.id,
-                            initialValue: node.data?.value || 0,
+                            initialValue: node.data?.value,
                             type: node.type,
                             data: node.data || {},
                             position: node.position
+                        }
+                    });
+                }
+            } else {
+                // Check for Data Updates
+                // Fix: Use deep comparison (stringify) to prevent infinite loops caused by new object references
+                // from useBrainUpdates or React Flow, even if data content is identical.
+                if (JSON.stringify(node.data) !== JSON.stringify(prevNode.data)) {
+                    brain.applyTransaction({
+                        type: 'UPDATE_NODE_DATA',
+                        payload: {
+                            id: node.id,
+                            data: node.data
                         }
                     });
                 }
@@ -49,8 +69,8 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
         });
 
         // 2. Removals
-        prevNodesRef.current.forEach(id => {
-            if (!currentNodes.has(id)) {
+        prevNodesRef.current.forEach((prevNode, id) => {
+            if (!currentNodesMap.has(id)) {
                 // Guard: Skip if Brain already removed this node (e.g. from Undo)
                 const existing = brain.getNode(id);
                 if (existing) {
@@ -62,7 +82,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
             }
         });
 
-        prevNodesRef.current = currentNodes;
+        prevNodesRef.current = currentNodesMap;
 
         // --- Sync Edges ---
         const currentEdges = new Set(edges.map(e => e.id));

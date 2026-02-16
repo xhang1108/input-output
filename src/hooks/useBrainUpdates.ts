@@ -75,7 +75,17 @@ export function useBrainUpdates(
                             let needsUpdate = false;
 
                             // Sync Data & Value
-                            const targetData = { ...logicNode.data, value: logicNode.value };
+                            // Fix: Unwrap the NodePayload to primitive before syncing to UI data.value
+                            // This prevents Control nodes (Toggle, Slider) from receiving an object instead of a primitive,
+                            // which caused "stuck on true" (object is truthy) and infinite loops.
+                            const unwrappedValue = PayloadUtils.unwrap(logicNode.value);
+                            const targetData = { ...logicNode.data, value: unwrappedValue };
+
+                            // Debug: Log if we are about to cause a type change loop
+                            // if (typeof uiNode.data.value !== typeof unwrappedValue && uiNode.data.value !== undefined) {
+                            //    console.warn(`[BrainUpdates] Type Mismatch for ${uiNode.id}! UI: ${typeof uiNode.data.value}, Brain: ${typeof unwrappedValue}`);
+                            // }
+
                             if (JSON.stringify(uiNode.data) !== JSON.stringify(targetData)) {
                                 newData = targetData;
                                 needsUpdate = true;

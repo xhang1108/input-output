@@ -155,7 +155,7 @@ export class Brain {
 
     // 2. Pull Evaluation (The Calculation)
     // Phase 2.1: Updated to return NodePayload
-    public getValue(nodeId: string, sourceHandle?: string): NodePayload {
+    public async getValue(nodeId: string, sourceHandle?: string): Promise<NodePayload> {
         const node = this.state.nodes.get(nodeId);
         if (!node) return PayloadUtils.createError('Node not found');
 
@@ -166,11 +166,12 @@ export class Brain {
             resultPayload = node.value;
         } else {
             const inputs = this.reverseAdjacency.get(nodeId) || [];
+
             const inputPayloads: Record<string, NodePayload> = {};
 
             for (const input of inputs) {
                 // Pass sourceHandle to ensure multi-output nodes work
-                const payload = this.getValue(input.nodeId, input.sourceHandle);
+                const payload = await this.getValue(input.nodeId, input.sourceHandle);
 
                 if (input.targetHandle) {
                     inputPayloads[input.targetHandle] = payload;
@@ -178,7 +179,7 @@ export class Brain {
             }
 
             // Compute
-            resultPayload = this.computeNode(node, inputPayloads);
+            resultPayload = await this.computeNode(node, inputPayloads);
 
             // Update & Clean
             node.value = resultPayload;
@@ -196,12 +197,21 @@ export class Brain {
                 // contains the raw value, but we might need to wrap it.
                 // Let's assume for now the evaluator returns { [handle]: specificValue }
                 const subValue = multiValue[sourceHandle];
-                // If it's already a payload-like structure, we can return it.
-                // But usually, computeNode returns one big NodePayload.
-                // We'll return a new payload wrapping the subValue.
+
+                // Phase 2.4: Metadata Propagation & Handle Specifics
+                const parentMeta = resultPayload.meta || {};
+                const handleMeta = parentMeta.handleMeta?.[sourceHandle] || {};
+
+                // Merge strategies:
+                // 1. Parent meta provided basics (e.g. unit?)
+                // 2. Handle meta provides specifics (e.g. range, unit) via overwrite
+                const newMeta = { ...parentMeta, ...handleMeta };
+                // Remove handleMeta from the child to keep it clean? Optional.
+
                 return {
                     ...resultPayload,
-                    value: subValue
+                    value: subValue,
+                    meta: newMeta
                 };
             }
         }
@@ -224,7 +234,7 @@ export class Brain {
             if (!node) continue;
 
             // Trigger Pull
-            const newPayload = this.getValue(id);
+            const newPayload = await this.getValue(id);
 
             patches.push({
                 id: id,
@@ -236,15 +246,43 @@ export class Brain {
     }
 
     // 3. Primitve Node Registry
-    private computeNode(node: NodeLogic, inputs: Record<string, NodePayload>): NodePayload {
+    private async computeNode(node: NodeLogic, inputs: Record<string, NodePayload>): Promise<NodePayload> {
         // Use Registry for evaluation
         // This decouples specific node logic from the Brain
         try {
-            return NodeRegistry.evaluate(node, inputs);
+            return await NodeRegistry.evaluate(node, inputs);
         } catch (error) {
             console.error(`Error computing node ${node.id}:`, error);
             return PayloadUtils.createError('Computation Failed');
         }
+    }
+
+    /**
+     * Synchronously peeks at the current cached value of a node.
+     * Does NOT trigger recalculation. Useful for UI lookups (sniffing).
+     */
+    public peekValue(nodeId: string, sourceHandle?: string): NodePayload | null {
+        const node = this.state.nodes.get(nodeId);
+        if (!node) return null;
+
+        const resultPayload = node.value;
+
+        // Handle specific Handle extraction (Phase 2.2 Multi-Output)
+        if (sourceHandle && resultPayload && typeof resultPayload.value === 'object' && resultPayload.value !== null) {
+            const multiValue = resultPayload.value as Record<string, any>;
+            if (sourceHandle in multiValue) {
+                const subValue = multiValue[sourceHandle];
+                const parentMeta = resultPayload.meta || {};
+                const handleMeta = parentMeta.handleMeta?.[sourceHandle] || {};
+                return {
+                    ...resultPayload,
+                    value: subValue,
+                    meta: { ...parentMeta, ...handleMeta }
+                };
+            }
+        }
+
+        return resultPayload;
     }
 
     public getEdges(): Edge[] {
@@ -408,6 +446,22 @@ export class Brain {
                 }
                 break;
 
+            case 'MOVE_NODE':
+                const mNode = this.state.nodes.get(tx.payload.id);
+                if (mNode) {
+                    mNode.position = { ...tx.payload.position };
+                    // No need to trigger calculation or emit 'graphChanged' for pure movement
+                    // unless we want to sync positions to other clients or UI components.
+                    // But useBrainUpdates listens to graphChanged even for position?
+                    // Yes, useBrainUpdates syncs position if mismatch.
+                    // So we SHOULD emit graphChanged if we want to confirm the move?
+                    // Actually, if we don't emit, useBrainUpdates won't fire.
+                    // But if we do emit, it might double-update?
+                    // Safe bet: Emit so state is consistent.
+                    if (!silent) this.emit('graphChanged', null);
+                }
+                break;
+
             case 'UPDATE_NODE_DATA':
                 const tNode = this.state.nodes.get(tx.payload.id);
                 if (tNode) {
@@ -419,7 +473,7 @@ export class Brain {
                     if (!silent) {
                         // 5. Success
                         this.emit('graphChanged', null); // Trigger full topology sync (Phase 2.3 Unit & Data Sync)
-                        this.emit('RE-LAYOUT', null); // Trigger automatic layout for position-less nodes
+                        // RE-LAYOUT removed to prevent unwanted auto-layout on data change
                         this.triggerCalculation();
                     }
                 }
@@ -596,11 +650,26 @@ export class Brain {
             return { isValid: false, reason: 'Source or Target node does not exist' };
         }
 
-        const isInput = (id: string) =>
-            !!id && (id.toLowerCase().startsWith('in') || id === 'target' || id.includes('input'));
+        const getHandleType = (nodeId: string, handleId: string) => {
+            const node = this.state.nodes.get(nodeId);
+            if (!node) return null;
+            const def = NODE_DEFINITIONS.find(d => d.id === node.type);
+            if (!def) return null;
+            const handle = def.handles.find(h => h.id === handleId);
+            return handle?.type || null;
+        };
 
-        const sourceIsInput = isInput(sourceHandle);
-        const targetIsInput = isInput(targetHandle);
+        const sourceHandleType = getHandleType(source, sourceHandle!);
+        const targetHandleType = getHandleType(target, targetHandle!);
+
+        // Fail-safe: if we can't find the definition, fallback to basic string check
+        const isInput = (id: string, typeHint: string | null) => {
+            if (typeHint) return typeHint === 'target';
+            return !!id && (id.toLowerCase().startsWith('in') || id === 'target' || id.includes('input') || id === 'condition' || id === 'select');
+        };
+
+        const sourceIsInput = isInput(sourceHandle!, sourceHandleType);
+        const targetIsInput = isInput(targetHandle!, targetHandleType);
 
         if (sourceIsInput === targetIsInput) {
             return { isValid: false, reason: 'Must connect Output to Input' };
@@ -746,6 +815,20 @@ export class Brain {
                 }
             }
 
+            // Fix: Fallback to data.value if initialValue is missing for IO nodes (Legacy JSON support)
+            let initVal = n.value;
+            if (initVal === undefined && n.data && n.data.value !== undefined) {
+                // Heuristic: If it has data.value and is IO/Logic-Source, treat as scalar/boolean
+                if (n.type.startsWith('IO-') || n.type === 'MA-08' || n.type === 'MA-09') {
+                    // For now, assume scalar. Logic nodes (MA-08) handle boolean conversion in their evaluator/wrapping if needed.
+                    // PayloadUtils.wrap will handle number/boolean correctly.
+                    // But we need to construct a raw value to be wrapped by ADD_NODE handlers, or pass a Payload directly?
+                    // ADD_NODE wraps it: const initialPayload = PayloadUtils.wrap(tx.payload.initialValue);
+                    // so we can pass the raw number/boolean.
+                    initVal = n.data.value;
+                }
+            }
+
             txs.push({
                 type: 'ADD_NODE',
                 payload: {
@@ -753,7 +836,7 @@ export class Brain {
                     type: n.type,
                     position: n.position,
                     data: nodeData,
-                    initialValue: n.value
+                    initialValue: initVal
                 }
             });
         });

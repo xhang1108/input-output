@@ -31,13 +31,16 @@ export class GraphCodec {
         const nodeRegex = /^([a-zA-Z0-9_-]+):([a-zA-Z0-9]+)(?::([a-zA-Z0-9_-]+))?(?:\s*@(-?\d+),(-?\d+))?(?:\s*=\s*(.*))?$/;
 
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
+            // Fix: Strip comments immediately to ensure regex matches clean lines
+            const rawLine = lines[i];
+            const line = rawLine.split('#')[0].trim();
             const lineNum = i + 1;
 
-            if (!line || line.startsWith('#')) continue;
+            if (!line) continue;
 
             if (line.includes('--')) {
                 // Connection Chain
+                // Note: parseChain handles splitting internally, but passing clean line is safer
                 this.parseChain(line, connections, diagnostics, lineNum);
             } else {
                 // Node Definition
@@ -53,7 +56,10 @@ export class GraphCodec {
                         value: val ? this.parseValue(val) : undefined
                     });
                 } else {
-                    diagnostics.push(`Line ${lineNum}: Skipped invalid syntax "${line}"`);
+                    // Only report error if line wasn't empty (checked above)
+                    // If line was just a comment, it became empty and skipped.
+                    // If it had content but didn't match regex, report it.
+                    diagnostics.push(`Line ${lineNum}: Skipped invalid syntax "${rawLine.trim()}"`);
                 }
             }
         }
@@ -134,6 +140,8 @@ export class GraphCodec {
                 if (typeInfo.id === 'IO-01') data.value = cNode.value;
                 else if (typeInfo.id === 'IO-02') data.value = cNode.value;
                 else if (typeInfo.id === 'MA-03') data.val = cNode.value;
+                else if (typeInfo.id === 'MA-08') data.value = cNode.value; // Fix: Allow Toggle initial value
+                else if (typeInfo.id === 'MA-09') data.value = cNode.value; // Fix: Allow Button initial value
                 else if (typeInfo.id.startsWith('IO')) data.value = cNode.value; // Generic fallback for IO
             }
 
@@ -142,6 +150,12 @@ export class GraphCodec {
             if (cNode.opCode && typeInfo.category === 'Math') {
                 // Standardize OpCode to UpperCase for internal logic
                 data.op = cNode.opCode.toUpperCase();
+            }
+
+            // Phase 2.2: Ensure Logic Gate has correct OpCode
+            if (cNode.opCode && typeInfo.id === 'MA-05') {
+                data.op = cNode.opCode.toUpperCase();
+                data.label = data.op;
             }
 
             graph.nodes.push({
@@ -196,6 +210,11 @@ export class GraphCodec {
         if (h === 'in') return 'in'; // Explicit 'in' is fine
         if (h === 'base') return 'in_a'; // POW uses 'in_a' (labeled Base), but 'base' is clearer in CGL
         if (h === 'exp') return 'in_b';
+        // Logic Aliases
+        if (h === 'cond' || h === 'if') return 'condition';
+        if (h === 'sel') return 'condition';
+        if (h === 't' || h === 'true') return 'in_true';
+        if (h === 'f' || h === 'false') return 'in_false';
         // Fallback
         return handle;
     }
@@ -236,7 +255,22 @@ export class GraphCodec {
             if (opLower === 'unit') return NODE_DEFINITIONS.find(d => d.id === 'IO-05');
         }
 
-        // 3. Logic Family (Future)
+        // 3. Logic Family
+        if (catLower === 'logic') {
+            if (opLower === 'and') return NODE_DEFINITIONS.find(d => d.id === 'MA-05');
+            if (opLower === 'or') return NODE_DEFINITIONS.find(d => d.id === 'MA-05');
+            if (opLower === 'xor') return NODE_DEFINITIONS.find(d => d.id === 'MA-05');
+            if (opLower === 'not') return NODE_DEFINITIONS.find(d => d.id === 'MA-05');
+            if (opLower === 'gate') return NODE_DEFINITIONS.find(d => d.id === 'MA-05');
+            if (opLower === 'split') return NODE_DEFINITIONS.find(d => d.id === 'MA-13');
+            if (opLower === 'switch') return NODE_DEFINITIONS.find(d => d.id === 'MA-04');
+            if (opLower === 'toggle') return NODE_DEFINITIONS.find(d => d.id === 'MA-08');
+            if (opLower === 'button') return NODE_DEFINITIONS.find(d => d.id === 'MA-09');
+
+            // Allow explicit MA-xx codes as opCodes in logic category
+            const codeMatch = NODE_DEFINITIONS.find(d => d.id.toLowerCase() === opLower);
+            if (codeMatch) return codeMatch;
+        }
 
         // 4. Direct ID Match (Fallback)
         // If user types ID-01 explicitly
@@ -261,8 +295,8 @@ export class GraphCodec {
                 const internalCat = def.category.toLowerCase();
                 if (internalCat === 'input' || internalCat === 'output' || internalCat === 'result') {
                     cat = 'io';
-                } else if (internalCat === 'math') {
-                    cat = 'math';
+                } else if (internalCat === 'logic') {
+                    cat = 'logic';
                 } else {
                     cat = internalCat;
                 }
@@ -283,8 +317,14 @@ export class GraphCodec {
                     const nodeData = node.data || {};
                     if (node.type === 'IO-01') { op = 'num'; if (nodeData.value !== undefined) val = ` = ${nodeData.value}`; }
                     else if (node.type === 'IO-02') { op = 'slider'; if (nodeData.value !== undefined) val = ` = ${nodeData.value}`; }
-                    else if (node.type === 'IO-11') { op = 'res'; }
                     else if (node.type === 'IO-05') { op = 'unit'; }
+                } else if (cat === 'logic') {
+                    const nodeData = node.data || {};
+                    if (node.type === 'MA-05') { op = nodeData.op || 'AND'; }
+                    else if (node.type === 'MA-13') { op = 'split'; }
+                    else if (node.type === 'MA-04') { op = 'switch'; }
+                    else if (node.type === 'MA-08') { op = 'toggle'; if (nodeData.value !== undefined) val = ` = ${nodeData.value}`; }
+                    else if (node.type === 'MA-09') { op = 'button'; }
                 }
             }
 

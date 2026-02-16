@@ -133,7 +133,22 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                                     placeholder="0"
                                     onChange={(e) => handleCellChange(r, c, e.target.value)}
                                     // Stop propagation specifically for keydown to prevent deleting node when typing backspace
-                                    onKeyDown={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => {
+                                        e.stopPropagation();
+                                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                                            e.preventDefault();
+                                            let step = 1;
+                                            if (e.shiftKey) step = 0.1;
+                                            if (e.altKey) step = 10;
+
+                                            const delta = e.key === 'ArrowUp' ? step : -step;
+                                            const currentVal = parseFloat(e.currentTarget.value) || 0;
+                                            const newVal = parseFloat((currentVal + delta).toFixed(2)); // Round to avoid float errors
+
+                                            // Update Grid State
+                                            handleCellChange(r, c, String(newVal));
+                                        }
+                                    }}
                                     onMouseDown={(e) => e.stopPropagation()}
                                 />
                             ))}

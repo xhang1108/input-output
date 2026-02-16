@@ -102,6 +102,18 @@ export const PayloadUtils = {
     },
 
     /**
+     * Safe Boolean Creator
+     */
+    createBoolean(value: boolean): NodePayload {
+        return {
+            type: DataType.Boolean,
+            value,
+            symbol: null,
+            meta: {}
+        };
+    },
+
+    /**
      * Checks if payload is of a specific type
      */
     isType(payload: NodePayload, type: DataType): boolean {
@@ -306,15 +318,21 @@ export const PayloadUtils = {
             case 'BinaryExpression': {
                 const left = this.stringifySymbol(node.left!);
                 const right = this.stringifySymbol(node.right!);
-                // Use parenthesis for lower precedence operators if needed?
-                // Simple version for now: always wrap Binary unless Top Level?
-                // Actually, let's just use operator mappings.
-                const op = node.operator === 'ADD' ? '+' :
-                    node.operator === 'SUB' ? '-' :
-                        node.operator === 'MUL' ? '*' :
-                            node.operator === 'DIV' ? '/' : node.operator;
+
+                const opMap: Record<string, string> = {
+                    ADD: '+', SUB: '-', MUL: '*', DIV: '/',
+                    AND: '&&', OR: '||',
+                    EQ: '==', GT: '>', LT: '<', GTE: '>=', LTE: '<=', NEQ: '!='
+                };
+                const op = opMap[node.operator!] || node.operator;
 
                 return `(${left} ${op} ${right})`;
+            }
+            case 'ConditionalExpression': {
+                const test = this.stringifySymbol(node.test!);
+                const cons = this.stringifySymbol(node.consequent!);
+                const alt = this.stringifySymbol(node.alternate!);
+                return `(${test} ? ${cons} : ${alt})`;
             }
             case 'FunctionCall':
                 return `${node.name}(${node.args?.map(a => this.stringifySymbol(a)).join(', ')})`;

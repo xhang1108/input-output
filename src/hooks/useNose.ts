@@ -17,8 +17,8 @@ export function useNose() {
      */
     const sniffType = useCallback((nodeId: string): DataType => {
         const brain = getBrain();
-        const payload = brain.getValue(nodeId);
-        return payload?.type || 'scalar';
+        const payload = brain.peekValue(nodeId);
+        return payload?.type || DataType.Scalar;
     }, [getBrain]);
 
     /**
@@ -26,7 +26,7 @@ export function useNose() {
      */
     const sniffMeta = useCallback((nodeId: string) => {
         const brain = getBrain();
-        const payload = brain.getValue(nodeId);
+        const payload = brain.peekValue(nodeId);
         return payload?.meta || {};
     }, [getBrain]);
 

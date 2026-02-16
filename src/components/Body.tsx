@@ -3,80 +3,41 @@
 import {
     ReactFlow,
     Background,
-    BackgroundVariant,
     useNodesState,
     useEdgesState,
     Node,
-    addEdge,
-    Connection,
     Edge,
     SelectionMode,
-    useReactFlow,
-    XYPosition,
     ConnectionMode,
     ConnectionLineType,
 } from '@xyflow/react';
-import { RelinkLine, RelinkContext, RelinkState, RelinkAnchor } from './edges/RelinkLine';
+import { RelinkLine, RelinkContext } from './edges/RelinkLine';
 import '@xyflow/react/dist/style.css';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { generateNodeId } from '../utils/idGenerator';
-import { intersectsRect } from '../utils/geometry';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
-import { BaseNode } from './nodes/BaseNode';
-import { FrameNode } from './nodes/FrameNode';
-import { InputNode } from './nodes/InputNode';
-import { UnitNode } from './nodes/UnitNode';
-import { MathNode } from './nodes/MathNode';
-import { ResultNode } from './nodes/ResultNode';
-import { ConstantNode } from './nodes/ConstantNode';
-import { SliderNode } from './nodes/SliderNode';
-import { RandomNode } from './nodes/RandomNode';
-import { FormulaResultNode } from './nodes/FormulaResultNode';
-import { RoundingNode } from './nodes/RoundingNode';
-import { MatrixInputNode } from './nodes/MatrixInputNode';
-import { MatrixResultNode } from './nodes/MatrixResultNode';
-import { ColorNode } from './nodes/ColorNode';
-import { MagneticEdge } from './edges/MagneticEdge';
+import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
+import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
 import { useEar } from '../nerves/useEar';
 import { useHand } from '../nerves/useHand';
 import { useEye } from '../nerves/useEye';
 import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { useRelink } from '../hooks/useRelink';
+import { useAutoInsert } from '../hooks/useAutoInsert';
+import { useNodeSpawner } from '../hooks/useNodeSpawner';
 import { CommandPalette } from './ui/CommandPalette';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { InspectorPanel } from './ui/InspectorPanel';
-import { SettingsPanel } from './ui/SettingsPanel'; // Import SettingsPanel
-import { getLayoutedElements } from '../nerves/layoutEngine';
+import { SettingsPanel } from './ui/SettingsPanel';
 import { useMemory, initialNodes } from '../engine/useMemory';
 import { useBrainSync } from '../hooks/useBrainSync';
-import { ContextMenu, ContextMenuItem } from './ui/ContextMenu';
+import { ContextMenu } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
 import { Brain } from '../engine/Brain';
 import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useAppStore } from '../store/useStore';
 
-const nodeTypes = {
-    baseNode: BaseNode,
-    frame: FrameNode,
-    'MA-01': MathNode,
-    'MA-12': RoundingNode,
-    'MA-03': ConstantNode,
-    'IO-01': InputNode,
-    'IO-02': SliderNode,
-    'IO-05': UnitNode,
-    'IO-06': RandomNode,
-    'IO-08': MatrixInputNode,
-    'IO-11': ResultNode,
-    'IO-16': MatrixResultNode,
-    'IO-17': FormulaResultNode,
-    'IO-18': ColorNode,
-};
-
-const edgeTypes = {
-    magnetic: MagneticEdge,
-};
+// nodeTypes and edgeTypes imported from config/nodeTypeMap.ts
 
 export function Body() {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -110,20 +71,8 @@ export function Body() {
         nodeId?: string;
     } | null>(null);
 
-    const [pendingConnection, setPendingConnection] = useState<{
-        nodeId: string;
-        handleId: string | null;
-        handleType: 'source' | 'target';
-    } | null>(null);
-
-    const connectionStartRef = useRef<{
-        nodeId: string | null;
-        handleId: string | null;
-        handleType: string | null;
-    } | null>(null);
-
-    // --- Auto Insert State ---
-    const [highlightedEdgeId, setHighlightedEdgeId] = useState<string | null>(null);
+    // pendingConnection and spawnNode managed by useNodeSpawner
+    // highlightedEdgeId and autoInsert managed by useAutoInsert
 
     const effectiveSnap = isSnapping || manualSnap;
 
@@ -132,55 +81,9 @@ export function Body() {
 
 
     // Get flow helpers
-    const { project } = useCanvasProjection();
     const { focusOn, resetView, getZoom } = useEye();
 
     // Action Log is handled by useAppStore
-
-
-    // Sync Edge Type and Highlight State
-    useEffect(() => {
-        setEdges(eds => eds.map(e => ({
-            ...e,
-            data: {
-                ...e.data,
-                pathType: edgeType,
-                animate: edgeAnimation,
-                isHighlighted: e.id === highlightedEdgeId // Sync highlight state
-            }
-        })));
-        if (!highlightedEdgeId) {
-            // Low-noise logging: only log when general properties change, not every drag-highlight frame
-            // logAction(`Edge Type: ${edgeType} | Anim: ${edgeAnimation}`);
-        }
-    }, [edgeType, edgeAnimation, highlightedEdgeId, setEdges, logAction]);
-
-
-    // --- Persistence Logic ---
-    // Settings are handled by Zustand persist middleware.
-
-    // Memory (Nodes & Edges Persistence)
-    const { clearMemory } = useMemory(nodes, edges, setNodes, setEdges, logAction);
-
-    // Brain Sync (Shadow Mirror)
-    useBrainSync(nodes, edges);
-    // Brain Updates (Reverse Sync: Brain -> UI)
-    useBrainUpdates(setNodes, setEdges);
-
-
-    // Auto-Load Flow Data on Mount
-
-    // Connect Brain Log to UI Log
-    useEffect(() => {
-        const brain = Brain.getInstance();
-        // @ts-ignore
-        window.Brain = brain;
-        const cleanupLog = brain.on('log', (msg: string) => logAction(msg));
-
-        return () => {
-            cleanupLog();
-        };
-    }, [logAction]);
 
     const { handleAutoLayout } = useAutoLayout(
         nodes,
@@ -210,16 +113,67 @@ export function Body() {
         handleMouseUp,
         mode,
         cutPath,
-        swapConnections, // Imported
-        detachSelected, // Imported
-        clearSelection, // Imported
-        selectNode, // Imported
-        handleTypeNum, // New Import
-        transformBuffer, // New Import
-        transformValue // New Import
+        swapConnections,
+        detachSelected,
+        clearSelection,
+        selectNode,
+        handleTypeNum,
+        transformBuffer,
+        transformValue
     } = useHand();
 
-    // Debug: Log Mode Changes (To catch flickering)
+    // Memory (Nodes & Edges Persistence)
+    const { clearMemory } = useMemory(nodes, edges, setNodes, setEdges, logAction);
+
+    // Node Spawner (Command Palette + Auto-Link)
+    const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
+        palettePosition,
+        edgeType,
+        edgeAnimation,
+        setNodes,
+        setEdges,
+        logAction,
+    });
+
+    // Auto Insert (Drag over edge to split)
+    const { highlightedEdgeId, detectAutoInsert, performAutoInsert } = useAutoInsert({
+        nodes,
+        edges,
+        mode,
+        edgeType,
+        edgeAnimation,
+        setEdges,
+        logAction,
+    });
+
+    // Sync Edge Type and Highlight State
+    useEffect(() => {
+        setEdges(eds => eds.map(e => ({
+            ...e,
+            data: {
+                ...e.data,
+                pathType: edgeType,
+                animate: edgeAnimation,
+                isHighlighted: e.id === highlightedEdgeId
+            }
+        })));
+    }, [edgeType, edgeAnimation, highlightedEdgeId, setEdges]);
+
+    // Brain Sync (Shadow Mirror)
+    useBrainSync(nodes, edges);
+    // Brain Updates (Reverse Sync: Brain -> UI)
+    useBrainUpdates(setNodes, setEdges);
+
+    // Connect Brain Log to UI Log
+    useEffect(() => {
+        const brain = Brain.getInstance();
+        // @ts-ignore
+        window.Brain = brain;
+        const cleanupLog = brain.on('log', (msg: string) => logAction(msg));
+        return () => { cleanupLog(); };
+    }, [logAction]);
+
+    // Debug: Log Mode Changes
     useEffect(() => {
         logAction(`Mode: ${mode}`);
     }, [mode, logAction]);
@@ -247,57 +201,7 @@ export function Body() {
         }
     }, []);
 
-    // Helper: Spawn Node
-    const spawnNode = useCallback((type: string, label: string, extraData?: Record<string, any>) => {
-        logAction(`Spawn Node: ${type}`);
-        // Project screen coordinates (palette position) to flow coordinates
-        const flowPos = project({
-            x: palettePosition.x,
-            y: palettePosition.y
-        });
-
-        const newId = generateNodeId(type);
-        const newNode: Node = {
-            id: newId,
-            type: type || 'baseNode',
-            position: flowPos,
-            data: {
-                label,
-                type: type === 'baseNode' ? undefined : type,
-                ...extraData
-            },
-        };
-
-        setNodes((nds) => nds.concat(newNode));
-
-        // Auto-Link if we have a pending connection
-        if (pendingConnection) {
-            const nodeDef = NODE_DEFINITIONS.find(d => d.id === type);
-            if (nodeDef) {
-                // If pending was a source, we need a target on the new node
-                const targetType = pendingConnection.handleType === 'source' ? 'target' : 'source';
-                const companionHandle = nodeDef.handles.find(h => h.type === targetType);
-
-                if (companionHandle) {
-                    const newEdge: Edge = {
-                        id: generateNodeId('edge'),
-                        source: pendingConnection.handleType === 'source' ? pendingConnection.nodeId : newId,
-                        sourceHandle: pendingConnection.handleType === 'source' ? pendingConnection.handleId : companionHandle.id,
-                        target: pendingConnection.handleType === 'target' ? pendingConnection.nodeId : newId,
-                        targetHandle: pendingConnection.handleType === 'target' ? pendingConnection.handleId : companionHandle.id,
-                        type: 'magnetic',
-                        data: { pathType: edgeType, animate: edgeAnimation }
-                    };
-
-                    // Delay slightly to ensure handles are registered
-                    setTimeout(() => {
-                        setEdges(eds => addEdge(newEdge, eds));
-                    }, 50);
-                }
-            }
-            setPendingConnection(null);
-        }
-    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, edgeAnimation, logAction]);
+    // spawnNode managed by useNodeSpawner hook
 
     // --- Custom Handle Interactions State ---
     const {
@@ -483,124 +387,7 @@ export function Body() {
     });
 
 
-    // --- Auto Insert Logic ---
-    // Integration with useHand (GRABBING mode)
-    const detectAutoInsert = useCallback(() => {
-        if (mode !== 'GRABBING') return;
-
-        const selectedNodes = nodes.filter(n => n.selected);
-        if (selectedNodes.length !== 1) {
-            if (highlightedEdgeId) setHighlightedEdgeId(null);
-            return;
-        }
-
-        const node = selectedNodes[0];
-
-        // 1. Get Node Center
-        const w = node.measured?.width || 150;
-        const h = node.measured?.height || 50;
-        const cx = node.position.x + w / 2;
-        const cy = node.position.y + h / 2;
-
-        let bestEdge: string | null = null;
-        let minInfo = { dist: Infinity }; // Use dist to pick closest center, but trigger if inside Box
-
-        // 2. Check Intersections
-        for (const edge of edges) {
-            const sourceNode = nodes.find(n => n.id === edge.source);
-            const targetNode = nodes.find(n => n.id === edge.target);
-            if (!sourceNode || !targetNode) continue;
-
-            if (sourceNode.id === targetNode.id) continue;
-            if (sourceNode.selected || targetNode.selected) continue; // Don't snap to moving edges
-
-            const sx = sourceNode.position.x + (sourceNode.measured?.width || 150) / 2;
-            const sy = sourceNode.position.y + (sourceNode.measured?.height || 50) / 2;
-            const tx = targetNode.position.x + (targetNode.measured?.width || 150) / 2;
-            const ty = targetNode.position.y + (targetNode.measured?.height || 50) / 2;
-
-            const l2 = Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2);
-            if (l2 === 0) continue;
-
-            let t = ((cx - sx) * (tx - sx) + (cy - sy) * (ty - sy)) / l2;
-            t = Math.max(0, Math.min(1, t));
-            const px = sx + t * (tx - sx);
-            const py = sy + t * (ty - sy);
-            const dist = Math.sqrt(Math.pow(cx - px, 2) + Math.pow(cy - py, 2));
-
-            // Check intersection (Segment vs Expanded Box)
-            const buffer = 2; // Tighten buffer to prevent premature detection
-            const hasIntersection = intersectsRect(
-                sx, sy, tx, ty,
-                node.position.x - buffer, node.position.y - buffer,
-                w + buffer * 2, h + buffer * 2
-            );
-
-            if (hasIntersection && dist < minInfo.dist) {
-                minInfo.dist = dist;
-                bestEdge = edge.id;
-            }
-        }
-
-        if (bestEdge !== highlightedEdgeId) {
-            setHighlightedEdgeId(bestEdge);
-        }
-    }, [mode, nodes, edges, highlightedEdgeId]);
-
-    const performAutoInsert = useCallback(() => {
-        if (highlightedEdgeId) {
-            const edge = edges.find(e => e.id === highlightedEdgeId);
-            const selectedNodes = nodes.filter(n => n.selected);
-            const node = selectedNodes[0];
-
-            if (edge && node) {
-                // Perform Split
-                const sourceId = edge.source;
-                const targetId = edge.target;
-
-                // Find appropriate handles for the inserted node
-                const nodeDef = NODE_DEFINITIONS.find(d => d.id === node.type);
-
-                let inputHandle = 'in';
-                let outputHandle = 'out';
-
-                if (nodeDef && nodeDef.handles) {
-                    const firstIn = nodeDef.handles.find(h => h.type === 'target');
-                    const firstOut = nodeDef.handles.find(h => h.type === 'source');
-                    // Fallback: specific fix for MathNode/InputNode if IDs differ
-                    if (firstIn) inputHandle = firstIn.id;
-                    if (firstOut) outputHandle = firstOut.id;
-                }
-
-                // Create new edges
-                const e1: Edge = {
-                    id: generateNodeId('edge'),
-                    source: sourceId,
-                    sourceHandle: edge.sourceHandle,
-                    target: node.id,
-                    targetHandle: inputHandle,
-                    type: 'magnetic',
-                    data: { pathType: edgeType, animate: edgeAnimation }
-                };
-
-                const e2: Edge = {
-                    id: generateNodeId('edge'),
-                    source: node.id,
-                    sourceHandle: outputHandle,
-                    target: targetId,
-                    targetHandle: edge.targetHandle,
-                    type: 'magnetic',
-                    data: { pathType: edgeType, animate: edgeAnimation }
-                };
-
-                // Update Graph
-                setEdges(eds => eds.filter(e => e.id !== highlightedEdgeId).concat([e1, e2]));
-
-                logAction(`Auto Insert: ${node.id} into ${edge.id}`);
-            }
-            setHighlightedEdgeId(null);
-        }
-    }, [highlightedEdgeId, nodes, edges, edgeType, edgeAnimation, setEdges, setNodes, logAction]);
+    // Auto Insert logic managed by useAutoInsert hook
 
     const onMouseMove = useCallback((e: React.MouseEvent) => {
         mousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -763,24 +550,35 @@ export function Body() {
                             x={contextMenu.x}
                             y={contextMenu.y}
                             onClose={() => setContextMenu(null)}
-                            items={contextMenu.type === 'CANVAS' ? [
-                                { label: 'Command Palette', shortcut: 'Shift+A', action: () => { setPalettePosition({ x: contextMenu.x, y: contextMenu.y }); setShowPalette(true); } },
-                                { label: 'Reset View', action: () => resetView() },
-                                { label: 'Paste', shortcut: 'Ctrl+V', action: () => pasteFromClipboard() },
-                                { label: 'Select All', shortcut: 'A', action: () => { setNodes((nds: Node[]) => nds.map(n => ({ ...n, selected: true }))); } },
-                            ] : [
-                                { label: 'Rename', shortcut: 'Enter', action: () => { /* Trigger Rename? Needs Focus Logic */ logAction('Rename via Menu (Todo)'); } },
-                                {
-                                    label: 'Duplicate', shortcut: 'Shift+D', action: () => {
+                            items={contextMenu.type === 'CANVAS'
+                                ? getCanvasMenuItems({
+                                    openPalette: (x, y) => { setPalettePosition({ x, y }); setShowPalette(true); },
+                                    resetView,
+                                    pasteFromClipboard,
+                                    selectAll: () => setNodes((nds: Node[]) => nds.map(n => ({ ...n, selected: true }))),
+                                    rename: () => logAction('Rename via Menu (Todo)'),
+                                    duplicateAndGrab: () => { },
+                                    copyToClipboard,
+                                    detachSelected,
+                                    deleteSelected,
+                                    logAction,
+                                }, contextMenu.x, contextMenu.y)
+                                : getNodeMenuItems({
+                                    openPalette: () => { },
+                                    resetView,
+                                    pasteFromClipboard,
+                                    selectAll: () => { },
+                                    rename: () => logAction('Rename via Menu (Todo)'),
+                                    duplicateAndGrab: () => {
                                         const newNodes = duplicateSelected();
                                         if (newNodes) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, newNodes as Node[]);
-                                    }
-                                },
-                                { label: 'Copy', shortcut: 'Ctrl+C', action: () => copyToClipboard() },
-                                { label: 'Colors', action: () => { logAction('Colors via Menu (Todo)'); } },
-                                { label: 'Detach', shortcut: 'Alt+Drag', action: () => detachSelected() },
-                                { label: 'Delete', shortcut: 'Del', danger: true, action: () => deleteSelected() },
-                            ]}
+                                    },
+                                    copyToClipboard,
+                                    detachSelected,
+                                    deleteSelected,
+                                    logAction,
+                                })
+                            }
                         />
                     )}
                 </ReactFlow>
