@@ -1,0 +1,68 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mD:/Antigravity/Calctopus[39m
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mBasic State Management[2m > [22m[2mshould add a node correctly
+[22m[39m[History] Pushed. Past: 1, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mBasic State Management[2m > [22m[2mshould remove a node correctly
+[22m[39m[History] Pushed. Past: 2, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mBasic State Management[2m > [22m[2mshould remove a node correctly
+[22m[39m[History] Pushed. Past: 3, Future: 0
+[History] Pushed. Past: 4, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mBasic State Management[2m > [22m[2mshould connect nodes correctly
+[22m[39m[History] Pushed. Past: 5, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mBasic State Management[2m > [22m[2mshould connect nodes correctly
+[22m[39m[History] Pushed. Past: 6, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mCalculations[2m > [22m[2mshould perform addition correctly
+[22m[39m[History] Pushed. Past: 7, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mCalculations[2m > [22m[2mshould perform addition correctly
+[22m[39m[History] Pushed. Past: 8, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mCalculations[2m > [22m[2mshould update results when input values change
+[22m[39m[History] Pushed. Past: 9, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mCalculations[2m > [22m[2mshould update results when input values change
+[22m[39m[History] Pushed. Past: 10, Future: 0
+
+[90mstdout[2m | src/engine/__tests__/Brain.test.ts[2m > [22m[2mBrain[2m > [22m[2mCalculations[2m > [22m[2mshould update results when input values change
+[22m[39m[History] Pushed. Past: 11, Future: 0
+
+ [31mÔØ»[39m src/engine/__tests__/Brain.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 37[2mms[22m[39m
+       [32mÔ£ô[39m should add a node correctly[32m 5[2mms[22m[39m
+       [32mÔ£ô[39m should remove a node correctly[32m 1[2mms[22m[39m
+       [32mÔ£ô[39m should connect nodes correctly[32m 2[2mms[22m[39m
+       [32mÔ£ô[39m should perform addition correctly[32m 19[2mms[22m[39m
+[31m       [31m├ù[31m should update results when input values change[39m[32m 8[2mms[22m[39m
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 1 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/engine/__tests__/Brain.test.ts > Brain > Calculations > should update results when input values change
+AssertionError: expected 5 to be 10 // Object.is equality
+
+- Expected
++ Received
+
+- 10
++ 5
+
+ ÔØ» src/engine/__tests__/Brain.test.ts:109:57
+    107|             });
+    108| 
+    109|             expect((await brain.getValue('Res')).value).toBe(10);
+       |                                                         ^
+    110|         });
+    111|     });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/1]ÔÄ»
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 16:06:51
+[2m   Duration [22m 4.37s[2m (transform 133ms, setup 0ms, import 2.29s, tests 37ms, environment 1.80s)[22m
+

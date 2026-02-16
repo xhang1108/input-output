@@ -1,4 +1,4 @@
-import { DataType, NodePayload, PayloadValue, ASTNode } from "../types/payload";
+import { DataType, NodePayload, PayloadValue, ASTNode, Matrix } from "../types/payload";
 
 /**
  * 🛠️ Utility functions for creating and manipulating NodePayloads.
@@ -62,6 +62,30 @@ export const PayloadUtils = {
             value,
             symbol: null, // To be implemented in Phase 3
             meta: { unit }
+        };
+    },
+
+    /**
+     * Safe String Creator
+     */
+    createString(value: string): NodePayload {
+        return {
+            type: DataType.String,
+            value,
+            symbol: null,
+            meta: {}
+        };
+    },
+
+    /**
+     * Safe Matrix/Vector Creator
+     */
+    createVector(value: number[]): NodePayload {
+        return {
+            type: DataType.Matrix,
+            value,
+            symbol: null,
+            meta: {}
         };
     },
 

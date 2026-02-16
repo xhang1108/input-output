@@ -40,6 +40,7 @@ body {
   --color-boolean: hsl(30, 100%, 55%);  /* Orange       – Boolean      */
   --color-unit:    hsl(195, 85%, 48%);  /* Cyan         – Unit/SI      */
   --color-error:   hsl(0, 72%, 55%);    /* Red          – Error State  */
+  --color-color:   hsl(285, 80%, 65%);  /* Magenta/Pink – Color/Visual */
 
   /* ── Node Category Tokens ── */
   --color-input:   hsl(38, 92%, 55%);   /* Match scalar input */

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Download, Copy, Check } from 'lucide-react';
-import { Brain } from '../../engine/Brain';
+import { useMouth } from '../../hooks/useMouth';
 
 interface GraphExportModalProps {
     isOpen: boolean;
@@ -10,40 +10,26 @@ interface GraphExportModalProps {
 }
 
 export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
+    const { generateCGL, downloadCGL, copyToClipboard } = useMouth();
     const [exportData, setExportData] = useState('');
     const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
-            handleGenerateExport();
+            setExportData(generateCGL());
         }
-    }, [isOpen]);
+    }, [isOpen, generateCGL]);
 
-    const handleGenerateExport = async () => {
-        const { GraphCodec } = await import('../../engine/GraphCodec');
-        const graph = Brain.getInstance().toInjectable();
-        const cgl = GraphCodec.encode(graph);
-        setExportData(cgl);
-    };
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(exportData).then(() => {
+    const handleCopy = async () => {
+        const success = await copyToClipboard(exportData);
+        if (success) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        });
+        }
     };
 
     const handleDownload = () => {
-        const blob = new Blob([exportData], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        a.href = url;
-        a.download = `calctopus-graph-${timestamp}.cgl`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        downloadCGL();
     };
 
     if (!isOpen) return null;

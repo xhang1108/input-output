@@ -1,7 +1,7 @@
 import { Position } from '@xyflow/react';
 
 // Data type determines handle color via CSS variable lookup
-export type HandleDataType = 'scalar' | 'matrix' | 'vector' | 'soul' | 'unit';
+export type HandleDataType = 'scalar' | 'matrix' | 'vector' | 'soul' | 'unit' | 'string' | 'color';
 
 // Handle configuration - fully describes a single connection point
 export interface HandleConfig {
@@ -20,6 +20,8 @@ export const HANDLE_COLOR_MAP: Record<HandleDataType, string> = {
     vector: 'var(--color-vector)',
     soul: 'var(--color-soul)',
     unit: 'var(--color-unit)',
+    string: 'var(--color-string)',
+    color: 'var(--color-color)',
 };
 
 export function getHandleColor(config: HandleConfig): string {

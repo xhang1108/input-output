@@ -36,6 +36,7 @@ import { FormulaResultNode } from './nodes/FormulaResultNode';
 import { RoundingNode } from './nodes/RoundingNode';
 import { MatrixInputNode } from './nodes/MatrixInputNode';
 import { MatrixResultNode } from './nodes/MatrixResultNode';
+import { ColorNode } from './nodes/ColorNode';
 import { MagneticEdge } from './edges/MagneticEdge';
 import { useEar } from '../nerves/useEar';
 import { useHand } from '../nerves/useHand';
@@ -70,6 +71,7 @@ const nodeTypes = {
     'IO-11': ResultNode,
     'IO-16': MatrixResultNode,
     'IO-17': FormulaResultNode,
+    'IO-18': ColorNode,
 };
 
 const edgeTypes = {

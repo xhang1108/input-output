@@ -36,6 +36,17 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'slider', value: 50, min: 0, max: 100, step: 1 }
     },
+    {
+        id: 'IO-18',
+        label: 'Color',
+        category: 'Input',
+        handles: [
+            { id: 'hex', type: 'source', position: Position.Right, variant: 'single', dataType: 'string', label: 'HEX' },
+            { id: 'rgb', type: 'source', position: Position.Right, variant: 'single', dataType: 'vector', label: 'RGB' },
+            { id: 'vec3', type: 'source', position: Position.Right, variant: 'single', dataType: 'vector', label: 'Vec3' }
+        ],
+        defaultData: { type: 'color', value: '#3b82f6' }
+    },
 
     // ─── Output Family ──────────────────────────────────────────
     {

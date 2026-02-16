@@ -228,11 +228,12 @@ export class GraphCodec {
         }
 
         // 2. IO Family
-        if (catLower === 'io') {
+        if (catLower === 'io' || catLower === 'input' || catLower === 'output' || catLower === 'result') {
             if (opLower === 'num') return NODE_DEFINITIONS.find(d => d.id === 'IO-01');
             if (opLower === 'slider') return NODE_DEFINITIONS.find(d => d.id === 'IO-02');
             if (opLower === 'res') return NODE_DEFINITIONS.find(d => d.id === 'IO-11');
             if (opLower === 'text') return undefined; // Not implemented
+            if (opLower === 'unit') return NODE_DEFINITIONS.find(d => d.id === 'IO-05');
         }
 
         // 3. Logic Family (Future)
@@ -257,7 +258,14 @@ export class GraphCodec {
             const def = NODE_DEFINITIONS.find(d => d.id === node.type);
 
             if (def) {
-                cat = def.category.toLowerCase();
+                const internalCat = def.category.toLowerCase();
+                if (internalCat === 'input' || internalCat === 'output' || internalCat === 'result') {
+                    cat = 'io';
+                } else if (internalCat === 'math') {
+                    cat = 'math';
+                } else {
+                    cat = internalCat;
+                }
 
                 if (cat === 'math') {
                     const nodeData = node.data || {};

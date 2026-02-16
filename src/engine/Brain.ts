@@ -21,9 +21,36 @@ export class Brain {
             edges: [],
             mode: 'scientific' // Default to Scientific (BigNumber)
         };
+        this.startHeartbeat();
     }
 
     private listeners: Map<string, Set<(payload: any) => void>> = new Map();
+
+    private isRecalculating = false;
+    private heartbeatInterval: NodeJS.Timeout | null = null;
+    private readonly HEARTBEAT_MS = 16; // ~60fps
+
+    private startHeartbeat() {
+        if (this.heartbeatInterval) return;
+
+        this.heartbeatInterval = setInterval(async () => {
+            if (this.isRecalculating) return;
+
+            // Check if any node is dirty
+            const hasDirty = Array.from(this.state.nodes.values()).some(n => n.isDirty);
+            if (hasDirty) {
+                this.isRecalculating = true;
+                try {
+                    const patches = await this.recalculateDirty();
+                    if (patches.length > 0) {
+                        this.emit('graphChanged', patches);
+                    }
+                } finally {
+                    this.isRecalculating = false;
+                }
+            }
+        }, this.HEARTBEAT_MS);
+    }
 
     public static getInstance(): Brain {
         if (!Brain.instance) {
@@ -108,6 +135,18 @@ export class Brain {
         }
     }
 
+    public clearAll() {
+        this.state = {
+            nodes: new Map(),
+            edges: [],
+            mode: 'scientific'
+        };
+        this.adjacency = new Map();
+        this.reverseAdjacency = new Map();
+        this.history.clear();
+        this.emit('graphChanged', null);
+    }
+
     private markAllDirty() {
         this.state.nodes.forEach(node => {
             node.isDirty = true;
@@ -116,42 +155,56 @@ export class Brain {
 
     // 2. Pull Evaluation (The Calculation)
     // Phase 2.1: Updated to return NodePayload
-    public getValue(nodeId: string): NodePayload {
+    public getValue(nodeId: string, sourceHandle?: string): NodePayload {
         const node = this.state.nodes.get(nodeId);
         if (!node) return PayloadUtils.createError('Node not found');
 
-        // If clean, return cache (NodeLogic.value is now NodePayload)
+        let resultPayload: NodePayload;
+
+        // 1. Get/Calculate the node's current value
         if (!node.isDirty) {
-            return node.value;
-        }
+            resultPayload = node.value;
+        } else {
+            const inputs = this.reverseAdjacency.get(nodeId) || [];
+            const inputPayloads: Record<string, NodePayload> = {};
 
-        // If dirty, calculate!
-        const inputs = this.reverseAdjacency.get(nodeId) || [];
-        const inputPayloads: Record<string, NodePayload> = {};
+            for (const input of inputs) {
+                // Pass sourceHandle to ensure multi-output nodes work
+                const payload = this.getValue(input.nodeId, input.sourceHandle);
 
-        for (const input of inputs) {
-            const payload = this.getValue(input.nodeId);
-
-            // Phase 2.1: Error Propagation (Railroad)
-            if (PayloadUtils.isType(payload, DataType.Error)) {
-                // If any input is error, propagate it (unless node handles errors?)
-                // For now, propagate.
-                // We could potentially just pass it to computeNode and let logic decide.
-                // But fast-fail is better for most nodes.
-                // inputPayloads[input.targetHandle!] = payload;
+                if (input.targetHandle) {
+                    inputPayloads[input.targetHandle] = payload;
+                }
             }
 
-            if (input.targetHandle) {
-                inputPayloads[input.targetHandle] = payload;
-            }
+            // Compute
+            resultPayload = this.computeNode(node, inputPayloads);
+
+            // Update & Clean
+            node.value = resultPayload;
+            node.isDirty = false;
         }
 
-        // Compute
-        const resultPayload = this.computeNode(node, inputPayloads);
-
-        // Update & Clean
-        node.value = resultPayload;
-        node.isDirty = false;
+        // 2. Handle specific Handle extraction (Phase 2.2 Multi-Output)
+        // If node supports parallel outputs, resultPayload.value might be a Record<string, PayloadValue>
+        if (sourceHandle && typeof resultPayload.value === 'object' && resultPayload.value !== null) {
+            const multiValue = resultPayload.value as Record<string, any>;
+            if (sourceHandle in multiValue) {
+                // Return a sub-payload for this specific handle
+                // We keep the same type/meta for now, or the evaluator should have structured it.
+                // Ideally, if it's a multi-output node, resultPayload.value[handle] 
+                // contains the raw value, but we might need to wrap it.
+                // Let's assume for now the evaluator returns { [handle]: specificValue }
+                const subValue = multiValue[sourceHandle];
+                // If it's already a payload-like structure, we can return it.
+                // But usually, computeNode returns one big NodePayload.
+                // We'll return a new payload wrapping the subValue.
+                return {
+                    ...resultPayload,
+                    value: subValue
+                };
+            }
+        }
 
         return resultPayload;
     }
@@ -387,17 +440,12 @@ export class Brain {
     private calculationTimeout: NodeJS.Timeout | null = null;
     private readonly DEBOUNCE_MS = 50;
 
+    /**
+     * @deprecated Use automatic metabolism (heartbeat).
+     * This is now a no-op as the heartbeat handles calculation checks.
+     */
     private triggerCalculation() {
-        if (this.calculationTimeout) {
-            clearTimeout(this.calculationTimeout);
-        }
-
-        this.calculationTimeout = setTimeout(async () => {
-            const patches = await this.recalculateDirty();
-            if (patches.length > 0) {
-                this.emit('graphChanged', patches);
-            }
-        }, this.DEBOUNCE_MS);
+        // Heartbed handles this automatically now.
     }
 
     // ... createInverseTransaction and validateConnection remain mostly unchanged logic ...

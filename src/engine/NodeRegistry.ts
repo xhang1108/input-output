@@ -89,6 +89,28 @@ NodeRegistry.register('IO-11', (node, inputs) => {
     return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
 });
 
+// IO-18: Color Picker
+NodeRegistry.register('IO-18', (node) => {
+    const val = PayloadUtils.unwrap(node.value);
+    const hex = (typeof val === 'string' ? val : node.data.value) || '#3b82f6';
+
+    // Parse Hex
+    const r = parseInt(hex.slice(1, 3), 16) || 0;
+    const g = parseInt(hex.slice(3, 5), 16) || 0;
+    const b = parseInt(hex.slice(5, 7), 16) || 0;
+
+    return {
+        type: DataType.Object,
+        value: {
+            hex: hex,
+            rgb: [r, g, b],
+            vec3: [Number((r / 255).toFixed(3)), Number((g / 255).toFixed(3)), Number((b / 255).toFixed(3))]
+        },
+        symbol: null,
+        meta: {}
+    };
+});
+
 // IO-16: Matrix View
 NodeRegistry.register('IO-16', (node, inputs) => {
     // Pass-through payload for display
