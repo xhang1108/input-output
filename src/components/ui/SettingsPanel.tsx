@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse } from 'lucide-react';
+import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, FileJson, Download } from 'lucide-react';
 import { useState } from 'react';
 import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
 
@@ -26,6 +26,9 @@ interface SettingsPanelProps {
     onReset: () => void;
 }
 
+import { GraphImportModal } from './GraphImportModal';
+import { GraphExportModal } from './GraphExportModal';
+
 export function SettingsPanel({
     isSnapping, setSnapping,
     showGrid, setShowGrid,
@@ -39,6 +42,8 @@ export function SettingsPanel({
     onReset
 }: SettingsPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
 
     return (
         <div className="absolute top-4 right-4 z-50 flex flex-col items-end gap-2">
@@ -179,16 +184,49 @@ export function SettingsPanel({
 
                     <div className="h-px bg-zinc-800 my-1" />
 
+                    {/* Import Graph */}
+                    <button
+                        onClick={() => {
+                            setIsOpen(false);
+                            setShowImportModal(true);
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="text-zinc-500"><FileJson className="w-4 h-4" /></span>
+                            Import Graph
+                        </div>
+                    </button>
+
+                    {/* Export Graph */}
+                    <button
+                        onClick={() => {
+                            setIsOpen(false);
+                            setShowExportModal(true);
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="text-zinc-500"><Download className="w-4 h-4" /></span>
+                            Export Graph
+                        </div>
+                    </button>
+
                     {/* Reset Canvas */}
                     <button
                         onClick={onReset}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-red-400 hover:bg-red-500/10 hover:text-red-300"
                     >
-                        <Settings className="w-4 h-4" />
-                        Reset Canvas
+                        <div className="flex items-center gap-3">
+                            <span className="text-red-500/70"><Settings className="w-4 h-4" /></span>
+                            Reset Canvas
+                        </div>
                     </button>
                 </div>
             )}
+
+            <GraphImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
+            <GraphExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
         </div>
     );
 }

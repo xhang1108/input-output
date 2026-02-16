@@ -5,6 +5,7 @@ import { HistoryManager } from './HistoryManager';
 import { NodePayload, DataType } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { NodeRegistry } from './NodeRegistry'; // Static Import
+import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 
 export class Brain {
     private static instance: Brain;
@@ -363,7 +364,9 @@ export class Brain {
                     this.log(`Updated Node Data ${tNode.id}`);
 
                     if (!silent) {
-                        this.emit('graphChanged', null); // Force full sync (Phase 2.3 Unit & Data Sync)
+                        // 5. Success
+                        this.emit('graphChanged', null); // Trigger full topology sync (Phase 2.3 Unit & Data Sync)
+                        this.emit('RE-LAYOUT', null); // Trigger automatic layout for position-less nodes
                         this.triggerCalculation();
                     }
                 }
@@ -541,6 +544,10 @@ export class Brain {
             return { isValid: false, reason: 'Cannot connect node to itself' };
         }
 
+        if (!this.state.nodes.has(source) || !this.state.nodes.has(target)) {
+            return { isValid: false, reason: 'Source or Target node does not exist' };
+        }
+
         const isInput = (id: string) =>
             !!id && (id.toLowerCase().startsWith('in') || id === 'target' || id.includes('input'));
 
@@ -606,6 +613,27 @@ export class Brain {
 
         return false;
     }
+
+    public toInjectable(): import('./types').InjectableGraph {
+        const nodes = Array.from(this.state.nodes.values()).map(n => ({
+            id: n.id,
+            type: n.type || 'unknown',
+            position: n.position || { x: 0, y: 0 },
+            data: n.data,
+            value: n.value
+        }));
+
+        const edges = this.state.edges.map(e => ({
+            id: e.id,
+            source: e.source,
+            sourceHandle: e.sourceHandle || 'out',
+            target: e.target,
+            targetHandle: e.targetHandle || 'in'
+        }));
+
+        return { nodes, edges };
+    }
+
     // --- On-Demand AST Generation (Phase 3 Foundation) ---
 
     /**
@@ -641,6 +669,72 @@ export class Brain {
         // For now, let's implement a basic default symbolizers here or in Registry.
         // Let's defer to Registry static method.
         return NodeRegistry.getSymbol(node, inputSymbols);
+    }
+
+    // --- Dev Tools ---
+
+    public async injectNodes(graph: import('./types').InjectableGraph, clear: boolean = false): Promise<void> {
+        this.log(`Injecting ${graph.nodes.length} nodes and ${graph.edges.length} edges...`);
+
+        const txs: Transaction[] = [];
+
+        if (clear) {
+            // Basic clear implementation - simply remove all existing nodes
+            this.state.nodes.forEach(n => {
+                txs.push({ type: 'REMOVE_NODE', payload: n.id });
+            });
+        }
+
+        // 1. Add Nodes
+        // 1. Add Nodes
+        graph.nodes.forEach(n => {
+            let nodeData = n.data || {};
+
+            // Fix: Ensure handles are populated from Definitions if missing in JSON
+            if (!nodeData.handles) {
+                const def = NODE_DEFINITIONS.find(d => d.id === n.type);
+                if (def && def.handles) {
+                    nodeData = { ...nodeData, handles: def.handles };
+                }
+            }
+
+            txs.push({
+                type: 'ADD_NODE',
+                payload: {
+                    id: n.id,
+                    type: n.type,
+                    position: n.position,
+                    data: nodeData,
+                    initialValue: n.value
+                }
+            });
+        });
+
+        // 2. Add Edges (Wrapped in CONNECT transactions)
+        graph.edges.forEach(e => {
+            // Construct a valid Edge object for the transaction payload
+            // We need to ensure it matches the Edge interface expected by CONNECT
+            const edgePayload = {
+                id: e.id,
+                source: e.source,
+                sourceHandle: e.sourceHandle,
+                target: e.target,
+                targetHandle: e.targetHandle,
+                type: 'magnetic', // Default to magnetic
+                data: { pathType: 'bezier', animate: false } // Default styling
+            } as any; // Cast because Edge might have more specific XYFlow properties we don't have here
+
+            txs.push({
+                type: 'CONNECT',
+                payload: edgePayload
+            });
+        });
+
+        if (txs.length > 0) {
+            this.applyTransaction({ type: 'BATCH', payload: txs });
+            // Emit RE-LAYOUT to signal UI to run layout on the newly injected topology
+            this.emit('RE-LAYOUT', null);
+        }
     }
 }
 

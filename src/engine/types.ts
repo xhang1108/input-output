@@ -40,3 +40,20 @@ export interface BrainEvent {
     type: 'modeChanged' | 'log' | 'graphChanged';
     payload: any;
 }
+
+export interface InjectableGraph {
+    nodes: {
+        id: string;
+        type: string;
+        position: { x: number; y: number };
+        data?: Record<string, any>;
+        value?: any;
+    }[];
+    edges: {
+        id: string;
+        source: string;
+        sourceHandle: string;
+        target: string;
+        targetHandle: string;
+    }[];
+}

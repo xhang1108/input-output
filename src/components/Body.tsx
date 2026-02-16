@@ -53,6 +53,7 @@ import { ContextMenu, ContextMenuItem } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
 import { Brain } from '../engine/Brain';
 import { useBrainUpdates } from '../hooks/useBrainUpdates';
+import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useAppStore } from '../store/useStore';
 
 const nodeTypes = {
@@ -170,63 +171,24 @@ export function Body() {
     // Connect Brain Log to UI Log
     useEffect(() => {
         const brain = Brain.getInstance();
-        const cleanup = brain.on('log', (msg: string) => logAction(msg));
-        return cleanup;
+        // @ts-ignore
+        window.Brain = brain;
+        const cleanupLog = brain.on('log', (msg: string) => logAction(msg));
+
+        return () => {
+            cleanupLog();
+        };
     }, [logAction]);
 
-    const handleAutoLayout = useCallback(async () => {
-        const selectedNodes = nodes.filter(n => n.selected);
-        const isPartial = selectedNodes.length > 0;
-
-        const nodesToLayout = isPartial ? selectedNodes : nodes;
-        const edgesToLayout = isPartial
-            ? edges.filter(e => selectedNodes.some(n => n.id === e.source) && selectedNodes.some(n => n.id === e.target))
-            : edges;
-
-        if (nodesToLayout.length === 0) return;
-
-        // Calculate center for partial layout to preserve location
-        let originalCenter = { x: 0, y: 0 };
-        if (isPartial) {
-            const xSum = nodesToLayout.reduce((acc, n) => acc + n.position.x, 0);
-            const ySum = nodesToLayout.reduce((acc, n) => acc + n.position.y, 0);
-            originalCenter = { x: xSum / nodesToLayout.length, y: ySum / nodesToLayout.length };
-        }
-
-        const layouted = await getLayoutedElements(nodesToLayout, edgesToLayout, {
-            algorithm: layoutAlgorithm,
-            direction: layoutDirection
-        });
-
-        // Restore center for partial layout
-        let finalNodes = layouted.nodes;
-        if (isPartial) {
-            const xSum = layouted.nodes.reduce((acc, n) => acc + n.position.x, 0);
-            const ySum = layouted.nodes.reduce((acc, n) => acc + n.position.y, 0);
-            const currentCenter = { x: xSum / layouted.nodes.length, y: ySum / layouted.nodes.length };
-
-            const offsetX = originalCenter.x - currentCenter.x;
-            const offsetY = originalCenter.y - currentCenter.y;
-
-            finalNodes = layouted.nodes.map(n => ({
-                ...n,
-                position: { x: n.position.x + offsetX, y: n.position.y + offsetY }
-            }));
-        }
-
-        if (isPartial) {
-            setNodes(nds => nds.map(n => {
-                const found = finalNodes.find(ln => ln.id === n.id);
-                return found ? found : n;
-            }));
-            logAction('Layout Selected (L)');
-        } else {
-            setNodes([...finalNodes]);
-            setEdges([...layouted.edges]);
-            setTimeout(() => focusOn([]), 50); // Global focus
-            logAction('Layout Global (L)');
-        }
-    }, [nodes, edges, setNodes, setEdges, focusOn, logAction]);
+    const { handleAutoLayout } = useAutoLayout(
+        nodes,
+        edges,
+        setNodes,
+        setEdges,
+        layoutAlgorithm,
+        layoutDirection,
+        logAction
+    );
 
     const {
         startGrab,

@@ -1,0 +1,125 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { X, Download, Copy, Check } from 'lucide-react';
+import { Brain } from '../../engine/Brain';
+
+interface GraphExportModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
+    const [exportData, setExportData] = useState('');
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            handleGenerateExport();
+        }
+    }, [isOpen]);
+
+    const handleGenerateExport = async () => {
+        const { GraphCodec } = await import('../../engine/GraphCodec');
+        const graph = Brain.getInstance().toInjectable();
+        const cgl = GraphCodec.encode(graph);
+        setExportData(cgl);
+    };
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(exportData).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+
+    const handleDownload = () => {
+        const blob = new Blob([exportData], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.href = url;
+        a.download = `calctopus-graph-${timestamp}.cgl`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-1001 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div
+                className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[500px] max-w-[90vw] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+                    <div className="flex items-center gap-2 text-zinc-100 font-medium">
+                        <Download className="w-4 h-4 text-blue-400" />
+                        Export Graph
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-4 flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">CGL Data (Calctopus Graph Language)</label>
+                            <button
+                                onClick={handleCopy}
+                                className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 hover:text-zinc-200 transition-colors group"
+                            >
+                                {copied ? (
+                                    <>
+                                        <Check className="w-2.5 h-2.5 text-green-500" />
+                                        <span className="text-green-500">COPIED!</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Copy className="w-2.5 h-2.5 group-hover:scale-110 transition-transform" />
+                                        <span>COPY</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                        <textarea
+                            className="w-full h-80 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs font-mono text-zinc-300 outline-none focus:border-zinc-600 resize-none custom-scrollbar"
+                            readOnly
+                            value={exportData}
+                            spellCheck={false}
+                        />
+                    </div>
+
+                    <div className="text-[11px] text-zinc-500 leading-relaxed px-1">
+                        Exporting to <span className="text-blue-400 font-bold">CGL</span> format. This format is human-readable and optimized for sharing complex graphs.
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-3 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-2">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+                    >
+                        Close
+                    </button>
+                    <button
+                        onClick={handleDownload}
+                        className="px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20"
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        Download .cgl File
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
