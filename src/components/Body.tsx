@@ -434,7 +434,7 @@ export function Body() {
                     onConnect={onRelinkConnect}
                     onConnectStart={onConnectStart}
                     onConnectEnd={onConnectEnd}
-                    // isValidConnection removed to allow full Code Judgment (Brain)
+                    isValidConnection={isValidRelinkConnection}
 
                     nodeTypes={nodeTypes}
                     fitView

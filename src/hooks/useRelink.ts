@@ -5,6 +5,7 @@ import { RelinkState } from '../components/edges/RelinkLine';
 import { Brain } from '../engine/Brain';
 import { BrainHelper } from '../engine/BrainHelper';
 import { Transaction } from '../engine/types';
+import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 
 type UseRelinkProps = {
     edges: Edge[];
@@ -275,13 +276,28 @@ export function useRelink({
 
     const isValidRelinkConnection = useCallback(
         (connection: Edge | Connection) => {
-            const validation = Brain.getInstance().validateConnection(
-                connection.source!,
+            const brain = Brain.getInstance();
+            if (!connection.source || !connection.target) return false;
+
+            // Check for existing connection to replace (Variant: 'single' handles)
+            const targetNode = brain.getNode(connection.target);
+            const targetDef = NODE_DEFINITIONS.find(d => d.id === targetNode?.type);
+            const handleDef = targetDef?.handles.find(h => h.id === connection.targetHandle);
+
+            const isReplacementTarget = handleDef?.variant === 'single';
+
+            const edgesForValidation = isReplacementTarget
+                ? edges.filter(e => !(e.target === connection.target && e.targetHandle === connection.targetHandle))
+                : edges;
+
+            const validation = brain.validateConnection(
+                connection.source,
                 connection.sourceHandle,
-                connection.target!,
+                connection.target,
                 connection.targetHandle,
-                edges
+                edgesForValidation
             );
+
             return validation.isValid;
         },
         [edges]
@@ -363,11 +379,30 @@ export function useRelink({
             // The `validateConnection` here is just for UI feedback.
 
             setEdges((eds) => {
-                const targetHandle = params.targetHandle;
-                if (targetHandle && (targetHandle.startsWith('in') || targetHandle === 'target')) {
-                    const filtered = eds.filter(e => !(e.target === params.target && e.targetHandle === targetHandle));
+                const targetHandleId = params.targetHandle;
+                const brain = Brain.getInstance();
+                const targetNode = brain.getNode(params.target);
+                const targetDef = NODE_DEFINITIONS.find(d => d.id === targetNode?.type);
+                const handleDef = targetDef?.handles.find(h => h.id === targetHandleId);
+
+                // If handle exists and is marked as 'single', remove existing wires to it
+                if (handleDef?.variant === 'single') {
+                    const filtered = eds.filter(e => !(e.target === params.target && e.targetHandle === targetHandleId));
                     return addEdge(params, filtered);
                 }
+
+                // Fallback to name-based input guessing for unknown nodes/handles if they are targets
+                const isProbablyInput = (h: string | null) => {
+                    if (!h) return false;
+                    const lh = h.toLowerCase();
+                    return lh.startsWith('in') || lh === 'target' || lh.includes('input') || lh === 'condition' || lh === 'select' || lh === 'data' || lh === 'if';
+                };
+
+                if (targetHandleId && isProbablyInput(targetHandleId)) {
+                    const filtered = eds.filter(e => !(e.target === params.target && e.targetHandle === targetHandleId));
+                    return addEdge(params, filtered);
+                }
+
                 return addEdge(params, eds);
             });
 

@@ -53,18 +53,24 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                     });
                 }
             } else {
-                // Check for Data Updates
-                // Fix: Use deep comparison (stringify) to prevent infinite loops caused by new object references
-                // from useBrainUpdates or React Flow, even if data content is identical.
-                if (JSON.stringify(node.data) !== JSON.stringify(prevNode.data)) {
+                // Check for Data Updates (Excluding internally managed 'value')
+                const { value: _v, ...currentData } = node.data || {};
+                const { value: _pv, ...prevData } = prevNode.data || {};
+
+                if (JSON.stringify(currentData) !== JSON.stringify(prevData)) {
                     brain.applyTransaction({
                         type: 'UPDATE_NODE_DATA',
                         payload: {
                             id: node.id,
-                            data: node.data
+                            data: currentData
                         }
                     });
                 }
+            }
+
+            // Sync Position (Phase 1.4)
+            if (node.position && (!prevNode || !prevNode.position || Math.abs(node.position.x - prevNode.position.x) > 0.1 || Math.abs(node.position.y - prevNode.position.y) > 0.1)) {
+                brain.moveNode(node.id, node.position);
             }
         });
 

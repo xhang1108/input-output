@@ -19,6 +19,8 @@ import { MatrixResultNode } from '../components/nodes/MatrixResultNode';
 import { ColorNode } from '../components/nodes/ColorNode';
 import { ColorResultNode } from '../components/nodes/ColorResultNode';
 import { LogicNode } from '../components/nodes/LogicNode';
+import { ToggleNode } from '../components/nodes/ToggleNode';
+import { ButtonNode } from '../components/nodes/ButtonNode';
 import { MagneticEdge } from '../components/edges/MagneticEdge';
 
 export const nodeTypes = {
@@ -28,8 +30,8 @@ export const nodeTypes = {
     'MA-03': ConstantNode,
     'MA-04': BaseNode,       // Switch
     'MA-05': LogicNode,      // Consolidated Logic Gate
-    'MA-08': BaseNode,       // Legacy Toggle (Removed) - Mapped to BaseNode to prevent crash
-    'MA-09': BaseNode,       // Legacy Button (Removed) - Mapped to BaseNode to prevent crash
+    'MA-08': ToggleNode,
+    'MA-09': ButtonNode,
 
 
     'MA-12': RoundingNode,

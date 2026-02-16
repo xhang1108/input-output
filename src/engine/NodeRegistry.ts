@@ -630,5 +630,15 @@ NodeRegistry.register('MA-04', (node, inputs) => {
 });
 
 // MA-08: Toggle
+NodeRegistry.register('MA-08', (node) => {
+    return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(node.value));
+}, (node) => {
+    return PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap(node.value) });
+});
 
-
+// MA-09: Button
+NodeRegistry.register('MA-09', (node) => {
+    return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(node.value));
+}, (node) => {
+    return PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap(node.value) });
+});

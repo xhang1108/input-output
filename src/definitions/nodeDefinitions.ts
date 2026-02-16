@@ -227,6 +227,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'switch' }
     },
+
     {
         id: 'MA-08',
         label: 'Toggle',

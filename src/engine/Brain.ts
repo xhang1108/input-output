@@ -186,27 +186,22 @@ export class Brain {
             node.isDirty = false;
         }
 
-        // 2. Handle specific Handle extraction (Phase 2.2 Multi-Output)
-        // If node supports parallel outputs, resultPayload.value might be a Record<string, PayloadValue>
+        // 2. Handle specific Handle extraction
         if (sourceHandle && typeof resultPayload.value === 'object' && resultPayload.value !== null) {
             const multiValue = resultPayload.value as Record<string, any>;
             if (sourceHandle in multiValue) {
-                // Return a sub-payload for this specific handle
-                // We keep the same type/meta for now, or the evaluator should have structured it.
-                // Ideally, if it's a multi-output node, resultPayload.value[handle] 
-                // contains the raw value, but we might need to wrap it.
-                // Let's assume for now the evaluator returns { [handle]: specificValue }
                 const subValue = multiValue[sourceHandle];
 
-                // Phase 2.4: Metadata Propagation & Handle Specifics
                 const parentMeta = resultPayload.meta || {};
                 const handleMeta = parentMeta.handleMeta?.[sourceHandle] || {};
-
-                // Merge strategies:
-                // 1. Parent meta provided basics (e.g. unit?)
-                // 2. Handle meta provides specifics (e.g. range, unit) via overwrite
                 const newMeta = { ...parentMeta, ...handleMeta };
-                // Remove handleMeta from the child to keep it clean? Optional.
+
+                if (subValue && typeof subValue === 'object' && 'type' in subValue && 'value' in subValue) {
+                    return {
+                        ...(subValue as NodePayload),
+                        meta: { ...(subValue as NodePayload).meta, ...newMeta }
+                    };
+                }
 
                 return {
                     ...resultPayload,
@@ -274,10 +269,19 @@ export class Brain {
                 const subValue = multiValue[sourceHandle];
                 const parentMeta = resultPayload.meta || {};
                 const handleMeta = parentMeta.handleMeta?.[sourceHandle] || {};
+                const newMeta = { ...parentMeta, ...handleMeta };
+
+                if (subValue && typeof subValue === 'object' && 'type' in subValue && 'value' in subValue) {
+                    return {
+                        ...(subValue as NodePayload),
+                        meta: { ...(subValue as NodePayload).meta, ...newMeta }
+                    };
+                }
+
                 return {
                     ...resultPayload,
                     value: subValue,
-                    meta: { ...parentMeta, ...handleMeta }
+                    meta: newMeta
                 };
             }
         }
@@ -339,7 +343,7 @@ export class Brain {
 
     // --- Transaction Handling ---
 
-    public applyTransaction(tx: Transaction, record: boolean = true, silent: boolean = false): void {
+    public applyTransaction(tx: Transaction, record: boolean = true, silent: boolean = false): { success: boolean; reason?: string } {
         if (record) {
             const inverseTx = this.createInverseTransaction(tx);
             if (inverseTx) {
@@ -353,7 +357,7 @@ export class Brain {
                 this.emit('modeChanged', this.state.mode);
                 this.log(`Mode switched to ${tx.payload}`);
                 this.markAllDirty();
-                break;
+                return { success: true };
 
             case 'ADD_NODE':
                 // Payload: { id, initialValue, type, data }
@@ -371,15 +375,25 @@ export class Brain {
                 this.state.nodes.set(tx.payload.id, newNode);
                 this.adjacency.set(tx.payload.id, []);
                 this.reverseAdjacency.set(tx.payload.id, []);
-                break;
+                return { success: true };
 
-            case 'MOVE_NODE': {
-                const node = this.state.nodes.get(tx.payload.id);
+            case 'UPDATE_VALUE':
+                // Payload: { id, value }
+                const targetId = tx.payload.id;
+                const rawValue = tx.payload.value;
+                const node = this.state.nodes.get(targetId);
+
                 if (node) {
-                    node.position = tx.payload.position;
+                    // Phase 2.1: Wrap raw value into Payload
+                    // This handles Input nodes receiving numbers/strings from UI
+                    node.value = PayloadUtils.wrap(rawValue);
+                    node.isDirty = false; // Input is fresh
+                    this.propagateDirty(node.id);
+
+                    if (!silent) this.triggerCalculation();
+                    return { success: true };
                 }
-                break;
-            }
+                return { success: false, reason: 'Node not found' };
 
             case 'CONNECT': {
                 const newEdge = tx.payload as Edge;
@@ -401,20 +415,22 @@ export class Brain {
                         this.emit('graphChanged', null);
                         this.triggerCalculation();
                     }
+                    return { success: true };
                 } else {
                     this.log(`Blocked: ${validation.reason}`);
+                    return { success: false, reason: validation.reason };
                 }
-                break;
             }
 
             case 'REMOVE_NODE':
+                if (!this.state.nodes.has(tx.payload)) return { success: false, reason: 'Node not found' };
                 this.state.nodes.delete(tx.payload);
                 const connectedEdges = this.state.edges.filter(e => e.source === tx.payload || e.target === tx.payload);
                 connectedEdges.forEach(e => this.updateAdjacency(e, 'REMOVE'));
                 this.state.edges = this.state.edges.filter(e => e.source !== tx.payload && e.target !== tx.payload);
                 this.adjacency.delete(tx.payload);
                 this.reverseAdjacency.delete(tx.payload);
-                break;
+                return { success: true };
 
             case 'DISCONNECT':
                 const edgeToRemove = this.state.edges.find(e => e.id === tx.payload);
@@ -426,41 +442,19 @@ export class Brain {
                         this.emit('graphChanged', null);
                         this.triggerCalculation();
                     }
+                    return { success: true };
                 }
-                break;
+                return { success: false, reason: 'Edge not found' };
 
-            case 'UPDATE_VALUE':
-                // Payload: { id, value }
-                const targetId = tx.payload.id;
-                const rawValue = tx.payload.value;
-                const node = this.state.nodes.get(targetId);
-
+            case 'MOVE_NODE': {
+                const node = this.state.nodes.get(tx.payload.id);
                 if (node) {
-                    // Phase 2.1: Wrap raw value into Payload
-                    // This handles Input nodes receiving numbers/strings from UI
-                    node.value = PayloadUtils.wrap(rawValue);
-                    node.isDirty = false; // Input is fresh
-                    this.propagateDirty(node.id);
-
-                    if (!silent) this.triggerCalculation();
-                }
-                break;
-
-            case 'MOVE_NODE':
-                const mNode = this.state.nodes.get(tx.payload.id);
-                if (mNode) {
-                    mNode.position = { ...tx.payload.position };
-                    // No need to trigger calculation or emit 'graphChanged' for pure movement
-                    // unless we want to sync positions to other clients or UI components.
-                    // But useBrainUpdates listens to graphChanged even for position?
-                    // Yes, useBrainUpdates syncs position if mismatch.
-                    // So we SHOULD emit graphChanged if we want to confirm the move?
-                    // Actually, if we don't emit, useBrainUpdates won't fire.
-                    // But if we do emit, it might double-update?
-                    // Safe bet: Emit so state is consistent.
+                    node.position = tx.payload.position;
                     if (!silent) this.emit('graphChanged', null);
+                    return { success: true };
                 }
-                break;
+                return { success: false, reason: 'Node not found' };
+            }
 
             case 'UPDATE_NODE_DATA':
                 const tNode = this.state.nodes.get(tx.payload.id);
@@ -468,7 +462,6 @@ export class Brain {
                     tNode.data = { ...tNode.data, ...tx.payload.data };
                     tNode.isDirty = true;
                     this.propagateDirty(tNode.id);
-                    this.log(`Updated Node Data ${tNode.id}`);
 
                     if (!silent) {
                         // 5. Success
@@ -476,8 +469,9 @@ export class Brain {
                         // RE-LAYOUT removed to prevent unwanted auto-layout on data change
                         this.triggerCalculation();
                     }
+                    return { success: true };
                 }
-                break;
+                return { success: false, reason: 'Node not found' };
 
             case 'BATCH':
                 (tx.payload as Transaction[]).forEach(t => {
@@ -485,7 +479,10 @@ export class Brain {
                 });
                 this.emit('graphChanged', null);
                 this.triggerCalculation();
-                break;
+                return { success: true };
+
+            default:
+                return { success: false, reason: 'Unknown transaction type' };
         }
     }
 
@@ -665,7 +662,8 @@ export class Brain {
         // Fail-safe: if we can't find the definition, fallback to basic string check
         const isInput = (id: string, typeHint: string | null) => {
             if (typeHint) return typeHint === 'target';
-            return !!id && (id.toLowerCase().startsWith('in') || id === 'target' || id.includes('input') || id === 'condition' || id === 'select');
+            const lid = id.toLowerCase();
+            return !!id && (lid.startsWith('in') || lid === 'target' || lid.includes('input') || lid === 'condition' || lid === 'select' || lid === 'data' || lid === 'if');
         };
 
         const sourceIsInput = isInput(sourceHandle!, sourceHandleType);
@@ -818,8 +816,8 @@ export class Brain {
             // Fix: Fallback to data.value if initialValue is missing for IO nodes (Legacy JSON support)
             let initVal = n.value;
             if (initVal === undefined && n.data && n.data.value !== undefined) {
-                // Heuristic: If it has data.value and is IO/Logic-Source, treat as scalar/boolean
-                if (n.type.startsWith('IO-') || n.type === 'MA-08' || n.type === 'MA-09') {
+                // Heuristic: If it has data.value and is IO family, treat as raw value
+                if (n.type.startsWith('IO-')) {
                     // For now, assume scalar. Logic nodes (MA-08) handle boolean conversion in their evaluator/wrapping if needed.
                     // PayloadUtils.wrap will handle number/boolean correctly.
                     // But we need to construct a raw value to be wrapped by ADD_NODE handlers, or pass a Payload directly?

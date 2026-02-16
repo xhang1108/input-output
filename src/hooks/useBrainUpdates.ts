@@ -19,23 +19,30 @@ export function useBrainUpdates(
         const brain = Brain.getInstance();
 
         const handleGraphChange = (payload: any) => {
-            // Rule #6: Subscription / Protocol Law
-            // If payload is a list of patches, update specific nodes.
+            // console.log('[useBrainUpdates] Graph changed:', payload); // High volume
             if (Array.isArray(payload)) {
+                // console.log('[useBrainUpdates] Received patches:', payload.length);
                 const updates = new Map(payload.map((p: any) => [p.id, p.value]));
 
-                setNodes(currentNodes => currentNodes.map(node => {
-                    if (updates.has(node.id)) {
-                        const newValue = updates.get(node.id);
-                        if (node.data.value !== newValue) {
-                            return {
-                                ...node,
-                                data: { ...node.data, value: newValue }
-                            };
+                setNodes(currentNodes => {
+                    let changed = false;
+                    const nextNodes = currentNodes.map(node => {
+                        if (updates.has(node.id)) {
+                            const rawPayload = updates.get(node.id);
+                            const newValue = PayloadUtils.unwrap(rawPayload);
+
+                            if (node.data.value !== newValue) {
+                                changed = true;
+                                return {
+                                    ...node,
+                                    data: { ...node.data, value: newValue }
+                                };
+                            }
                         }
-                    }
-                    return node;
-                }));
+                        return node;
+                    });
+                    return changed ? nextNodes : currentNodes;
+                });
             } else {
                 // Topology / Full Sync (e.g. Undo/Redo)
                 const brainNodes = brain.getNodesMap(); // Need to expose this or use getNodes()

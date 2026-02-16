@@ -1,25 +1,23 @@
+import { describe, it, beforeEach, expect } from 'vitest';
 import { Brain } from '../Brain';
-import { NodeRegistry } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 
 describe('Switch Node Logic', () => {
     let brain: Brain;
 
     beforeEach(() => {
-        brain = new Brain();
+        brain = Brain.getInstance();
         brain.clearAll();
     });
 
     it('should switch between true and false inputs based on condition', async () => {
-        // 1. Setup Nodes
-        // Toggle (MA-08)
+        // Input Condition (Replacing removed MA-08 Toggle)
         brain.applyTransaction({
             type: 'ADD_NODE',
             payload: {
                 id: 'T1',
-                type: 'MA-08',
-                data: { value: true }, // Start TRUE
+                type: 'IO-01',
+                initialValue: true, // Start TRUE
                 position: { x: 0, y: 0 }
             }
         });
@@ -30,7 +28,7 @@ describe('Switch Node Logic', () => {
             payload: {
                 id: 'N1',
                 type: 'IO-01',
-                data: { value: 100 },
+                initialValue: 100,
                 position: { x: 0, y: 0 }
             }
         });
@@ -41,7 +39,7 @@ describe('Switch Node Logic', () => {
             payload: {
                 id: 'N2',
                 type: 'IO-01',
-                data: { value: 200 },
+                initialValue: 200,
                 position: { x: 0, y: 0 }
             }
         });
@@ -101,12 +99,12 @@ describe('Switch Node Logic', () => {
         const result1 = await brain.getValue('SW1');
         expect(PayloadUtils.unwrap(result1)).toBe(100);
 
-        // 4. Update Toggle to False
+        // 4. Update Condition to False
         brain.applyTransaction({
-            type: 'UPDATE_NODE_DATA',
+            type: 'UPDATE_VALUE',
             payload: {
                 id: 'T1',
-                data: { value: false }
+                value: false
             }
         });
 
@@ -123,11 +121,11 @@ describe('Switch Node Logic', () => {
             payload: {
                 id: 'e_invalid',
                 source: 'N1', // Input Node
-                sourceHandle: 'in', // Trying to connect Input to Input? No IO-01 'in' doesn't exist.
+                sourceHandle: 'in', // IO-01 'in' doesn't exist
                 target: 'SW1',
                 targetHandle: 'condition'
             }
         });
-        // IO-01 has no 'in'. 
+        expect(res.success).toBe(false);
     });
 });

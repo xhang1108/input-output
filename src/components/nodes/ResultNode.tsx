@@ -3,14 +3,11 @@ import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { Brain } from '../../engine/Brain';
-
-// We need to detect matrix structure from payload.value
-// Typically it's a dehydrated object { mathjs: 'Matrix', data: [...] } or a raw array.
+import { DataType } from '../../types/payload';
 
 export const ResultNode = memo((props: NodeProps) => {
     const { id, data } = props;
 
-    // Define custom handles: Single Input (Dot), No Output (Sink)
     const handles = [
         {
             id: 'in',
@@ -20,111 +17,111 @@ export const ResultNode = memo((props: NodeProps) => {
         }
     ];
 
-    // Merge handles into data
     const nodeData = { ...data, handles };
-
     const precision = data.precision as number | undefined;
-    const payload = data.value as import('../../types/payload').NodePayload;
+    const value = data.value; // Can be NodePayload OR raw number/boolean
 
     let displayValue: React.ReactNode = '...';
     let isError = false;
     let isMatrix = false;
     let matrixData: any[][] = [];
+    let dataTypeColor = 'text-[var(--color-scalar)]';
 
-    if (payload) {
-        if (payload.type === 'error') {
+    if (value !== undefined && value !== null) {
+        // Normalize to Payload if it's raw
+        const payload = (typeof value === 'object' && value !== null && 'type' in value)
+            ? value as import('../../types/payload').NodePayload
+            : PayloadUtils.wrap(value);
+
+        if (payload.type === DataType.Error) {
             displayValue = payload.meta?.error || 'Error';
             isError = true;
+            dataTypeColor = 'text-red-500';
         } else {
-            // Check for Matrix Type explicitly or by value structure
-            // 1. Check DataType enum (if we had it imported, but string check is fine)
-            if (payload.type === 'matrix') {
+            // Determine Color Based on Type
+            switch (payload.type) {
+                case DataType.Boolean: dataTypeColor = 'text-[var(--color-boolean)]'; break;
+                case DataType.Matrix: dataTypeColor = 'text-[var(--color-matrix)]'; break;
+                case DataType.String: dataTypeColor = 'text-[var(--color-string)]'; break;
+                default: dataTypeColor = 'text-[var(--color-scalar)]';
+            }
+
+            if (payload.type === DataType.Matrix) {
                 isMatrix = true;
             }
 
-            // 2. Unwrap to get raw value
             const rawValue = PayloadUtils.unwrap(payload);
 
             if (isMatrix) {
-                // Handle Matrix Rendering
-                // rawValue could be Array[][] or { mathjs: 'Matrix', data: ... }
                 if (Array.isArray(rawValue)) {
                     matrixData = rawValue;
                 } else if (typeof rawValue === 'object' && rawValue?.mathjs === 'Matrix') {
                     matrixData = rawValue.data;
                 } else {
-                    // Fallback or single value matrix
-                    isMatrix = false; // Treat as scalar if we can't parse grid
+                    isMatrix = false;
                 }
             }
 
             if (!isMatrix) {
-                // --- SCALAR RENDERING (Existing Logic) ---
-                if (rawValue !== undefined && rawValue !== null) {
-                    let numValue: number | null = null;
-                    let unitStr: string | undefined = payload.meta?.unit;
+                let numValue: number | null = null;
+                let unitStr: string | undefined = payload.meta?.unit;
 
-                    // Extract numeric value and potential unit from dehydrated objects
-                    if (typeof rawValue === 'object' && rawValue !== null && 'mathjs' in rawValue) {
-                        if ('value' in rawValue) {
-                            numValue = Number(rawValue.value);
-                        }
-                        if ('unit' in rawValue) {
-                            unitStr = (rawValue as any).unit;
-                        }
-                    } else if (typeof rawValue === 'number') {
-                        numValue = rawValue;
-                    }
+                if (typeof rawValue === 'object' && rawValue !== null && 'mathjs' in rawValue) {
+                    if ('value' in rawValue) numValue = Number(rawValue.value);
+                    if ('unit' in rawValue) unitStr = (rawValue as any).unit;
+                } else if (typeof rawValue === 'number') {
+                    numValue = rawValue;
+                }
 
-                    if (numValue !== null && !isNaN(numValue)) {
-                        if (precision !== undefined && precision !== -1) {
-                            displayValue = numValue.toLocaleString(undefined, {
-                                minimumFractionDigits: precision,
-                                maximumFractionDigits: precision
-                            });
-                        } else {
-                            // Intelligent default
-                            const absVal = Math.abs(numValue);
-                            if (absVal !== 0 && (absVal < 0.0001 || absVal > 100000000)) {
-                                displayValue = numValue.toExponential(4);
-                            } else {
-                                displayValue = numValue.toLocaleString(undefined, {
-                                    maximumFractionDigits: 6
-                                });
-                            }
-                        }
-                    } else if (typeof rawValue === 'object' && 'toString' in rawValue) {
-                        displayValue = rawValue.toString();
+                if (numValue !== null && !isNaN(numValue)) {
+                    if (precision !== undefined && precision !== -1) {
+                        displayValue = numValue.toLocaleString(undefined, {
+                            minimumFractionDigits: precision,
+                            maximumFractionDigits: precision
+                        });
                     } else {
-                        displayValue = String(rawValue);
+                        const absVal = Math.abs(numValue);
+                        if (absVal !== 0 && (absVal < 0.0001 || absVal > 100000000)) {
+                            displayValue = numValue.toExponential(4);
+                        } else {
+                            displayValue = numValue.toLocaleString(undefined, {
+                                maximumFractionDigits: 6
+                            });
+                        }
                     }
+                } else if (typeof rawValue === 'boolean') {
+                    displayValue = rawValue ? 'TRUE' : 'FALSE';
+                } else if (typeof rawValue === 'object' && rawValue !== null && 'toString' in rawValue) {
+                    displayValue = rawValue.toString();
+                } else {
+                    displayValue = String(rawValue);
+                }
 
-                    // Handle units
-                    const finalUnit = unitStr || payload.meta?.unit;
-                    if (finalUnit) {
-                        const formatUnit = (u: string) => {
-                            return u
-                                .replace(/ /g, '')
-                                .replace(/\*/g, '')
-                                .replace(/m{2}/g, 'm²')
-                                .replace(/\^2/g, '²')
-                                .replace(/\^3/g, '³')
-                                .replace(/\^([0-9]+)/g, '^$1');
-                        };
+                // Handle units
+                const finalUnit = unitStr || payload.meta?.unit;
+                if (finalUnit) {
+                    const formatUnit = (u: string) => {
+                        return u
+                            .replace(/ /g, '')
+                            .replace(/\*/g, '')
+                            .replace(/m{2}/g, 'm²')
+                            .replace(/\^2/g, '²')
+                            .replace(/\^3/g, '³')
+                            .replace(/\^([0-9]+)/g, '^$1');
+                    };
 
-                        displayValue = (
-                            <div className="flex flex-col items-end">
-                                <div className="flex items-baseline gap-1.5 leading-none">
-                                    <span className={`font-mono transition-all duration-200 ${isError ? 'text-red-500 text-sm' : 'text-2xl text-(--color-scalar)'}`}>
-                                        {displayValue}
-                                    </span>
-                                    <span className="text-xs font-bold text-zinc-500 italic">
-                                        {formatUnit(finalUnit)}
-                                    </span>
-                                </div>
+                    displayValue = (
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-baseline gap-1.5 leading-none">
+                                <span className={`font-mono transition-all duration-200 ${isError ? 'text-red-500 text-sm' : `text-2xl ${dataTypeColor}`}`}>
+                                    {displayValue}
+                                </span>
+                                <span className="text-xs font-bold text-zinc-500 italic">
+                                    {formatUnit(finalUnit)}
+                                </span>
                             </div>
-                        );
-                    }
+                        </div>
+                    );
                 }
             }
         }
@@ -144,16 +141,12 @@ export const ResultNode = memo((props: NodeProps) => {
         });
     };
 
-    // Render Matrix Grid
     const renderMatrix = (grid: any[][]) => {
         if (!grid || !grid.length) return <span className="text-xs text-zinc-500">Empty Matrix</span>;
-
-        // Limit display size for performance
         const maxRows = 8;
         const maxCols = 8;
         const totalRows = grid.length;
         const totalCols = grid[0]?.length || 0;
-
         const displayRows = grid.slice(0, maxRows);
 
         return (
@@ -162,7 +155,7 @@ export const ResultNode = memo((props: NodeProps) => {
                     {displayRows.map((row, r) => (
                         <div key={r} className="flex gap-px">
                             {Array.isArray(row) ? row.slice(0, maxCols).map((cell, c) => (
-                                <div key={c} className="w-8 h-6 flex items-center justify-center bg-zinc-900/80 text-[10px] font-mono text-cyan-300">
+                                <div key={c} className={`w-8 h-6 flex items-center justify-center bg-zinc-900/80 text-[10px] font-mono ${dataTypeColor}`}>
                                     {typeof cell === 'number'
                                         ? cell.toLocaleString(undefined, { maximumFractionDigits: 2 })
                                         : String(cell)}
@@ -215,11 +208,16 @@ export const ResultNode = memo((props: NodeProps) => {
                     <div
                         className={`w-full min-h-[44px] flex items-center justify-end border border-zinc-800/50 rounded-lg px-3 py-2 bg-black/20 group-hover:border-zinc-700/50 transition-colors ${isError ? 'border-red-900/30' : ''}`}
                     >
-                        {displayValue === '...' ? renderEmpty() : (typeof displayValue === 'string' ? (
-                            <span className={`font-mono truncate ${isError ? 'text-red-500 text-sm' : 'text-2xl text-(--color-scalar)'}`}>
-                                {displayValue}
+                        {displayValue === '...' ? (
+                            renderEmpty()
+                        ) : (
+                            <span className={`font-mono truncate ${isError ? 'text-red-500 text-sm' : `text-2xl ${dataTypeColor}`}`}>
+                                {typeof displayValue === 'object' && displayValue !== null && 'props' in (displayValue as any)
+                                    ? (displayValue as any)
+                                    : String(displayValue)
+                                }
                             </span>
-                        ) : displayValue)}
+                        )}
                     </div>
                 )}
             </div>
