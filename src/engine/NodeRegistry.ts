@@ -534,19 +534,28 @@ NodeRegistry.register('MA-05', (node, inputs) => {
     const getVal = (key: string) => {
         const p = inputs[key];
         if (!p) return null;
-        return PayloadUtils.unwrap(p);
+        // Hydrate to ensure we have comparable mathjs objects (BigNumber, Unit) or primitives
+        const raw = PayloadUtils.unwrap(p);
+        const hydrated = PayloadUtils.hydrate(raw, math);
+
+        // MA-01 Style: Re-attach unit if available and not already a Unit object
+        if (p.meta?.unit && (typeof hydrated === 'number' || (hydrated && (hydrated as any).isBigNumber))) {
+            try { return math.unit(hydrated, p.meta.unit); } catch (e) { return hydrated; }
+        }
+        return hydrated;
     };
 
     const valA = getVal('in_a');
     const valB = getVal('in_b');
 
-    // Bool conversion helper
-    const toBool = (v: any) => !!v;
+    // Bool conversion helper (loosely truthy)
+    const toBool = (v: any) => PayloadUtils.toBoolean(v, math);
 
     try {
         let result: boolean;
         switch (op) {
             // Comparisons
+            // Note: math.larger and friends work with Units, BigNumbers, etc.
             case 'GT': result = math.larger(valA, valB) as boolean; break;
             case 'LT': result = math.smaller(valA, valB) as boolean; break;
             case 'GTE': result = math.largerEq(valA, valB) as boolean; break;
@@ -564,7 +573,8 @@ NodeRegistry.register('MA-05', (node, inputs) => {
         }
         return PayloadUtils.createBoolean(result);
     } catch (e) {
-        return PayloadUtils.createError(`${op} Failed`);
+        // If comparison fails (e.g. incompatible units), return Error
+        return PayloadUtils.createError(`${op} Failed: ${(e as any).message}`);
     }
 }, (node, inputs) => {
     const op = node.data?.op || 'AND';
@@ -591,9 +601,10 @@ NodeRegistry.register('MA-05', (node, inputs) => {
     return PayloadUtils.createSymbol('Literal', { value: 'Logic' });
 });
 
-// MA-13: Logic Split (Renamed from MA-03)
+// MA-13: Logic Split
 NodeRegistry.register('MA-13', (node, inputs) => {
-    const condition = !!PayloadUtils.unwrap(inputs['condition'] || PayloadUtils.createBoolean(false));
+    const math = MathEngine.getInstance().getMathInstance();
+    const condition = PayloadUtils.toBoolean(inputs['condition'], math);
     const data = inputs['data'] || PayloadUtils.createScalar(0);
 
     return {
@@ -613,9 +624,9 @@ NodeRegistry.register('MA-13', (node, inputs) => {
 });
 
 // MA-04: Switch
-// MA-04: Switch
 NodeRegistry.register('MA-04', (node, inputs) => {
-    const condition = !!PayloadUtils.unwrap(inputs['condition'] || PayloadUtils.createBoolean(false));
+    const math = MathEngine.getInstance().getMathInstance();
+    const condition = PayloadUtils.toBoolean(inputs['condition'], math);
     const valTrue = inputs['in_true'];
     const valFalse = inputs['in_false'];
 

@@ -268,6 +268,30 @@ export const PayloadUtils = {
     },
 
     /**
+     * 🧠 Truthiness Logic
+     * Determines if a payload or raw value is "true" in the Calctopus world.
+     * Handles: Booleans, Numbers (0=false), Strings (""=false), and MathJS Types (BigNumber, Unit).
+     */
+    toBoolean(value: any, math?: any): boolean {
+        // 1. Unwrap Payload if needed
+        const raw = this.unwrap(value);
+
+        // 2. Hydrate if we have a math instance (important for Units/BigNumbers)
+        const hydrated = math ? this.hydrate(raw, math) : raw;
+
+        // 3. Handle MathJS Types
+        if (hydrated && typeof hydrated === 'object') {
+            if (hydrated.isBigNumber) return !hydrated.isZero();
+            if (hydrated.isUnit) return hydrated.value !== 0;
+            if (hydrated.isComplex) return hydrated.re !== 0 || hydrated.im !== 0;
+            if (hydrated.isFraction) return hydrated.n !== 0;
+        }
+
+        // 4. Standard JS Truthiness
+        return !!hydrated;
+    },
+
+    /**
      * 🛡️ Strict Typing: Validate & Coerce
      * Ensures payload matches expected type, or throws.
      */

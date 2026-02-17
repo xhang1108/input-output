@@ -20,6 +20,12 @@ import {
     randomIntDependencies, // Explicitly added for randomInt
     matrixDependencies,
     onesDependencies,
+    largerDependencies,
+    smallerDependencies,
+    largerEqDependencies,
+    smallerEqDependencies,
+    equalDependencies,
+    unequalDependencies,
     MathJsStatic
 } from 'mathjs';
 import { ComputationMode } from './types';
@@ -53,7 +59,13 @@ export class MathEngine implements IMathEngine {
             randomDependencies, // Added for Random Node
             randomIntDependencies, // Explicitly added for randomInt
             matrixDependencies,
-            onesDependencies
+            onesDependencies,
+            largerDependencies,
+            smallerDependencies,
+            largerEqDependencies,
+            smallerEqDependencies,
+            equalDependencies,
+            unequalDependencies
         }, {
             number: 'BigNumber', // Default to high precision
             precision: 64
