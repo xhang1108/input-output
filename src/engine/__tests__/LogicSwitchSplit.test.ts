@@ -1,4 +1,4 @@
-
+import { describe, it, expect, beforeAll } from 'vitest';
 import { NodeRegistry } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { MathEngine } from '../MathEngine';
@@ -15,7 +15,8 @@ describe('Logic Switch & Split (MA-04/13)', () => {
             type,
             data: {},
             position: { x: 0, y: 0 },
-            value: null
+            value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            isDirty: false
         };
         return await NodeRegistry.evaluate(node, inputs);
     };

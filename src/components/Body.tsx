@@ -242,6 +242,9 @@ export function Body() {
         onRelinkEnd(event, connectionState);
     }, [onRelinkEnd]);
 
+    // --- Auto-Resize Frame on Child Drag ---
+
+
     const relinkValue = {
         ...relinkState,
         edgeType // Inject current edgeType into RelinkContext
@@ -430,6 +433,7 @@ export function Body() {
                     nodes={nodes}
                     edges={edges}
                     onNodesChange={onNodesChange}
+
                     onEdgesChange={onEdgesChange}
                     onConnect={onRelinkConnect}
                     onConnectStart={onConnectStart}

@@ -1,14 +1,57 @@
 import { useEffect } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
-import { NodePayload } from '../types/payload';
+import { NodeLogic } from '../engine/types';
 import { PayloadUtils } from '../utils/PayloadUtils';
+
+/**
+ * liftStructuralProps
+ * 
+ * Extracts Frame-related properties from Brain's NodeLogic.data
+ * and returns them as top-level React Flow Node properties.
+ * 
+ * Brain stores everything in `data`. React Flow expects structural
+ * properties (parentId, extent, expandParent) at the Node root level,
+ * and dimensions in `style`. This function bridges that gap.
+ */
+function liftStructuralProps(logicNode: NodeLogic) {
+    const d = logicNode.data || {};
+
+    // Destructure structural props from data, leaving the rest as display data
+    const { parentId, extent, expandParent, width, height, ...displayData } = d;
+    // NOTE: We intentionally do NOT lift `extent` or `expandParent` to Node root.
+    // Setting extent='parent' causes React Flow to call clampPositionToParent,
+    // which crashes if the parent hasn't been measured yet.
+
+    // Build style object for dimensions and z-index
+    const style: Record<string, any> = {};
+    if (width != null) style.width = width;
+    if (height != null) style.height = height;
+
+    // Z-index: Frames sit behind everything, children sit above
+    if (logicNode.type === 'frame') {
+        style.zIndex = -100;
+    } else if (parentId) {
+        style.zIndex = 100;
+    }
+
+    return {
+        // Top-level structural props (React Flow reads these)
+        parentId: parentId as string | undefined,
+        // extent and expandParent intentionally omitted (see note above)
+        width: width as number | undefined,
+        height: height as number | undefined,
+        style,
+        // Clean display data (still includes parentId etc. for data consumers)
+        displayData: { ...d, value: undefined }, // value set separately
+    };
+}
 
 /**
  * useBrainUpdates
  * 
- * Listens to Brain 'graphChanged' events and syncs computed values
- * back to React Flow nodes' data.value.
+ * Listens to Brain 'graphChanged' events and syncs state
+ * back to React Flow nodes and edges.
  */
 export function useBrainUpdates(
     setNodes: React.Dispatch<React.SetStateAction<Node[]>>,
@@ -19,9 +62,8 @@ export function useBrainUpdates(
         const brain = Brain.getInstance();
 
         const handleGraphChange = (payload: any) => {
-            // console.log('[useBrainUpdates] Graph changed:', payload); // High volume
             if (Array.isArray(payload)) {
-                // console.log('[useBrainUpdates] Received patches:', payload.length);
+                // Value-only patches (hot path: calculation results)
                 const updates = new Map(payload.map((p: any) => [p.id, p.value]));
 
                 setNodes(currentNodes => {
@@ -44,13 +86,11 @@ export function useBrainUpdates(
                     return changed ? nextNodes : currentNodes;
                 });
             } else {
-                // Topology / Full Sync (e.g. Undo/Redo)
-                const brainNodes = brain.getNodesMap(); // Need to expose this or use getNodes()
+                // Full topology sync (structure changes, undo/redo, etc.)
+                const brainNodes = brain.getNodesMap();
 
                 setNodes(currentNodes => {
                     const nextNodes = [...currentNodes];
-                    const uiNodeIds = new Set(currentNodes.map(n => n.id));
-                    const brainNodeIds = new Set(brainNodes.keys());
                     let changed = false;
 
                     // 1. Remove nodes not in Brain
@@ -63,77 +103,94 @@ export function useBrainUpdates(
 
                     // 2. Add/Update nodes from Brain
                     for (const [id, logicNode] of brainNodes) {
+                        const lifted = liftStructuralProps(logicNode);
+                        const unwrappedValue = PayloadUtils.unwrap(logicNode.value);
+                        const targetData = { ...lifted.displayData, value: unwrappedValue };
+
                         const existingIndex = nextNodes.findIndex(n => n.id === id);
 
                         if (existingIndex === -1) {
-                            // New Node from Brain (e.g. Undo Delete)
+                            // New node (from Brain transaction, undo, or load)
                             nextNodes.push({
-                                id: id,
+                                id,
                                 position: logicNode.position || { x: 0, y: 0 },
-                                data: { ...logicNode.data, value: logicNode.value },
-                                type: logicNode.type || 'mathNode'
+                                data: targetData,
+                                type: logicNode.type || 'mathNode',
+                                parentId: lifted.parentId,
+                                width: lifted.width,
+                                height: lifted.height,
+                                style: lifted.style,
                             });
                             changed = true;
                         } else {
-                            // Update existing
+                            // Update existing node
                             const uiNode = nextNodes[existingIndex];
-                            let newData = uiNode.data;
-                            let newPos = uiNode.position;
                             let needsUpdate = false;
 
-                            // Sync Data & Value
-                            // Fix: Unwrap the NodePayload to primitive before syncing to UI data.value
-                            // This prevents Control nodes (Toggle, Slider) from receiving an object instead of a primitive,
-                            // which caused "stuck on true" (object is truthy) and infinite loops.
-                            const unwrappedValue = PayloadUtils.unwrap(logicNode.value);
-                            const targetData = { ...logicNode.data, value: unwrappedValue };
-
-                            // Debug: Log if we are about to cause a type change loop
-                            // if (typeof uiNode.data.value !== typeof unwrappedValue && uiNode.data.value !== undefined) {
-                            //    console.warn(`[BrainUpdates] Type Mismatch for ${uiNode.id}! UI: ${typeof uiNode.data.value}, Brain: ${typeof unwrappedValue}`);
-                            // }
-
+                            // Check data changes
                             if (JSON.stringify(uiNode.data) !== JSON.stringify(targetData)) {
-                                newData = targetData;
                                 needsUpdate = true;
                             }
 
-                            // Sync Position (Phase 1.4)
-                            if (logicNode.position && (Math.abs(uiNode.position.x - logicNode.position.x) > 0.1 || Math.abs(uiNode.position.y - logicNode.position.y) > 0.1)) {
+                            // Check position changes
+                            let newPos = uiNode.position;
+                            if (logicNode.position &&
+                                (Math.abs(uiNode.position.x - logicNode.position.x) > 0.1 ||
+                                    Math.abs(uiNode.position.y - logicNode.position.y) > 0.1)) {
                                 newPos = { ...logicNode.position };
                                 needsUpdate = true;
                             }
 
+                            // Check structural changes
+                            if (uiNode.parentId !== lifted.parentId) {
+                                needsUpdate = true;
+                            }
+
                             if (needsUpdate) {
-                                nextNodes[existingIndex] = { ...uiNode, data: newData, position: newPos };
+                                nextNodes[existingIndex] = {
+                                    ...uiNode,
+                                    data: targetData,
+                                    position: newPos,
+                                    parentId: lifted.parentId,
+                                    width: lifted.width,
+                                    height: lifted.height,
+                                    style: { ...uiNode.style, ...lifted.style },
+                                };
                                 changed = true;
                             }
                         }
                     }
 
+                    // CRITICAL: React Flow requires parent nodes to appear BEFORE
+                    // their children in the array. Sort: parentless first, then children.
+                    if (changed) {
+                        nextNodes.sort((a, b) => {
+                            const aIsChild = a.parentId ? 1 : 0;
+                            const bIsChild = b.parentId ? 1 : 0;
+                            return aIsChild - bIsChild;
+                        });
+                    }
+
                     return changed ? nextNodes : currentNodes;
                 });
 
-                // Sync Edges (Topology)
+                // Sync Edges
                 const brainEdges = brain.getEdges();
                 setEdges(currentEdges => {
                     const brainEdgeIds = new Set(brainEdges.map(e => e.id));
                     const uiEdgeIds = new Set(currentEdges.map(e => e.id));
-
                     let edgesChanged = false;
                     const nextEdges = [...currentEdges];
 
-                    // 1. Remove Edges not in Brain
+                    // Remove edges not in Brain
                     for (let i = nextEdges.length - 1; i >= 0; i--) {
                         if (!brainEdgeIds.has(nextEdges[i].id)) {
-                            // Only remove if it's not a temp edge (if we had any)
-                            // Assuming all valid edges are in Brain
                             nextEdges.splice(i, 1);
                             edgesChanged = true;
                         }
                     }
 
-                    // 2. Add Edges from Brain
+                    // Add edges from Brain
                     for (const edge of brainEdges) {
                         if (!uiEdgeIds.has(edge.id)) {
                             nextEdges.push(edge);

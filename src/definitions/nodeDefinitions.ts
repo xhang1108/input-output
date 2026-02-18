@@ -47,6 +47,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'color', value: '#3b82f6' }
     },
+    {
+        id: 'IO-04',
+        label: 'String',
+        category: 'Input',
+        handles: [
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'string' }
+        ],
+        defaultData: { type: 'string', value: 'Hello' }
+    },
 
     // ─── Output Family ──────────────────────────────────────────
     {
@@ -124,6 +133,29 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]' }
     },
 
+    // ─── Utility Family ─────────────────────────────────────────
+    {
+        id: 'UI-01',
+        label: 'Annotation',
+        category: 'Utility',
+        handles: [],
+        defaultData: {
+            markdown: '# New Note\nDouble click to edit.',
+            width: 200,
+            height: 150
+        }
+    },
+    {
+        id: 'UI-03',
+        label: 'Reroute',
+        category: 'Utility',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any', label: '' }
+        ],
+        defaultData: { type: 'reroute' }
+    },
+
     // ─── Math Family ────────────────────────────────────────────
     // All share nodeType 'MA-01' but differ by `op` in defaultData
     {
@@ -180,7 +212,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { val: 'pi', label: 'Constant' }
     },
     {
-        id: 'MA-12',
+        id: 'MA-14',
         label: 'Round',
         category: 'Math',
         handles: [
@@ -188,6 +220,30 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { precision: 0 }
+    },
+    {
+        id: 'MA-12',
+        label: 'Fraction',
+        category: 'Math',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
+            { id: 'int', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'int' },
+            { id: 'numerator', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'n' },
+            { id: 'denominator', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'd' },
+            { id: 'string', type: 'source', position: Position.Right, variant: 'single', dataType: 'string', label: 'Text' }
+        ],
+        defaultData: { mixed: false }
+    },
+    {
+        id: 'MA-02',
+        label: 'Number Theory',
+        category: 'Math',
+        handles: [
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'A' },
+            { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'B' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { op: 'GCD' }
     },
 
     // ─── Logic Family ───────────────────────────────────────────

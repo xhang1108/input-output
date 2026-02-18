@@ -19,10 +19,20 @@ export function useAutoLayout(
         const selectedNodes = nodes.filter(n => n.selected);
         const isPartial = selectedNodes.length > 0;
 
-        const nodesToLayout = isPartial ? selectedNodes : nodes;
+        let nodesToLayout = isPartial
+            ? selectedNodes
+            : nodes;
+
         const edgesToLayout = isPartial
             ? edges.filter(e => selectedNodes.some(n => n.id === e.source) && selectedNodes.some(n => n.id === e.target))
             : edges;
+
+        // Hierarchy Protection:
+        // If a node's parent is also in the layout set, we must exclude the child.
+        // ELK would layout them as siblings, but React Flow renders the child relatively.
+        // This causes "double movement" and visual detachment.
+        const layoutIdSet = new Set(nodesToLayout.map(n => n.id));
+        nodesToLayout = nodesToLayout.filter(n => !n.parentId || !layoutIdSet.has(n.parentId));
 
         if (nodesToLayout.length === 0) return;
 

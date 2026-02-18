@@ -26,6 +26,10 @@ import {
     smallerEqDependencies,
     equalDependencies,
     unequalDependencies,
+    gcdDependencies,
+    lcmDependencies,
+    modDependencies,
+    isPrimeDependencies,
     MathJsStatic
 } from 'mathjs';
 import { ComputationMode } from './types';
@@ -65,7 +69,11 @@ export class MathEngine implements IMathEngine {
             largerEqDependencies,
             smallerEqDependencies,
             equalDependencies,
-            unequalDependencies
+            unequalDependencies,
+            gcdDependencies,
+            lcmDependencies,
+            modDependencies,
+            isPrimeDependencies
         }, {
             number: 'BigNumber', // Default to high precision
             precision: 64

@@ -364,4 +364,17 @@ export const PayloadUtils = {
                 return '';
         }
     },
+
+    /**
+     * 👯 Clone Payload
+     * Creates a shallow copy of the payload to prevent mutation side-effects.
+     */
+    clone(payload: NodePayload): NodePayload {
+        return {
+            type: payload.type,
+            value: payload.value, // Reference copy for complex objects (Matrix), primitive for others
+            symbol: payload.symbol,
+            meta: { ...payload.meta }
+        };
+    },
 };

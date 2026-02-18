@@ -1,4 +1,4 @@
-
+import { describe, it, expect, beforeAll } from 'vitest';
 import { NodeRegistry } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { MathEngine } from '../MathEngine';
@@ -16,7 +16,8 @@ describe('Logic Gate (MA-05)', () => {
             type: 'MA-05',
             data: { op },
             position: { x: 0, y: 0 },
-            value: null
+            value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            isDirty: false
         };
 
         const inputs = {

@@ -1,27 +1,21 @@
 'use client';
 
-import { memo } from 'react';
-import { NodeProps, Handle, Position } from '@xyflow/react';
+import { memo, useCallback } from 'react';
+import { NodeProps, NodeResizer } from '@xyflow/react';
+import { Brain } from '@/engine/Brain';
 
-export const FrameNode = memo(({ data, selected }: NodeProps) => {
+/**
+ * FrameNode (UI-02) — Visual grouping container.
+ * Pure structural node: no handles, no logic, no computation.
+ * NodeResizer handles dimensions via React Flow's internal style management.
+ */
+export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
+    const label = String(data.label || 'Frame');
+
     return (
-        <div
-            className={`
-                relative bg-zinc-900/30 border-2 border-dashed rounded-lg transition duration-200 group -z-10
-                ${selected ? 'border-zinc-400 bg-zinc-800/50' : 'border-zinc-800 hover:border-zinc-700'}
-            `}
-            style={{
-                width: data.width ? Number(data.width) : 300,
-                height: data.height ? Number(data.height) : 200,
-            }}
-        >
-            {/* Header / Label */}
-            <div className="absolute -top-7 left-0 px-2 py-1 bg-zinc-800/50 rounded text-xs font-bold text-zinc-500 uppercase tracking-wider group-hover:text-zinc-300 transition-colors">
-                {String(data.label || 'Frame')}
-            </div>
-
-            {/* We don't need handles for now, or maybe later for data flow? */}
-            {/* Frame is mainly structural. */}
+        <div className="frame-node" data-selected={selected}>
+            {/* Manual resizing disabled in favor of Content-Aware Auto-Resize */}
+            <div className="frame-node__label">{label}</div>
         </div>
     );
 });

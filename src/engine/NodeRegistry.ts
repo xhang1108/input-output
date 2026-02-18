@@ -82,6 +82,14 @@ NodeRegistry.register('IO-01', (node) => node.value, (node) => {
         : PayloadUtils.createSymbol('Literal', { value });
 });
 
+// IO-04: String Input
+NodeRegistry.register('IO-04', (node) => {
+    const val = node.data.value !== undefined ? node.data.value : node.value;
+    return PayloadUtils.createString(String(val));
+}, (node) => {
+    return PayloadUtils.createSymbol('Literal', { value: String(node.data.value || '') });
+});
+
 // IO-11: Result (Display)
 NodeRegistry.register('IO-11', (node, inputs) => {
     return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
@@ -493,8 +501,8 @@ NodeRegistry.register('IO-17', (node, inputs) => {
     return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
 });
 
-// MA-12: Rounding
-NodeRegistry.register('MA-12', (node, inputs) => {
+// MA-14: Rounding (Moved from MA-12)
+NodeRegistry.register('MA-14', (node, inputs) => {
     const math = MathEngine.getInstance().getMathInstance();
     const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
     const prec = node.data.precision as number ?? 0;
@@ -520,6 +528,144 @@ NodeRegistry.register('MA-12', (node, inputs) => {
             PayloadUtils.createSymbol('Literal', { value: node.data.precision ?? 0 })
         ]
     });
+});
+
+// MA-12: Fraction
+NodeRegistry.register('MA-12', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const raw = PayloadUtils.unwrap(inputs['in']);
+
+    const isMixed = node.data.mixed === true;
+
+    try {
+        if (raw === null || raw === undefined) return PayloadUtils.createScalar(0);
+        const f = math.fraction(raw);
+        let n = Number((f as any).n);
+        let d = Number((f as any).d);
+        let integerPart = 0;
+        let str = math.format(f);
+
+        if (isMixed && d !== 0) {
+            integerPart = Math.floor(n / d);
+            const remainder = n % d;
+
+            if (integerPart !== 0) {
+                n = remainder;
+                if (n === 0) {
+                    str = `${integerPart}`;
+                } else {
+                    str = `${integerPart} ${n}/${d}`;
+                }
+            }
+        }
+
+        return {
+            type: DataType.Object,
+            value: {
+                int: PayloadUtils.createScalar(integerPart),
+                numerator: PayloadUtils.createScalar(n),
+                denominator: PayloadUtils.createScalar(d),
+                string: PayloadUtils.createString(str)
+            },
+            symbol: null,
+            meta: {}
+        };
+    } catch (e) {
+        return PayloadUtils.createError('Invalid Fraction');
+    }
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('FunctionCall', { name: 'fraction', args: [inputs['in']] });
+});
+
+// MA-02: Number Theory
+NodeRegistry.register('MA-02', (node, inputs) => {
+    const engine = MathEngine.getInstance();
+    const math = engine.getMathInstance();
+    const op = node.data?.op || 'GCD';
+
+    const getVal = (key: string) => {
+        const p = inputs[key];
+        if (!p) return 0;
+        const val = PayloadUtils.unwrap(p);
+        const hydrated = PayloadUtils.hydrate(val, math);
+        // Handle Units if necessary (for now, strip units or use scalar)
+        if (p.meta?.unit && (typeof hydrated === 'number' || (hydrated && (hydrated as any).isBigNumber))) {
+            try { return (hydrated as any).toNumber ? (hydrated as any).toNumber() : Number(hydrated); } catch (e) { return 0; }
+        }
+        return hydrated;
+    };
+
+    const valA = getVal('in_a');
+
+    // For IsPrime, we only need A. For others, we need A and B.
+    const valB = getVal('in_b');
+
+    console.log('[NumberTheory] Execution:', { op, valA, valB, inputs });
+
+    try {
+        let result: any;
+        switch (op) {
+            case 'GCD': result = math.gcd(valA, valB); break;
+            case 'LCM': result = math.lcm(valA, valB); break;
+            case 'MOD': result = math.mod(valA, valB); break;
+            case 'IS_PRIME': result = math.isPrime(valA); break;
+            default: result = 0;
+        }
+
+        if (op === 'IS_PRIME') {
+            return PayloadUtils.createBoolean(!!result);
+        }
+
+        // Convert BigNumber to number for display, similar into MA-01
+        let finalValue = result;
+        if (result && typeof result === 'object' && result.isBigNumber) {
+            finalValue = result.toNumber();
+        }
+
+        const payload = {
+            type: DataType.Scalar,
+            value: PayloadUtils.dehydrate(finalValue),
+            symbol: null,
+            meta: {}
+        };
+        return payload;
+    } catch (e: any) {
+        return PayloadUtils.createError(`${op} Failed: ${e.message}`);
+    }
+}, (node, inputs) => {
+    const op = node.data?.op || 'GCD';
+    const funcMap: Record<string, string> = {
+        GCD: 'gcd', LCM: 'lcm', MOD: 'mod', IS_PRIME: 'isPrime'
+    };
+
+    const args = [inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 })];
+    if (op !== 'IS_PRIME') {
+        args.push(inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 }));
+    }
+
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: funcMap[op] || 'gcd',
+        args: args
+    });
+});
+
+// UI-01: Text Annotation (No-op)
+NodeRegistry.register('UI-01', (node, inputs) => {
+    return {
+        type: DataType.Object,
+        value: {},
+        symbol: null,
+        meta: {}
+    };
+});
+
+// UI-03: Reroute (Identity)
+NodeRegistry.register('UI-03', (node, inputs) => {
+    // Pass-through input 'in' to output 'out' (implied by return value)
+    const val = inputs['in'] ? PayloadUtils.clone(inputs['in']) : PayloadUtils.createScalar(0);
+    return val;
+}, (node, inputs) => {
+    return inputs['in'] || null;
 });
 
 
