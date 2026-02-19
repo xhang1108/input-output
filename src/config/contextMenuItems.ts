@@ -18,6 +18,7 @@ interface ContextMenuActions {
     detachSelected: () => void;
     deleteSelected: () => void;
     logAction: (msg: string) => void;
+    copyAsLatex?: () => void; // Optional because canvas menu doesn't need it
 }
 
 export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: number): ContextMenuItemDef[] {
@@ -34,6 +35,7 @@ export function getNodeMenuItems(actions: ContextMenuActions): ContextMenuItemDe
         { label: 'Rename', shortcut: 'Enter', action: () => actions.rename() },
         { label: 'Duplicate', shortcut: 'Shift+D', action: () => actions.duplicateAndGrab() },
         { label: 'Copy', shortcut: 'Ctrl+C', action: () => actions.copyToClipboard() },
+        { label: 'Copy as LaTeX', action: () => actions.copyAsLatex?.() },
         { label: 'Colors', action: () => actions.logAction('Colors via Menu (Todo)') },
         { label: 'Detach', shortcut: 'Alt+Drag', action: () => actions.detachSelected() },
         { label: 'Delete', shortcut: 'Del', danger: true, action: () => actions.deleteSelected() },

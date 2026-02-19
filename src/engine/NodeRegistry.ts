@@ -438,7 +438,6 @@ NodeRegistry.register('MA-01', (node, inputs) => {
         const isUnitA = hA && (hA.isUnit || (hA as { constructor?: { name: string } }).constructor?.name === 'Unit');
         const isUnitB = hB && (hB.isUnit || (hB as { constructor?: { name: string } }).constructor?.name === 'Unit');
 
-        // STRICT MODE: Check for Matrix <-> Scalar mismatch
         const isMatrixA = hA && (Array.isArray(hA) || hA.isMatrix || (hA as { constructor?: { name: string } }).constructor?.name === 'Matrix');
         const isMatrixB = hB && (Array.isArray(hB) || hB.isMatrix || (hB as { constructor?: { name: string } }).constructor?.name === 'Matrix');
 
@@ -456,9 +455,23 @@ NodeRegistry.register('MA-01', (node, inputs) => {
     }
 
     try {
-        const fn = op === 'ADD' ? 'add' : op === 'SUB' ? 'subtract' : op === 'MUL' ? 'multiply' : 'divide';
-        const m = (mathInstance as unknown) as Record<string, (a: unknown, b: unknown) => unknown>;
-        const result = m[fn](procA, procB);
+        const m = (mathInstance as unknown) as Record<string, (...args: unknown[]) => unknown>;
+        let result: unknown;
+
+        switch (op) {
+            case 'ADD': result = m.add(procA, procB); break;
+            case 'SUB': result = m.subtract(procA, procB); break;
+            case 'MUL': result = m.multiply(procA, procB); break;
+            case 'DIV': result = m.divide(procA, procB); break;
+            case 'POW': result = m.pow(procA, procB); break;
+            case 'SQRT': result = m.sqrt(procA); break;
+            case 'ABS': result = m.abs(procA); break;
+            case 'SIN': result = m.sin(procA); break;
+            case 'COS': result = m.cos(procA); break;
+            case 'TAN': result = m.tan(procA); break;
+            default: result = m.add(procA, procB);
+        }
+
         let finalValue = result;
         let finalUnit: string | undefined;
 
@@ -513,8 +526,18 @@ NodeRegistry.register('MA-01', (node, inputs) => {
         return PayloadUtils.createError(msg);
     }
 }, (node, inputs) => {
+    const op = ((node.data || {}) as Record<string, unknown>).op as string || 'ADD';
+    const unaryOps = ['SIN', 'COS', 'TAN', 'SQRT', 'ABS'];
+
+    if (unaryOps.includes(op)) {
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: op.toLowerCase(),
+            args: [inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
+        });
+    }
+
     return PayloadUtils.createSymbol('BinaryExpression', {
-        operator: ((node.data || {}) as Record<string, unknown>).op as string || 'ADD',
+        operator: op,
         left: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
         right: inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 })
     });
@@ -793,6 +816,64 @@ NodeRegistry.register('MA-15', (node, inputs) => {
     };
 
     return resultPayload;
+});
+
+// MA-16: Logarithm
+NodeRegistry.register('MA-16', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'LN';
+
+    const val = PayloadUtils.unwrap(valPayload);
+    const hVal = PayloadUtils.hydrate(val, math);
+
+    try {
+        const m = math as unknown as Record<string, (v: unknown, b?: unknown) => unknown>;
+        let result: unknown;
+
+        if (op === 'LOG10') {
+            result = m.log10(hVal);
+        } else if (op === 'LOG_N') {
+            const basePayload = inputs['base'];
+            let base = basePayload ? PayloadUtils.hydrate(PayloadUtils.unwrap(basePayload), math) : 10;
+            result = m.log(hVal, base);
+        } else {
+            result = m.log(hVal);
+        }
+
+        return {
+            type: DataType.Scalar,
+            value: PayloadUtils.dehydrate(result),
+            symbol: null,
+            meta: {}
+        };
+    } catch (e: unknown) {
+        return PayloadUtils.createError('Log Failed');
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'LN';
+
+    if (op === 'LOG10') {
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: 'log10',
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
+        });
+    } else if (op === 'LOG_N') {
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: 'log',
+            args: [
+                inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
+                inputs['base'] || PayloadUtils.createSymbol('Literal', { value: 10 })
+            ]
+        });
+    } else {
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: 'log',
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
+        });
+    }
 });
 
 // MA-05: Logic Gate (AND, OR, NOT, XOR, NAND, NOR, XNOR)

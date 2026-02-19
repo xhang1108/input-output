@@ -28,6 +28,7 @@ interface SettingsPanelProps {
 
 import { GraphImportModal } from './GraphImportModal';
 import { GraphExportModal } from './GraphExportModal';
+import { LatexImportModal } from './LatexImportModal';
 
 export function SettingsPanel({
     isSnapping, setSnapping,
@@ -44,6 +45,7 @@ export function SettingsPanel({
     const [isOpen, setIsOpen] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [showLatexModal, setShowLatexModal] = useState(false);
 
     return (
         <div className="absolute top-4 right-4 z-50 flex flex-col items-end gap-2">
@@ -194,7 +196,21 @@ export function SettingsPanel({
                     >
                         <div className="flex items-center gap-3">
                             <span className="text-zinc-500"><FileJson className="w-4 h-4" /></span>
-                            Import Graph
+                            Import JSON
+                        </div>
+                    </button>
+
+                    {/* Import LaTeX */}
+                    <button
+                        onClick={() => {
+                            setIsOpen(false);
+                            setShowLatexModal(true);
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="text-zinc-500 font-serif italic text-xs border border-zinc-600 rounded px-0.5">Tx</span>
+                            Import LaTeX
                         </div>
                     </button>
 
@@ -227,6 +243,7 @@ export function SettingsPanel({
 
             <GraphImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
             <GraphExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
+            <LatexImportModal isOpen={showLatexModal} onClose={() => setShowLatexModal(false)} />
         </div>
     );
 }

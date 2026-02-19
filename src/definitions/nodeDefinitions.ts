@@ -244,6 +244,17 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { mixed: false }
     },
+    {
+        id: 'MA-16',
+        label: 'Logarithm',
+        category: 'Math',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'x' },
+            { id: 'base', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Base' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { op: 'LN' }
+    },
 
     // ─── Number Theory ──────────────────────────────────────────
     {
@@ -324,7 +335,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'button', value: false }
     },
-
 ];
 
 

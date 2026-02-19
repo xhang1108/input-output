@@ -99,7 +99,7 @@ export function useSelection() {
                     });
 
                     const PAD = 40;
-                    const TOP_PAD = 70;
+                    const TOP_PAD = 40;
 
                     const targetLeft = minX - PAD;
                     const targetTop = minY - TOP_PAD;
@@ -175,7 +175,7 @@ export function useSelection() {
 
         // 2. Add padding (extra top for label)
         const PAD = 40;
-        const TOP_PAD = 70;
+        const TOP_PAD = 40;
         minX -= PAD;
         minY -= TOP_PAD;
         maxX += PAD;

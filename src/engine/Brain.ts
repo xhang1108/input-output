@@ -1,7 +1,7 @@
 import { NodePayload } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { Edge } from '@xyflow/react';
-import { GraphState, ComputationMode, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload } from './types';
+import { GraphState, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload } from './types';
 import { HistoryManager } from './HistoryManager';
 import { NodeRegistry } from './NodeRegistry'; // Static Import
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
@@ -19,7 +19,7 @@ export class Brain {
         this.state = {
             nodes: new Map(),
             edges: [],
-            mode: 'scientific' // Default to Scientific (BigNumber)
+
         };
         this.startHeartbeat();
     }
@@ -84,9 +84,7 @@ export class Brain {
 
     // --- State Accessors ---
 
-    public getMode(): ComputationMode {
-        return this.state.mode;
-    }
+
 
     // --- Topology Management ---
 
@@ -139,7 +137,7 @@ export class Brain {
         this.state = {
             nodes: new Map(),
             edges: [],
-            mode: 'scientific'
+
         };
         this.adjacency = new Map();
         this.reverseAdjacency = new Map();
@@ -349,12 +347,7 @@ export class Brain {
         }
 
         switch (tx.type) {
-            case 'SET_MODE':
-                this.state.mode = tx.payload as ComputationMode;
-                this.emit('modeChanged', this.state.mode);
-                this.log(`Mode switched to ${tx.payload}`);
-                this.markAllDirty();
-                return { success: true };
+
 
             case 'ADD_NODE': {
                 const p = tx.payload as AddNodePayload;
@@ -367,7 +360,7 @@ export class Brain {
                     type: p.type || 'baseNode',
                     value: initialPayload,
                     data: p.data || {},
-                    position: p.position,
+                    position: p.position as { x: number; y: number },
                     isDirty: true
                 };
                 this.state.nodes.set(p.id, newNode);
@@ -519,10 +512,11 @@ export class Brain {
     private createInverseTransaction(tx: Transaction): Transaction | null {
         switch (tx.type) {
             case 'ADD_NODE':
-                return { type: 'REMOVE_NODE', payload: tx.payload.id };
+                return { type: 'REMOVE_NODE', payload: (tx.payload as AddNodePayload).id };
 
             case 'REMOVE_NODE': {
-                const node = this.state.nodes.get(tx.payload);
+                const id = tx.payload as string;
+                const node = this.state.nodes.get(id);
                 if (!node) return null;
 
                 const addNodeTx: Transaction = {
@@ -537,7 +531,7 @@ export class Brain {
                 };
 
                 const connectedEdges = this.state.edges.filter(
-                    e => e.source === tx.payload || e.target === tx.payload
+                    e => e.source === (tx.payload as string) || e.target === (tx.payload as string)
                 );
 
                 if (connectedEdges.length === 0) {
@@ -560,15 +554,16 @@ export class Brain {
                 return { type: 'DISCONNECT', payload: (tx.payload as Edge).id };
 
             case 'DISCONNECT': {
-                const edge = this.state.edges.find(e => e.id === tx.payload);
+                const edge = this.state.edges.find(e => e.id === (tx.payload as string));
                 if (!edge) return null;
                 return { type: 'CONNECT', payload: { ...edge } };
             }
 
             case 'MOVE_NODE': {
-                const node = this.state.nodes.get(tx.payload.id);
+                const p = tx.payload as MoveNodePayload;
+                const node = this.state.nodes.get(p.id);
                 if (!node) return null;
-                const restorePos = tx.payload.oldPosition || node.position || { x: 0, y: 0 };
+                const restorePos = p.oldPosition || node.position || { x: 0, y: 0 };
 
                 return {
                     type: 'MOVE_NODE',
@@ -580,10 +575,11 @@ export class Brain {
             }
 
             case 'UPDATE_NODE_DATA': {
-                const node = this.state.nodes.get(tx.payload.id);
+                const p = tx.payload as { id: string, data: Record<string, unknown> };
+                const node = this.state.nodes.get(p.id);
                 if (!node) return null;
                 const oldData: Record<string, unknown> = {};
-                for (const key in tx.payload.data) {
+                for (const key in p.data) {
                     oldData[key] = node.data[key];
                 }
                 return {
@@ -604,8 +600,7 @@ export class Brain {
                 };
             }
 
-            case 'SET_MODE':
-                return { type: 'SET_MODE', payload: this.state.mode };
+
 
             case 'UPDATE_VALUE': {
                 // Inverse of value update is... restoring old value.

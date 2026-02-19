@@ -1,7 +1,7 @@
 import { Edge, Node } from '@xyflow/react';
 import { NodePayload } from '../types/payload';
 
-export type ComputationMode = 'scientific' | 'engineering';
+
 
 export type NodeLogic = Node & {
     data: Record<string, unknown>;
@@ -13,7 +13,7 @@ export type NodeLogic = Node & {
 export interface GraphState {
     nodes: Map<string, NodeLogic>;
     edges: Edge[];
-    mode: ComputationMode;
+
 }
 
 export type TransactionType =
@@ -22,7 +22,7 @@ export type TransactionType =
     | 'CONNECT'
     | 'DISCONNECT'
     | 'UPDATE_VALUE'
-    | 'SET_MODE'
+
     | 'UPDATE_NODE_DATA'
     | 'MOVE_NODE'
     | 'BATCH';
@@ -57,7 +57,7 @@ export interface UpdateValuePayload {
 }
 
 export interface BrainEvent {
-    type: 'modeChanged' | 'log' | 'graphChanged';
+    type: 'log' | 'graphChanged';
     payload: unknown;
 }
 

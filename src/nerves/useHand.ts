@@ -92,7 +92,7 @@ export function useHand() {
             if (minX === Infinity) return;
 
             const PAD = 40;
-            const TOP_PAD = 70;
+            const TOP_PAD = 40;
 
             const targetLeft = minX - PAD;
             const targetTop = minY - TOP_PAD;
@@ -806,7 +806,7 @@ export function useHand() {
                         });
 
                         const PAD = 40;
-                        const TOP_PAD = 70;
+                        const TOP_PAD = 40;
 
                         // Target child region with padding
                         const targetLeft = minX - PAD;
@@ -984,6 +984,19 @@ export function useHand() {
     );
 
     const handleMouseUp = useCallback((e: MouseEvent) => {
+        // Click-to-Select Logic (Deselect others if clicking a selected node without dragging)
+        if (mode === 'IDLE' && pendingGrabStart.current) {
+            const target = e.target as HTMLElement;
+            const nodeElement = target.closest('.react-flow__node');
+            if (nodeElement) {
+                const nodeId = nodeElement.getAttribute('data-id');
+                // Only if modifiers are NOT held (standard click behavior)
+                if (nodeId && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                    selectNode(nodeId, true); // Exclusive selection
+                }
+            }
+        }
+
         pendingGrabStart.current = null;
         if (mode === 'CUTTING') {
             endCut();
@@ -991,7 +1004,7 @@ export function useHand() {
         } else {
             handleModalMouseUp(e);
         }
-    }, [mode, endCut, handleModalMouseUp]);
+    }, [mode, endCut, handleModalMouseUp, selectNode]);
 
     const handleTypeNum = useCallback((char: string) => {
         if (!['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) return;

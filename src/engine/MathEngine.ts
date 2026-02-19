@@ -10,6 +10,7 @@ import {
     cosDependencies,
     tanDependencies,
     logDependencies,
+    log10Dependencies,
     sqrtDependencies,
     powDependencies,
     piDependencies,
@@ -32,13 +33,12 @@ import {
     isPrimeDependencies,
     MathJsStatic
 } from 'mathjs';
-import { ComputationMode } from './types';
 import { IMathEngine } from './interfaces/IMathEngine';
 
 export class MathEngine implements IMathEngine {
     private static instance: MathEngine;
     private math: MathJsStatic;
-    // Mode removed: Always Scientific (BigNumber)
+
 
     private constructor() {
         this.math = create({
@@ -52,6 +52,7 @@ export class MathEngine implements IMathEngine {
             cosDependencies,
             tanDependencies,
             logDependencies,
+            log10Dependencies,
             sqrtDependencies,
             powDependencies,
             piDependencies,
@@ -93,7 +94,7 @@ export class MathEngine implements IMathEngine {
         return this.math;
     }
 
-    // Mode methods removed
+
 
     public evaluate(op: string, ...args: unknown[]): unknown {
         const m = this.math as unknown as Record<string, (...args: unknown[]) => unknown>;
@@ -120,9 +121,7 @@ export class MathEngine implements IMathEngine {
             }
         }
 
-        // Always promote to BigNumber for precision
-        const mathWithBN = this.math as MathJsStatic & { bignumber: (v: number | string) => unknown };
-        return mathWithBN.bignumber(v);
+
     }
 
     public convertUnit(val: number, fromUnit: string, toUnit: string): number {

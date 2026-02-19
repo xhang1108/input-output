@@ -20,7 +20,7 @@ export const ColorResultNode = memo((props: NodeProps) => {
 
     // Extract display values (fallback to defaults if parsing failed or no input)
     const colorObject = (unwrapped && typeof unwrapped === 'object' && !Array.isArray(unwrapped) && 'hex' in unwrapped)
-        ? unwrapped
+        ? unwrapped as { hex: string; vec3?: number[] }
         : null;
 
     const hex = colorObject?.hex || '#000000';

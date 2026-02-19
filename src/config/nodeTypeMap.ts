@@ -27,6 +27,7 @@ import { MagneticEdge } from '../components/edges/MagneticEdge';
 import { TextAnnotationNode } from '../components/nodes/TextAnnotationNode';
 import { RerouteNode } from '../components/nodes/RerouteNode';
 import { BaseConverterNode } from '../components/nodes/BaseConverterNode';
+import { LogNode } from '../components/nodes/LogNode';
 import { DebugNode } from '../components/nodes/DebugNode';
 
 export const nodeTypes = {
@@ -45,6 +46,7 @@ export const nodeTypes = {
     'MA-13': BaseNode,       // Logic Split (Placeholder/Generic)
     'MA-14': RoundingNode,   // Rounding (Moved from MA-12)
     'MA-15': BaseConverterNode, // Base Converter
+    'MA-16': LogNode,           // Logarithm
     'IO-01': InputNode,
     'IO-02': SliderNode,
     'IO-04': InputNode, // String Input uses same UI as Number Input (for now)

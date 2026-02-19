@@ -313,6 +313,10 @@ input[type="range"]::-moz-range-thumb:hover {
    § Frame Node (UI-02)
    ─────────────────────────────────────── */
 
+.react-flow__node-frame {
+  pointer-events: none !important;
+}
+
 .frame-node {
   position: relative;
   width: 100%;

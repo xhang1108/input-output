@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Upload, FileJson, Check, Copy } from 'lucide-react';
 import { Brain } from '../../engine/Brain';
 
@@ -16,6 +16,14 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
     const [diagnostics, setDiagnostics] = useState<string[]>([]);
     const [success, setSuccess] = useState(false);
     const [copied, setCopied] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Auto-focus on open
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => textareaRef.current?.focus(), 50);
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -89,7 +97,10 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-1001 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div
+            className="fixed inset-0 z-1001 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={onClose}
+        >
             <div
                 className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[500px] max-w-[90vw] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={e => e.stopPropagation()}
@@ -113,6 +124,7 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                     <div className="flex flex-col gap-2">
                         <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">JSON Data</label>
                         <textarea
+                            ref={textareaRef}
                             className="w-full h-64 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs font-mono text-zinc-300 outline-none focus:border-zinc-600 resize-none placeholder-zinc-700"
                             placeholder='{ "nodes": [...], "edges": [...] }'
                             value={jsonInput}

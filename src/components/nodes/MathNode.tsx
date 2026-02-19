@@ -36,6 +36,12 @@ export const MathNode = memo((props: NodeProps) => {
                     <option value="SUB">Subtract (-)</option>
                     <option value="MUL">Multiply (*)</option>
                     <option value="DIV">Divide (/)</option>
+                    <option value="POW">Power (^)</option>
+                    <option value="SQRT">Square Root (√)</option>
+                    <option value="ABS">Absolute (|x|)</option>
+                    <option value="SIN">Sine (sin)</option>
+                    <option value="COS">Cosine (cos)</option>
+                    <option value="TAN">Tangent (tan)</option>
                 </select>
             </div>
         </BaseNode>
