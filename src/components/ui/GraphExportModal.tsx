@@ -14,11 +14,13 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
     const [exportData, setExportData] = useState('');
     const [copied, setCopied] = useState(false);
 
-    useEffect(() => {
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+    if (isOpen !== prevIsOpen) {
+        setPrevIsOpen(isOpen);
         if (isOpen) {
             setExportData(generateCGL());
         }
-    }, [isOpen, generateCGL]);
+    }
 
     const handleCopy = async () => {
         const success = await copyToClipboard(exportData);

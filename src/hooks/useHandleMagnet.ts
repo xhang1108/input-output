@@ -3,16 +3,16 @@ import { getNearestHandle } from '../utils/geometry';
 
 export function useHandleMagnet(targetX: number, targetY: number) {
     const nodeLookup = useStore((s) => s.nodeLookup);
-    const connectionHandleId = useStore((s: any) => s.connectionHandleId);
-    const connectionNodeId = useStore((s: any) => s.connectionNodeId);
+    const connectionHandleId = useStore((s) => (s as { connectionHandleId?: string | null }).connectionHandleId);
+    const connectionNodeId = useStore((s) => (s as { connectionNodeId?: string | null }).connectionNodeId);
 
     // Default: No snap
     let effectiveX = targetX;
     let effectiveY = targetY;
     let effectivePos: Position | undefined = undefined;
     let isSnapped = false;
-    let snappedHandleId: string | null = connectionHandleId;
-    let snappedNodeId: string | null = connectionNodeId;
+    let snappedHandleId: string | null = connectionHandleId || null;
+    let snappedNodeId: string | null = connectionNodeId || null;
 
     // Manual Collision Detection (using unified geometry helper)
     if (!snappedHandleId) {
@@ -29,13 +29,17 @@ export function useHandleMagnet(targetX: number, targetY: number) {
         // Resolve Coordinates for native snapping
         const hoveredNode = nodeLookup.get(snappedNodeId);
         if (hoveredNode) {
-            const handleBounds = (hoveredNode as any).internals?.handleBounds;
+            const internals = (hoveredNode as Record<string, unknown>).internals as {
+                handleBounds?: { source?: { id: string, x: number, y: number, width: number, height: number, position: Position }[], target?: { id: string, x: number, y: number, width: number, height: number, position: Position }[] };
+                positionAbsolute: { x: number, y: number };
+            };
+            const handleBounds = internals?.handleBounds;
             if (handleBounds) {
                 const allHandles = [...(handleBounds.source || []), ...(handleBounds.target || [])];
                 const handle = allHandles.find(h => h.id === snappedHandleId);
                 if (handle) {
-                    effectiveX = (hoveredNode as any).internals.positionAbsolute.x + handle.x + (handle.width / 2);
-                    effectiveY = (hoveredNode as any).internals.positionAbsolute.y + handle.y + (handle.height / 2);
+                    effectiveX = internals.positionAbsolute.x + handle.x + (handle.width / 2);
+                    effectiveY = internals.positionAbsolute.y + handle.y + (handle.height / 2);
                     effectivePos = handle.position;
                     isSnapped = true;
                 }

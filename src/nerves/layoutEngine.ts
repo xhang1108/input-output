@@ -72,6 +72,7 @@ export const getLayoutedElements = async (nodes: Node[], edges: Edge[], config: 
         id: 'root',
         layoutOptions: getOptions(config),
         children: nodes.map(toElkNode),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         edges: edges.map(toElkEdge) as any,
     };
 

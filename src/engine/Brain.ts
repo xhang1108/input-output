@@ -1,13 +1,13 @@
-
-import { Edge, Node } from '@xyflow/react';
-import { GraphState, ComputationMode, NodeLogic, Transaction } from './types';
-import { HistoryManager } from './HistoryManager';
-import { NodePayload, DataType } from '../types/payload';
+import { NodePayload } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
+import { Edge } from '@xyflow/react';
+import { GraphState, ComputationMode, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload } from './types';
+import { HistoryManager } from './HistoryManager';
 import { NodeRegistry } from './NodeRegistry'; // Static Import
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 
 export class Brain {
+    // Phase 2.0.5: Forced Rebuild
     private static instance: Brain;
     private state: GraphState;
 
@@ -24,7 +24,7 @@ export class Brain {
         this.startHeartbeat();
     }
 
-    private listeners: Map<string, Set<(payload: any) => void>> = new Map();
+    private listeners: Map<string, Set<(payload: unknown) => void>> = new Map();
 
     private isRecalculating = false;
     private heartbeatInterval: NodeJS.Timeout | null = null;
@@ -42,7 +42,7 @@ export class Brain {
                 this.isRecalculating = true;
                 try {
                     const patches = await this.recalculateDirty();
-                    if (patches.length > 0) {
+                    if (patches.size > 0) {
                         this.emit('graphChanged', patches);
                     }
                 } finally {
@@ -59,7 +59,7 @@ export class Brain {
         return Brain.instance;
     }
 
-    public on(eventType: string, callback: (payload: any) => void): () => void {
+    public on(eventType: string, callback: (payload: unknown) => void): () => void {
         if (!this.listeners.has(eventType)) {
             this.listeners.set(eventType, new Set());
         }
@@ -69,11 +69,11 @@ export class Brain {
         return () => this.off(eventType, callback);
     }
 
-    public off(eventType: string, callback: (payload: any) => void) {
+    public off(eventType: string, callback: (payload: unknown) => void) {
         this.listeners.get(eventType)?.delete(callback);
     }
 
-    private emit(eventType: string, payload: any) {
+    private emit(eventType: string, payload: unknown) {
         const listeners = this.listeners.get(eventType);
         listeners?.forEach(cb => cb(payload));
     }
@@ -162,7 +162,7 @@ export class Brain {
         let resultPayload: NodePayload;
 
         // 1. Get/Calculate the node's current value
-        if (!node.isDirty) {
+        if (!node.isDirty && node.value) {
             resultPayload = node.value;
         } else {
             const inputs = this.reverseAdjacency.get(nodeId) || [];
@@ -188,7 +188,7 @@ export class Brain {
 
         // 2. Handle specific Handle extraction
         if (sourceHandle && typeof resultPayload.value === 'object' && resultPayload.value !== null) {
-            const multiValue = resultPayload.value as Record<string, any>;
+            const multiValue = resultPayload.value as Record<string, unknown>;
             if (sourceHandle in multiValue) {
                 const subValue = multiValue[sourceHandle];
 
@@ -217,8 +217,8 @@ export class Brain {
     /**
      * Recalculates all dirty nodes in the graph.
      */
-    private async recalculateDirty(): Promise<{ id: string, value: NodePayload }[]> {
-        const patches: { id: string, value: NodePayload }[] = [];
+    private async recalculateDirty(): Promise<Map<string, NodePayload>> {
+        const patches = new Map<string, NodePayload>();
 
         const dirtyNodeIds = Array.from(this.state.nodes.values())
             .filter(n => n.isDirty)
@@ -230,11 +230,7 @@ export class Brain {
 
             // Trigger Pull
             const newPayload = await this.getValue(id);
-
-            patches.push({
-                id: id,
-                value: newPayload
-            });
+            patches.set(id, newPayload);
         }
 
         return patches;
@@ -261,10 +257,11 @@ export class Brain {
         if (!node) return null;
 
         const resultPayload = node.value;
+        if (!resultPayload) return null;
 
         // Handle specific Handle extraction (Phase 2.2 Multi-Output)
-        if (sourceHandle && resultPayload && typeof resultPayload.value === 'object' && resultPayload.value !== null) {
-            const multiValue = resultPayload.value as Record<string, any>;
+        if (sourceHandle && typeof resultPayload.value === 'object' && resultPayload.value !== null) {
+            const multiValue = resultPayload.value as Record<string, unknown>;
             if (sourceHandle in multiValue) {
                 const subValue = multiValue[sourceHandle];
                 const parentMeta = resultPayload.meta || {};
@@ -353,34 +350,37 @@ export class Brain {
 
         switch (tx.type) {
             case 'SET_MODE':
-                this.state.mode = tx.payload;
+                this.state.mode = tx.payload as ComputationMode;
                 this.emit('modeChanged', this.state.mode);
                 this.log(`Mode switched to ${tx.payload}`);
                 this.markAllDirty();
                 return { success: true };
 
-            case 'ADD_NODE':
+            case 'ADD_NODE': {
+                const p = tx.payload as AddNodePayload;
                 // Payload: { id, initialValue, type, data }
                 // Phase 2.1: Ensure initialValue is wrapped
-                const initialPayload = PayloadUtils.wrap(tx.payload.initialValue);
+                const initialPayload = PayloadUtils.wrap(p.initialValue);
 
                 const newNode: NodeLogic = {
-                    id: tx.payload.id,
-                    type: tx.payload.type || 'baseNode',
+                    id: p.id,
+                    type: p.type || 'baseNode',
                     value: initialPayload,
-                    data: tx.payload.data || {},
-                    position: tx.payload.position,
+                    data: p.data || {},
+                    position: p.position,
                     isDirty: true
                 };
-                this.state.nodes.set(tx.payload.id, newNode);
-                this.adjacency.set(tx.payload.id, []);
-                this.reverseAdjacency.set(tx.payload.id, []);
+                this.state.nodes.set(p.id, newNode);
+                this.adjacency.set(p.id, []);
+                this.reverseAdjacency.set(p.id, []);
                 return { success: true };
+            }
 
-            case 'UPDATE_VALUE':
+            case 'UPDATE_VALUE': {
                 // Payload: { id, value }
-                const targetId = tx.payload.id;
-                const rawValue = tx.payload.value;
+                const p = tx.payload as UpdateValuePayload;
+                const targetId = p.id;
+                const rawValue = p.value;
                 const node = this.state.nodes.get(targetId);
 
                 if (node) {
@@ -394,6 +394,7 @@ export class Brain {
                     return { success: true };
                 }
                 return { success: false, reason: 'Node not found' };
+            }
 
             case 'CONNECT': {
                 const newEdge = tx.payload as Edge;
@@ -422,21 +423,24 @@ export class Brain {
                 }
             }
 
-            case 'REMOVE_NODE':
-                if (!this.state.nodes.has(tx.payload)) return { success: false, reason: 'Node not found' };
-                this.state.nodes.delete(tx.payload);
-                const connectedEdges = this.state.edges.filter(e => e.source === tx.payload || e.target === tx.payload);
+            case 'REMOVE_NODE': {
+                const id = tx.payload as string;
+                if (!this.state.nodes.has(id)) return { success: false, reason: 'Node not found' };
+                this.state.nodes.delete(id);
+                const connectedEdges = this.state.edges.filter(e => e.source === id || e.target === id);
                 connectedEdges.forEach(e => this.updateAdjacency(e, 'REMOVE'));
-                this.state.edges = this.state.edges.filter(e => e.source !== tx.payload && e.target !== tx.payload);
-                this.adjacency.delete(tx.payload);
-                this.reverseAdjacency.delete(tx.payload);
+                this.state.edges = this.state.edges.filter(e => e.source !== id && e.target !== id);
+                this.adjacency.delete(id);
+                this.reverseAdjacency.delete(id);
                 return { success: true };
+            }
 
-            case 'DISCONNECT':
-                const edgeToRemove = this.state.edges.find(e => e.id === tx.payload);
+            case 'DISCONNECT': {
+                const edgeId = tx.payload as string;
+                const edgeToRemove = this.state.edges.find(e => e.id === edgeId);
                 if (edgeToRemove) {
                     this.updateAdjacency(edgeToRemove, 'REMOVE');
-                    this.state.edges = this.state.edges.filter(e => e.id !== tx.payload);
+                    this.state.edges = this.state.edges.filter(e => e.id !== edgeId);
                     this.propagateDirty(edgeToRemove.target);
                     if (!silent) {
                         this.emit('graphChanged', null);
@@ -445,21 +449,24 @@ export class Brain {
                     return { success: true };
                 }
                 return { success: false, reason: 'Edge not found' };
+            }
 
             case 'MOVE_NODE': {
-                const node = this.state.nodes.get(tx.payload.id);
+                const p = tx.payload as MoveNodePayload;
+                const node = this.state.nodes.get(p.id);
                 if (node) {
-                    node.position = tx.payload.position;
+                    node.position = p.position;
                     if (!silent) this.emit('graphChanged', null);
                     return { success: true };
                 }
                 return { success: false, reason: 'Node not found' };
             }
 
-            case 'UPDATE_NODE_DATA':
-                const tNode = this.state.nodes.get(tx.payload.id);
+            case 'UPDATE_NODE_DATA': {
+                const p = tx.payload as { id: string, data: Record<string, unknown> };
+                const tNode = this.state.nodes.get(p.id);
                 if (tNode) {
-                    tNode.data = { ...tNode.data, ...tx.payload.data };
+                    tNode.data = { ...tNode.data, ...p.data };
                     tNode.isDirty = true;
                     this.propagateDirty(tNode.id);
 
@@ -472,6 +479,7 @@ export class Brain {
                     return { success: true };
                 }
                 return { success: false, reason: 'Node not found' };
+            }
 
             case 'BATCH':
                 (tx.payload as Transaction[]).forEach(t => {
@@ -574,7 +582,7 @@ export class Brain {
             case 'UPDATE_NODE_DATA': {
                 const node = this.state.nodes.get(tx.payload.id);
                 if (!node) return null;
-                const oldData: any = {};
+                const oldData: Record<string, unknown> = {};
                 for (const key in tx.payload.data) {
                     oldData[key] = node.data[key];
                 }
@@ -605,7 +613,8 @@ export class Brain {
                 // Currently Transaction only has NEW value.
                 // This is a known issue in my HistoryManager if we don't capture state *before* apply.
                 // createInverseTransaction is called BEFORE apply, so node.value is OLD value.
-                const node = this.state.nodes.get(tx.payload.id);
+                const p = tx.payload as UpdateValuePayload;
+                const node = this.state.nodes.get(p.id);
                 if (!node) return null;
 
                 return {
@@ -760,7 +769,7 @@ export class Brain {
         if (!node) return null;
 
         // 1. If node has a cached symbol, return it (e.g. Factor nodes might cache)
-        if (node.value.symbol) {
+        if (node.value && node.value.symbol) {
             return node.value.symbol;
         }
 
@@ -851,7 +860,7 @@ export class Brain {
                 targetHandle: e.targetHandle,
                 type: 'magnetic', // Default to magnetic
                 data: { pathType: 'bezier', animate: false } // Default styling
-            } as any; // Cast because Edge might have more specific XYFlow properties we don't have here
+            } as unknown as Edge; // Cast because Edge might have more specific XYFlow properties we don't have here
 
             txs.push({
                 type: 'CONNECT',

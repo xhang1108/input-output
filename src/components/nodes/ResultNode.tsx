@@ -24,7 +24,7 @@ export const ResultNode = memo((props: NodeProps) => {
     let displayValue: React.ReactNode = '...';
     let isError = false;
     let isMatrix = false;
-    let matrixData: any[][] = [];
+    let matrixData: unknown[][] = [];
     let dataTypeColor = 'text-[var(--color-scalar)]';
 
     if (value !== undefined && value !== null) {
@@ -50,13 +50,15 @@ export const ResultNode = memo((props: NodeProps) => {
                 isMatrix = true;
             }
 
+            // The 'data' variable is already destructured from props.
             const rawValue = PayloadUtils.unwrap(payload);
 
             if (isMatrix) {
+                const r = rawValue as { mathjs?: string; data?: unknown[][] };
                 if (Array.isArray(rawValue)) {
                     matrixData = rawValue;
-                } else if (typeof rawValue === 'object' && rawValue?.mathjs === 'Matrix') {
-                    matrixData = rawValue.data;
+                } else if (typeof rawValue === 'object' && r?.mathjs === 'Matrix') {
+                    matrixData = r.data || [];
                 } else {
                     isMatrix = false;
                 }
@@ -66,14 +68,54 @@ export const ResultNode = memo((props: NodeProps) => {
                 let numValue: number | null = null;
                 let unitStr: string | undefined = payload.meta?.unit;
 
-                if (typeof rawValue === 'object' && rawValue !== null && 'mathjs' in rawValue) {
-                    if ('value' in rawValue) numValue = Number(rawValue.value);
-                    if ('unit' in rawValue) unitStr = (rawValue as any).unit;
+                let isBigNumber = false;
+                let bigNumStr = '';
+
+                if (typeof rawValue === 'object' && rawValue !== null) {
+                    const r = rawValue as { mathjs?: string; value?: string; unit?: string; isBigNumber?: boolean; toString?: () => string };
+
+                    if (r.mathjs === 'BigNumber' && r.value) {
+                        isBigNumber = true;
+                        bigNumStr = r.value;
+                        numValue = Number(r.value);
+                    } else if (r.isBigNumber === true) {
+                        // Handle live BigNumber object
+                        isBigNumber = true;
+                        bigNumStr = r.toString ? r.toString() : String(r);
+                        numValue = Number(bigNumStr);
+                    } else if ('value' in rawValue) {
+                        numValue = Number(r.value);
+                    }
+                    if ('unit' in r) unitStr = r.unit;
                 } else if (typeof rawValue === 'number') {
                     numValue = rawValue;
                 }
 
-                if (numValue !== null && !isNaN(numValue)) {
+                if (isBigNumber) {
+                    // BigNumber Logic
+                    if (precision !== undefined && precision !== -1) {
+                        // If precision is set, we might need a BigNumber formatter or just slice?
+                        // For now, let's just show it. Or try to use toFixed found in BigNumber if we had the instance.
+                        // Simple approach: standard slice or leave it to user to round upstream.
+                        // Actually, let's respect the "Auto" (precision -1) by showing full string.
+                        displayValue = bigNumStr;
+
+                        // If user forced precision, we fallback to number behavior for now OR implementation simple string truncation
+                        if (precision >= 0) {
+                            // Very basic string truncation for BigNumber if precision is needed visualy
+                            // This is a naive implementation; ideal would be using mathjs.format() upstream.
+                            // But since we only have the struct here:
+                            const dotIndex = bigNumStr.indexOf('.');
+                            if (dotIndex !== -1) {
+                                displayValue = bigNumStr.substring(0, dotIndex + 1 + precision);
+                            }
+                        }
+                    } else {
+                        // Auto: Show full precision
+                        // Truncate extremely long strings to avoid UI breaking? 64 chars is fine.
+                        displayValue = bigNumStr;
+                    }
+                } else if (numValue !== null && !isNaN(numValue)) {
                     if (precision !== undefined && precision !== -1) {
                         displayValue = numValue.toLocaleString(undefined, {
                             minimumFractionDigits: precision,
@@ -84,8 +126,9 @@ export const ResultNode = memo((props: NodeProps) => {
                         if (absVal !== 0 && (absVal < 0.0001 || absVal > 100000000)) {
                             displayValue = numValue.toExponential(4);
                         } else {
+                            // Standard Auto logic for normal numbers
                             displayValue = numValue.toLocaleString(undefined, {
-                                maximumFractionDigits: 6
+                                maximumFractionDigits: 10 // Increased from 6 for better standard float exp
                             });
                         }
                     }
@@ -97,9 +140,55 @@ export const ResultNode = memo((props: NodeProps) => {
                     displayValue = String(rawValue);
                 }
 
-                // Handle units
+                // Handle units (including Base Conversion)
                 const finalUnit = unitStr || payload.meta?.unit;
-                if (finalUnit) {
+                const isBaseUnit = finalUnit && ['BIN', 'OCT', 'HEX', 'DUO', 'DEC'].includes(finalUnit);
+
+                if (isBaseUnit && numValue !== null && !isNaN(numValue)) {
+                    // Base Conversion Logic
+                    let formatted = '';
+                    let prefix = '';
+                    const base = finalUnit as string;
+
+                    switch (base) {
+                        case 'BIN':
+                            formatted = Math.abs(numValue).toString(2);
+                            prefix = '0b';
+                            break;
+                        case 'OCT':
+                            formatted = Math.abs(numValue).toString(8);
+                            prefix = '0o';
+                            break;
+                        case 'HEX':
+                            formatted = Math.abs(numValue).toString(16).toUpperCase();
+                            prefix = '0x';
+                            break;
+                        case 'DUO':
+                            formatted = toBase12(Math.abs(numValue));
+                            prefix = '0z';
+                            break;
+                        case 'DEC':
+                        default:
+                            formatted = Math.abs(numValue).toString(10);
+                            prefix = '';
+                    }
+
+                    if (numValue < 0) prefix = '-' + prefix;
+
+                    displayValue = (
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-baseline gap-1.5 leading-none">
+                                <span className={`font-mono transition-all duration-200 text-2xl text-(--color-scalar)`}>
+                                    {prefix}{formatted}
+                                </span>
+                                <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800/50 px-1 rounded">
+                                    {base}
+                                </span>
+                            </div>
+                        </div>
+                    );
+                } else if (finalUnit) {
+                    // Standard Unit Logic
                     const formatUnit = (u: string) => {
                         return u
                             .replace(/ /g, '')
@@ -141,7 +230,7 @@ export const ResultNode = memo((props: NodeProps) => {
         });
     };
 
-    const renderMatrix = (grid: any[][]) => {
+    const renderMatrix = (grid: unknown[][]): React.ReactNode => {
         if (!grid || !grid.length) return <span className="text-xs text-zinc-500">Empty Matrix</span>;
         const maxRows = 8;
         const maxCols = 8;
@@ -212,8 +301,8 @@ export const ResultNode = memo((props: NodeProps) => {
                             renderEmpty()
                         ) : (
                             <span className={`font-mono truncate ${isError ? 'text-red-500 text-sm' : `text-2xl ${dataTypeColor}`}`}>
-                                {typeof displayValue === 'object' && displayValue !== null && 'props' in (displayValue as any)
-                                    ? (displayValue as any)
+                                {typeof displayValue === 'object' && displayValue !== null && 'props' in (displayValue as unknown as Record<string, unknown>)
+                                    ? (displayValue as React.ReactElement)
                                     : String(displayValue)
                                 }
                             </span>
@@ -224,5 +313,28 @@ export const ResultNode = memo((props: NodeProps) => {
         </BaseNode>
     );
 });
+
+// Helper for Base 12
+function toBase12(num: number): string {
+    const integerPart = Math.floor(num);
+    const fractionalPart = num - integerPart;
+
+    let result = integerPart.toString(12).toUpperCase().replace(/A/g, 'A').replace(/B/g, 'B'); // default toString(12) uses a/b
+
+    // Simple fractional support (up to 4 places)
+    if (fractionalPart > 0) {
+        result += '.';
+        let f = fractionalPart;
+        for (let i = 0; i < 4; i++) {
+            f *= 12;
+            const digit = Math.floor(f);
+            result += digit.toString(12).toUpperCase();
+            f -= digit;
+            if (f === 0) break;
+        }
+    }
+
+    return result;
+}
 
 ResultNode.displayName = 'ResultNode';

@@ -8,8 +8,18 @@ interface CommandPaletteProps {
     isOpen: boolean;
     position?: { x: number, y: number };
     onClose: () => void;
-    onSelect: (type: string, label: string, data?: any) => void;
+    onSelect: (type: string, label: string, data?: unknown) => void;
     pendingConnection?: { nodeId: string; handleId: string | null; handleType: 'source' | 'target' } | null;
+}
+
+interface MenuItem {
+    label: string;
+    type: string;
+    category: string;
+    data: {
+        handles?: Array<{ type: string }>;
+        [key: string]: unknown;
+    };
 }
 
 // Transform NodeDefinitions → Menu format
@@ -34,21 +44,25 @@ export function CommandPalette({ isOpen, position, onClose, onSelect, pendingCon
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Synchronize search and index when closed/opened
+    // Since CommandPalette is unmounted when closed in Body.tsx, 
+    // it will naturally reset to '' and 0 on mount.
+    // The previous useEffect was redundant.
+
     // Flatten items for search/navigation
     const flattenedItems = useMemo(() => {
-        let items = MENU_ITEMS.flatMap(cat =>
+        let items: MenuItem[] = MENU_ITEMS.flatMap(cat =>
             cat.items.map(item => ({ ...item, category: cat.category }))
         );
 
         // Filter by Pending Connection (Smart Link)
         if (pendingConnection) {
             const requiredHandleType = pendingConnection.handleType === 'source' ? 'target' : 'source';
-            console.log('Filtering for:', requiredHandleType);
 
             items = items.filter(item => {
                 // Check if node definition has a compatible handle
                 const nodeHandles = item.data.handles || [];
-                const hasCompatibleHandle = nodeHandles.some((h: any) => h.type === requiredHandleType);
+                const hasCompatibleHandle = nodeHandles.some((h) => h.type === requiredHandleType);
                 return hasCompatibleHandle;
             });
         }
@@ -59,18 +73,19 @@ export function CommandPalette({ isOpen, position, onClose, onSelect, pendingCon
         );
     }, [search, pendingConnection]);
 
-    useEffect(() => {
-        if (isOpen) {
-            console.log('CommandPalette MOUNTED/OPENED at:', position);
-            setSearch('');
-            setSelectedIndex(0);
-            setTimeout(() => inputRef.current?.focus(), 50);
-        }
-    }, [isOpen, position]);
+    // Reset selection when search changes (during render)
+    const [prevSearch, setPrevSearch] = useState(search);
+    if (search !== prevSearch) {
+        setPrevSearch(search);
+        setSelectedIndex(0);
+    }
 
     useEffect(() => {
-        setSelectedIndex(0);
-    }, [search]);
+        if (isOpen) {
+            // Only focus is needed on mount
+            setTimeout(() => inputRef.current?.focus(), 50);
+        }
+    }, [isOpen]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'ArrowDown') {
@@ -127,7 +142,7 @@ export function CommandPalette({ isOpen, position, onClose, onSelect, pendingCon
                             if (!acc[item.category]) acc[item.category] = [];
                             acc[item.category].push(item);
                             return acc;
-                        }, {} as Record<string, typeof flattenedItems>)
+                        }, {} as Record<string, MenuItem[]>)
                     ).map(([category, items]) => (
                         <div key={category} className="mb-1">
                             {/* Category Header */}
@@ -145,8 +160,8 @@ export function CommandPalette({ isOpen, position, onClose, onSelect, pendingCon
                                     <button
                                         key={`${item.type}-${item.label}`}
                                         className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between group transition-colors ${globalIndex === selectedIndex
-                                                ? 'bg-blue-600/90 text-white shadow-sm'
-                                                : 'text-zinc-300 hover:bg-zinc-800'
+                                            ? 'bg-blue-600/90 text-white shadow-sm'
+                                            : 'text-zinc-300 hover:bg-zinc-800'
                                             }`}
                                         onClick={() => {
                                             onSelect(item.type, item.label, item.data);

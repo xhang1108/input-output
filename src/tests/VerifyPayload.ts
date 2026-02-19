@@ -17,14 +17,14 @@ import { DataType } from '../types/payload';
     ];
 
     cases.forEach(c => {
-        const result = PayloadUtils.mergeUnits(c.a, c.b, c.op as any);
+        const result = PayloadUtils.mergeUnits(c.a, c.b, c.op as 'ADD' | 'SUB' | 'MUL' | 'DIV');
         const pass = result === c.expected;
         console.log(`  ${c.a} ${c.op} ${c.b} -> ${result} [${pass ? 'PASS' : 'FAIL'}]`);
     });
 
     // 2. Test MathNode Evaluation
     console.log('\n[Test 2] MathNode Evaluation');
-    const mathNodeStub = { id: 'test-math', type: 'MA-01', value: PayloadUtils.createScalar(0), isDirty: true, data: { op: 'ADD' } };
+    const mathNodeStub = { id: 'test-math', type: 'MA-01', value: PayloadUtils.createScalar(0), isDirty: true, data: { op: 'ADD' }, position: { x: 0, y: 0 } };
 
     const inputA = PayloadUtils.createScalar(5, 'kg');
     const inputB = PayloadUtils.createScalar(10, 'kg');
@@ -75,7 +75,7 @@ import { DataType } from '../types/payload';
     try {
         const errorNode = { ...mathNodeStub, data: { op: 'ADD' } };
         const errorInputs = {
-            in_a: { type: DataType.String as DataType, value: "4k'g" as any, symbol: null, meta: {} },
+            in_a: { type: DataType.String as DataType, value: "4k'g", symbol: null, meta: {} },
             in_b: PayloadUtils.createScalar(10)
         };
 
@@ -99,7 +99,8 @@ import { DataType } from '../types/payload';
         type: 'IO-05',
         value: PayloadUtils.createScalar(0),
         isDirty: true,
-        data: { unit: 'm/s' }
+        data: { unit: 'm/s' },
+        position: { x: 0, y: 0 }
     };
 
     const unitInputs = {
@@ -133,7 +134,8 @@ import { DataType } from '../types/payload';
         type: 'MA-01',
         value: PayloadUtils.createScalar(0),
         isDirty: true,
-        data: { op: 'ADD' }
+        data: { op: 'ADD' },
+        position: { x: 0, y: 0 }
     };
 
     const inputsPhysics = {
@@ -157,7 +159,7 @@ import { DataType } from '../types/payload';
     console.log('\n[Test 9] Unit Conversion Node');
 
     // Case A: Assignment (Scalar -> Unit)
-    const nodeAssign = { id: 'assign', type: 'IO-05', data: { unit: 'm' }, value: PayloadUtils.createScalar(0), isDirty: true };
+    const nodeAssign = { id: 'assign', type: 'IO-05', data: { unit: 'm' }, value: PayloadUtils.createScalar(0), isDirty: true, position: { x: 0, y: 0 } };
     const inputScalar = { in: PayloadUtils.createScalar(10) };
     const resAssign = await NodeRegistry.evaluate(nodeAssign, inputScalar);
     console.log(`  Assign: 10 -> m = ${PayloadUtils.unwrap(resAssign)} ${resAssign.meta.unit}`);
@@ -165,7 +167,7 @@ import { DataType } from '../types/payload';
     else console.log('  [FAIL]');
 
     // Case B: Conversion (Unit -> Unit)
-    const nodeConvert = { id: 'convert', type: 'IO-05', data: { unit: 'm' }, value: PayloadUtils.createScalar(0), isDirty: true };
+    const nodeConvert = { id: 'convert', type: 'IO-05', data: { unit: 'm' }, value: PayloadUtils.createScalar(0), isDirty: true, position: { x: 0, y: 0 } };
     const inputUnit = { in: PayloadUtils.createScalar(100, 'cm') };
     const resConvert = await NodeRegistry.evaluate(nodeConvert, inputUnit);
     console.log(`  Convert: 100 cm -> m = ${PayloadUtils.unwrap(resConvert)} ${resConvert.meta.unit}`);
@@ -173,7 +175,7 @@ import { DataType } from '../types/payload';
     else console.log('  [FAIL]');
 
     // Case C: Incompatible (kg -> m)
-    const nodeError = { id: 'err', type: 'IO-05', data: { unit: 'm' }, value: PayloadUtils.createScalar(0), isDirty: true };
+    const nodeError = { id: 'err', type: 'IO-05', data: { unit: 'm' }, value: PayloadUtils.createScalar(0), isDirty: true, position: { x: 0, y: 0 } };
     const inputBad = { in: PayloadUtils.createScalar(10, 'kg') };
     const resError = await NodeRegistry.evaluate(nodeError, inputBad);
     console.log(`  Error: 10 kg -> m = ${resError.type}`);
@@ -184,20 +186,18 @@ import { DataType } from '../types/payload';
     console.log('\n[Test 10] MathNode -> UnitNode Chain');
     const inputBigA = PayloadUtils.createScalar(1110, 'cm');
     const inputBigB = PayloadUtils.createScalar(128, 'km');
-    const mathNodeBig = { id: 'math-big', type: 'MA-01', value: PayloadUtils.createScalar(0), isDirty: true, data: { op: 'ADD' } };
-    // @ts-ignore
-    const mathResultBig = await NodeRegistry.evaluate(mathNodeBig, { in_a: inputBigA, in_b: inputBigB });
+    const mathNodeBig = { id: 'math-big', type: 'MA-01', value: PayloadUtils.createScalar(0), isDirty: true, data: { op: 'ADD' }, position: { x: 0, y: 0 } };
+    const mathResultBig = await NodeRegistry.evaluate(mathNodeBig as unknown as import('../engine/types').NodeLogic, { in_a: inputBigA, in_b: inputBigB });
 
     console.log(`  Math Output: ${PayloadUtils.unwrap(mathResultBig)} ${mathResultBig.meta.unit}`);
 
     // 2. UnitNode (Convert to ft)
-    const unitNodeFt = { id: 'unit-ft', type: 'IO-05', value: PayloadUtils.createScalar(0), isDirty: true, data: { unit: 'ft' } };
-    // @ts-ignore
-    const finalResultChain = await NodeRegistry.evaluate(unitNodeFt, { in: mathResultBig });
+    const unitNodeFt = { id: 'unit-ft', type: 'IO-05', value: PayloadUtils.createScalar(0), isDirty: true, data: { unit: 'ft' }, position: { x: 0, y: 0 } };
+    const finalResultChain = await NodeRegistry.evaluate(unitNodeFt as unknown as import('../engine/types').NodeLogic, { in: mathResultBig });
 
     console.log(`  Final Output: ${PayloadUtils.unwrap(finalResultChain)} ${finalResultChain.meta.unit}`);
 
-    const valChain = PayloadUtils.unwrap(finalResultChain);
+    const valChain = PayloadUtils.unwrap(finalResultChain) as number;
     if (valChain > 419000 && valChain < 421000 && finalResultChain.meta.unit === 'ft') {
         console.log(`  [PASS] Conversion successful: ${valChain} ft`);
     } else if (valChain === 12801110 && finalResultChain.meta.unit === 'ft') {

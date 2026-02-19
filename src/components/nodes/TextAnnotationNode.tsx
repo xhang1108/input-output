@@ -14,12 +14,12 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
     const [text, setText] = useState((data.markdown as string) || '# Note\nDouble click to edit');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Sync from data if it changes externally
-    useEffect(() => {
-        if (typeof data.markdown === 'string') {
-            setText(data.markdown);
-        }
-    }, [data.markdown]);
+    // Sync from data if it changes externally (during render)
+    const [prevMarkdown, setPrevMarkdown] = useState(data.markdown);
+    if (data.markdown !== prevMarkdown && typeof data.markdown === 'string') {
+        setPrevMarkdown(data.markdown);
+        setText(data.markdown);
+    }
 
     // Focus textarea on edit
     useEffect(() => {

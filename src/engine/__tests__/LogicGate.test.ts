@@ -10,7 +10,7 @@ describe('Logic Gate (MA-05)', () => {
         MathEngine.getInstance();
     });
 
-    const evaluate = async (op: string, a: any, b: any, aUnit?: string, bUnit?: string) => {
+    const evaluate = async (op: string, a: string | number | boolean, b: string | number | boolean, aUnit?: string, bUnit?: string) => {
         const node = {
             id: 'test-logic',
             type: 'MA-05',
@@ -18,7 +18,7 @@ describe('Logic Gate (MA-05)', () => {
             position: { x: 0, y: 0 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             isDirty: false
-        };
+        } as unknown as import('../types').NodeLogic;
 
         const inputs = {
             in_a: PayloadUtils.createScalar(a, aUnit),

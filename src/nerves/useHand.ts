@@ -57,13 +57,12 @@ export function useHand() {
     const initialParentPositions = useRef<Map<string, XYPosition>>(new Map());
 
     // --- Transform Helpers ---
-    // --- Transform Helpers ---
-    const getAbsolutePosition = useCallback((nodeId: string, nodeMap: Map<string, Node>): XYPosition => {
+    const getAbsolutePosition = useCallback(function getAbs(nodeId: string, nodeMap: Map<string, Node>): XYPosition {
         const node = nodeMap.get(nodeId);
         if (!node) return { x: 0, y: 0 };
         if (!node.parentId) return node.position;
 
-        const parentPos = getAbsolutePosition(node.parentId, nodeMap);
+        const parentPos = getAbs(node.parentId, nodeMap);
         return {
             x: parentPos.x + node.position.x,
             y: parentPos.y + node.position.y
@@ -424,7 +423,7 @@ export function useHand() {
     }, [mode, project, axisLock, transformBuffer, applyMove, applyScale, applyRotate]);
 
     // --- Autopan Loop ---
-    const autopan = useCallback(() => {
+    const autopan = useCallback(function autopanLoop() {
         if (!['GRABBING', 'SCALING', 'ROTATING'].includes(mode) || !mousePosRef.current) {
             rafRef.current = null;
             return;
@@ -455,7 +454,7 @@ export function useHand() {
             updateInteraction(mousePosRef.current);
         }
 
-        rafRef.current = requestAnimationFrame(autopan);
+        rafRef.current = requestAnimationFrame(autopanLoop);
     }, [mode, getViewport, setViewport, updateInteraction]);
 
     useEffect(() => {
@@ -673,7 +672,7 @@ export function useHand() {
 
             if (newParentId !== oldParentId) {
                 // Parent changed — coordinate space transform needed
-                let newPos = { ...node.position };
+                const newPos = { ...node.position };
 
                 // Convert to absolute (if was child)
                 if (oldParentId) {
@@ -783,7 +782,7 @@ export function useHand() {
                 });
             } else {
                 // Standard move (no parent change)
-                let finalPos = { ...node.position };
+                const finalPos = { ...node.position };
 
                 // Auto-Resize Parent Frame
                 if (node.parentId) {

@@ -30,11 +30,20 @@ export function getHandleColor(config: HandleConfig): string {
     return HANDLE_COLOR_MAP[config.dataType || 'scalar'];
 }
 
+// Node parameter configuration
+export interface NodeParameter {
+    id: string;
+    label: string;
+    type: 'string' | 'number' | 'boolean' | 'select';
+    options?: { label: string; value: string | number }[];
+}
+
 // Node definition - central registry entry for a node type
 export interface NodeDefinition {
     id: string;              // Type ID, e.g. 'MA-01'
     label: string;           // Display name, e.g. 'Add'
     category: string;        // Menu category, e.g. 'Math'
     handles: HandleConfig[]; // All handles (inputs AND outputs)
-    defaultData?: Record<string, any>; // Default data payload
+    defaultData?: Record<string, unknown>; // Default data payload
+    params?: NodeParameter[];
 }

@@ -25,8 +25,10 @@ export class NodeRegistry {
     }
 
     public static async evaluate(node: NodeLogic, inputs: Record<string, NodePayload>): Promise<NodePayload> {
+
         // Mute Bypass Logic: If muted, pass through the primary input
-        if (node.data?.muted) {
+        const data = (node.data || {}) as Record<string, unknown>;
+        if (data.muted) {
             const primaryInput = inputs['in'] || inputs['in_a'] || Object.values(inputs)[0];
             if (primaryInput) return primaryInput;
             return node.value || PayloadUtils.createScalar(0);
@@ -34,6 +36,8 @@ export class NodeRegistry {
 
         const evaluator = this.evaluators.get(node.type || 'baseNode');
         const result = evaluator ? await evaluator(node, inputs) : node.value;
+
+        if (!result) return node.value || PayloadUtils.createScalar(0);
 
         // Auto-attach symbol if not already present
         if (result && typeof result === 'object' && result.symbol === null) {
@@ -44,7 +48,7 @@ export class NodeRegistry {
                 } else {
                     // Fallback for unconnected or raw inputs: Literal of their value
                     const val = PayloadUtils.unwrap(p);
-                    inputSymbols[key] = PayloadUtils.createSymbol('Literal', { value: typeof val === 'object' ? 'Object' : val });
+                    inputSymbols[key] = PayloadUtils.createSymbol('Literal', { value: (typeof val === 'object' ? 'Object' : val) as string | number | boolean | undefined });
                 }
             }
             result.symbol = this.getSymbol(node, inputSymbols);
@@ -62,32 +66,36 @@ export class NodeRegistry {
 
         // Default Symbolizer: Identifier vs Literal
         const val = PayloadUtils.unwrap(node.value);
-        const label = node.data?.label || node.data?.name;
+        const data = (node.data || {}) as Record<string, unknown>;
+        const label = (data.label || data.name) as string | undefined;
 
         if (label) {
-            return PayloadUtils.createSymbol('Identifier', { name: String(label), value: typeof val === 'object' ? 'Complex' : val });
+            return PayloadUtils.createSymbol('Identifier', { name: String(label), value: (typeof val === 'object' ? 'Complex' : val) as string | number | boolean | undefined });
         }
-        return PayloadUtils.createSymbol('Literal', { value: typeof val === 'object' ? 'Complex' : val });
+        return PayloadUtils.createSymbol('Literal', { value: (typeof val === 'object' ? 'Complex' : val) as string | number | boolean | undefined });
     }
 }
 
 // --- IO Nodes ---
 
 // IO-01: Input (Scalar)
-NodeRegistry.register('IO-01', (node) => node.value, (node) => {
-    const name = node.data.label as string;
+NodeRegistry.register('IO-01', (node) => node.value || PayloadUtils.createScalar(0), (node) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const name = data.label as string;
     const value = PayloadUtils.unwrap(node.value);
     return name
-        ? PayloadUtils.createSymbol('Identifier', { name, value })
-        : PayloadUtils.createSymbol('Literal', { value });
+        ? PayloadUtils.createSymbol('Identifier', { name, value: value as string | number | boolean | undefined })
+        : PayloadUtils.createSymbol('Literal', { value: value as string | number | boolean | undefined });
 });
 
 // IO-04: String Input
 NodeRegistry.register('IO-04', (node) => {
-    const val = node.data.value !== undefined ? node.data.value : node.value;
+    const data = (node.data || {}) as Record<string, unknown>;
+    const val = data.value !== undefined ? data.value : node.value;
     return PayloadUtils.createString(String(val));
 }, (node) => {
-    return PayloadUtils.createSymbol('Literal', { value: String(node.data.value || '') });
+    const data = (node.data || {}) as Record<string, unknown>;
+    return PayloadUtils.createSymbol('Literal', { value: String(data.value || '') });
 });
 
 // IO-11: Result (Display)
@@ -99,10 +107,8 @@ NodeRegistry.register('IO-11', (node, inputs) => {
 
 // IO-18: Color Picker
 NodeRegistry.register('IO-18', (node) => {
-    // Priority: node.data.value (fresh user input from UPDATE_NODE_DATA)
-    //           > node.value (cached evaluator output)
-    //           > default fallback
-    const dataVal = node.data?.value; // Set by UPDATE_NODE_DATA from UI
+    const data = (node.data || {}) as Record<string, unknown>;
+    const dataVal = data.value; // Set by UPDATE_NODE_DATA from UI
     const cachedVal = PayloadUtils.unwrap(node.value); // Previous evaluator output
 
     let hex = '#3b82f6';
@@ -111,21 +117,23 @@ NodeRegistry.register('IO-18', (node) => {
     // 1. Try data.value first (user input from RGB/Vec3 editing)
     if (dataVal && typeof dataVal === 'object' && !Array.isArray(dataVal) && 'vec3' in dataVal) {
         // User edited via channel inputs — { hex, vec3 } format
-        hex = dataVal.hex || '#000000';
-        if (Array.isArray(dataVal.vec3)) {
-            [rNorm, gNorm, bNorm] = dataVal.vec3;
+        const colorData = dataVal as { hex?: string; vec3?: number[] };
+        hex = colorData.hex || '#000000';
+        if (Array.isArray(colorData.vec3)) {
+            [rNorm, gNorm, bNorm] = colorData.vec3;
         }
-    } else if (typeof dataVal === 'string' && dataVal.startsWith('#')) {
-        // User picked from color picker — raw hex string
-        hex = dataVal;
+    } else if (typeof dataVal === 'string' && (dataVal.startsWith('#') || dataVal.length === 6)) {
+        // User picked from color picker or manual input — normalize hex
+        hex = dataVal.startsWith('#') ? dataVal : '#' + dataVal;
         rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
         gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
         bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
     } else if (cachedVal && typeof cachedVal === 'object' && !Array.isArray(cachedVal) && 'vec3' in cachedVal) {
         // Fallback to cached evaluator output (e.g. first render, undo/redo)
-        hex = cachedVal.hex || '#000000';
-        if (Array.isArray(cachedVal.vec3)) {
-            [rNorm, gNorm, bNorm] = cachedVal.vec3;
+        const cVal = cachedVal as { hex?: string; vec3?: number[] };
+        hex = cVal.hex || '#000000';
+        if (Array.isArray(cVal.vec3)) {
+            [rNorm, gNorm, bNorm] = cVal.vec3;
         }
     } else if (typeof cachedVal === 'string' && cachedVal.startsWith('#')) {
         hex = cachedVal;
@@ -136,7 +144,7 @@ NodeRegistry.register('IO-18', (node) => {
     // else: keep defaults (#3b82f6, 0,0,0)
 
     // 2. Bit Depth Scaling logic
-    const depth = node.data?.depth || '8bit';
+    const depth = data.depth as string || '8bit';
     const scaler = depth === '10bit' ? 1023 : depth === '12bit' ? 4095 : 255;
 
     const rOut = Math.round(rNorm * scaler);
@@ -194,9 +202,9 @@ NodeRegistry.register('IO-19', (node, inputs) => {
 
         // Helper to apply scaling
         const applyScale = (div: number) => {
-            vr = val[0] / div;
-            vg = val[1] / div;
-            vb = val[2] / div;
+            vr = (val as number[])[0] / div;
+            vg = (val as number[])[1] / div;
+            vb = (val as number[])[2] / div;
             r = Math.round(vr * 255);
             g = Math.round(vg * 255);
             b = Math.round(vb * 255);
@@ -253,21 +261,23 @@ NodeRegistry.register('IO-16', (node, inputs) => {
 
 // IO-05: Unit Assigner
 NodeRegistry.register('IO-05', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
     const inputPayload = inputs['in'] || PayloadUtils.createScalar(0);
     const val = PayloadUtils.unwrap(inputPayload);
-    const unit = node.data?.unit as string || 'm';
+    const unit = data.unit as string || 'm';
     const inputUnit = inputPayload.meta?.unit;
 
     const math = MathEngine.getInstance().getMathInstance();
     const hydratedInput = PayloadUtils.hydrate(val, math);
 
     let finalVal: number;
+    const h = hydratedInput as { isBigNumber?: boolean; isUnit?: boolean; toNumber: () => number };
     if (typeof hydratedInput === 'number') {
         finalVal = hydratedInput;
-    } else if (hydratedInput && hydratedInput.isBigNumber) {
-        finalVal = hydratedInput.toNumber();
-    } else if (hydratedInput && hydratedInput.isUnit) {
-        finalVal = hydratedInput.toNumber();
+    } else if (h && h.isBigNumber) {
+        finalVal = h.toNumber();
+    } else if (h && h.isUnit) {
+        finalVal = h.toNumber();
     } else {
         finalVal = Number(hydratedInput);
     }
@@ -282,46 +292,50 @@ NodeRegistry.register('IO-05', (node, inputs) => {
 
     return PayloadUtils.createScalar(finalVal, unit);
 }, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
     const inputSymbol = inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 });
-    const targetUnit = node.data?.unit as string;
+    const targetUnit = data.unit as string;
     return { ...inputSymbol, unit: targetUnit };
 });
 
 // IO-02: Slider
-NodeRegistry.register('IO-02', (node) => node.value, (node) => {
-    return PayloadUtils.createSymbol('Literal', { value: PayloadUtils.unwrap(node.value) });
+NodeRegistry.register('IO-02', (node) => node.value || PayloadUtils.createScalar(0), (node) => {
+    return PayloadUtils.createSymbol('Literal', { value: PayloadUtils.unwrap(node.value) as string | number | boolean | undefined });
 });
 
 // IO-06: Random
 NodeRegistry.register('IO-06', (node) => {
     const engine = MathEngine.getInstance();
     const math = engine.getMathInstance();
-    const data = node.data || {};
-    const mode = data.mode || 'float';
-    const rows = data.rows || 3;
-    const cols = data.cols || 3;
-    let result: any;
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'float';
+    const rows = (data.rows as number) || 3;
+    const cols = (data.cols as number) || 3;
+    let result: unknown;
 
     try {
-        const nMin = (data.min !== undefined && data.min !== null) ? Number(math.number(data.min)) : 0;
-        const nMax = (data.max !== undefined && data.max !== null) ? Number(math.number(data.max)) : 1;
+        const mathAny = math as unknown as Record<string, (v: unknown) => number>;
+        const nMin = (data.min !== undefined && data.min !== null) ? Number(mathAny.number(data.min)) : 0;
+        const nMax = (data.max !== undefined && data.max !== null) ? Number(mathAny.number(data.max)) : 1;
         const [realMin, realMax] = nMin <= nMax ? [nMin, nMax] : [nMax, nMin];
         const itemMode = data.itemMode || 'float';
 
         if (mode === 'matrix') {
             const size = [rows, cols];
+            const mathM = math as unknown as Record<string, (s: number[], mi: number, ma: number) => unknown>;
             result = (itemMode === 'int')
-                ? math.randomInt(size, realMin, realMax + 1)
-                : math.random(size, realMin, realMax);
+                ? mathM.randomInt(size, realMin, realMax + 1)
+                : mathM.random(size, realMin, realMax);
         } else {
+            const mathS = math as unknown as Record<string, (mi: number, ma: number) => unknown>;
             result = (mode === 'int')
-                ? math.randomInt(realMin, realMax + 1)
-                : math.random(realMin, realMax);
+                ? mathS.randomInt(realMin, realMax + 1)
+                : mathS.random(realMin, realMax);
         }
 
-        const isBigNumber = engine.getComputationMode() === 'scientific';
-        if (isBigNumber && typeof result === 'number') result = math.bignumber(result);
-    } catch (e) {
+        // Always use BigNumber for random values in high precision mode
+        if (typeof result === 'number') result = math.bignumber(result);
+    } catch (e: unknown) {
         return PayloadUtils.createError('Random Failed');
     }
 
@@ -332,22 +346,24 @@ NodeRegistry.register('IO-06', (node) => {
         meta: {}
     };
 }, (node) => {
+    const data = (node.data || {}) as Record<string, unknown>;
     return PayloadUtils.createSymbol('FunctionCall', {
         name: 'random',
         args: [
-            PayloadUtils.createSymbol('Literal', { value: node.data.min ?? 0 }),
-            PayloadUtils.createSymbol('Literal', { value: node.data.max ?? 1 })
+            PayloadUtils.createSymbol('Literal', { value: Number(data.min ?? 0) }),
+            PayloadUtils.createSymbol('Literal', { value: Number(data.max ?? 1) })
         ]
     });
 });
 
 // IO-08: Matrix Input
 NodeRegistry.register('IO-08', (node) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const raw = data.rawExpression as string || '[]';
     const math = MathEngine.getInstance().getMathInstance();
     // Re-hydrate matrix from raw expression if available, else zero
-    const raw = node.data.rawExpression ? JSON.parse(node.data.rawExpression as string) : [[0]];
     try {
-        return PayloadUtils.createMatrix(math.matrix(raw));
+        return PayloadUtils.createMatrix(math.matrix(JSON.parse(raw)));
     } catch (e) {
         return PayloadUtils.createError('Invalid Matrix');
     }
@@ -365,16 +381,20 @@ NodeRegistry.register('MA-01', (node, inputs) => {
     const getHydrated = (key: string) => {
         const p = inputs[key];
         if (!p) return 0;
-        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(p), mathInstance);
-        if (p.meta?.unit && (typeof hydrated === 'number' || (hydrated && hydrated.isBigNumber))) {
-            try { return mathInstance.unit(hydrated, p.meta.unit); } catch (e) { return hydrated; }
+        const hydrated = PayloadUtils.unwrap(p);
+        const mathHydrated = PayloadUtils.hydrate(hydrated, mathInstance);
+        const h = mathHydrated as { isBigNumber?: boolean };
+        if (p.meta?.unit && (typeof mathHydrated === 'number' || (h && h.isBigNumber))) {
+            const m = mathInstance as unknown as Record<string, (v: unknown, u: string) => unknown>;
+            try { return m.unit(mathHydrated, p.meta.unit); } catch (e: unknown) { return mathHydrated; }
         }
-        return hydrated;
+        return mathHydrated;
     };
 
     const valA = getHydrated('in_a');
     const valB = getHydrated('in_b');
-    const op = node.data?.op || 'ADD';
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'ADD';
 
     // SPECIAL HANDLING: Color Objects (or other complex types)
     // If we receive a Color Object, extract its vector representation for math.
@@ -382,10 +402,13 @@ NodeRegistry.register('MA-01', (node, inputs) => {
     // For now, let's default to extracting 'vec3' if available.
 
     // Helper to unwrap complex objects for math
-    const extractValue = (v: any) => {
-        if (v && typeof v === 'object' && !Array.isArray(v) && !v.isMatrix && !v.isUnit && !v.isBigNumber) {
-            if ('vec3' in v) return v.vec3; // Color Object -> vec3
-            if ('value' in v) return v.value; // Generic Wrapper
+    const extractValue = (v: unknown) => {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+            const obj = v as Record<string, unknown>;
+            if (!obj.isMatrix && !obj.isUnit && !obj.isBigNumber) {
+                if ('vec3' in obj) return obj.vec3; // Color Object -> vec3
+                if ('value' in obj) return obj.value; // Generic Wrapper
+            }
         }
         return v;
     };
@@ -393,30 +416,49 @@ NodeRegistry.register('MA-01', (node, inputs) => {
     let procA = extractValue(valA);
     let procB = extractValue(valB);
 
+    // SCIENCE MODE: Enforce BigNumber if configured
+    // PRECISION POLICY: Always promote to BigNumber for high precision.
+    // This unifies the engine behavior (formerly "Scientific Mode").
+    const toBig = (v: unknown) => {
+        if (typeof v === 'number') return (mathInstance as unknown as { bignumber: (n: number) => unknown }).bignumber(v);
+        return v;
+    };
+    procA = toBig(procA);
+    procB = toBig(procB);
+
     // DEBUG LOGGING
     if (op === 'MUL') {
         console.log('MA-01 MUL Debug:', { procA, procB, typeA: typeof procA });
     }
 
     if (op === 'ADD' || op === 'SUB') {
-        const isUnitA = procA && (procA.isUnit || procA.constructor.name === 'Unit');
-        const isUnitB = procB && (procB.isUnit || procB.constructor.name === 'Unit');
+        const hA = procA as { isUnit?: boolean; formatUnits: () => string; isMatrix?: boolean };
+        const hB = procB as { isUnit?: boolean; formatUnits: () => string; isMatrix?: boolean };
+
+        const isUnitA = hA && (hA.isUnit || (hA as { constructor?: { name: string } }).constructor?.name === 'Unit');
+        const isUnitB = hB && (hB.isUnit || (hB as { constructor?: { name: string } }).constructor?.name === 'Unit');
 
         // STRICT MODE: Check for Matrix <-> Scalar mismatch
-        const isMatrixA = procA && (Array.isArray(procA) || procA.isMatrix || procA.constructor.name === 'Matrix');
-        const isMatrixB = procB && (Array.isArray(procB) || procB.isMatrix || procB.constructor.name === 'Matrix');
+        const isMatrixA = hA && (Array.isArray(hA) || hA.isMatrix || (hA as { constructor?: { name: string } }).constructor?.name === 'Matrix');
+        const isMatrixB = hB && (Array.isArray(hB) || hB.isMatrix || (hB as { constructor?: { name: string } }).constructor?.name === 'Matrix');
 
         if ((isMatrixA && !isMatrixB) || (!isMatrixA && isMatrixB)) {
             return PayloadUtils.createError("Strict Mode: Cannot add/sub Matrix and Scalar");
         }
 
-        if (isUnitA && !isUnitB && mathInstance.equal(procB, 0)) procB = mathInstance.unit(0, procA.formatUnits());
-        else if (!isUnitA && isUnitB && mathInstance.equal(procA, 0)) procA = mathInstance.unit(0, procB.formatUnits());
+        const m = mathInstance as {
+            equal: (a: unknown, b: unknown) => boolean;
+            unit: (v: unknown, u: unknown) => unknown;
+        };
+
+        if (isUnitA && !isUnitB && m.equal(procB, 0)) procB = m.unit(0, hA.formatUnits());
+        else if (!isUnitA && isUnitB && m.equal(procA, 0)) procA = m.unit(0, hB.formatUnits());
     }
 
     try {
         const fn = op === 'ADD' ? 'add' : op === 'SUB' ? 'subtract' : op === 'MUL' ? 'multiply' : 'divide';
-        const result = mathInstance[fn](procA, procB);
+        const m = (mathInstance as unknown) as Record<string, (a: unknown, b: unknown) => unknown>;
+        const result = m[fn](procA, procB);
         let finalValue = result;
         let finalUnit: string | undefined;
 
@@ -424,7 +466,7 @@ NodeRegistry.register('MA-01', (node, inputs) => {
         // If inputs had 'role: color', preserve it?
         const metaA = inputs['in_a']?.meta || {};
         const metaB = inputs['in_b']?.meta || {};
-        const combinedMeta: any = {};
+        const combinedMeta: Record<string, unknown> = {};
 
         if (finalUnit) combinedMeta.unit = finalUnit;
         else {
@@ -441,11 +483,11 @@ NodeRegistry.register('MA-01', (node, inputs) => {
             }
         }
 
-        if (result && typeof result === 'object' && ('isUnit' in result || result.constructor.name === 'Unit')) {
-            const unitResult = result as any;
-            if (unitResult.isUnit || unitResult.constructor.name === 'Unit') {
-                finalUnit = unitResult.formatUnits();
-                try { finalValue = unitResult.toNumber(finalUnit); } catch (e) { finalValue = unitResult.value; }
+        if (result && typeof result === 'object') {
+            const obj = result as { isUnit?: boolean; constructor: { name: string }; formatUnits: () => string; toNumber: (u: string) => number; value: unknown };
+            if (obj.isUnit || obj.constructor.name === 'Unit') {
+                finalUnit = obj.formatUnits();
+                try { finalValue = obj.toNumber(finalUnit); } catch (e) { finalValue = obj.value; }
                 return {
                     ...PayloadUtils.createScalar(PayloadUtils.dehydrate(finalValue), finalUnit),
                     meta: { ...combinedMeta, unit: finalUnit }
@@ -458,8 +500,9 @@ NodeRegistry.register('MA-01', (node, inputs) => {
             ...PayloadUtils.wrap(result),
             meta: combinedMeta
         };
-    } catch (e: any) {
-        let msg = e.message;
+    } catch (e: unknown) {
+        const err = e as Error;
+        let msg = err.message;
         if (msg.includes('Dimension mismatch')) {
             if (op === 'ADD' || op === 'SUB') msg = `Size Mismatch: Cannot ${op === 'ADD' ? 'Add' : 'Subtract'} different sized matrices`;
             else if (op === 'MUL') msg = `Size Mismatch: Cols A must match Rows B`;
@@ -471,7 +514,7 @@ NodeRegistry.register('MA-01', (node, inputs) => {
     }
 }, (node, inputs) => {
     return PayloadUtils.createSymbol('BinaryExpression', {
-        operator: node.data?.op || 'ADD',
+        operator: ((node.data || {}) as Record<string, unknown>).op as string || 'ADD',
         left: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
         right: inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 })
     });
@@ -479,22 +522,26 @@ NodeRegistry.register('MA-01', (node, inputs) => {
 
 // MA-03: Constants
 NodeRegistry.register('MA-03', (node) => {
-    const math = MathEngine.getInstance().getMathInstance();
-    const label = node.data.val as string || 'pi';
-    let value = (math as any)[label] ?? (label === 'Infinity' ? Infinity : 0);
+    const mathResult = MathEngine.getInstance().getMathInstance() as unknown;
+    const math = mathResult as Record<string, unknown>;
+    const data = (node.data || {}) as Record<string, unknown>;
+    const label = data.val as string || 'pi';
+    let value: unknown = math[label] ?? (label === 'Infinity' ? Infinity : 0);
 
-    const precision = node.data.precision as number | undefined;
+    const precision = data.precision as number | undefined;
     if (precision !== undefined && precision !== -1) {
-        value = math.round(value, precision);
+        const m = math as unknown as Record<string, (v: unknown, p: number) => unknown>;
+        value = m.round(value, precision) as unknown;
     }
 
+    const valToDehydrate = value as Record<string, unknown>;
     return {
         type: DataType.Scalar,
-        value: PayloadUtils.dehydrate(value),
+        value: PayloadUtils.dehydrate(valToDehydrate),
         symbol: null,
         meta: {}
     };
-}, (node) => PayloadUtils.createSymbol('Identifier', { name: node.data.val || 'pi' }));
+}, (node) => PayloadUtils.createSymbol('Identifier', { name: ((node.data || {}) as Record<string, unknown>).val as string || 'pi' }));
 
 // IO-17: Formula Result
 NodeRegistry.register('IO-17', (node, inputs) => {
@@ -505,27 +552,30 @@ NodeRegistry.register('IO-17', (node, inputs) => {
 NodeRegistry.register('MA-14', (node, inputs) => {
     const math = MathEngine.getInstance().getMathInstance();
     const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
-    const prec = node.data.precision as number ?? 0;
+    const data = (node.data || {}) as Record<string, unknown>;
+    const prec = data.precision as number ?? 0;
 
     const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
 
     try {
-        const result = math.round(val, prec);
+        const m = math as unknown as Record<string, (v: unknown, p: number) => unknown>;
+        const result = m.round(val, prec);
         return {
             type: DataType.Scalar,
             value: PayloadUtils.dehydrate(result),
             symbol: null,
             meta: { unit: valPayload.meta?.unit }
         };
-    } catch (e) {
-        return PayloadUtils.createError('Round Failed');
+    } catch (e: unknown) {
+        return PayloadUtils.createError('Op Failed');
     }
 }, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
     return PayloadUtils.createSymbol('FunctionCall', {
         name: 'round',
         args: [
             inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
-            PayloadUtils.createSymbol('Literal', { value: node.data.precision ?? 0 })
+            PayloadUtils.createSymbol('Literal', { value: (data.precision as number) ?? 0 })
         ]
     });
 });
@@ -534,14 +584,15 @@ NodeRegistry.register('MA-14', (node, inputs) => {
 NodeRegistry.register('MA-12', (node, inputs) => {
     const math = MathEngine.getInstance().getMathInstance();
     const raw = PayloadUtils.unwrap(inputs['in']);
-
-    const isMixed = node.data.mixed === true;
+    const data = (node.data || {}) as Record<string, unknown>;
+    const isMixed = data.mixed === true;
 
     try {
         if (raw === null || raw === undefined) return PayloadUtils.createScalar(0);
-        const f = math.fraction(raw);
-        let n = Number((f as any).n);
-        let d = Number((f as any).d);
+        const m = math as unknown as Record<string, (v: number) => { n: unknown, d: unknown }>;
+        const f = m.fraction(raw as number);
+        let n = Number(f.n);
+        const d = Number(f.d);
         let integerPart = 0;
         let str = math.format(f);
 
@@ -581,7 +632,8 @@ NodeRegistry.register('MA-12', (node, inputs) => {
 NodeRegistry.register('MA-02', (node, inputs) => {
     const engine = MathEngine.getInstance();
     const math = engine.getMathInstance();
-    const op = node.data?.op || 'GCD';
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'GCD';
 
     const getVal = (key: string) => {
         const p = inputs[key];
@@ -589,8 +641,9 @@ NodeRegistry.register('MA-02', (node, inputs) => {
         const val = PayloadUtils.unwrap(p);
         const hydrated = PayloadUtils.hydrate(val, math);
         // Handle Units if necessary (for now, strip units or use scalar)
-        if (p.meta?.unit && (typeof hydrated === 'number' || (hydrated && (hydrated as any).isBigNumber))) {
-            try { return (hydrated as any).toNumber ? (hydrated as any).toNumber() : Number(hydrated); } catch (e) { return 0; }
+        const h = hydrated as { isBigNumber?: boolean; toNumber?: () => number };
+        if (p.meta?.unit && (typeof hydrated === 'number' || (h && h.isBigNumber))) {
+            try { return h.toNumber ? h.toNumber() : Number(hydrated); } catch (e) { return 0; }
         }
         return hydrated;
     };
@@ -603,12 +656,13 @@ NodeRegistry.register('MA-02', (node, inputs) => {
     console.log('[NumberTheory] Execution:', { op, valA, valB, inputs });
 
     try {
-        let result: any;
+        let result: unknown;
+        const m = (math as unknown) as Record<string, (...args: unknown[]) => unknown>;
         switch (op) {
-            case 'GCD': result = math.gcd(valA, valB); break;
-            case 'LCM': result = math.lcm(valA, valB); break;
-            case 'MOD': result = math.mod(valA, valB); break;
-            case 'IS_PRIME': result = math.isPrime(valA); break;
+            case 'GCD': result = m.gcd(valA, valB); break;
+            case 'LCM': result = m.lcm(valA, valB); break;
+            case 'MOD': result = m.mod(valA, valB); break;
+            case 'IS_PRIME': result = m.isPrime(valA); break;
             default: result = 0;
         }
 
@@ -618,8 +672,11 @@ NodeRegistry.register('MA-02', (node, inputs) => {
 
         // Convert BigNumber to number for display, similar into MA-01
         let finalValue = result;
-        if (result && typeof result === 'object' && result.isBigNumber) {
-            finalValue = result.toNumber();
+        if (result && typeof result === 'object') {
+            const obj = result as { isBigNumber?: boolean; toNumber: () => number };
+            if (obj.isBigNumber) {
+                finalValue = obj.toNumber();
+            }
         }
 
         const payload = {
@@ -629,11 +686,13 @@ NodeRegistry.register('MA-02', (node, inputs) => {
             meta: {}
         };
         return payload;
-    } catch (e: any) {
-        return PayloadUtils.createError(`${op} Failed: ${e.message}`);
+    } catch (e: unknown) {
+        const err = e as Error;
+        return PayloadUtils.createError(`${op} Failed: ${err.message}`);
     }
 }, (node, inputs) => {
-    const op = node.data?.op || 'GCD';
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'GCD';
     const funcMap: Record<string, string> = {
         GCD: 'gcd', LCM: 'lcm', MOD: 'mod', IS_PRIME: 'isPrime'
     };
@@ -668,14 +727,80 @@ NodeRegistry.register('UI-03', (node, inputs) => {
     return inputs['in'] || null;
 });
 
+// UI-99: Debug Node
+NodeRegistry.register('UI-99', (node, inputs) => {
+    // Pass-through input for inspection
+    return inputs['in'] || PayloadUtils.createScalar(0);
+}, (node, inputs) => {
+    return inputs['in'] || null;
+});
+
 
 // --- Logic Nodes ---
 
-// MA-05: Logic Gates & Comparisons
+
+// MA-15: Base Converter
+NodeRegistry.register('MA-15', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const inputPayload = inputs['in'] as import('../types/payload').NodePayload | undefined;
+    const targetBase = (data.base as string) || 'HEX';
+
+    // Default to 0
+    let finalValue: number = 0;
+
+    if (inputPayload) {
+        // Unwrap and Normalize to Number
+        const raw = PayloadUtils.unwrap(inputPayload);
+        // If it's a simple number, use it.
+        if (typeof raw === 'number') {
+            finalValue = raw;
+        } else {
+            // Use MathEngine to handle Units/BigNumbers
+            const engine = MathEngine.getInstance();
+            const math = engine.getMathInstance();
+            const hydrated = PayloadUtils.hydrate(raw, math);
+
+            if (typeof hydrated === 'number') {
+                finalValue = hydrated;
+            } else if (hydrated && typeof hydrated === 'object') {
+                // Check for Unit, BigNumber, etc.
+                const h = hydrated as { toNumber?: (u?: string) => number; value?: number; isUnit?: boolean };
+                if (h.toNumber) {
+                    try {
+                        // verify if it is Unit
+                        if (h.isUnit) {
+                            finalValue = h.toNumber(h.isUnit ? undefined : ''); // toNumber() with no args for base scalar
+                        } else {
+                            finalValue = h.toNumber();
+                        }
+                    } catch (e) {
+                        finalValue = 0; // Fallback
+                    }
+                } else if (h.value !== undefined && typeof h.value === 'number') {
+                    finalValue = h.value;
+                }
+            }
+        }
+    }
+
+    const resultPayload = {
+        type: DataType.Scalar, // Always return Scalar for base conversion
+        value: finalValue,
+        symbol: inputPayload ? inputPayload.symbol : null,
+        meta: {
+            unit: targetBase
+        }
+    };
+
+    return resultPayload;
+});
+
+// MA-05: Logic Gate (AND, OR, NOT, XOR, NAND, NOR, XNOR)
 NodeRegistry.register('MA-05', (node, inputs) => {
     const engine = MathEngine.getInstance();
     const math = engine.getMathInstance();
-    const op = node.data?.op || 'AND';
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'AND';
 
     const getVal = (key: string) => {
         const p = inputs[key];
@@ -685,8 +810,8 @@ NodeRegistry.register('MA-05', (node, inputs) => {
         const hydrated = PayloadUtils.hydrate(raw, math);
 
         // MA-01 Style: Re-attach unit if available and not already a Unit object
-        if (p.meta?.unit && (typeof hydrated === 'number' || (hydrated && (hydrated as any).isBigNumber))) {
-            try { return math.unit(hydrated, p.meta.unit); } catch (e) { return hydrated; }
+        if (p.meta?.unit && (typeof hydrated === 'number' || (hydrated && typeof hydrated === 'object' && 'isBigNumber' in hydrated))) {
+            try { return math.unit(hydrated as number, p.meta.unit); } catch (e) { return hydrated; }
         }
         return hydrated;
     };
@@ -695,19 +820,20 @@ NodeRegistry.register('MA-05', (node, inputs) => {
     const valB = getVal('in_b');
 
     // Bool conversion helper (loosely truthy)
-    const toBool = (v: any) => PayloadUtils.toBoolean(v, math);
+    const toBool = (v: unknown) => PayloadUtils.toBoolean(v, math);
 
     try {
+        const m = math as unknown as Record<string, (a: unknown, b: unknown) => unknown>;
         let result: boolean;
         switch (op) {
             // Comparisons
             // Note: math.larger and friends work with Units, BigNumbers, etc.
-            case 'GT': result = math.larger(valA, valB) as boolean; break;
-            case 'LT': result = math.smaller(valA, valB) as boolean; break;
-            case 'GTE': result = math.largerEq(valA, valB) as boolean; break;
-            case 'LTE': result = math.smallerEq(valA, valB) as boolean; break;
-            case 'NEQ': result = !math.equal(valA, valB) as boolean; break;
-            case 'EQ': result = math.equal(valA, valB) as boolean; break;
+            case 'GT': result = m.larger(valA, valB) as boolean; break;
+            case 'LT': result = m.smaller(valA, valB) as boolean; break;
+            case 'GTE': result = m.largerEq(valA, valB) as boolean; break;
+            case 'LTE': result = m.smallerEq(valA, valB) as boolean; break;
+            case 'NEQ': result = !m.equal(valA, valB) as boolean; break;
+            case 'EQ': result = m.equal(valA, valB) as boolean; break;
 
             // Boolean Gates
             case 'NOT': result = !toBool(valA); break;
@@ -720,10 +846,11 @@ NodeRegistry.register('MA-05', (node, inputs) => {
         return PayloadUtils.createBoolean(result);
     } catch (e) {
         // If comparison fails (e.g. incompatible units), return Error
-        return PayloadUtils.createError(`${op} Failed: ${(e as any).message}`);
+        return PayloadUtils.createError(`${op} Failed: ${e instanceof Error ? e.message : String(e)}`);
     }
 }, (node, inputs) => {
-    const op = node.data?.op || 'AND';
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'AND';
     const ops: Record<string, string> = {
         EQ: '==', GT: '>', LT: '<', GTE: '>=', LTE: '<=', NEQ: '!=',
         AND: '&&', OR: '||'

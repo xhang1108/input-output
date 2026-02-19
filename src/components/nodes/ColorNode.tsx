@@ -23,13 +23,16 @@ export const ColorNode = memo((props: NodeProps) => {
     // Extract normalized values from vec3 if available, otherwise fallback to hex string
     let rNorm = 0, gNorm = 0, bNorm = 0;
 
+    const colorObj = (typeof unwrapped === 'object' && unwrapped !== null) ? unwrapped as Record<string, unknown> : null;
+
     // If unwrapped is an object with hex/rgb/vec3, extract hex; otherwise use as string
-    const displayColor = (typeof unwrapped === 'object' && unwrapped?.hex)
-        ? unwrapped.hex
+    const displayColor = (colorObj && typeof colorObj.hex === 'string')
+        ? colorObj.hex
         : (typeof unwrapped === 'string' ? unwrapped : '#3b82f6');
 
-    if (typeof unwrapped === 'object' && unwrapped?.vec3) {
-        [rNorm, gNorm, bNorm] = unwrapped.vec3;
+    if (colorObj && Array.isArray(colorObj.vec3)) {
+        const v3 = colorObj.vec3 as number[];
+        [rNorm, gNorm, bNorm] = [v3[0] || 0, v3[1] || 0, v3[2] || 0];
     } else {
         // Fallback for legacy/hex-only state
         const hex = displayColor.startsWith('#') ? displayColor : '#000000';
@@ -192,12 +195,12 @@ const FloatInput = ({ value, onChange, min = 0, max = 1, step = 0.01, decimals =
     const [localStr, setLocalStr] = useState(fmt(value));
     const [isFocused, setIsFocused] = useState(false);
 
-    // Sync from parent only when NOT focused
-    useEffect(() => {
-        if (!isFocused) {
-            setLocalStr(fmt(value));
-        }
-    }, [value, isFocused, decimals]);
+    // Sync from parent only when NOT focused (using state transition during render)
+    const [prevValue, setPrevValue] = useState(value);
+    if (value !== prevValue && !isFocused) {
+        setPrevValue(value);
+        setLocalStr(fmt(value));
+    }
 
     return (
         <input

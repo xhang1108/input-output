@@ -26,6 +26,8 @@ import { ButtonNode } from '../components/nodes/ButtonNode';
 import { MagneticEdge } from '../components/edges/MagneticEdge';
 import { TextAnnotationNode } from '../components/nodes/TextAnnotationNode';
 import { RerouteNode } from '../components/nodes/RerouteNode';
+import { BaseConverterNode } from '../components/nodes/BaseConverterNode';
+import { DebugNode } from '../components/nodes/DebugNode';
 
 export const nodeTypes = {
     baseNode: BaseNode,
@@ -40,8 +42,9 @@ export const nodeTypes = {
 
 
     'MA-12': FractionNode,   // Fraction
-    'MA-13': BaseNode,       // Logic Split
+    'MA-13': BaseNode,       // Logic Split (Placeholder/Generic)
     'MA-14': RoundingNode,   // Rounding (Moved from MA-12)
+    'MA-15': BaseConverterNode, // Base Converter
     'IO-01': InputNode,
     'IO-02': SliderNode,
     'IO-04': InputNode, // String Input uses same UI as Number Input (for now)
@@ -56,6 +59,7 @@ export const nodeTypes = {
 
     'UI-01': TextAnnotationNode, // Text Annotation
     'UI-03': RerouteNode,        // Reroute
+    'UI-99': DebugNode,
 };
 
 export const edgeTypes = {

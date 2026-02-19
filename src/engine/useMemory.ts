@@ -36,10 +36,10 @@ export function useMemory(
                     // Sanitize: strip extent/expandParent from persisted nodes.
                     // These cause React Flow to crash (clampPositionToParent)
                     // when the parent Frame hasn't been measured yet.
-                    const sanitized = flow.nodes.map((n: any) => {
-                        const { extent, expandParent, ...clean } = n;
+                    const sanitized = (flow.nodes as Node[]).map((n) => {
+                        const { extent: _, expandParent: __, ...clean } = n as Record<string, unknown>;
                         return clean;
-                    });
+                    }) as Node[];
                     setNodes(sanitized);
                     setEdges(flow.edges);
                     onLog('Memory Recalled');

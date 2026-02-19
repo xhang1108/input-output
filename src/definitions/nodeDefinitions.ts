@@ -25,7 +25,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         handles: [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { type: 'number', value: 0 }
+        defaultData: { type: 'scalar', value: 0 }
     },
     {
         id: 'IO-02',
@@ -156,6 +156,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'reroute' }
     },
 
+    {
+        id: 'UI-99',
+        label: 'Debug',
+        category: 'Utility',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' }
+        ],
+        defaultData: { type: 'debug' }
+    },
+
     // ─── Math Family ────────────────────────────────────────────
     // All share nodeType 'MA-01' but differ by `op` in defaultData
     {
@@ -234,6 +244,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { mixed: false }
     },
+
+    // ─── Number Theory ──────────────────────────────────────────
     {
         id: 'MA-02',
         label: 'Number Theory',
@@ -244,6 +256,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'GCD' }
+    },
+    {
+        id: 'MA-15',
+        label: 'Base Converter',
+        category: 'Math',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
+        ],
+        defaultData: { base: 'HEX' }
     },
 
     // ─── Logic Family ───────────────────────────────────────────

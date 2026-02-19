@@ -29,7 +29,7 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                 throw new Error("Please enter JSON or CGL data.");
             }
 
-            let graphData: any;
+            let graphData: import('../../engine/types').InjectableGraph;
 
             // Auto-detect format
             const trimmed = jsonInput.trim();
@@ -59,8 +59,8 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
             console.log('[JsonImport] Injecting Graph:', {
                 nodes: graphData.nodes?.length,
                 edges: graphData.edges?.length,
-                nodeIds: graphData.nodes?.map((n: any) => n.id),
-                edgeIds: graphData.edges?.map((e: any) => e.targetHandle) // Check target handles
+                nodeIds: graphData.nodes?.map((n) => n.id),
+                edgeIds: graphData.edges?.map((e) => e.targetHandle) // Check target handles
             });
 
             Brain.getInstance().injectNodes(graphData, shouldClear);
@@ -74,9 +74,9 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                 }
             }, 1000);
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Import failed:", err);
-            setError(err.message || "Failed to parse or inject data.");
+            setError((err as Error).message || "Failed to parse or inject data.");
         }
     };
 

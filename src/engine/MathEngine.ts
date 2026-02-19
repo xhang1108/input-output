@@ -15,9 +15,9 @@ import {
     piDependencies,
     eDependencies,
     phiDependencies,
-    unitDependencies, // Added for Phase 2.4
-    randomDependencies, // Added for Random Node
-    randomIntDependencies, // Explicitly added for randomInt
+    unitDependencies,
+    randomDependencies,
+    randomIntDependencies,
     matrixDependencies,
     onesDependencies,
     largerDependencies,
@@ -38,11 +38,9 @@ import { IMathEngine } from './interfaces/IMathEngine';
 export class MathEngine implements IMathEngine {
     private static instance: MathEngine;
     private math: MathJsStatic;
-    private mode: ComputationMode = 'scientific'; // Default
+    // Mode removed: Always Scientific (BigNumber)
 
     private constructor() {
-        // Rule #3: Tree Shaking
-        // We import specific dependencies to construct the math instance.
         this.math = create({
             addDependencies,
             subtractDependencies,
@@ -59,9 +57,9 @@ export class MathEngine implements IMathEngine {
             piDependencies,
             eDependencies,
             phiDependencies,
-            unitDependencies, // Added for Phase 2.4
-            randomDependencies, // Added for Random Node
-            randomIntDependencies, // Explicitly added for randomInt
+            unitDependencies,
+            randomDependencies,
+            randomIntDependencies,
             matrixDependencies,
             onesDependencies,
             largerDependencies,
@@ -75,7 +73,7 @@ export class MathEngine implements IMathEngine {
             modDependencies,
             isPrimeDependencies
         }, {
-            number: 'BigNumber', // Default to high precision
+            number: 'BigNumber',
             precision: 64
         }) as MathJsStatic;
     }
@@ -91,56 +89,43 @@ export class MathEngine implements IMathEngine {
         return this.math;
     }
 
-    public setMode(mode: ComputationMode) {
-        this.mode = mode;
-        console.log(`[MathEngine] Mode set to ${mode}`);
+    public async getMathInstanceAsync(): Promise<MathJsStatic> {
+        return this.math;
     }
 
-    public getComputationMode(): ComputationMode {
-        return this.mode;
-    }
+    // Mode methods removed
 
-    public evaluate(op: string, ...args: any[]): any {
-        switch (op) {
-            case 'ADD': return this.math.add(args[0], args[1]);
-            case 'SUB': return this.math.subtract(args[0], args[1]);
-            case 'MUL': return this.math.multiply(args[0], args[1]);
-            case 'DIV': return this.math.divide(args[0], args[1]);
-            case 'SIN': return this.math.sin(args[0]);
-            case 'COS': return this.math.cos(args[0]);
-            case 'TAN': return this.math.tan(args[0]);
-            case 'LOG': return this.math.log(args[0]);
-            case 'SQRT': return this.math.sqrt(args[0]);
-            case 'POW': return this.math.pow(args[0], args[1]);
-            default:
-                throw new Error(`Unknown operation: ${op}`);
+    public evaluate(op: string, ...args: unknown[]): unknown {
+        const m = this.math as unknown as Record<string, (...args: unknown[]) => unknown>;
+        const fnMap: Record<string, string> = {
+            'ADD': 'add', 'SUB': 'subtract', 'MUL': 'multiply', 'DIV': 'divide',
+            'SIN': 'sin', 'COS': 'cos', 'TAN': 'tan', 'LOG': 'log', 'SQRT': 'sqrt', 'POW': 'pow'
+        };
+        const fn = fnMap[op];
+        if (fn && typeof m[fn] === 'function') {
+            return m[fn](...args);
         }
+        throw new Error(`Unknown operation: ${op}`);
     }
 
-    public processInput(val: any, unit?: string): any {
+    public processInput(val: unknown, unit?: string): unknown {
+        const v = val as number | string;
         if (unit) {
-            // If unit is present, create a Unit object
-            // e.g. math.unit(5, 'cm')
-            // Note: BigNumber + Unit support in mathjs might be tricky.
-            // Let's try flexible parsing.
             try {
-                // math.unit(value, unit) might work if value is number/BigNumber
-                return this.math.unit(val, unit);
+                const mathWithUnit = this.math as MathJsStatic & { unit: (v: number | string, u: string) => unknown };
+                return mathWithUnit.unit(v, unit);
             } catch (e) {
                 console.warn(`[MathEngine] Failed to create unit ${val} ${unit}`, e);
-                return this.processInput(val); // Fallback to scalar
+                return this.processInput(val);
             }
         }
 
-        if (this.mode === 'scientific') {
-            return this.math.bignumber(val);
-        } else {
-            return this.math.number(val);
-        }
+        // Always promote to BigNumber for precision
+        const mathWithBN = this.math as MathJsStatic & { bignumber: (v: number | string) => unknown };
+        return mathWithBN.bignumber(v);
     }
 
     public convertUnit(val: number, fromUnit: string, toUnit: string): number {
-        // e.g. math.unit(100, 'cm').to('m').toNumber('m') -> 1
         return this.math.unit(val, fromUnit).to(toUnit).toNumber(toUnit);
     }
 }

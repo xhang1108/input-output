@@ -24,7 +24,7 @@ export const MatrixResultNode = memo((props: NodeProps) => {
     // console.log('[MatrixResultNode] Payload:', payload);
 
 
-    let matrixData: any[][] = [];
+    let matrixData: unknown[][] = [];
     let isValid = false;
     let rows = 0;
     let cols = 0;
@@ -40,14 +40,15 @@ export const MatrixResultNode = memo((props: NodeProps) => {
             if (Array.isArray(rawValue)) {
                 matrixData = rawValue;
                 isValid = true;
-            } else if (typeof rawValue === 'object') {
-                if (rawValue?.isMatrix) {
+            } else if (typeof rawValue === 'object' && rawValue !== null) {
+                const r = rawValue as { isMatrix?: boolean; toArray?: () => unknown[][]; mathjs?: string; data?: unknown[][] };
+                if (r.isMatrix && r.toArray) {
                     // Live math.js Matrix
-                    matrixData = rawValue.toArray();
+                    matrixData = r.toArray();
                     isValid = true;
-                } else if (rawValue?.mathjs === 'Matrix') {
+                } else if (r.mathjs === 'Matrix') {
                     // Dehydrated JSON
-                    matrixData = rawValue.data;
+                    matrixData = r.data || [];
                     isValid = true;
                 }
             }
@@ -84,7 +85,7 @@ export const MatrixResultNode = memo((props: NodeProps) => {
                                              text-zinc-200 overflow-hidden"
                                     title={String(val)}
                                 >
-                                    {typeof val === 'number' ? Math.round(val * 1000) / 1000 : val}
+                                    {typeof val === 'number' ? Math.round(val * 1000) / 1000 : String(val)}
                                 </div>
                             ))}
                         </div>

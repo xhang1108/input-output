@@ -18,16 +18,32 @@ export function InspectorPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
     const [posX, setPosX] = useState('0');
     const [posY, setPosY] = useState('0');
 
-    // Sync state when selection changes
-    useEffect(() => {
-        if (selectedNode) {
-            setLabel((selectedNode.data.label as string) || '');
-            setPosX(selectedNode.position.x.toFixed(1));
-            setPosY(selectedNode.position.y.toFixed(1));
-        }
-    }, [selectedNode?.id, selectedNode?.data.label, selectedNode?.position.x, selectedNode?.position.y]);
+    // Sync state when selection changes (during render)
+    const [prevSyncData, setPrevSyncData] = useState({
+        id: selectedNode?.id,
+        label: selectedNode?.data.label,
+        x: selectedNode?.position.x,
+        y: selectedNode?.position.y
+    });
 
-    const handleUpdate = (updates: any) => {
+    if (selectedNode && (
+        selectedNode.id !== prevSyncData.id ||
+        selectedNode.data.label !== prevSyncData.label ||
+        selectedNode.position.x !== prevSyncData.x ||
+        selectedNode.position.y !== prevSyncData.y
+    )) {
+        setPrevSyncData({
+            id: selectedNode.id,
+            label: selectedNode.data.label,
+            x: selectedNode.position.x,
+            y: selectedNode.position.y
+        });
+        setLabel((selectedNode.data.label as string) || '');
+        setPosX(selectedNode.position.x.toFixed(1));
+        setPosY(selectedNode.position.y.toFixed(1));
+    }
+
+    const handleUpdate = (updates: Partial<import('@xyflow/react').Node<Record<string, unknown>>>) => {
         if (!selectedNode) return;
 
         setNodes(nds => nds.map(n => {

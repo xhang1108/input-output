@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { Edge, Connection, addEdge } from '@xyflow/react';
+import { Edge, Connection, addEdge, OnConnectStartParams, HandleType } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import { RelinkState } from '../components/edges/RelinkLine';
 import { Brain } from '../engine/Brain';
@@ -61,7 +61,7 @@ export function useRelink({
 
         const dropSide = { n: targetN, h: targetH };
         let newEdgesToCreate: Edge[] = [];
-        let edgesToRemove: string[] = [...removedEdgeIds.current]; // Start with the dragged wire(s)
+        const edgesToRemove: string[] = [...removedEdgeIds.current]; // Start with the dragged wire(s)
 
         if (state.type === 'target') {
             // Anchor is Target (Input). Dragging Source.
@@ -182,7 +182,7 @@ export function useRelink({
         relinkStateRef.current = emptyState;
     }, []);
 
-    const onRelinkStart = useCallback((event: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
+    const onRelinkStart = useCallback((event: MouseEvent | TouchEvent, params: OnConnectStartParams) => {
         // Always track start params for potential Smart Link
         connectionStartRef.current = params;
 
@@ -192,8 +192,8 @@ export function useRelink({
 
         if (!nodeId || !handleId) return;
 
-        const nativeEvent = event as any;
-        const isCtrl = nativeEvent.ctrlKey || nativeEvent.metaKey;
+        const isCtrl = (event as MouseEvent).ctrlKey || (event as MouseEvent).metaKey;
+        // const isShift = (event as unknown as React.MouseEvent).shiftKey; // This variable was declared but never used.
 
         if (handleType === 'source' && isCtrl) {
             const outboundEdges = edges.filter(e => e.source === nodeId && e.sourceHandle === handleId);
@@ -223,16 +223,16 @@ export function useRelink({
         }
     }, [edges, setEdges, logAction]);
 
-    const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
+    const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: { toNode: { id: string } | null; toHandle: { id?: string | null } | null; isValid: boolean | null } | null) => {
         const state = relinkStateRef.current;
         const wasRelinking = state.active; // Capture state before potential reset
 
         if (wasRelinking) {
-            const { toNode, toHandle, isValid } = connectionState || {};
+            const { toNode, toHandle } = connectionState || {};
             // console.log('[Relink] End:', { toNode: toNode?.id, toHandle: toHandle?.id, isValid });
 
             if (toNode && toHandle) {
-                performRelink(toNode.id, toHandle.id);
+                performRelink(toNode.id, toHandle.id || null);
             } else {
                 // Cancelled: Delete the removed edges via Brain
                 const brain = Brain.getInstance();
@@ -245,14 +245,14 @@ export function useRelink({
             resetRelink();
         } else {
             // NOT Relinking. Could be a Smart Link Search (Air Drop).
-            if (!connectionState.toNode && connectionStartRef.current && connectionStartRef.current.nodeId && onSmartLinkSearch) {
+            if (!connectionState?.toNode && connectionStartRef.current && connectionStartRef.current.nodeId && onSmartLinkSearch) {
                 let screenX, screenY;
                 if ('clientX' in event) {
-                    const mouseEvent = event as MouseEvent;
+                    const mouseEvent = event as unknown as React.MouseEvent;
                     screenX = mouseEvent.clientX;
                     screenY = mouseEvent.clientY;
                 } else {
-                    const touchEvent = event as TouchEvent;
+                    const touchEvent = event as unknown as React.TouchEvent;
                     const touch = touchEvent.changedTouches[0];
                     screenX = touch.clientX;
                     screenY = touch.clientY;

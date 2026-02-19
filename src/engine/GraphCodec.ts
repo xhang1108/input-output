@@ -9,7 +9,7 @@ interface CGLNode {
     opCode?: string;
     x?: number;
     y?: number;
-    value?: any;
+    value?: unknown;
 }
 
 interface CGLConnection {
@@ -28,7 +28,7 @@ export class GraphCodec {
         const connections: CGLConnection[] = [];
 
         // Regex Patterns
-        const nodeRegex = /^([a-zA-Z0-9_-]+):([a-zA-Z0-9]+)(?::([a-zA-Z0-9_-]+))?(?:\s*@(-?\d+),(-?\d+))?(?:\s*=\s*(.*))?$/;
+        const nodeRegex = /^([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)(?::([a-zA-Z0-9_-]+))?(?:\s*@(-?\d+),(-?\d+))?(?:\s*=\s*(.*))?$/;
 
         for (let i = 0; i < lines.length; i++) {
             // Fix: Strip comments immediately to ensure regex matches clean lines
@@ -98,7 +98,7 @@ export class GraphCodec {
         }
     }
 
-    private static parseValue(valStr: string): any {
+    private static parseValue(valStr: string): unknown {
         // Try number
         const num = parseFloat(valStr);
         if (!isNaN(num) && valStr.trim() === num.toString()) return num;
@@ -130,7 +130,7 @@ export class GraphCodec {
             }
 
             // Merge default data using OpCode if needed
-            let data = { ...typeInfo.defaultData };
+            const data = { ...((typeInfo.defaultData || {}) as Record<string, unknown>) } as Record<string, unknown>;
 
             // If value is provided, override appropriate field
             if (cNode.value !== undefined) {
@@ -150,6 +150,11 @@ export class GraphCodec {
             if (cNode.opCode && typeInfo.category === 'Math') {
                 // Standardize OpCode to UpperCase for internal logic
                 data.op = cNode.opCode.toUpperCase();
+
+                // Phase 2.15: Fix MA-15 Base Mapping
+                if (typeInfo.id === 'MA-15') {
+                    data.base = data.op;
+                }
             }
 
             // Phase 2.2: Ensure Logic Gate has correct OpCode
@@ -193,9 +198,9 @@ export class GraphCodec {
                 sourceHandle: sourceHandle,
                 target: conn.targetId,
                 targetHandle: resolvedTarget
-            } as any);
+            });
 
-            console.log(`[GraphCodec] Edge ${idx}: ${conn.sourceId}:${sourceHandle} -> ${conn.targetId}:${resolvedTarget}`);
+            console.log(`[GraphCodec] Edge ${String(idx)}: ${conn.sourceId}:${sourceHandle} -> ${conn.targetId}:${resolvedTarget}`);
         });
 
         return graph;
@@ -243,7 +248,8 @@ export class GraphCodec {
             }
             // Fallback for Const, Round if no explicit op match?
             if (opLower === 'const') return NODE_DEFINITIONS.find(d => d.id === 'MA-03');
-            if (opLower === 'round') return NODE_DEFINITIONS.find(d => d.id === 'MA-12');
+            if (opLower === 'round') return NODE_DEFINITIONS.find(d => d.id === 'MA-14'); // Fixed from MA-12
+            if (opLower === 'base' || opLower === 'hex' || opLower === 'bin') return NODE_DEFINITIONS.find(d => d.id === 'MA-15');
         }
 
         // 2. IO Family
@@ -301,29 +307,43 @@ export class GraphCodec {
                     cat = internalCat;
                 }
 
+                // If node has specific parameters, encode them
+                if (def.params) {
+                    const nodeData = (node.data || {}) as Record<string, unknown>;
+                    const paramValues: string[] = [];
+                    for (const param of def.params) {
+                        if (nodeData[param.id] !== undefined) {
+                            paramValues.push(`${param.id}=${String(nodeData[param.id])}`);
+                        }
+                    }
+                    if (paramValues.length > 0) {
+                        val = ` {${paramValues.join(', ')}}`;
+                    }
+                }
+
                 if (cat === 'math') {
-                    const nodeData = node.data || {};
+                    const nodeData = (node.data || {}) as Record<string, unknown>;
                     if (nodeData.op) {
-                        op = nodeData.op;
+                        op = String(nodeData.op);
                     } else if (def.defaultData?.op) {
-                        op = def.defaultData.op;
+                        op = String(def.defaultData.op);
                     } else if (node.type === 'MA-03') {
                         op = 'CONST';
-                        if (nodeData.val !== undefined) val = ` = ${nodeData.val}`;
+                        if (nodeData.val !== undefined) val = ` = ${String(nodeData.val)}`;
                     } else if (node.type === 'MA-12') {
                         op = 'ROUND';
                     }
                 } else if (cat === 'io') {
-                    const nodeData = node.data || {};
-                    if (node.type === 'IO-01') { op = 'num'; if (nodeData.value !== undefined) val = ` = ${nodeData.value}`; }
-                    else if (node.type === 'IO-02') { op = 'slider'; if (nodeData.value !== undefined) val = ` = ${nodeData.value}`; }
+                    const nodeData = (node.data || {}) as Record<string, unknown>;
+                    if (node.type === 'IO-01') { op = 'num'; if (nodeData.value !== undefined) val = ` = ${String(nodeData.value)}`; }
+                    else if (node.type === 'IO-02') { op = 'slider'; if (nodeData.value !== undefined) val = ` = ${String(nodeData.value)}`; }
                     else if (node.type === 'IO-05') { op = 'unit'; }
                 } else if (cat === 'logic') {
-                    const nodeData = node.data || {};
-                    if (node.type === 'MA-05') { op = nodeData.op || 'AND'; }
+                    const nodeData = (node.data || {}) as Record<string, unknown>;
+                    if (node.type === 'MA-05') { op = String(nodeData.op || 'AND'); }
                     else if (node.type === 'MA-13') { op = 'split'; }
                     else if (node.type === 'MA-04') { op = 'switch'; }
-                    else if (node.type === 'MA-08') { op = 'toggle'; if (nodeData.value !== undefined) val = ` = ${nodeData.value}`; }
+                    else if (node.type === 'MA-08') { op = 'toggle'; if (nodeData.value !== undefined) val = ` = ${String(nodeData.value)}`; }
                     else if (node.type === 'MA-09') { op = 'button'; }
                 }
             }

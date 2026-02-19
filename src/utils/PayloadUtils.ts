@@ -9,7 +9,7 @@ export const PayloadUtils = {
      * Converts a raw value into a proper NodePayload.
      * Auto-detects type (Scalar, String, Boolean, Object).
      */
-    wrap(value: any): NodePayload {
+    wrap(value: unknown): NodePayload {
         if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
             // Already a payload, return as is (idempotent)
             return value as NodePayload;
@@ -23,7 +23,7 @@ export const PayloadUtils = {
 
         return {
             type,
-            value,
+            value: value as PayloadValue,
             symbol: null,
             meta: {}
         };
@@ -33,11 +33,11 @@ export const PayloadUtils = {
      * Extracts the raw value from a payload.
      * Essential for UI components during the migration phase.
      */
-    unwrap(payload: NodePayload | number | any): any {
-        if (typeof payload === 'object' && payload !== null && 'value' in payload) {
-            return payload.value;
+    unwrap(payload: NodePayload | number | unknown): unknown {
+        if (typeof payload === 'object' && payload !== null && 'value' in (payload as Record<string, unknown>)) {
+            return (payload as { value: unknown }).value;
         }
-        return payload; // Return raw number if not wrapped
+        return payload; // Return raw value if not wrapped
     },
 
     /**
@@ -56,7 +56,7 @@ export const PayloadUtils = {
     /**
      * Safe Scalar Creator
      */
-    createScalar(value: number, unit?: string): NodePayload {
+    createScalar(value: PayloadValue, unit?: string): NodePayload {
         return {
             type: DataType.Scalar,
             value,
@@ -141,10 +141,6 @@ export const PayloadUtils = {
             case 'ADD':
             case 'SUB':
                 if (unitA === unitB) return unitA;
-                // TODO: Error propagation for mismatch (e.g. 'm' + 'kg')
-                // For now, return a warning string or just one of them?
-                // Let's return undefined to indicate "Dimensionless/Invalid" or maybe strict check?
-                // Returning a string like "UnitMismatch" might be handled by caller.
                 return `${unitA}|${unitB}`; // Temporary Mismatch Indicator
 
             case 'MUL':
@@ -191,52 +187,70 @@ export const PayloadUtils = {
      * 🧊 Dehydrate: MathJS Object -> JSON
      * Prepares value for storage or transport (Web Worker).
      */
-    dehydrate(value: any): PayloadValue {
-        if (!value) return value;
+    dehydrate(value: unknown): PayloadValue {
+        if (!value) return value as PayloadValue;
+
+        const h = value as {
+            isBigNumber?: boolean;
+            isFraction?: boolean;
+            n?: unknown;
+            d?: unknown;
+            isComplex?: boolean;
+            re?: unknown;
+            im?: unknown;
+            isUnit?: boolean;
+            toNumber?: (u?: string) => number;
+            formatUnits?: () => string;
+            value?: unknown;
+            isMatrix?: boolean;
+            toArray?: () => unknown[];
+            type?: string;
+            toString?: () => string;
+        };
 
         // BigNumber -> String
-        if (value.isBigNumber) {
-            return { mathjs: 'BigNumber', value: value.toString() };
+        if (h.isBigNumber) {
+            return { mathjs: 'BigNumber', value: h.toString ? h.toString() : String(value) };
         }
 
         // Fraction -> String
-        if (value.isFraction) {
-            return { mathjs: 'Fraction', n: value.n, d: value.d }; // or toString
+        if (h.isFraction) {
+            return { mathjs: 'Fraction', n: h.n, d: h.d };
         }
 
         // Complex -> {re, im}
-        if (value.isComplex) {
-            return { mathjs: 'Complex', re: value.re, im: value.im };
+        if (h.isComplex) {
+            return { mathjs: 'Complex', re: h.re, im: h.im };
         }
 
         // Unit -> String (simplest for now) or Object
-        if (value.isUnit) {
+        if (h.isUnit) {
             return {
                 mathjs: 'Unit',
-                value: value.toNumber ? value.toNumber(value.formatUnits()) : value.value,
-                unit: value.formatUnits()
+                value: h.toNumber ? h.toNumber(h.formatUnits ? h.formatUnits() : undefined) : h.value,
+                unit: h.formatUnits ? h.formatUnits() : undefined
             };
         }
 
         // Array -> Array (Recursive)
         if (Array.isArray(value)) {
-            return value.map(item => this.dehydrate(item));
+            return value.map(item => this.dehydrate(item)) as unknown as PayloadValue;
         }
 
         // Matrix -> Array (Recursive) or JSON
-        if (value.isMatrix) {
+        if (h.isMatrix && h.toArray) {
             return {
                 mathjs: 'Matrix',
-                data: value.toArray().map((item: any) =>
+                data: h.toArray().map((item: unknown) =>
                     Array.isArray(item)
-                        ? item.map((sub: any) => this.dehydrate(sub))
+                        ? item.map((sub: unknown) => this.dehydrate(sub))
                         : this.dehydrate(item)
                 ),
-                type: value.type // 'DenseMatrix' or 'SparseMatrix'
+                type: h.type // 'DenseMatrix' or 'SparseMatrix'
             };
         }
 
-        return value;
+        return value as PayloadValue;
     },
 
     /**
@@ -244,23 +258,34 @@ export const PayloadUtils = {
      * Restores objects for calculation.
      * Note: Requires math instance to create objects.
      */
-    hydrate(value: PayloadValue, math: any): any {
+    hydrate(value: PayloadValue, math: unknown): unknown {
         if (!value || typeof value !== 'object') return value;
 
-        if ('mathjs' in value) {
-            const type = (value as any).mathjs;
+        // Use a record with index signature to safely check for 'mathjs'
+        const obj = value as Record<string, unknown>;
+
+        if ('mathjs' in obj) {
+            const type = obj.mathjs;
+            // Define an interface for the math object functions we expect
+            const m = math as {
+                bignumber: (v: unknown) => unknown;
+                fraction: (n: unknown, d: unknown) => unknown;
+                complex: (re: unknown, im: unknown) => unknown;
+                unit: (v: unknown, u: unknown) => unknown;
+                matrix: (d: unknown) => unknown;
+            };
+
             switch (type) {
                 case 'BigNumber':
-                    return math.bignumber((value as any).value);
+                    return m.bignumber(obj.value);
                 case 'Fraction':
-                    return math.fraction((value as any).n, (value as any).d);
+                    return m.fraction(obj.n, obj.d);
                 case 'Complex':
-                    return math.complex((value as any).re, (value as any).im);
+                    return m.complex(obj.re, obj.im);
                 case 'Unit':
-                    // value.value might be number, value.unit is string
-                    return math.unit((value as any).value, (value as any).unit);
+                    return m.unit(obj.value, obj.unit);
                 case 'Matrix':
-                    return math.matrix((value as any).data);
+                    return m.matrix(obj.data);
             }
         }
 
@@ -272,19 +297,30 @@ export const PayloadUtils = {
      * Determines if a payload or raw value is "true" in the Calctopus world.
      * Handles: Booleans, Numbers (0=false), Strings (""=false), and MathJS Types (BigNumber, Unit).
      */
-    toBoolean(value: any, math?: any): boolean {
+    toBoolean(value: unknown, math?: unknown): boolean {
         // 1. Unwrap Payload if needed
         const raw = this.unwrap(value);
 
         // 2. Hydrate if we have a math instance (important for Units/BigNumbers)
-        const hydrated = math ? this.hydrate(raw, math) : raw;
+        const hydrated = math ? this.hydrate(raw as PayloadValue, math) : raw;
 
         // 3. Handle MathJS Types
         if (hydrated && typeof hydrated === 'object') {
-            if (hydrated.isBigNumber) return !hydrated.isZero();
-            if (hydrated.isUnit) return hydrated.value !== 0;
-            if (hydrated.isComplex) return hydrated.re !== 0 || hydrated.im !== 0;
-            if (hydrated.isFraction) return hydrated.n !== 0;
+            const h = hydrated as {
+                isBigNumber?: boolean;
+                isZero?: () => boolean;
+                isUnit?: boolean;
+                value?: number;
+                isComplex?: boolean;
+                re?: number;
+                im?: number;
+                isFraction?: boolean;
+                n?: number;
+            };
+            if (h.isBigNumber && h.isZero) return !h.isZero();
+            if (h.isUnit) return h.value !== 0;
+            if (h.isComplex) return h.re !== 0 || h.im !== 0;
+            if (h.isFraction) return h.n !== 0;
         }
 
         // 4. Standard JS Truthiness
@@ -305,10 +341,6 @@ export const PayloadUtils = {
 
         // 1. Matrix -> Scalar (if 1x1)
         if (payload.type === DataType.Matrix && expected === DataType.Scalar) {
-            const val = payload.value;
-            if (Array.isArray(val) && val.length === 1) {
-                // Very naive check for now. dehydration makes matrix arrays.
-            }
             // For now, let's just return Error if mismatch.
             return this.createError(`Type Mismatch: Expected ${expected}, got ${payload.type}`);
         }
@@ -325,6 +357,7 @@ export const PayloadUtils = {
         // Fail
         return this.createError(`Type Mismatch: Expected ${expected}, got ${payload.type}`);
     },
+
     /**
      * 🔠 Stringify Symbol: AST -> Formula String
      * Recursively converts an AST node into a human-readable formula.

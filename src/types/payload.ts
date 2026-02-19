@@ -22,7 +22,7 @@ export type ASTNode = {
     value?: number | string | boolean;
     unit?: string; // Symbolic unit
 };
-export type Matrix = any;  // Will be mathjs.Matrix in Phase 2.3
+export type Matrix = unknown;  // Will be mathjs.Matrix in Phase 2.3
 
 export enum DataType {
     Scalar = 'scalar',
@@ -49,8 +49,11 @@ export interface PayloadMetadata {
     /** Error code or message if type is Error */
     error?: string;
 
+    /** Handle-specific metadata overrides */
+    handleMeta?: Record<string, PayloadMetadata>;
+
     /** arbitrary extra data */
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface NodePayload {

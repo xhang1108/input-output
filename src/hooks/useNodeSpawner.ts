@@ -37,7 +37,7 @@ export function useNodeSpawner({
     const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
     const { project } = useCanvasProjection();
 
-    const spawnNode = useCallback((type: string, label: string, extraData?: Record<string, any>) => {
+    const spawnNode = useCallback((type: string, label: string, extraData?: unknown) => {
         logAction(`Spawn Node: ${type}`);
         const flowPos = project({
             x: palettePosition.x,
@@ -52,7 +52,7 @@ export function useNodeSpawner({
             data: {
                 label,
                 type: type === 'baseNode' ? undefined : type,
-                ...extraData
+                ...(extraData as Record<string, unknown>)
             },
         };
 

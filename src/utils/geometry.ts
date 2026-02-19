@@ -9,6 +9,15 @@ export interface SnapResult {
     handleId: string;
 }
 
+interface InternalHandle {
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    position: Position;
+}
+
 /**
  * Calculates the Euclidean distance between two points.
  */
@@ -33,29 +42,32 @@ export function getNearestHandle(
         if (node.hidden) continue;
 
         // Note: react-flow nodes have 'internals' which contain absolute positions and handle bounds
-        const internals = (node as any).internals;
-        const handleBounds = internals?.handleBounds;
+        const internals = (node as Node & { internals?: Record<string, unknown> }).internals;
+        const handleBounds = (internals as Record<string, unknown>)?.handleBounds as { source?: InternalHandle[], target?: InternalHandle[] } | undefined;
         if (!handleBounds) continue;
 
         const allHandles = [...(handleBounds.source || []), ...(handleBounds.target || [])];
 
         for (const h of allHandles) {
             // Handle Center in World Space
-            const hCenterX = internals.positionAbsolute.x + h.x + h.width / 2;
-            const hCenterY = internals.positionAbsolute.y + h.y + h.height / 2;
+            if (internals && internals.positionAbsolute) {
+                const pos = internals.positionAbsolute as { x: number, y: number };
+                const hCenterX = pos.x + h.x + h.width / 2;
+                const hCenterY = pos.y + h.y + h.height / 2;
 
-            const dist = getDistance(targetX, targetY, hCenterX, hCenterY);
+                const dist = getDistance(targetX, targetY, hCenterX, hCenterY);
 
-            if (dist <= snapRadius && dist < minDistance) {
-                minDistance = dist;
-                result = {
-                    x: hCenterX,
-                    y: hCenterY,
-                    position: h.position,
-                    distance: dist,
-                    nodeId: id,
-                    handleId: h.id!
-                };
+                if (dist <= snapRadius && dist < minDistance) {
+                    minDistance = dist;
+                    result = {
+                        x: hCenterX,
+                        y: hCenterY,
+                        position: h.position,
+                        distance: dist,
+                        nodeId: id,
+                        handleId: h.id!
+                    };
+                }
             }
         }
     }

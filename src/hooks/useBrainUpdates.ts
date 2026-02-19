@@ -24,7 +24,7 @@ function liftStructuralProps(logicNode: NodeLogic) {
     // which crashes if the parent hasn't been measured yet.
 
     // Build style object for dimensions and z-index
-    const style: Record<string, any> = {};
+    const style: Record<string, unknown> = {};
     if (width != null) style.width = width;
     if (height != null) style.height = height;
 
@@ -57,21 +57,19 @@ export function useBrainUpdates(
     setNodes: React.Dispatch<React.SetStateAction<Node[]>>,
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>
 ) {
-
     useEffect(() => {
         const brain = Brain.getInstance();
 
-        const handleGraphChange = (payload: any) => {
-            if (Array.isArray(payload)) {
-                // Value-only patches (hot path: calculation results)
-                const updates = new Map(payload.map((p: any) => [p.id, p.value]));
-
+        const handleGraphChange = (updates?: Map<string, unknown>) => {
+            if (updates) {
+                // Partial update (value changes only)
                 setNodes(currentNodes => {
                     let changed = false;
                     const nextNodes = currentNodes.map(node => {
                         if (updates.has(node.id)) {
                             const rawPayload = updates.get(node.id);
-                            const newValue = PayloadUtils.unwrap(rawPayload);
+                            // FIX: Do NOT unwrap here. Pass full payload to UI so ResultNode gets metadata.
+                            const newValue = rawPayload; // Was: PayloadUtils.unwrap(rawPayload);
 
                             if (node.data.value !== newValue) {
                                 changed = true;
@@ -104,7 +102,8 @@ export function useBrainUpdates(
                     // 2. Add/Update nodes from Brain
                     for (const [id, logicNode] of brainNodes) {
                         const lifted = liftStructuralProps(logicNode);
-                        const unwrappedValue = PayloadUtils.unwrap(logicNode.value);
+                        // FIX: Pass full payload object
+                        const unwrappedValue = logicNode.value; // Was: PayloadUtils.unwrap(logicNode.value);
                         const targetData = { ...lifted.displayData, value: unwrappedValue };
 
                         const existingIndex = nextNodes.findIndex(n => n.id === id);
@@ -120,7 +119,7 @@ export function useBrainUpdates(
                                 width: lifted.width,
                                 height: lifted.height,
                                 style: lifted.style,
-                            });
+                            } as Node);
                             changed = true;
                         } else {
                             // Update existing node
@@ -203,7 +202,7 @@ export function useBrainUpdates(
             }
         };
 
-        const cleanup = brain.on('graphChanged', handleGraphChange);
+        const cleanup = brain.on('graphChanged', (payload: unknown) => handleGraphChange(payload as Map<string, unknown>));
         return cleanup;
-    }, [setNodes]);
+    }, [setNodes, setEdges]);
 }

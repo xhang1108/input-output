@@ -51,7 +51,7 @@ export function useAutoInsert({
         const cy = node.position.y + h / 2;
 
         let bestEdge: string | null = null;
-        let minInfo = { dist: Infinity };
+        const minInfo = { dist: Infinity };
 
         // 2. Check Intersections
         for (const edge of edges) {

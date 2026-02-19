@@ -7,7 +7,7 @@ export const RandomNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
     const { updateNodeData } = useReactFlow();
 
-    const handleChange = (key: string, value: any) => {
+    const handleChange = (key: string, value: unknown) => {
         updateNodeData(id, { [key]: value });
         Brain.getInstance().applyTransaction({
             type: 'UPDATE_NODE_DATA',

@@ -14,7 +14,7 @@ type EarProps = {
     shortcuts?: HotkeyMapping;
     onKeyDown?: (e: KeyboardEvent) => void;
     onKeyUp?: (e: KeyboardEvent) => void;
-    deps?: any[];
+    deps?: unknown[];
 };
 
 /**
@@ -28,6 +28,7 @@ type EarProps = {
 export function useEar(props: EarProps = {}) {
 
     const [keys, setKeys] = useState<Set<string>>(new Set());
+    const { shortcuts, onKeyDown, onKeyUp, deps = [] } = props;
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
         // 1. Guard: Skip if user is typing in an input (except for Escape)
@@ -50,12 +51,12 @@ export function useEar(props: EarProps = {}) {
         });
 
         // 3. Delegate to callback
-        if (props.onKeyDown) {
-            props.onKeyDown(e);
+        if (onKeyDown) {
+            onKeyDown(e);
         }
 
         // 4. Shortcut Dispatching (The "Brain" part of the ear)
-        if (props.shortcuts) {
+        if (shortcuts) {
             const key = e.key.toLowerCase();
             const modifiers = [];
             if (e.ctrlKey || e.metaKey) modifiers.push('ctrl');
@@ -66,7 +67,7 @@ export function useEar(props: EarProps = {}) {
                 ? `${modifiers.sort().join('+')}+${key}`
                 : key;
 
-            const match = props.shortcuts[comboKey] || (modifiers.length === 0 ? props.shortcuts[key] : undefined);
+            const match = shortcuts[comboKey] || (modifiers.length === 0 ? shortcuts[key] : undefined);
 
             // Undo (Ctrl+Z)
             if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -82,8 +83,6 @@ export function useEar(props: EarProps = {}) {
                 return;
             }
 
-
-
             if (match) {
                 const isFunction = typeof match === 'function';
                 const action = isFunction ? match : match.action;
@@ -94,7 +93,8 @@ export function useEar(props: EarProps = {}) {
                 }
             }
         }
-    }, [props.deps, props.onKeyDown, props.shortcuts]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [onKeyDown, shortcuts, ...deps]);
 
     const handleKeyUp = useCallback((e: KeyboardEvent) => {
         setKeys(prev => {
@@ -103,10 +103,11 @@ export function useEar(props: EarProps = {}) {
             return newKeys;
         });
 
-        if (props.onKeyUp) {
-            props.onKeyUp(e);
+        if (onKeyUp) {
+            onKeyUp(e);
         }
-    }, props.deps || []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [onKeyUp, ...deps]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);

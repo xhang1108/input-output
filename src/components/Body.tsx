@@ -10,6 +10,7 @@ import {
     SelectionMode,
     ConnectionMode,
     ConnectionLineType,
+    OnConnectStartParams,
 } from '@xyflow/react';
 import { RelinkLine, RelinkContext } from './edges/RelinkLine';
 import '@xyflow/react/dist/style.css';
@@ -167,9 +168,9 @@ export function Body() {
     // Connect Brain Log to UI Log
     useEffect(() => {
         const brain = Brain.getInstance();
-        // @ts-ignore
+        // @ts-expect-error - Brain is global for debugging
         window.Brain = brain;
-        const cleanupLog = brain.on('log', (msg: string) => logAction(msg));
+        const cleanupLog = brain.on('log', (msg: unknown) => logAction(String(msg)));
         return () => { cleanupLog(); };
     }, [logAction]);
 
@@ -234,11 +235,11 @@ export function Body() {
         }
     });
 
-    const onConnectStart = useCallback((event: any, params: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
+    const onConnectStart = useCallback((event: MouseEvent | TouchEvent, params: OnConnectStartParams): void => {
         onRelinkStart(event, params);
     }, [onRelinkStart]);
 
-    const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
+    const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: { toNode: { id: string } | null; toHandle: { id?: string | null } | null; isValid: boolean | null } | null) => {
         onRelinkEnd(event, connectionState);
     }, [onRelinkEnd]);
 
@@ -415,7 +416,7 @@ export function Body() {
         if (showPalette) setShowPalette(false);
         if (contextMenu) setContextMenu(null);
         if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) confirmGrab();
-    }, [mode, confirmGrab, showPalette, contextMenu]);
+    }, [mode, confirmGrab, showPalette, contextMenu, setShowPalette, setContextMenu]);
 
 
     return (
