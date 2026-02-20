@@ -69,40 +69,13 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'unit', unit: 'm' }
     },
     {
-        id: 'IO-19',
-        label: 'Color Result',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector', label: 'Color' }
-        ],
-        defaultData: { type: 'colorResult' }
-    },
-    {
         id: 'IO-11',
         label: 'Result',
         category: 'Output',
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single' }
         ],
-        defaultData: { type: 'result' }
-    },
-    {
-        id: 'IO-17',
-        label: 'Formula Result',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }
-        ],
-        defaultData: { type: 'formula' }
-    },
-    {
-        id: 'IO-16',
-        label: 'Matrix Result',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix', label: 'Matrix' }
-        ],
-        defaultData: {}
+        defaultData: { type: 'result', viewMode: 'auto' }
     },
 
     {

@@ -26,6 +26,7 @@ import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { useRelink } from '../hooks/useRelink';
 import { useAutoInsert } from '../hooks/useAutoInsert';
 import { useNodeSpawner } from '../hooks/useNodeSpawner';
+import { useProjectSave } from '../hooks/useProjectSave';
 import { CommandPalette } from './ui/CommandPalette';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { InspectorPanel } from './ui/InspectorPanel';
@@ -80,6 +81,9 @@ export function Body() {
     // highlightedEdgeId and autoInsert managed by useAutoInsert
 
     const effectiveSnap = isSnapping || manualSnap;
+
+    // Save/Load Hook
+    const { saveProject } = useProjectSave();
 
     // Sync Edge Type for existing edges
     // (Removed duplicate useEffect that caused ReferenceError)
@@ -372,6 +376,10 @@ export function Body() {
             'ctrl+v': () => { pasteFromClipboard(); logAction('Paste (Ctrl+V)'); },
             'cmd+v': () => { pasteFromClipboard(); logAction('Paste (Cmd+V)'); },
 
+            // Save
+            'ctrl+s': (e) => { e.preventDefault(); saveProject(); logAction('Save Project (Ctrl+S)'); },
+            'cmd+s': (e) => { e.preventDefault(); saveProject(); logAction('Save Project (Cmd+S)'); },
+
             // Confirmation & Navigation
             'enter': () => { confirmGrab(); logAction('Confirm (Enter)'); },
             'escape': () => {
@@ -408,7 +416,7 @@ export function Body() {
                 }
             },
         },
-        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowInspector, handleAutoLayout, handleTypeNum, transformBuffer]
+        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowInspector, handleAutoLayout, handleTypeNum, transformBuffer, saveProject]
     });
 
 

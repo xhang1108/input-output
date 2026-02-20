@@ -37,14 +37,25 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                 throw new Error("Please enter JSON or CGL data.");
             }
 
-            let graphData: import('../../engine/types').InjectableGraph;
+            let graphData: import('../../engine/types').InjectableGraph = { nodes: [], edges: [] };
 
             // Auto-detect format
             const trimmed = jsonInput.trim();
+            let isJson = false;
+
             if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                try {
+                    graphData = JSON.parse(jsonInput);
+                    isJson = true;
+                } catch (e) {
+                    // Failed to parse as JSON, might be a CGL string that starts with '['
+                    isJson = false;
+                }
+            }
+
+            if (isJson) {
                 // JSON
-                graphData = JSON.parse(jsonInput);
-                if (!graphData.nodes || !Array.isArray(graphData.nodes)) {
+                if (!graphData!.nodes || !Array.isArray(graphData!.nodes)) {
                     throw new Error("Invalid JSON format: 'nodes' array is required.");
                 }
             } else {

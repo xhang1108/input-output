@@ -50,19 +50,18 @@ export const nodeTypes = {
     'MA-16': LogNode,           // Logarithm
     'IO-01': InputNode,
     'IO-02': SliderNode,
-    'IO-04': InputNode, // String Input uses same UI as Number Input (for now)
-    'IO-05': UnitNode,
-    'IO-06': RandomNode,
-    'IO-08': MatrixInputNode,
-    'IO-11': ResultNode,
-    'IO-16': MatrixResultNode,
-    'IO-17': FormulaResultNode,
-    'IO-18': ColorNode,
-    'IO-19': ColorResultNode,
-
-    'SY-05': NodeExpression,
-    'UI-01': TextAnnotationNode, // Text Annotation
-    'UI-03': RerouteNode,        // Reroute
+    'IO-04': InputNode,      // String
+    'IO-05': UnitNode,       // Unit
+    'IO-06': RandomNode,     // Random
+    'IO-08': MatrixInputNode, // Matrix Provider
+    'IO-11': ResultNode,     // Universal Result (Scalar, Matrix, Color, Formula)
+    'IO-16': ResultNode,     // Fallback mapping to prevent crashes from old graphs
+    'IO-17': ResultNode,     // Fallback mapping
+    'IO-18': ColorNode,      // Color Provider
+    'IO-19': ResultNode,     // Fallback mapping
+    'SY-05': NodeExpression, // AST Formula Evaluator
+    'UI-01': TextAnnotationNode, // Markdown
+    'UI-03': RerouteNode,    // Flow alignment
     'UI-99': DebugNode,
 };
 

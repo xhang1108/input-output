@@ -95,7 +95,11 @@ export class Brain {
             targets.push(edge.target);
             this.adjacency.set(edge.source, targets);
         } else {
-            this.adjacency.set(edge.source, targets.filter(t => t !== edge.target));
+            const index = targets.findIndex(t => t === edge.target);
+            if (index !== -1) {
+                targets.splice(index, 1);
+                this.adjacency.set(edge.source, targets);
+            }
         }
 
         // 2. Reverse Adjacency (Target -> Inputs)
@@ -104,31 +108,32 @@ export class Brain {
             inputs.push({ nodeId: edge.source, sourceHandle: edge.sourceHandle!, targetHandle: edge.targetHandle! });
             this.reverseAdjacency.set(edge.target, inputs);
         } else {
-            this.reverseAdjacency.set(edge.target, inputs.filter(i => i.nodeId !== edge.source));
+            const index = inputs.findIndex(i => i.nodeId === edge.source && i.sourceHandle === edge.sourceHandle && i.targetHandle === edge.targetHandle);
+            if (index !== -1) {
+                inputs.splice(index, 1);
+                this.reverseAdjacency.set(edge.target, inputs);
+            }
         }
     }
 
     // --- Pulse Engine (Dirty & Pull) ---
 
     // 1. Dirty Propagation (The Pulse Wave)
-    private propagateDirty(startNodeId: string) {
-        const queue = [startNodeId];
-        const visited = new Set<string>();
-
-        while (queue.length > 0) {
-            const currentId = queue.shift()!;
-
-            const node = this.state.nodes.get(currentId);
-            if (node) {
-                node.isDirty = true;
-            }
-
-            if (visited.has(currentId)) continue;
-            visited.add(currentId);
-
-            const children = this.adjacency.get(currentId) || [];
-            for (const childId of children) {
-                queue.push(childId);
+    // FIX: Instead of aggressive full-depth propagation (Over-propagation),
+    // we only mark the IMMEDIATELY connected children as dirty.
+    // Deep propagation will now happen stepwise during recalculateDirty
+    // if and only if the parent's actual computed value changed.
+    private propagateDirty(startNodeId: string, depth: number = 0) {
+        // Fallback: If we want immediate propagation for UI snappiness
+        // we can still propagate, but let's just mark children dirty.
+        // Wait, if a node's value is updated by UI, it's not dirty, its children are.
+        const children = this.adjacency.get(startNodeId) || [];
+        for (const childId of children) {
+            const childNode = this.state.nodes.get(childId);
+            if (childNode && !childNode.isDirty) {
+                childNode.isDirty = true;
+                // We do NOT recursively call propagateDirty here.
+                // Let the recalculate loop handle downstream.
             }
         }
     }
@@ -153,9 +158,16 @@ export class Brain {
 
     // 2. Pull Evaluation (The Calculation)
     // Phase 2.1: Updated to return NodePayload
-    public async getValue(nodeId: string, sourceHandle?: string): Promise<NodePayload> {
+    // Phase 4.1: Cycle Detection via `computingPath`
+    public async getValue(nodeId: string, sourceHandle?: string, computingPath: Set<string> = new Set()): Promise<NodePayload> {
         const node = this.state.nodes.get(nodeId);
         if (!node) return PayloadUtils.createError('Node not found');
+
+        // Circular Dependency Detection (Fatal Flaw 1 Fix)
+        if (computingPath.has(nodeId)) {
+            console.warn(`[Brain] Cycle detected at node ${nodeId}!`);
+            return PayloadUtils.createError('Cycle Detected');
+        }
 
         let resultPayload: NodePayload;
 
@@ -163,13 +175,18 @@ export class Brain {
         if (!node.isDirty && node.value) {
             resultPayload = node.value;
         } else {
+            // We are about to compute this node. Mark it in the path to prevent infinite loops.
+            const newPath = new Set(computingPath);
+            newPath.add(nodeId);
+
             const inputs = this.reverseAdjacency.get(nodeId) || [];
 
             const inputPayloads: Record<string, NodePayload> = {};
 
             for (const input of inputs) {
                 // Pass sourceHandle to ensure multi-output nodes work
-                const payload = await this.getValue(input.nodeId, input.sourceHandle);
+                // Pass newPath to detect cycles downstream
+                const payload = await this.getValue(input.nodeId, input.sourceHandle, newPath);
 
                 if (input.targetHandle) {
                     inputPayloads[input.targetHandle] = payload;
@@ -177,11 +194,20 @@ export class Brain {
             }
 
             // Compute
+            const oldPayload = node.value;
             resultPayload = await this.computeNode(node, inputPayloads);
 
             // Update & Clean
             node.value = resultPayload;
             node.isDirty = false;
+
+            // Stepwise Propagation: Only propagate if the value ACTUALLY changed.
+            // This prevents "Performance Avalanches" (Fatal Flaw 4 Fix)
+            if (oldPayload && JSON.stringify(oldPayload) !== JSON.stringify(resultPayload)) {
+                this.propagateDirty(nodeId);
+            } else if (!oldPayload) {
+                this.propagateDirty(nodeId);
+            }
         }
 
         // 2. Handle specific Handle extraction
@@ -402,6 +428,8 @@ export class Brain {
                 if (validation.isValid) {
                     this.state.edges.push(newEdge);
                     this.updateAdjacency(newEdge, 'ADD');
+                    const tNode = this.state.nodes.get(newEdge.target);
+                    if (tNode) tNode.isDirty = true;
                     this.propagateDirty(newEdge.target);
 
                     this.log(`Connected ${newEdge.source} -> ${newEdge.target}`);
@@ -421,10 +449,22 @@ export class Brain {
                 if (!this.state.nodes.has(id)) return { success: false, reason: 'Node not found' };
                 this.state.nodes.delete(id);
                 const connectedEdges = this.state.edges.filter(e => e.source === id || e.target === id);
-                connectedEdges.forEach(e => this.updateAdjacency(e, 'REMOVE'));
+                connectedEdges.forEach(e => {
+                    this.updateAdjacency(e, 'REMOVE');
+                    if (e.target !== id) {
+                        const tNode = this.state.nodes.get(e.target);
+                        if (tNode) tNode.isDirty = true;
+                        this.propagateDirty(e.target);
+                    }
+                });
                 this.state.edges = this.state.edges.filter(e => e.source !== id && e.target !== id);
                 this.adjacency.delete(id);
                 this.reverseAdjacency.delete(id);
+
+                if (!silent) {
+                    this.emit('graphChanged', null);
+                    this.triggerCalculation();
+                }
                 return { success: true };
             }
 
@@ -434,7 +474,10 @@ export class Brain {
                 if (edgeToRemove) {
                     this.updateAdjacency(edgeToRemove, 'REMOVE');
                     this.state.edges = this.state.edges.filter(e => e.id !== edgeId);
+                    const tNode = this.state.nodes.get(edgeToRemove.target);
+                    if (tNode) tNode.isDirty = true;
                     this.propagateDirty(edgeToRemove.target);
+
                     if (!silent) {
                         this.emit('graphChanged', null);
                         this.triggerCalculation();
@@ -655,6 +698,12 @@ export class Brain {
             const node = this.state.nodes.get(nodeId);
             if (!node) return null;
 
+            // Check instance data first (for dynamically generated handles like SY-05)
+            if (node.data && Array.isArray(node.data.handles)) {
+                const handleFromData = node.data.handles.find((h: any) => h.id === handleId);
+                if (handleFromData) return handleFromData.type;
+            }
+
             const def = NODE_DEFINITIONS.find(d => d.id === node.type);
             if (!def) return null;
             const handle = def.handles.find(h => h.id === handleId);
@@ -668,6 +717,8 @@ export class Brain {
         const isInput = (id: string, typeHint: string | null) => {
             if (typeHint) return typeHint === 'target';
             const lid = id.toLowerCase();
+            // Add single-letter variables typical for SY-05 as fallback inputs if typeHint is missing
+            if (lid.length === 1 && lid >= 'a' && lid <= 'z') return true;
             return !!id && (lid.startsWith('in') || lid === 'target' || lid.includes('input') || lid === 'condition' || lid === 'select' || lid === 'data' || lid === 'if');
         };
 
@@ -681,6 +732,8 @@ export class Brain {
         const fromNode = sourceIsInput ? target : source;
         const toNode = sourceIsInput ? source : target;
 
+        // Reactivate UI-level cycle prevention, since users usually don't intend to build infinite loops
+        // and it's cleaner to reject it at connection time.
         if (this.detectCycle(fromNode, toNode, edgesToCheck)) {
             return { isValid: false, reason: 'Connection would create a cycle' };
         }

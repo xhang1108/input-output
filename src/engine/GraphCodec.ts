@@ -27,8 +27,8 @@ export class GraphCodec {
         const nodes = new Map<string, CGLNode>();
         const connections: CGLConnection[] = [];
 
-        // Regex Patterns
-        const nodeRegex = /^([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)(?::([a-zA-Z0-9_-]+))?(?:\s*@(-?\d+),(-?\d+))?(?:\s*=\s*(.*))?$/;
+        // Regex Patterns: ID:Category:OpCode @ X, Y = Value (Allows spaces around @ and ,)
+        const nodeRegex = /^([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)(?::([a-zA-Z0-9_-]+))?(?:\s*@\s*(-?\d+)\s*,\s*(-?\d+))?(?:\s*=\s*(.*))?$/;
 
         for (let i = 0; i < lines.length; i++) {
             // Fix: Strip comments immediately to ensure regex matches clean lines
@@ -132,48 +132,36 @@ export class GraphCodec {
             // Merge default data using OpCode if needed
             const data = { ...((typeInfo.defaultData || {}) as Record<string, unknown>) } as Record<string, unknown>;
 
-            // If value is provided, override appropriate field
+            // If value is provided, override appropriate field with strict type validation
             if (cNode.value !== undefined) {
-                // For Inputs, it's 'value'
-                // For Consts, it might be 'val'
-                // We need a smart mapper here
-                if (typeInfo.id === 'IO-01') data.value = cNode.value;
-                else if (typeInfo.id === 'IO-02') data.value = cNode.value;
-                else if (typeInfo.id === 'MA-03') data.val = cNode.value;
-                else if (typeInfo.id === 'MA-08') data.value = cNode.value; // Fix: Allow Toggle initial value
-                else if (typeInfo.id === 'MA-09') data.value = cNode.value; // Fix: Allow Button initial value
-                else if (typeInfo.id === 'SY-05') {
-                    data.code = cNode.value;
-                    // Pre-generate handles for SY-05 so that Brain.validateConnection succeeds during injection
-                    if (typeof data.code === 'string' && data.code.trim()) {
-                        try {
-                            // We use a simplified version of NodeExpression's handle logic here
-                            // We'll import MathEngine later in the file if needed, or assume it's available
-                            // For CGL import, we only need to ensure 'a', 'b', etc exist as handles
-                            // Let's use a regex to find likely variables: words that aren't functions
-                            const code = data.code as string;
-                            const vars = Array.from(code.matchAll(/\b([a-zA-Z][a-zA-Z0-9]*)\b/g))
-                                .map(m => m[1])
-                                .filter(v => !['sin', 'cos', 'tan', 'sqrt', 'log', 'pow', 'exp', 'abs', 'e', 'pi'].includes(v.toLowerCase()));
+                let validValue = cNode.value;
 
-                            const uniqueVars = Array.from(new Set(vars)).sort();
-                            data.handles = [
-                                ...uniqueVars.map(v => ({
-                                    id: v,
-                                    type: 'target',
-                                    position: 'left', // Lowercase for InjectableGraph compatibility usually
-                                    variant: 'single',
-                                    dataType: 'scalar',
-                                    label: v
-                                })),
-                                { id: 'out', type: 'source', position: 'right', variant: 'single', dataType: 'scalar' }
-                            ];
-                        } catch (e) {
-                            console.warn('[GraphCodec] Failed to pre-generate handles for SY-05:', e);
-                        }
+                // Strict Type Validation
+                if (typeInfo.id === 'IO-01' || typeInfo.id === 'IO-02') {
+                    if (typeof cNode.value !== 'number') {
+                        diagnostics.push(`Node "${cNode.id}": Value "${cNode.value}" is invalid for ${typeInfo.id}. Expected number. Defaulting to 0.`);
+                        validValue = 0;
                     }
+                } else if (typeInfo.id === 'MA-08' || typeInfo.id === 'MA-09') {
+                    if (typeof cNode.value !== 'boolean') {
+                        diagnostics.push(`Node "${cNode.id}": Value "${cNode.value}" is invalid for ${typeInfo.id}. Expected boolean. Defaulting to false.`);
+                        validValue = false;
+                    }
+                } else if (typeInfo.id === 'IO-04') {
+                    validValue = String(cNode.value);
                 }
-                else if (typeInfo.id.startsWith('IO')) data.value = cNode.value;
+
+                // Update cNode.value to the validated value so Brain gets the safe initialValue
+                cNode.value = validValue;
+
+                // Map to specific data field based on node type
+                if (typeInfo.id === 'IO-01') data.value = validValue;
+                else if (typeInfo.id === 'IO-02') data.value = validValue;
+                else if (typeInfo.id === 'MA-03') data.val = validValue;
+                else if (typeInfo.id === 'MA-08') data.value = validValue;
+                else if (typeInfo.id === 'MA-09') data.value = validValue;
+                else if (typeInfo.id === 'SY-05') data.code = validValue;
+                else if (typeInfo.id.startsWith('IO')) data.value = validValue;
             }
 
             // Override OpCode if specified (e.g. math:SUB)

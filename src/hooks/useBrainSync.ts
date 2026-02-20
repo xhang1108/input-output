@@ -30,6 +30,8 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
             prevNodesRef.current = new Map();
         }
 
+        const syncTxs: import('../engine/types').Transaction[] = [];
+
         // --- Sync Nodes ---
         const currentNodesMap = new Map(nodes.map(n => [n.id, n]));
 
@@ -41,7 +43,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                 // New Node
                 const existing = brain.getNode(node.id);
                 if (!existing) {
-                    brain.applyTransaction({
+                    syncTxs.push({
                         type: 'ADD_NODE',
                         payload: {
                             id: node.id,
@@ -58,7 +60,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                 const { value: _pv, ...prevData } = prevNode.data || {};
 
                 if (JSON.stringify(currentData) !== JSON.stringify(prevData)) {
-                    brain.applyTransaction({
+                    syncTxs.push({
                         type: 'UPDATE_NODE_DATA',
                         payload: {
                             id: node.id,
@@ -70,7 +72,16 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
 
             // Sync Position (Phase 1.4)
             if (node.position && (!prevNode || !prevNode.position || Math.abs(node.position.x - prevNode.position.x) > 0.1 || Math.abs(node.position.y - prevNode.position.y) > 0.1)) {
-                brain.moveNode(node.id, node.position);
+                // Determine old position. If none, assume 0,0 
+                const oldPos = prevNode?.position || { x: 0, y: 0 };
+                syncTxs.push({
+                    type: 'MOVE_NODE',
+                    payload: {
+                        id: node.id,
+                        position: node.position,
+                        oldPosition: oldPos
+                    }
+                });
             }
         });
 
@@ -80,7 +91,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                 // Guard: Skip if Brain already removed this node (e.g. from Undo)
                 const existing = brain.getNode(id);
                 if (existing) {
-                    brain.applyTransaction({
+                    syncTxs.push({
                         type: 'REMOVE_NODE',
                         payload: id
                     });
@@ -99,7 +110,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                 // Guard: Skip if Brain already removed this edge (e.g. from Undo)
                 const existing = brain.getEdges().find(e => e.id === id);
                 if (existing) {
-                    brain.applyTransaction({
+                    syncTxs.push({
                         type: 'DISCONNECT',
                         payload: id
                     });
@@ -113,7 +124,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                 // Check if Brain already has this edge (to avoid duplicate logs/logic if we double-sync)
                 const existing = brain.getEdges().find(e => e.id === edge.id);
                 if (!existing) {
-                    brain.applyTransaction({
+                    syncTxs.push({
                         type: 'CONNECT',
                         payload: edge
                     });
@@ -122,6 +133,11 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
         });
 
         prevEdgesRef.current = currentEdges;
+
+        // Execute all accumulated changes securely inside a single batch
+        if (syncTxs.length > 0) {
+            brain.applyTransaction({ type: 'BATCH', payload: syncTxs });
+        }
 
     }, [nodes, edges]);
 }

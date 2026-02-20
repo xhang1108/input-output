@@ -29,7 +29,7 @@ export const InputNode = memo((props: NodeProps) => {
                         className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-blue-500 outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="Text..."
-                        defaultValue={data.value as string}
+                        defaultValue={String(PayloadUtils.unwrap(data.value) || '')}
                         onChange={(e) => {
                             Brain.getInstance().applyTransaction({
                                 type: 'UPDATE_VALUE',
