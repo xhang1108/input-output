@@ -5,22 +5,20 @@ import { NodeProps, NodeResizer, Position, useReactFlow, useUpdateNodeInternals 
 import { Pencil } from 'lucide-react';
 import { NodeHandle } from './NodeHandle';
 import { HandleConfig, getHandleColor } from '../../types/NodeDefinition';
+import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 
 // Re-export HandleConfig for backward compatibility
 export type { HandleConfig } from '../../types/NodeDefinition';
 
-// Default fallback handles (used when data.handles is not provided)
-const DEFAULT_HANDLES: HandleConfig[] = [
-    { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar' },
-    { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' },
-];
-
-export const BaseNode = memo(({ id, data, selected, isConnectable, children }: NodeProps & { children?: React.ReactNode }) => {
+export const BaseNode = memo(({ id, data, selected, isConnectable, children, type }: NodeProps & { children?: React.ReactNode }) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [title, setTitle] = useState((data.label as string) || 'Node');
     const inputRef = useRef<HTMLInputElement>(null);
     const { updateNodeData } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
+
+    // Find definition for fallback handles
+    const definition = NODE_DEFINITIONS.find((d) => d.id === type);
 
     // Sync edges when handles change (Dynamic Layout)
     useEffect(() => {
@@ -55,7 +53,11 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children }: N
     };
 
     // Separate handles by position
-    const allHandles = (data.handles as HandleConfig[]) || DEFAULT_HANDLES;
+    // Priority: 1. Dynamic handles from data | 2. Definition handles | 3. DEFAULT_HANDLES
+    const allHandles = (data.handles as HandleConfig[]) || definition?.handles || [
+        { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar' },
+        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' },
+    ];
     const leftHandles = allHandles.filter(h => h.position === Position.Left);
     const rightHandles = allHandles.filter(h => h.position === Position.Right);
 

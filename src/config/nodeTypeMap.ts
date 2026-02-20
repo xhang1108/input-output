@@ -28,6 +28,7 @@ import { TextAnnotationNode } from '../components/nodes/TextAnnotationNode';
 import { RerouteNode } from '../components/nodes/RerouteNode';
 import { BaseConverterNode } from '../components/nodes/BaseConverterNode';
 import { LogNode } from '../components/nodes/LogNode';
+import { NodeExpression } from '../components/nodes/NodeExpression';
 import { DebugNode } from '../components/nodes/DebugNode';
 
 export const nodeTypes = {
@@ -59,6 +60,7 @@ export const nodeTypes = {
     'IO-18': ColorNode,
     'IO-19': ColorResultNode,
 
+    'SY-05': NodeExpression,
     'UI-01': TextAnnotationNode, // Text Annotation
     'UI-03': RerouteNode,        // Reroute
     'UI-99': DebugNode,

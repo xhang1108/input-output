@@ -142,7 +142,38 @@ export class GraphCodec {
                 else if (typeInfo.id === 'MA-03') data.val = cNode.value;
                 else if (typeInfo.id === 'MA-08') data.value = cNode.value; // Fix: Allow Toggle initial value
                 else if (typeInfo.id === 'MA-09') data.value = cNode.value; // Fix: Allow Button initial value
-                else if (typeInfo.id.startsWith('IO')) data.value = cNode.value; // Generic fallback for IO
+                else if (typeInfo.id === 'SY-05') {
+                    data.code = cNode.value;
+                    // Pre-generate handles for SY-05 so that Brain.validateConnection succeeds during injection
+                    if (typeof data.code === 'string' && data.code.trim()) {
+                        try {
+                            // We use a simplified version of NodeExpression's handle logic here
+                            // We'll import MathEngine later in the file if needed, or assume it's available
+                            // For CGL import, we only need to ensure 'a', 'b', etc exist as handles
+                            // Let's use a regex to find likely variables: words that aren't functions
+                            const code = data.code as string;
+                            const vars = Array.from(code.matchAll(/\b([a-zA-Z][a-zA-Z0-9]*)\b/g))
+                                .map(m => m[1])
+                                .filter(v => !['sin', 'cos', 'tan', 'sqrt', 'log', 'pow', 'exp', 'abs', 'e', 'pi'].includes(v.toLowerCase()));
+
+                            const uniqueVars = Array.from(new Set(vars)).sort();
+                            data.handles = [
+                                ...uniqueVars.map(v => ({
+                                    id: v,
+                                    type: 'target',
+                                    position: 'left', // Lowercase for InjectableGraph compatibility usually
+                                    variant: 'single',
+                                    dataType: 'scalar',
+                                    label: v
+                                })),
+                                { id: 'out', type: 'source', position: 'right', variant: 'single', dataType: 'scalar' }
+                            ];
+                        } catch (e) {
+                            console.warn('[GraphCodec] Failed to pre-generate handles for SY-05:', e);
+                        }
+                    }
+                }
+                else if (typeInfo.id.startsWith('IO')) data.value = cNode.value;
             }
 
             // Override OpCode if specified (e.g. math:SUB)
@@ -190,7 +221,9 @@ export class GraphCodec {
                 }
             }
 
-            const resolvedTarget = this.resolveHandleAlias(conn.targetHandle);
+            const targetCNode = cglNodes.get(conn.targetId);
+            const targetDef = targetCNode ? this.resolveType(targetCNode.category, targetCNode.opCode) : undefined;
+            const resolvedTarget = this.resolveHandleAlias(conn.targetHandle, targetDef?.id);
 
             graph.edges.push({
                 id: `e-cgl-${Math.random().toString(36).substr(2, 9)}`,
@@ -206,14 +239,17 @@ export class GraphCodec {
         return graph;
     }
 
-    private static resolveHandleAlias(handle: string): string {
+    private static resolveHandleAlias(handle: string, targetTypeId?: string): string {
+        // Skip aliasing for Expert nodes (SY-05, etc.) because handles must match code variables exactly
+        if (targetTypeId?.startsWith('SY-')) return handle;
+
         const h = handle.toLowerCase();
-        // Common Math Aliases
+        // Common Math Aliases (MA-01 uses in_a, in_b)
         if (h === 'a') return 'in_a';
         if (h === 'b') return 'in_b';
         // Base Input Alias
         if (h === 'in') return 'in'; // Explicit 'in' is fine
-        if (h === 'base') return 'in_a'; // POW uses 'in_a' (labeled Base), but 'base' is clearer in CGL
+        if (h === 'base') return 'in_a'; // POW uses 'in_a' (labeled Base)
         if (h === 'exp') return 'in_b';
         // Logic Aliases
         if (h === 'cond' || h === 'if') return 'condition';
@@ -257,8 +293,14 @@ export class GraphCodec {
             if (opLower === 'num') return NODE_DEFINITIONS.find(d => d.id === 'IO-01');
             if (opLower === 'slider') return NODE_DEFINITIONS.find(d => d.id === 'IO-02');
             if (opLower === 'res') return NODE_DEFINITIONS.find(d => d.id === 'IO-11');
+            if (opLower === 'matrix') return NODE_DEFINITIONS.find(d => d.id === 'IO-16');
+            if (opLower === 'formula') return NODE_DEFINITIONS.find(d => d.id === 'IO-17');
             if (opLower === 'text') return undefined; // Not implemented
             if (opLower === 'unit') return NODE_DEFINITIONS.find(d => d.id === 'IO-05');
+
+            // Fallback for IO nodes by ID (e.g. io:IO-11)
+            const idMatch = NODE_DEFINITIONS.find(d => d.id.toLowerCase() === opLower);
+            if (idMatch) return idMatch;
         }
 
         // 3. Logic Family
@@ -278,7 +320,15 @@ export class GraphCodec {
             if (codeMatch) return codeMatch;
         }
 
-        // 4. Direct ID Match (Fallback)
+        // 4. Expert Family
+        if (catLower === 'expert') {
+            if (opLower === 'sy-05' || opLower === 'expression') return NODE_DEFINITIONS.find(d => d.id === 'SY-05');
+            // Fallback for expert nodes by ID
+            const idMatch = NODE_DEFINITIONS.find(d => d.id.toLowerCase() === opLower);
+            if (idMatch) return idMatch;
+        }
+
+        // 5. Direct ID Match (Fallback)
         // If user types ID-01 explicitly
         return NODE_DEFINITIONS.find(d => d.id.toLowerCase() === category.toLowerCase());
     }
@@ -345,6 +395,13 @@ export class GraphCodec {
                     else if (node.type === 'MA-04') { op = 'switch'; }
                     else if (node.type === 'MA-08') { op = 'toggle'; if (nodeData.value !== undefined) val = ` = ${String(nodeData.value)}`; }
                     else if (node.type === 'MA-09') { op = 'button'; }
+                } else if (internalCat === 'expert') {
+                    cat = 'expert';
+                    const nodeData = (node.data || {}) as Record<string, unknown>;
+                    if (node.type === 'SY-05') {
+                        op = 'SY-05';
+                        if (nodeData.code !== undefined) val = ` = ${String(nodeData.code)}`;
+                    }
                 }
             }
 

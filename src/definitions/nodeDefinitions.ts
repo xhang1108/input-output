@@ -335,6 +335,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'button', value: false }
     },
+    {
+        id: 'SY-05',
+        label: 'NodeExpression',
+        category: 'Expert',
+        handles: [
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { type: 'expression', code: '1 + 2' }
+    },
 ];
 
 

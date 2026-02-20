@@ -1,7 +1,8 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { Copy, Check } from 'lucide-react';
 
 /**
  * 📝 FormulaResultNode (IO-17)
@@ -24,6 +25,7 @@ export const FormulaResultNode = memo((props: NodeProps) => {
 
     const nodeData = { ...data, handles };
     const payload = data.value as import('../../types/payload').NodePayload;
+    const [copied, setCopied] = useState(false);
 
     let formula = '';
     if (payload && payload.symbol) {
@@ -33,11 +35,25 @@ export const FormulaResultNode = memo((props: NodeProps) => {
         formula = String(PayloadUtils.unwrap(payload));
     }
 
+    const copyToClipboard = () => {
+        if (formula) {
+            navigator.clipboard.writeText(formula);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     return (
         <BaseNode {...props} data={nodeData}>
             <div className="flex flex-col gap-2 p-2 min-w-[200px] max-w-[400px]">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mb-1">
                     <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Calculation Path</label>
+                    <button
+                        onClick={copyToClipboard}
+                        className={`nodrag p-1 rounded hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
+                    >
+                        {copied ? <Check size={12} /> : <Copy size={12} />}
+                    </button>
                 </div>
 
                 {/* Glassmorphism Formula Display */}

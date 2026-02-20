@@ -643,7 +643,7 @@ export function useHand() {
             let targetArea = Infinity;
 
             for (const frame of frames) {
-                if (frame.id === node.id) continue; // Can't parent to self
+                if (frame.id === node.id) continue;
                 const { w: fw, h: fh } = getSize(frame);
                 const fX = frame.position.x;
                 const fY = frame.position.y;
@@ -660,7 +660,6 @@ export function useHand() {
 
             // 5. Determine parent change
             const oldParentId = node.parentId;
-
             let newParentId = targetFrame?.id;
 
             // Auto-Resize Feature:

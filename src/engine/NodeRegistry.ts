@@ -156,19 +156,21 @@ NodeRegistry.register('IO-18', (node) => {
         value: {
             hex: hex,
             rgb: [rOut, gOut, bOut],
-            vec3: [rNorm, gNorm, bNorm] // Preserve infinite precision
+            vec3: [rNorm, gNorm, bNorm]
         },
         symbol: null,
         meta: {
             role: 'color',
             handleMeta: {
-                // 'rgb' handle uses 'rgb' unit (integer range depends on depth)
                 rgb: { role: 'color', unit: 'rgb' },
-                // 'vec3' handle uses 'vec3' unit (0-1)
                 vec3: { role: 'color', unit: 'vec3' }
             }
         }
     };
+}, (node) => {
+    const val = node.value || { value: '#ffffff' };
+    const raw = PayloadUtils.unwrap(val) as any;
+    return PayloadUtils.createSymbol('Literal', { value: raw?.hex || String(raw) });
 });
 
 // IO-19: Color Result (Display)
@@ -566,10 +568,8 @@ NodeRegistry.register('MA-03', (node) => {
     };
 }, (node) => PayloadUtils.createSymbol('Identifier', { name: ((node.data || {}) as Record<string, unknown>).val as string || 'pi' }));
 
-// IO-17: Formula Result
-NodeRegistry.register('IO-17', (node, inputs) => {
-    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
-});
+// IO-17: Formula Result (Consolidated)
+// (Implementation moved to end or handled here)
 
 // MA-14: Rounding (Moved from MA-12)
 NodeRegistry.register('MA-14', (node, inputs) => {
@@ -1006,4 +1006,97 @@ NodeRegistry.register('MA-09', (node) => {
     return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(node.value));
 }, (node) => {
     return PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap(node.value) });
+});
+
+
+// IO-17: Formula Result
+NodeRegistry.register('IO-17', (node, inputs) => {
+    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
+}, (node, inputs) => {
+    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
+});
+
+// UI-01: Text Annotation
+NodeRegistry.register('UI-01', (node, inputs) => {
+    return {
+        type: DataType.Object,
+        value: {},
+        symbol: null,
+        meta: {}
+    };
+}, (node) => {
+    return PayloadUtils.createSymbol('Literal', { value: 'Annotation' });
+});
+
+// SY-05: Expert Node (NodeExpression)
+NodeRegistry.register('SY-05', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const code = (data.code as string) || '';
+    if (!code) return PayloadUtils.createScalar(0);
+
+    const math = MathEngine.getInstance().getMathInstance();
+    try {
+        const scope: Record<string, any> = {};
+        for (const [key, val] of Object.entries(inputs)) {
+            const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(val), math);
+            scope[key] = hydrated;
+        }
+
+        const result = math.evaluate(code, scope);
+        return {
+            type: DataType.Scalar,
+            value: PayloadUtils.dehydrate(result),
+            symbol: null,
+            meta: {}
+        };
+    } catch (error) {
+        return PayloadUtils.createError(String(error));
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const code = (data.code as string) || '';
+    if (!code) return PayloadUtils.createSymbol('Literal', { value: 0 });
+
+    const math = MathEngine.getInstance().getMathInstance();
+    try {
+        const parsed = math.parse(code);
+        const convert = (mNode: any): any => {
+            if (mNode.isSymbolNode) {
+                return inputs[mNode.name] || PayloadUtils.createSymbol('Identifier', { name: mNode.name });
+            }
+            if (mNode.isOperatorNode) {
+                const opMap: Record<string, string> = {
+                    '+': 'ADD', '-': 'SUB', '*': 'MUL', '/': 'DIV', '^': 'POW'
+                };
+                if (mNode.args.length === 2) {
+                    return PayloadUtils.createSymbol('BinaryExpression', {
+                        operator: opMap[mNode.op] || mNode.op,
+                        left: convert(mNode.args[0]),
+                        right: convert(mNode.args[1])
+                    });
+                } else if (mNode.args.length === 1) {
+                    return PayloadUtils.createSymbol('UnaryExpression', {
+                        operator: mNode.op === '-' ? 'NEG' : mNode.op,
+                        argument: convert(mNode.args[0])
+                    });
+                }
+            }
+            if (mNode.isConstantNode) {
+                return PayloadUtils.createSymbol('Literal', { value: mNode.value });
+            }
+            if (mNode.isFunctionNode) {
+                return PayloadUtils.createSymbol('FunctionCall', {
+                    name: mNode.name,
+                    args: mNode.args.map(convert)
+                });
+            }
+            if (mNode.isParenthesisNode) {
+                return convert(mNode.content);
+            }
+            return PayloadUtils.createSymbol('Literal', { value: mNode ? String(mNode) : '?' });
+        };
+        return convert(parsed);
+    } catch (e) {
+        return PayloadUtils.createSymbol('Literal', { value: code });
+    }
 });

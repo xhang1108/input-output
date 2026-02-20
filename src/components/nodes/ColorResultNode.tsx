@@ -1,10 +1,11 @@
 'use client';
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { Brain } from '../../engine/Brain';
+import { Copy, Check } from 'lucide-react';
 
 /**
  * ColorResultNode (IO-19)
@@ -14,6 +15,7 @@ import { Brain } from '../../engine/Brain';
  */
 export const ColorResultNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const [copied, setCopied] = useState(false);
 
     // Unwrap the payload
     const unwrapped = PayloadUtils.unwrap(data.value);
@@ -46,15 +48,31 @@ export const ColorResultNode = memo((props: NodeProps) => {
         });
     }, [id]);
 
+    const copyToClipboard = () => {
+        if (hex) {
+            navigator.clipboard.writeText(hex);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     return (
         <BaseNode {...props}>
             <div className="flex flex-col gap-2 p-1 w-[160px]">
                 {/* Header / Primary Value Preview */}
                 <div className="flex items-center justify-between gap-2 px-1 mb-1">
                     <label className="text-[9px] text-zinc-500 uppercase tracking-widest font-black">Result</label>
-                    <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase truncate max-w-[120px]" title={hex}>
-                        {hex}
-                    </span>
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                        <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase truncate max-w-[80px]" title={hex}>
+                            {hex}
+                        </span>
+                        <button
+                            onClick={copyToClipboard}
+                            className={`nodrag p-1 rounded hover:bg-zinc-800 transition-colors shrink-0 ${copied ? 'text-green-500' : 'text-zinc-500'}`}
+                        >
+                            {copied ? <Check size={10} /> : <Copy size={10} />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Color Display (Visual) */}

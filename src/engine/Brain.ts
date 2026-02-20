@@ -654,6 +654,7 @@ export class Brain {
         const getHandleType = (nodeId: string, handleId: string) => {
             const node = this.state.nodes.get(nodeId);
             if (!node) return null;
+
             const def = NODE_DEFINITIONS.find(d => d.id === node.type);
             if (!def) return null;
             const handle = def.handles.find(h => h.id === handleId);
@@ -761,7 +762,11 @@ export class Brain {
      */
     public getSymbol(nodeId: string): import('../types/payload').ASTNode | null {
         const node = this.state.nodes.get(nodeId);
-        if (!node) return null;
+        if (!node) {
+            console.warn(`[Brain] getSymbol: Node ${nodeId} not found in state.`);
+            return null;
+        }
+        console.log(`[Brain] getSymbol: Found node ${nodeId}, generating symbol...`);
 
         // 1. If node has a cached symbol, return it (e.g. Factor nodes might cache)
         if (node.value && node.value.symbol) {
@@ -781,13 +786,11 @@ export class Brain {
         }
 
         // 3. Ask Registry to construct AST using input symbols
-        // We need a new Registry method: `getSymbol(nodeType, nodeData, inputSymbols)`
-        // Or we can simple reuse `evaluate` but passing Symbols instead of values?
-        // No, `evaluate` is for Values. We need a `symbolize` method in Registry.
-
-        // For now, let's implement a basic default symbolizers here or in Registry.
-        // Let's defer to Registry static method.
-        return NodeRegistry.getSymbol(node, inputSymbols);
+        const result = NodeRegistry.getSymbol(node, inputSymbols);
+        if (!result) {
+            console.error(`[Brain] getSymbol: Registry returned null for node ${nodeId} (${node.type})`);
+        }
+        return result;
     }
 
     // --- Dev Tools ---

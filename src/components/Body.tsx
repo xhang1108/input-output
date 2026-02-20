@@ -16,6 +16,7 @@ import { RelinkLine, RelinkContext } from './edges/RelinkLine';
 import '@xyflow/react/dist/style.css';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
+import { SoulRenderer } from '../utils/SoulRenderer';
 import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
 import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
 import { useEar } from '../nerves/useEar';
@@ -34,6 +35,7 @@ import { useBrainSync } from '../hooks/useBrainSync';
 import { ContextMenu } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
 import { Brain } from '../engine/Brain';
+import { NodeRegistry } from '../engine/NodeRegistry';
 import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useAppStore } from '../store/useStore';
@@ -170,8 +172,25 @@ export function Body() {
     // Connect Brain Log to UI Log
     useEffect(() => {
         const brain = Brain.getInstance();
-        // @ts-expect-error - Brain is global for debugging
-        window.Brain = brain;
+        // @ts-expect-error - Expose for debugging
+        window.Brain = Brain;
+        // @ts-expect-error - Expose for debugging
+        window.brain = brain;
+        // @ts-expect-error - Expose for debugging
+        window.NodeRegistry = NodeRegistry;
+        // @ts-expect-error - Expose for debugging
+        window.SoulRenderer = SoulRenderer;
+
+        // @ts-expect-error - Debug helper
+        window.debugBrain = () => {
+            console.log('Brain State:', (brain as any).state);
+            console.log('Available Nodes:', Array.from((brain as any).state.nodes.keys()));
+            console.log('Registered Evaluators:', (NodeRegistry as any).evaluators.size);
+            console.log('Registered Symbolizers:', (NodeRegistry as any).symbolizers.size);
+        };
+        // @ts-expect-error - Debug helper
+        window.getNodes = () => Array.from((brain as any).state.nodes.values());
+
         const cleanupLog = brain.on('log', (msg: unknown) => logAction(String(msg)));
         return () => { cleanupLog(); };
     }, [logAction]);

@@ -250,6 +250,33 @@ export const PayloadUtils = {
             };
         }
 
+        // 📝 MathJS Node (OperatorNode, SymbolNode, etc) -> String
+        if (typeof value === 'object' && value !== null && 'isNode' in (value as any)) {
+            return (value as any).toString();
+        }
+
+        // 📦 Plain Object -> Recursive Dehydrate
+        // This ensures nested results in objects (like { a: det(...) }) are properly handled.
+        // We only recursion if it's a "POJO" (Plain Old JavaScript Object)
+        const isPOJO = typeof value === 'object' && value !== null &&
+            (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
+
+        if (isPOJO) {
+            const result: Record<string, unknown> = {};
+            for (const key in value as Record<string, unknown>) {
+                if (Object.prototype.hasOwnProperty.call(value, key)) {
+                    result[key] = this.dehydrate((value as any)[key]);
+                }
+            }
+            return result as unknown as PayloadValue;
+        }
+
+        // 🛡️ Final Fallback: If it's a complex object we don't recognize but has a toString, 
+        // and it's not a POJO/Array, it might be an internal Decimal/Complex/Unit.
+        if (typeof value === 'object' && value !== null && h.toString) {
+            return h.toString();
+        }
+
         return value as PayloadValue;
     },
 

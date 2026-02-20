@@ -9,7 +9,7 @@
 // Placeholder for Future Phases
 // Phase 3: Symbolic AST Structure
 export type ASTNode = {
-    type: 'BinaryExpression' | 'UnaryExpression' | 'FunctionCall' | 'Identifier' | 'Literal' | 'ConditionalExpression';
+    type: 'BinaryExpression' | 'UnaryExpression' | 'FunctionCall' | 'Identifier' | 'Literal' | 'ConditionalExpression' | 'TemplateLiteral';
     operator?: string;
     left?: ASTNode;
     right?: ASTNode;
@@ -18,6 +18,7 @@ export type ASTNode = {
     alternate?: ASTNode;  // For ternary/conditional
     argument?: ASTNode;
     args?: ASTNode[];
+    parts?: (string | ASTNode)[]; // For TemplateLiteral
     name?: string;
     value?: number | string | boolean;
     unit?: string; // Symbolic unit
