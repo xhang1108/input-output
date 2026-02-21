@@ -53,6 +53,7 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                 }
             }
 
+            let parseDiagnostics: string[] = [];
             if (isJson) {
                 // JSON
                 if (!graphData!.nodes || !Array.isArray(graphData!.nodes)) {
@@ -68,9 +69,10 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                 const { GraphCodec } = await import('../../engine/GraphCodec');
                 const result = GraphCodec.parse(jsonInput);
                 graphData = result.graph;
-                setDiagnostics(result.diagnostics);
+                parseDiagnostics = result.diagnostics;
+                setDiagnostics(parseDiagnostics);
 
-                if (graphData.nodes.length === 0 && graphData.edges.length === 0 && result.diagnostics.length === 0) {
+                if (graphData.nodes.length === 0 && graphData.edges.length === 0 && parseDiagnostics.length === 0) {
                     console.warn('[JsonImport] Warning: Parsed graph is empty');
                 }
             }
@@ -82,12 +84,15 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                 edgeIds: graphData.edges?.map((e) => e.targetHandle) // Check target handles
             });
 
-            Brain.getInstance().injectNodes(graphData, shouldClear);
+            const injectDiagnostics = await Brain.getInstance().injectNodes(graphData, shouldClear);
+
+            setDiagnostics(prev => [...prev, ...injectDiagnostics]);
+
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);
                 // Only auto-close if there are no warnings to read
-                if (graphData.nodes.length > 0 && diagnostics.length === 0) {
+                if (graphData.nodes.length > 0 && parseDiagnostics.length === 0 && injectDiagnostics.length === 0) {
                     onClose();
                     setJsonInput('');
                 }

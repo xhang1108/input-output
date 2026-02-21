@@ -75,5 +75,7 @@ export interface InjectableGraph {
         sourceHandle: string;
         target: string;
         targetHandle: string;
+        type?: string;
+        data?: Record<string, unknown>;
     }[];
 }

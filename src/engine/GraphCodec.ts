@@ -218,7 +218,9 @@ export class GraphCodec {
                 source: conn.sourceId,
                 sourceHandle: sourceHandle,
                 target: conn.targetId,
-                targetHandle: resolvedTarget
+                targetHandle: resolvedTarget,
+                type: 'magnetic',
+                data: { pathType: 'bezier', animate: false }
             });
 
             console.log(`[GraphCodec] Edge ${String(idx)}: ${conn.sourceId}:${sourceHandle} -> ${conn.targetId}:${resolvedTarget}`);

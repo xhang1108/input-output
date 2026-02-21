@@ -717,8 +717,6 @@ export class Brain {
         const isInput = (id: string, typeHint: string | null) => {
             if (typeHint) return typeHint === 'target';
             const lid = id.toLowerCase();
-            // Add single-letter variables typical for SY-05 as fallback inputs if typeHint is missing
-            if (lid.length === 1 && lid >= 'a' && lid <= 'z') return true;
             return !!id && (lid.startsWith('in') || lid === 'target' || lid.includes('input') || lid === 'condition' || lid === 'select' || lid === 'data' || lid === 'if');
         };
 
@@ -848,24 +846,20 @@ export class Brain {
 
     // --- Dev Tools ---
 
-    public async injectNodes(graph: import('./types').InjectableGraph, clear: boolean = false): Promise<void> {
+    public async injectNodes(graph: import('./types').InjectableGraph, clear: boolean = false): Promise<string[]> {
         this.log(`Injecting ${graph.nodes.length} nodes and ${graph.edges.length} edges...`);
-
-        const txs: Transaction[] = [];
+        const diagnostics: string[] = [];
+        const nodeTxs: Transaction[] = [];
 
         if (clear) {
-            // Basic clear implementation - simply remove all existing nodes
             this.state.nodes.forEach(n => {
-                txs.push({ type: 'REMOVE_NODE', payload: n.id });
+                nodeTxs.push({ type: 'REMOVE_NODE', payload: n.id });
             });
         }
 
         // 1. Add Nodes
-        // 1. Add Nodes
         graph.nodes.forEach(n => {
             let nodeData = n.data || {};
-
-            // Fix: Ensure handles are populated from Definitions if missing in JSON
             if (!nodeData.handles) {
                 const def = NODE_DEFINITIONS.find(d => d.id === n.type);
                 if (def && def.handles) {
@@ -873,21 +867,14 @@ export class Brain {
                 }
             }
 
-            // Fix: Fallback to data.value if initialValue is missing for IO nodes (Legacy JSON support)
             let initVal = n.value;
             if (initVal === undefined && n.data && n.data.value !== undefined) {
-                // Heuristic: If it has data.value and is IO family, treat as raw value
                 if (n.type.startsWith('IO-')) {
-                    // For now, assume scalar. Logic nodes (MA-08) handle boolean conversion in their evaluator/wrapping if needed.
-                    // PayloadUtils.wrap will handle number/boolean correctly.
-                    // But we need to construct a raw value to be wrapped by ADD_NODE handlers, or pass a Payload directly?
-                    // ADD_NODE wraps it: const initialPayload = PayloadUtils.wrap(tx.payload.initialValue);
-                    // so we can pass the raw number/boolean.
                     initVal = n.data.value;
                 }
             }
 
-            txs.push({
+            nodeTxs.push({
                 type: 'ADD_NODE',
                 payload: {
                     id: n.id,
@@ -899,31 +886,54 @@ export class Brain {
             });
         });
 
-        // 2. Add Edges (Wrapped in CONNECT transactions)
+        // 2. Validate and Add Edges
+        const edgeTxs: Transaction[] = [];
         graph.edges.forEach(e => {
-            // Construct a valid Edge object for the transaction payload
-            // We need to ensure it matches the Edge interface expected by CONNECT
             const edgePayload = {
                 id: e.id,
                 source: e.source,
                 sourceHandle: e.sourceHandle,
                 target: e.target,
                 targetHandle: e.targetHandle,
-                type: 'magnetic', // Default to magnetic
-                data: { pathType: 'bezier', animate: false } // Default styling
-            } as unknown as Edge; // Cast because Edge might have more specific XYFlow properties we don't have here
+                type: 'magnetic',
+                data: { pathType: 'bezier', animate: false }
+            } as unknown as Edge;
 
-            txs.push({
+            edgeTxs.push({
                 type: 'CONNECT',
                 payload: edgePayload
             });
         });
 
-        if (txs.length > 0) {
-            this.applyTransaction({ type: 'BATCH', payload: txs });
-            // Emit RE-LAYOUT to signal UI to run layout on the newly injected topology
+        const allTxs = [...nodeTxs, ...edgeTxs];
+        if (allTxs.length > 0) {
+            // We use a custom BATCH apply to capture individual errors
+            const tx = { type: 'BATCH' as const, payload: allTxs };
+
+            // Generate inverse for the entire batch
+            const inverseTx = this.createInverseTransaction(tx);
+            if (inverseTx) {
+                this.history.push({ do: tx, undo: inverseTx });
+            }
+
+            // Apply Nodes manually silently
+            nodeTxs.forEach(t => this.applyTransaction(t, false, true));
+
+            // Apply Edges manually and catch validation errors
+            edgeTxs.forEach(t => {
+                const res = this.applyTransaction(t, false, true);
+                if (!res.success) {
+                    const payload = t.payload as Edge;
+                    diagnostics.push(`Failed to connect ${payload.source}:${payload.sourceHandle} to ${payload.target}:${payload.targetHandle} - ${res.reason}`);
+                }
+            });
+
+            this.emit('graphChanged', null);
+            this.triggerCalculation();
             this.emit('RE-LAYOUT', null);
         }
+
+        return diagnostics;
     }
 }
 
