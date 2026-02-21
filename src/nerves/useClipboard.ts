@@ -1,18 +1,18 @@
 import { useCallback } from 'react';
-import { useReactFlow, Node } from '@xyflow/react';
-import { generateNodeId } from '../utils/idGenerator';
+import { useReactFlow, Node, Edge } from '@xyflow/react';
+import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 
 const CLIPBOARD_KEY = 'calctopus_clipboard';
 
 /**
  * useClipboard
- * Handles clone, copy, paste, and duplicate operations on nodes.
+ * Handles clone, copy, paste, and duplicate operations on nodes and edges.
  */
 export function useClipboard() {
-    const { getNodes, setNodes } = useReactFlow();
+    const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
 
-    // --- Helper: Clone Nodes (Internal) ---
-    const cloneNodes = useCallback((nodesToClone: Node[], offset: { x: number, y: number } = { x: 0, y: 0 }) => {
+    // --- Helper: Clone Nodes & Edges (Internal) ---
+    const cloneElements = useCallback((nodesToClone: Node[], edgesToClone: Edge[], offset: { x: number, y: number } = { x: 0, y: 0 }) => {
         const idMap = new Map<string, string>();
 
         const newNodes = nodesToClone.map(node => {
@@ -38,28 +38,51 @@ export function useClipboard() {
             }
         });
 
-        return newNodes;
+        const newEdges = edgesToClone.map(edge => {
+            const newSource = idMap.get(edge.source);
+            const newTarget = idMap.get(edge.target);
+            if (!newSource || !newTarget) return null;
+
+            return {
+                ...edge,
+                id: generateEdgeId(),
+                source: newSource,
+                target: newTarget,
+                selected: true
+            };
+        }).filter(Boolean) as Edge[];
+
+        return { newNodes, newEdges };
     }, []);
 
     // --- Command: Duplicate (Immediate) ---
-    const duplicateSelected = useCallback((): Node[] | false => {
+    const duplicateSelected = useCallback((): { nodes: Node[], edges: Edge[] } | false => {
         const nodes = getNodes();
         const selectedNodes = nodes.filter(n => n.selected);
         if (selectedNodes.length === 0) return false;
 
-        const newNodes = cloneNodes(selectedNodes, { x: 0, y: 0 });
-        setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat(newNodes));
-        return newNodes;
-    }, [getNodes, setNodes, cloneNodes]);
+        const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
+        const edgesToClone = getEdges().filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target));
+
+        const { newNodes, newEdges } = cloneElements(selectedNodes, edgesToClone, { x: 0, y: 0 });
+
+        setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
+        setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
+        return { nodes: newNodes, edges: newEdges };
+    }, [getNodes, getEdges, setNodes, setEdges, cloneElements]);
 
     // --- Command: Copy to Clipboard ---
     const copyToClipboard = useCallback(() => {
         const nodes = getNodes();
         const selectedNodes = nodes.filter(n => n.selected);
         if (selectedNodes.length === 0) return;
-        const payload = JSON.stringify(selectedNodes);
+
+        const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
+        const edgesToCopy = getEdges().filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target));
+
+        const payload = JSON.stringify({ nodes: selectedNodes, edges: edgesToCopy });
         localStorage.setItem(CLIPBOARD_KEY, payload);
-    }, [getNodes]);
+    }, [getNodes, getEdges]);
 
     // --- Command: Paste from Clipboard ---
     const pasteFromClipboard = useCallback(() => {
@@ -67,15 +90,28 @@ export function useClipboard() {
         if (!payload) return;
 
         try {
-            const clipboardNodes = JSON.parse(payload) as Node[];
-            if (!Array.isArray(clipboardNodes)) return;
+            const parsed = JSON.parse(payload);
+            let clipboardNodes: Node[] = [];
+            let clipboardEdges: Edge[] = [];
 
-            const newNodes = cloneNodes(clipboardNodes, { x: 20, y: 20 });
-            setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat(newNodes));
+            if (Array.isArray(parsed)) {
+                // Legacy support (nodes only)
+                clipboardNodes = parsed;
+            } else if (parsed && Array.isArray(parsed.nodes)) {
+                // New format { nodes: [], edges: [] }
+                clipboardNodes = parsed.nodes;
+                clipboardEdges = parsed.edges || [];
+            } else {
+                return;
+            }
+
+            const { newNodes, newEdges } = cloneElements(clipboardNodes, clipboardEdges, { x: 20, y: 20 });
+            setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
+            setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
         } catch (e) {
-            console.error("Failed to paste nodes", e);
+            console.error("Failed to paste items", e);
         }
-    }, [setNodes, cloneNodes]);
+    }, [setNodes, setEdges, cloneElements]);
 
     return {
         duplicateSelected,

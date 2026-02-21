@@ -16,3 +16,10 @@ export function generateNodeId(type: string): string {
 
     return `${cleanType}_${shortHash}`;
 }
+
+/**
+ * Generates an ID for an edge.
+ */
+export function generateEdgeId(): string {
+    return `e_${nanoid(8)}`;
+}

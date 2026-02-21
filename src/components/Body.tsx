@@ -328,9 +328,9 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             'r': (e) => { startRotate(mousePosRef.current); logAction('Start Rotate (R)'); },
             'shift+d': (e) => {
                 e.preventDefault();
-                const newNodes = duplicateSelected();
-                if (newNodes) {
-                    startGrab(mousePosRef.current, false, newNodes as Node[]);
+                const duplicated = duplicateSelected();
+                if (duplicated) {
+                    startGrab(mousePosRef.current, false, duplicated.nodes);
                     logAction('Duplicate Selected (Shift+D)');
                 }
             },
@@ -626,8 +626,8 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                                     selectAll: () => { },
                                     rename: () => logAction('Rename via Menu (Todo)'),
                                     duplicateAndGrab: () => {
-                                        const newNodes = duplicateSelected();
-                                        if (newNodes) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, newNodes as Node[]);
+                                        const duplicated = duplicateSelected();
+                                        if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes);
                                     },
                                     copyToClipboard,
                                     detachSelected,
