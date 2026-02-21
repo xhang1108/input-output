@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, FileJson, Download } from 'lucide-react';
+import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, FileJson, Download, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
 
@@ -24,6 +24,7 @@ interface SettingsPanelProps {
     panOnScroll: boolean;
     setPanOnScroll: (enabled: boolean) => void;
     onReset: () => void;
+    onBackToProjects: () => void;
 }
 
 import { GraphImportModal } from './GraphImportModal';
@@ -40,7 +41,8 @@ export function SettingsPanel({
     layoutDirection, setLayoutDirection,
     edgeAnimation, setEdgeAnimation,
     panOnScroll, setPanOnScroll,
-    onReset
+    onReset,
+    onBackToProjects
 }: SettingsPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
@@ -225,6 +227,20 @@ export function SettingsPanel({
                         <div className="flex items-center gap-3">
                             <span className="text-zinc-500"><Download className="w-4 h-4" /></span>
                             Export Graph
+                        </div>
+                    </button>
+
+                    {/* Projects (Back to Load Screen) */}
+                    <button
+                        onClick={() => {
+                            setIsOpen(false);
+                            onBackToProjects();
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="text-zinc-500"><FolderOpen className="w-4 h-4" /></span>
+                            Projects
                         </div>
                     </button>
 

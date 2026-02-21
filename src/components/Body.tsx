@@ -11,6 +11,7 @@ import {
     ConnectionMode,
     ConnectionLineType,
     OnConnectStartParams,
+    useReactFlow,
 } from '@xyflow/react';
 import { RelinkLine, RelinkContext } from './edges/RelinkLine';
 import '@xyflow/react/dist/style.css';
@@ -31,7 +32,6 @@ import { CommandPalette } from './ui/CommandPalette';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { InspectorPanel } from './ui/InspectorPanel';
 import { SettingsPanel } from './ui/SettingsPanel';
-import { useMemory, initialNodes } from '../engine/useMemory';
 import { useBrainSync } from '../hooks/useBrainSync';
 import { ContextMenu } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
@@ -44,11 +44,17 @@ import { toast } from 'sonner';
 
 // nodeTypes and edgeTypes imported from config/nodeTypeMap.ts
 
-export function Body() {
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+interface BodyProps {
+    projectId: string; // slot id or 'new' for blank canvas
+    onBackToProjects: () => void;
+}
+
+export function Body({ projectId, onBackToProjects }: BodyProps) {
+    const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
     // UI Helpers
+    const { fitView, getViewport, setViewport } = useReactFlow();
     const mousePosRef = useRef({ x: 0, y: 0 });
     const [isSnapping, setIsSnapping] = useState(false);
 
@@ -82,7 +88,7 @@ export function Body() {
     const effectiveSnap = isSnapping || manualSnap;
 
     // Save/Load Hook
-    const { saveProject } = useProjectSave();
+    const { saveProject, isLoaded } = useProjectSave(projectId);
 
     // Sync Edge Type for existing edges
     // (Removed duplicate useEffect that caused ReferenceError)
@@ -130,8 +136,16 @@ export function Body() {
         transformValue
     } = useHand();
 
-    // Memory (Nodes & Edges Persistence)
-    const { clearMemory } = useMemory(nodes, edges, setNodes, setEdges, logAction);
+    // --- Canvas Reset ---
+    const clearMemory = useCallback(() => {
+        if (confirm('Are you sure you want to wipe all memory? This cannot be undone.')) {
+            Brain.getInstance().clearAll();
+            setNodes([]);
+            setEdges([]);
+            logAction('Memory Wiped');
+            setTimeout(() => fitView({ duration: 400 }), 100);
+        }
+    }, [setNodes, setEdges, logAction, fitView]);
 
     // Node Spawner (Command Palette + Auto-Link)
     const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
@@ -457,6 +471,15 @@ export function Body() {
                 onClick={onClick}
                 onContextMenu={(e) => e.preventDefault()}
             >
+                {/* Loading Overlay — blocks flash while project data loads */}
+                {!isLoaded && (
+                    <div className="absolute inset-0 z-9999 bg-zinc-950 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-2 border-zinc-700 border-t-unit rounded-full animate-spin" />
+                            <span className="text-xs text-zinc-500">Loading project...</span>
+                        </div>
+                    </div>
+                )}
                 <ReactFlow
                     connectionLineComponent={RelinkLine}
                     nodes={nodes}
@@ -470,7 +493,6 @@ export function Body() {
                     isValidConnection={isValidRelinkConnection}
 
                     nodeTypes={nodeTypes}
-                    fitView
                     colorMode="dark"
                     connectionMode={ConnectionMode.Loose} // Allow Target-to-Target connection start
                     proOptions={{ hideAttribution: true }}
@@ -568,6 +590,7 @@ export function Body() {
                         panOnScroll={panOnScroll}
                         setPanOnScroll={setPanOnScroll}
                         onReset={clearMemory}
+                        onBackToProjects={onBackToProjects}
                     />
 
 

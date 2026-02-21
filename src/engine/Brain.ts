@@ -150,6 +150,16 @@ export class Brain {
         this.emit('graphChanged', null);
     }
 
+    /** Clears all state silently — no events emitted. Use before mounting UI. */
+    public silentReset() {
+        this.state = {
+            nodes: new Map(),
+            edges: [],
+        };
+        this.adjacency = new Map();
+        this.reverseAdjacency = new Map();
+    }
+
     private markAllDirty() {
         this.state.nodes.forEach(node => {
             node.isDirty = true;
@@ -846,7 +856,7 @@ export class Brain {
 
     // --- Dev Tools ---
 
-    public async injectNodes(graph: import('./types').InjectableGraph, clear: boolean = false): Promise<string[]> {
+    public async injectNodes(graph: import('./types').InjectableGraph, clear: boolean = false, skipLayout: boolean = false): Promise<string[]> {
         this.log(`Injecting ${graph.nodes.length} nodes and ${graph.edges.length} edges...`);
         const diagnostics: string[] = [];
         const nodeTxs: Transaction[] = [];
@@ -930,7 +940,7 @@ export class Brain {
 
             this.emit('graphChanged', null);
             this.triggerCalculation();
-            this.emit('RE-LAYOUT', null);
+            if (!skipLayout) this.emit('RE-LAYOUT', null);
         }
 
         return diagnostics;
