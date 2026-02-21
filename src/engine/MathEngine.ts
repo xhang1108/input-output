@@ -3,17 +3,15 @@ import {
     all,
 } from 'mathjs';
 import { IMathEngine } from './interfaces/IMathEngine';
+import { MATH_CONFIG } from './mathConfig';
 
 export class MathEngine implements IMathEngine {
     private static instance: MathEngine;
     private math: any;
 
     private constructor() {
-        // Correct initialization for mathjs factory functions
-        this.math = create(all, {
-            number: 'BigNumber',
-            precision: 64
-        });
+        // Use shared MATH_CONFIG to guarantee parity with Web Worker
+        this.math = create(all, MATH_CONFIG);
     }
 
     public static getInstance(): MathEngine {
