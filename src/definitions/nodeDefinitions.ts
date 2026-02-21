@@ -77,6 +77,33 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'result', viewMode: 'auto' }
     },
+    {
+        id: 'IO-16',
+        label: 'Matrix Result',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single' }
+        ],
+        defaultData: { type: 'result', viewMode: 'grid' }
+    },
+    {
+        id: 'IO-17',
+        label: 'Formula Result',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single' }
+        ],
+        defaultData: { type: 'result', viewMode: 'formula' }
+    },
+    {
+        id: 'IO-19',
+        label: 'LaTeX Result',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single' }
+        ],
+        defaultData: { type: 'result', viewMode: 'latex' }
+    },
 
     {
         id: 'IO-06',
@@ -104,6 +131,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'result', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
         ],
         defaultData: { rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]' }
+    },
+    {
+        id: 'IO-21',
+        label: 'Abacus',
+        category: 'Input',
+        handles: [
+            { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] }
     },
 
     // ─── Utility Family ─────────────────────────────────────────

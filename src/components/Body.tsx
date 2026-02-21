@@ -40,7 +40,6 @@ import { NodeRegistry } from '../engine/NodeRegistry';
 import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useAppStore } from '../store/useStore';
-import { exportGraphToLatex } from '../utils/latex/graphToLatex';
 import { toast } from 'sonner';
 
 // nodeTypes and edgeTypes imported from config/nodeTypeMap.ts
@@ -608,14 +607,6 @@ export function Body() {
                                         if (newNodes) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, newNodes as Node[]);
                                     },
                                     copyToClipboard,
-                                    copyAsLatex: () => {
-                                        if (contextMenu.nodeId) {
-                                            const latex = exportGraphToLatex(contextMenu.nodeId, nodes, edges);
-                                            navigator.clipboard.writeText(latex);
-                                            toast.success('Copied to clipboard as LaTeX!');
-                                            logAction('Copied as LaTeX');
-                                        }
-                                    },
                                     detachSelected,
                                     deleteSelected,
                                     logAction,

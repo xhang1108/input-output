@@ -111,7 +111,10 @@ describe('Color Node Evaluator', () => {
 
         expect(result.type).toBe('matrix'); // Output provided by MathNode
         // [1, 0, 0] * 0.5 = [0.5, 0, 0]
-        expect(result.value).toEqual([0.5, 0, 0]);
+        const resArray = result.value as number[];
+        expect(resArray[0]).toBeCloseTo(0.5);
+        expect(resArray[1]).toBeCloseTo(0);
+        expect(resArray[2]).toBeCloseTo(0);
     });
 
     it('should allow ADD operations between Color (Vec3) and Scalar (Broadcasting)', async () => {

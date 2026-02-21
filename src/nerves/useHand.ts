@@ -487,7 +487,41 @@ export function useHand() {
         if (selected.length === 0) return;
 
         if (isAltHeld && !overrideNodes) {
+            // Break Abacus Links
+            const txs: import('../engine/types').Transaction[] = [];
+            selected.forEach(n => {
+                if (n.type === 'IO-21') {
+                    if (n.data?.prevAbacusId) {
+                        txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: n.data.prevAbacusId as string, data: { nextAbacusId: null } } });
+                        txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: n.id, data: { prevAbacusId: null } } });
+                    }
+                    if (n.data?.nextAbacusId) {
+                        txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: n.data.nextAbacusId as string, data: { prevAbacusId: null } } });
+                        txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: n.id, data: { nextAbacusId: null } } });
+                    }
+                }
+            });
+            if (txs.length > 0) Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+
             detachSelected();
+        } else if (!overrideNodes) {
+            // Expand selection to include linked abacuses
+            const chainSelected = new Set(selected.map(n => n.id));
+            let added = true;
+            while (added) {
+                added = false;
+                for (const n of nodes) {
+                    if (n.type === 'IO-21' && !chainSelected.has(n.id)) {
+                        const prevId = n.data?.prevAbacusId as string;
+                        const nextId = n.data?.nextAbacusId as string;
+                        if ((prevId && chainSelected.has(prevId)) || (nextId && chainSelected.has(nextId))) {
+                            chainSelected.add(n.id);
+                            selected.push(n);
+                            added = true;
+                        }
+                    }
+                }
+            }
         }
 
         initialPositions.current = new Map(selected.map((n) => {
@@ -860,6 +894,8 @@ export function useHand() {
                     }
                 }
 
+
+
                 const initPos = initialPositions.current.get(node.id)!;
                 txs.push({
                     type: 'MOVE_NODE',
@@ -917,6 +953,7 @@ export function useHand() {
     const handleMouseDown = useCallback((e: MouseEvent) => {
         const target = e.target as HTMLElement;
         if (target.closest('.react-flow__handle') || target.closest('.react-flow__edge')) return;
+        if (target.closest('.nodrag')) return; // Ignore custom drag if clicking on a protected area
 
         if (e.ctrlKey && e.button === 2) {
             setMode('CUTTING');

@@ -10,6 +10,7 @@
 // Phase 3: Symbolic AST Structure
 export type ASTNode = {
     type: 'BinaryExpression' | 'UnaryExpression' | 'FunctionCall' | 'Identifier' | 'Literal' | 'ConditionalExpression' | 'TemplateLiteral';
+    sourceId?: string; // Origin tracking
     operator?: string;
     left?: ASTNode;
     right?: ASTNode;

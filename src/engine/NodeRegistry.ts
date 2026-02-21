@@ -2,6 +2,7 @@ import { NodeLogic } from './types';
 import { MathEngine } from './MathEngine';
 import { NodePayload, DataType, ASTNode } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
+import { Brain } from './Brain';
 
 /**
  * 💡 NodeRegistry: The Brain's Cortex
@@ -61,18 +62,53 @@ export class NodeRegistry {
         const symbolizer = this.symbolizers.get(node.type || 'baseNode');
 
         if (symbolizer) {
-            return symbolizer(node, inputs);
+            const sym = symbolizer(node, inputs);
+            if (sym && !sym.sourceId && node.id) {
+                sym.sourceId = node.id;
+            }
+            return sym;
         }
 
         // Default Symbolizer: Identifier vs Literal
-        const val = PayloadUtils.unwrap(node.value);
+        // Using "val" for default fallback logic.
         const data = (node.data || {}) as Record<string, unknown>;
-        const label = (data.label || data.name) as string | undefined;
-
-        if (label) {
-            return PayloadUtils.createSymbol('Identifier', { name: String(label), value: (typeof val === 'object' ? 'Complex' : val) as string | number | boolean | undefined });
+        const label = data.label || node.id;
+        let val: unknown = data.val;
+        if (val === undefined && node.value) {
+            val = PayloadUtils.unwrap(node.value);
         }
-        return PayloadUtils.createSymbol('Literal', { value: (typeof val === 'object' ? 'Complex' : val) as string | number | boolean | undefined });
+
+        if (val === undefined) {
+            const sym = PayloadUtils.createSymbol('Identifier', { name: String(label), value: (typeof val === 'object' ? 'Complex' : val) as string | number | boolean | undefined });
+            if (node.id) sym.sourceId = node.id;
+            return sym;
+        }
+        if (typeof val === 'string' && val.trim() === '') {
+            const sym = PayloadUtils.createSymbol('Literal', { value: (typeof val === 'object' ? 'Complex' : val) as string | number | boolean | undefined });
+            if (node.id) sym.sourceId = node.id;
+            return sym;
+        }
+
+        // Auto-detect if value is identifier (starts with letter) or literal number
+        if (typeof val === 'string') {
+            const isIdentifier = /^[a-zA-Z_]\w*$/.test(val);
+            if (isIdentifier) {
+                const sym = PayloadUtils.createSymbol('Identifier', { name: val, value: val as string | number | boolean | undefined });
+                if (node.id) sym.sourceId = node.id;
+                return sym;
+            }
+        }
+
+        // We could theoretically use 'parseString' logic here too, but for symbolizer we keep it simple
+        const name = String(label);
+        const value = typeof val === 'object' ? 'Complex' : val;
+        // If the node type expects an identifier name, we emit Identifier. 
+        // For simple math nodes without special symbolizers, emitting literal is safer if it's a number.
+        const sym = isNaN(Number(value))
+            ? PayloadUtils.createSymbol('Identifier', { name, value: value as string | number | boolean | undefined })
+            : PayloadUtils.createSymbol('Literal', { value: value as string | number | boolean | undefined });
+        if (node.id) sym.sourceId = node.id;
+        return sym;
     }
 }
 
@@ -95,7 +131,9 @@ NodeRegistry.register('IO-04', (node) => {
     return PayloadUtils.createString(String(val));
 }, (node) => {
     const data = (node.data || {}) as Record<string, unknown>;
-    return PayloadUtils.createSymbol('Literal', { value: String(data.value || '') });
+    const sym = PayloadUtils.createSymbol('Literal', { value: String(data.value || '') });
+    if (node.id) sym.sourceId = node.id;
+    return sym;
 });
 
 // IO-11: Result (Display)
@@ -371,6 +409,46 @@ NodeRegistry.register('IO-08', (node) => {
     }
 }, (node) => {
     return PayloadUtils.createSymbol('Literal', { value: 'Matrix' });
+});
+
+// IO-21: Abacus
+NodeRegistry.register('IO-21', (node) => {
+    let total = 0;
+    const digits = (node.data?.digits as number[]) || [0, 0, 0, 0, 0, 0, 0];
+
+    // Digits[0] is highest, digits[last] is lowest for THIS specific abacus node.
+    for (let i = 0; i < digits.length; i++) {
+        total = total * 10 + digits[i];
+    }
+
+    return {
+        type: DataType.Scalar,
+        value: PayloadUtils.dehydrate(total),
+        symbol: null,
+        meta: {}
+    };
+}, (node) => {
+    let total = 0;
+
+    const accumulateValue = (currentNodeId: string): void => {
+        const brainNodeMap = Brain.getInstance().getNodesMap();
+        const currentNode = brainNodeMap.get(currentNodeId);
+        const nodeData = (currentNode?.data || (currentNodeId === node.id ? node.data : {})) as Record<string, unknown>;
+
+        if (nodeData.prevAbacusId) {
+            accumulateValue(nodeData.prevAbacusId as string);
+        }
+
+        const digits = (nodeData.digits as number[]) || [0, 0, 0, 0, 0, 0, 0];
+
+        for (let i = 0; i < digits.length; i++) {
+            total = total * 10 + digits[i];
+        }
+    };
+
+    accumulateValue(node.id);
+
+    return PayloadUtils.createSymbol('Literal', { value: total });
 });
 
 // --- Math Nodes ---

@@ -20,6 +20,8 @@ export class SoulRenderer {
                 return this.renderUnary(node.operator!, node.argument!);
             case 'FunctionCall':
                 return this.renderFunction(node.name!, node.args || []);
+            case 'TemplateLiteral':
+                return this.renderTemplate(node.parts || []);
             default:
                 return '';
         }
@@ -63,9 +65,18 @@ export class SoulRenderer {
         // Handle special LaTeX functions
         const lowerName = name.toLowerCase();
         if (lowerName === 'sqrt') return `\\sqrt{${renderedArgs[0]}}`;
-        if (lowerName === 'sin') return `\\sin(${renderedArgs[0]})`;
-        if (lowerName === 'cos') return `\\cos(${renderedArgs[0]})`;
+        if (lowerName === 'sin') return `\\sin{${renderedArgs[0]}}`;
+        if (lowerName === 'cos') return `\\cos{${renderedArgs[0]}}`;
 
         return `\\text{${name}}(${renderedArgs.join(', ')})`;
+    }
+
+    private static renderTemplate(parts: (string | ASTNode)[]): string {
+        return parts.map(part => {
+            if (typeof part === 'string') {
+                return `\\text{${part}}`;
+            }
+            return this.render(part);
+        }).join('');
     }
 }

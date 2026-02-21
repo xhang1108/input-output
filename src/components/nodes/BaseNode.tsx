@@ -10,7 +10,7 @@ import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 // Re-export HandleConfig for backward compatibility
 export type { HandleConfig } from '../../types/NodeDefinition';
 
-export const BaseNode = memo(({ id, data, selected, isConnectable, children, type }: NodeProps & { children?: React.ReactNode }) => {
+export const BaseNode = memo(({ id, data, selected, isConnectable, children, type, style }: NodeProps & { children?: React.ReactNode, style?: React.CSSProperties }) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [title, setTitle] = useState((data.label as string) || 'Node');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -76,13 +76,13 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     return (
         <div
             className={`
-                relative min-w-(--node-width-min) rounded-xl border transition-all duration-200 group
+                relative min-w-(--node-width-min) rounded-xl border transition duration-200 group
                 ${selected
                     ? 'border-zinc-400 animate-ring-pulse'
                     : 'border-zinc-700 hover:border-zinc-500'}
                 ${data.muted ? 'opacity-40 grayscale-40 shadow-none!' : 'node-shadow-1'}
             `}
-            style={{ minHeight: `${minHeight}px`, background: 'var(--node-bg)' }}
+            style={{ minHeight: `${minHeight}px`, background: 'var(--node-bg)', ...style }}
         >
             {/* Muted Bypass Visual */}
             {!!data.muted && (

@@ -2,6 +2,7 @@ import { memo, useState, useMemo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { SoulRenderer } from '../../utils/SoulRenderer';
 import { Brain } from '../../engine/Brain';
 import { Copy, Check } from 'lucide-react';
 import { DataType } from '../../types/payload';
@@ -10,8 +11,9 @@ import { ScalarView } from './views/ScalarView';
 import { GridView } from './views/GridView';
 import { ColorView } from './views/ColorView';
 import { FormulaView } from './views/FormulaView';
+import { LatexView } from './views/LatexView';
 
-export type ResultViewMode = 'auto' | 'text' | 'grid' | 'color' | 'formula';
+export type ResultViewMode = 'auto' | 'text' | 'grid' | 'color' | 'formula' | 'latex';
 
 export const ResultNode = memo((props: NodeProps) => {
     const { id, data } = props;
@@ -47,7 +49,7 @@ export const ResultNode = memo((props: NodeProps) => {
     const errorStr = isError ? String(payload?.meta?.error || 'Error') : '';
 
     // Determine effective view mode
-    let effectiveMode: 'text' | 'grid' | 'color' | 'formula' = 'text';
+    let effectiveMode: 'text' | 'grid' | 'color' | 'formula' | 'latex' = 'text';
 
     if (viewMode === 'auto') {
         if (payload?.type === DataType.Matrix) effectiveMode = 'grid';
@@ -73,8 +75,8 @@ export const ResultNode = memo((props: NodeProps) => {
     }
 
     let formulaStr = '';
-    if (effectiveMode === 'formula' && payload) {
-        if (payload.symbol) formulaStr = PayloadUtils.stringifySymbol(payload.symbol);
+    if ((effectiveMode === 'formula' || effectiveMode === 'latex') && payload) {
+        if (payload.symbol) formulaStr = (effectiveMode === 'latex') ? SoulRenderer.render(payload.symbol) : PayloadUtils.stringifySymbol(payload.symbol);
         else formulaStr = String(rawValue);
     }
 
@@ -95,6 +97,7 @@ export const ResultNode = memo((props: NodeProps) => {
         else if (effectiveMode === 'grid') copyStr = JSON.stringify(matrixData);
         else if (effectiveMode === 'color') copyStr = (rawValue as any)?.hex || '';
         else if (effectiveMode === 'formula') copyStr = formulaStr;
+        else if (effectiveMode === 'latex') copyStr = formulaStr;
         else copyStr = typeof rawValue === 'string' ? rawValue : JSON.stringify(rawValue);
 
         if (copyStr && copyStr !== '[object Object]') {
@@ -154,9 +157,10 @@ export const ResultNode = memo((props: NodeProps) => {
                             <option value="grid">Grid</option>
                             <option value="color">Color</option>
                             <option value="formula">Formula</option>
+                            <option value="latex">LaTeX</option>
                         </select>
 
-                        {effectiveMode !== 'formula' && effectiveMode !== 'color' && (
+                        {effectiveMode !== 'formula' && effectiveMode !== 'latex' && effectiveMode !== 'color' && (
                             <select
                                 className="nodrag bg-transparent text-[9px] text-zinc-500 border border-zinc-700/50 rounded-xs outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold"
                                 value={precision}
@@ -191,6 +195,7 @@ export const ResultNode = memo((props: NodeProps) => {
                             {effectiveMode === 'grid' && <GridView grid={matrixData} precision={precision} />}
                             {effectiveMode === 'color' && <ColorView payload={payload} depth={depth} onDepthChange={handleDepthChange} />}
                             {effectiveMode === 'formula' && <FormulaView formula={formulaStr} />}
+                            {effectiveMode === 'latex' && <LatexView formula={formulaStr} />}
                         </>
                     )}
                 </div>

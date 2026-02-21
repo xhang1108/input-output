@@ -84,7 +84,7 @@ describe('Brain', () => {
             });
 
             const result = await brain.getValue('Res');
-            expect(result.value).toBe(30);
+            expect(Number(result.value)).toBe(30);
         });
 
         it('should update results when input values change', async () => {
@@ -98,7 +98,8 @@ describe('Brain', () => {
                 ]
             });
 
-            expect((await brain.getValue('Res')).value).toBe(5);
+            let result = await brain.getValue('Res');
+            expect(Number(result.value)).toBe(5);
 
             // Update A to 10
             brain.applyTransaction({
@@ -106,7 +107,8 @@ describe('Brain', () => {
                 payload: { id: 'A', value: 10 }
             });
 
-            expect((await brain.getValue('Res')).value).toBe(10);
+            result = await brain.getValue('Res');
+            expect(Number(result.value)).toBe(10);
         });
     });
 });

@@ -12,12 +12,10 @@ import { ResultNode } from '../components/nodes/ResultNode';
 import { ConstantNode } from '../components/nodes/ConstantNode';
 import { SliderNode } from '../components/nodes/SliderNode';
 import { RandomNode } from '../components/nodes/RandomNode';
-import { FormulaResultNode } from '../components/nodes/FormulaResultNode';
 import { RoundingNode } from '../components/nodes/RoundingNode';
 import { MatrixInputNode } from '../components/nodes/MatrixInputNode';
-import { MatrixResultNode } from '../components/nodes/MatrixResultNode';
 import { ColorNode } from '../components/nodes/ColorNode';
-import { ColorResultNode } from '../components/nodes/ColorResultNode';
+import { AbacusNode } from '../components/nodes/AbacusNode';
 import { NumberTheoryNode } from '../components/nodes/NumberTheoryNode';
 import { FractionNode } from '../components/nodes/FractionNode';
 import { LogicNode } from '../components/nodes/LogicNode';
@@ -58,7 +56,8 @@ export const nodeTypes = {
     'IO-16': ResultNode,     // Fallback mapping to prevent crashes from old graphs
     'IO-17': ResultNode,     // Fallback mapping
     'IO-18': ColorNode,      // Color Provider
-    'IO-19': ResultNode,     // Fallback mapping
+    'IO-19': ResultNode,     // Fallback mapping for latex
+    'IO-21': AbacusNode,     // Abacus
     'SY-05': NodeExpression, // AST Formula Evaluator
     'UI-01': TextAnnotationNode, // Markdown
     'UI-03': RerouteNode,    // Flow alignment
