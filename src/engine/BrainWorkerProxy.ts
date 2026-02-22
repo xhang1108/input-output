@@ -331,7 +331,7 @@ export class BrainWorkerProxy {
                 symbol: node.value.symbol,
                 meta: node.value.meta,
             } : null,
-            data: node.data || {},
+            data: PayloadUtils.dehydrate(node.data) as Record<string, unknown> || {},
             isDirty: !!node.isDirty,
         };
     }

@@ -15,7 +15,45 @@ export const MatrixInputNode = memo((props: NodeProps) => {
 
     // Grid Dimensions State
     // We initialize from data if available, otherwise default to 3x3
-    const initialGrid = (data.rawExpression ? JSON.parse(data.rawExpression as string) : [[0, 0, 0], [0, 0, 0], [0, 0, 0]]) as number[][];
+    const initialGrid = (() => {
+        try {
+            // Helper to recursively find a 2D array in the NodePayload or raw data
+            const extract2DArray = (obj: any): any => {
+                // If it's a MathJS Matrix object
+                if (obj && typeof obj === 'object' && typeof obj.toArray === 'function') {
+                    const arr = obj.toArray();
+                    if (Array.isArray(arr)) {
+                        if (Array.isArray(arr[0])) return arr;
+                        if (typeof arr[0] === 'number') return arr.map((v: any) => [v]);
+                    }
+                }
+
+                if (Array.isArray(obj)) {
+                    if (Array.isArray(obj[0])) return obj;
+                    // Fallback to column matrix if it's a 1D vector
+                    if (typeof obj[0] === 'number') return obj.map((v: any) => [v]);
+                }
+
+                if (obj && typeof obj === 'object') {
+                    if (obj.value !== undefined) return extract2DArray(obj.value);
+                    if (obj.data !== undefined) return extract2DArray(obj.data);
+                }
+                return null;
+            };
+
+            if (typeof data.rawExpression === 'string') {
+                try {
+                    const parsed = JSON.parse(data.rawExpression);
+                    const extracted = extract2DArray(parsed);
+                    if (extracted) return extracted;
+                } catch (e) { }
+            }
+
+            const extracted = extract2DArray(data.value || data);
+            if (extracted) return extracted;
+        } catch (e) { }
+        return [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    })() as number[][];
     const [rows, setRows] = useState(initialGrid.length);
     const [cols, setCols] = useState(initialGrid[0]?.length || 1);
 
@@ -104,7 +142,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
 
     // Define Output Handle
     const handles = [
-        { id: 'result', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
     ];
 
     const nodeData = {

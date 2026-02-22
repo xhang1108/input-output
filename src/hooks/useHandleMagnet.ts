@@ -1,5 +1,6 @@
 import { useStore, Position } from '@xyflow/react';
 import { getNearestHandle } from '../utils/geometry';
+import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 
 export function useHandleMagnet(targetX: number, targetY: number) {
     const nodeLookup = useStore((s) => s.nodeLookup);
@@ -13,6 +14,7 @@ export function useHandleMagnet(targetX: number, targetY: number) {
     let isSnapped = false;
     let snappedHandleId: string | null = connectionHandleId || null;
     let snappedNodeId: string | null = connectionNodeId || null;
+    let handleCenterY = targetY; // The actual handle center Y (for capsule slot calculation)
 
     // Manual Collision Detection (using unified geometry helper)
     if (!snappedHandleId) {
@@ -20,6 +22,7 @@ export function useHandleMagnet(targetX: number, targetY: number) {
         if (result) {
             effectiveX = result.x;
             effectiveY = result.y;
+            handleCenterY = result.y;
             effectivePos = result.position;
             snappedHandleId = result.handleId;
             snappedNodeId = result.nodeId;
@@ -40,6 +43,7 @@ export function useHandleMagnet(targetX: number, targetY: number) {
                 if (handle) {
                     effectiveX = internals.positionAbsolute.x + handle.x + (handle.width / 2);
                     effectiveY = internals.positionAbsolute.y + handle.y + (handle.height / 2);
+                    handleCenterY = effectiveY;
                     effectivePos = handle.position;
                     isSnapped = true;
                 }
@@ -47,9 +51,26 @@ export function useHandleMagnet(targetX: number, targetY: number) {
         }
     }
 
+    // For capsule handles: snap X only, let Y be free (user picks slot by moving mouse up/down)
+    if (isSnapped && snappedNodeId && snappedHandleId) {
+        const snappedNode = nodeLookup.get(snappedNodeId);
+        const nodeData = snappedNode?.data as Record<string, unknown> | undefined;
+        const dynamicHandles = nodeData?.handles as { id: string; variant?: string }[] | undefined;
+        const dynamicHandle = dynamicHandles?.find(h => h.id === snappedHandleId);
+        const staticDef = NODE_DEFINITIONS.find(d => d.id === snappedNode?.type);
+        const staticHandle = staticDef?.handles.find(h => h.id === snappedHandleId);
+        const variant = dynamicHandle?.variant || staticHandle?.variant || 'single';
+
+        if (variant === 'capsule') {
+            // Keep X snapped to handle, but let Y follow the mouse
+            effectiveY = targetY;
+        }
+    }
+
     return {
         x: effectiveX,
         y: effectiveY,
+        handleCenterY, // Always the actual handle center Y
         position: effectivePos,
         isSnapped,
         snappedNodeId,

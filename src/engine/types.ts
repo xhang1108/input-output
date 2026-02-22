@@ -25,6 +25,7 @@ export type TransactionType =
 
     | 'UPDATE_NODE_DATA'
     | 'MOVE_NODE'
+    | 'REORDER_EDGES'
     | 'BATCH';
 
 export interface Transaction {

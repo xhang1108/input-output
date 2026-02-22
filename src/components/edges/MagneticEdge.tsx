@@ -1,11 +1,16 @@
-import { BaseEdge, EdgeProps, getBezierPath, getStraightPath, getSmoothStepPath } from '@xyflow/react';
+import { BaseEdge, EdgeProps, getBezierPath, getStraightPath, getSmoothStepPath, useStore } from '@xyflow/react';
+import { useCapsulePreview } from './capsulePreviewState';
+import { HANDLE_SLOT_SPACING, calculateSlotOffsetY } from '../../utils/handleUtils';
 
 export function MagneticEdge({
     id,
+    source,
+    target,
     sourceX,
     sourceY,
     targetX,
     targetY,
+    targetHandleId,
     sourcePosition,
     targetPosition,
     style = {},
@@ -15,13 +20,38 @@ export function MagneticEdge({
 }: EdgeProps) {
     const pathType = data?.pathType || 'bezier';
 
+    // ─── Dynamic Target Y Offset Calculation ───
+    const allEdges = useStore((s) => s.edges);
+    const siblingEdges = allEdges.filter((e) => e.target === target && e.targetHandle === targetHandleId);
+    const preview = useCapsulePreview(); // Must be at top level (React rules of hooks)
+
+    let finalTargetY = targetY;
+    if (siblingEdges.length > 0) {
+        const myIndex = siblingEdges.findIndex((e) => e.id === id);
+        if (myIndex !== -1) {
+            const isPreviewActive = preview.active && preview.nodeId === target && preview.handleId === targetHandleId;
+            // CHECK: Is the previewed wire already committed to the edge list?
+            const isAlreadyCommitted = isPreviewActive && siblingEdges.length === preview.totalSlots;
+
+            if (isPreviewActive && !isAlreadyCommitted) {
+                // A new wire is pending at preview.slotIndex — shift existing wires to make room
+                const total = preview.totalSlots;
+                const adjustedIndex = myIndex >= preview.slotIndex ? myIndex + 1 : myIndex;
+                finalTargetY += calculateSlotOffsetY(adjustedIndex, total);
+            } else {
+                // Normal layout or post-drop transition
+                finalTargetY += calculateSlotOffsetY(myIndex, siblingEdges.length);
+            }
+        }
+    }
+
     let edgePath = '';
     const params = {
         sourceX,
         sourceY,
         sourcePosition,
         targetX,
-        targetY,
+        targetY: finalTargetY,
         targetPosition,
     };
 
@@ -30,13 +60,10 @@ export function MagneticEdge({
             [edgePath] = getStraightPath(params);
             break;
         case 'step':
-            // Fallback since getStepPath is not exported?
-            // Or use smoothstep with 0 radius if that API existed. 
-            // For now, mapping 'step' to 'smoothstep' visually.
             [edgePath] = getSmoothStepPath({ ...params, borderRadius: 0 });
             break;
         case 'smoothstep':
-            [edgePath] = getSmoothStepPath(params); // Default radius
+            [edgePath] = getSmoothStepPath(params);
             break;
         default:
             [edgePath] = getBezierPath(params);

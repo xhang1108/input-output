@@ -14,6 +14,7 @@ interface CGLNode {
 
 interface CGLConnection {
     sourceId: string;
+    sourceHandle?: string;
     targetId: string;
     targetHandle: string;
 }
@@ -38,7 +39,7 @@ export class GraphCodec {
 
             if (!line) continue;
 
-            if (line.includes('--')) {
+            if (line.includes('--') || line.includes('->')) {
                 // Connection Chain
                 // Note: parseChain handles splitting internally, but passing clean line is safer
                 this.parseChain(line, connections, diagnostics, lineNum);
@@ -70,13 +71,16 @@ export class GraphCodec {
 
     private static parseChain(line: string, connections: CGLConnection[], diagnostics: string[], lineNum: number) {
         const cleanLine = line.split('#')[0].trim();
-        const parts = cleanLine.split('--').map(p => p.trim());
+        // Support both -- and -> as separators
+        const parts = cleanLine.split(/--|->/).map(p => p.trim());
 
         for (let i = 0; i < parts.length - 1; i++) {
             const sourceInfo = parts[i];
             const targetInfo = parts[i + 1];
 
-            const sourceId = sourceInfo.split(':')[0];
+            const sourceParts = sourceInfo.split(':');
+            const sourceId = sourceParts[0];
+            const sourceHandle = sourceParts[1];
 
             const targetParts = targetInfo.split(':');
             const targetId = targetParts[0];
@@ -89,6 +93,7 @@ export class GraphCodec {
             if (sourceId && targetId) {
                 connections.push({
                     sourceId,
+                    sourceHandle,
                     targetId,
                     targetHandle
                 });
@@ -110,6 +115,18 @@ export class GraphCodec {
         // String (strip quotes if explicit)
         if (valStr.startsWith('"') && valStr.endsWith('"')) {
             return valStr.slice(1, -1);
+        }
+
+        // Try Array/Matrix (e.g. [1, 2, 2])
+        if (valStr.trim().startsWith('[') && valStr.trim().endsWith(']')) {
+            try {
+                // We use JSON.parse for basic array support, but need to ensure it's valid JSON
+                // replacing single quotes with double quotes if any, and handling missing quotes for numbers
+                // For now, simpler: if it looks like a matrix but JSON.parse fails, return as string
+                return JSON.parse(valStr);
+            } catch (e) {
+                return valStr;
+            }
         }
 
         return valStr;
@@ -161,18 +178,35 @@ export class GraphCodec {
                 else if (typeInfo.id === 'MA-08') data.value = validValue;
                 else if (typeInfo.id === 'MA-09') data.value = validValue;
                 else if (typeInfo.id === 'SY-05') data.code = validValue;
+                else if (typeInfo.id === 'IO-08') {
+                    // MatrixInputNode expects 2D array [[x, y, z]]. 
+                    // If we got 1D [x, y, z] wrap it.
+                    let matrixVal = validValue;
+                    if (Array.isArray(matrixVal) && matrixVal.length > 0 && !Array.isArray(matrixVal[0])) {
+                        matrixVal = [matrixVal];
+                    }
+                    data.rawExpression = typeof matrixVal === 'string' ? matrixVal : JSON.stringify(matrixVal);
+                }
                 else if (typeInfo.id.startsWith('IO')) data.value = validValue;
             }
 
             // Override OpCode if specified (e.g. math:SUB)
             // Even though resolveType might have found the definition, ensuring 'op' is set correctly is safe
-            if (cNode.opCode && typeInfo.category === 'Math') {
+            if (cNode.opCode && (typeInfo.category === 'Math' || typeInfo.category === 'LinearAlgebra')) {
                 // Standardize OpCode to UpperCase for internal logic
                 data.op = cNode.opCode.toUpperCase();
 
                 // Phase 2.15: Fix MA-15 Base Mapping
                 if (typeInfo.id === 'MA-15') {
                     data.base = data.op;
+                }
+
+                // Phase 2.16: Vector Split Mode Mapping
+                if (typeInfo.id === 'AD-09') {
+                    if (data.op === 'COMBINE') data.mode = 'combine';
+                    if (data.op === 'SEPARATE' || data.op === 'SPLIT') data.mode = 'separate';
+                    // Synchronize initial value for mode
+                    cNode.value = data.mode;
                 }
             }
 
@@ -195,23 +229,36 @@ export class GraphCodec {
         cglConns.forEach((conn, idx) => {
             // Determine correct source handle based on Source Node Type
             // Most are 'out', but MA-03 (Constant) uses 'val'.
-            // In CGL, we don't specify source handle yet, so we must infer it.
-            let sourceHandle = 'out';
+            let sourceHandle = conn.sourceHandle || 'out';
 
-            const sourceCNode = cglNodes.get(conn.sourceId);
-            if (sourceCNode) {
-                const def = this.resolveType(sourceCNode.category, sourceCNode.opCode);
-                if (def && def.handles) {
-                    const sourceDef = def.handles.find(h => h.type === 'source');
-                    if (sourceDef) {
-                        sourceHandle = sourceDef.id;
+            // If no explicit sourceHandle, try to intelligently infer it from the definition.
+            if (!conn.sourceHandle) {
+                const sourceCNode = cglNodes.get(conn.sourceId);
+                if (sourceCNode) {
+                    const def = this.resolveType(sourceCNode.category, sourceCNode.opCode);
+                    if (def && def.handles) {
+                        // Phase 2.18: Dynamic Source Inference (Special Case for Vector Split)
+                        if (def.id === 'AD-09') {
+                            const op = (sourceCNode.opCode || '').toUpperCase();
+                            sourceHandle = (op === 'COMBINE') ? 'out' : 'x';
+                        } else {
+                            const sourceDef = def.handles.find(h => h.type === 'source');
+                            if (sourceDef) {
+                                sourceHandle = sourceDef.id;
+                            }
+                        }
                     }
                 }
+            } else {
+                // Phase 2.17: Support Source Handle Aliases
+                const sourceCNode = cglNodes.get(conn.sourceId);
+                const sourceDef = sourceCNode ? this.resolveType(sourceCNode.category, sourceCNode.opCode) : undefined;
+                sourceHandle = this.resolveHandleAlias(conn.sourceHandle, sourceDef?.id, true);
             }
 
             const targetCNode = cglNodes.get(conn.targetId);
             const targetDef = targetCNode ? this.resolveType(targetCNode.category, targetCNode.opCode) : undefined;
-            const resolvedTarget = this.resolveHandleAlias(conn.targetHandle, targetDef?.id);
+            const resolvedTarget = this.resolveHandleAlias(conn.targetHandle, targetDef?.id, false);
 
             graph.edges.push({
                 id: `e-cgl-${Math.random().toString(36).substr(2, 9)}`,
@@ -229,23 +276,46 @@ export class GraphCodec {
         return graph;
     }
 
-    private static resolveHandleAlias(handle: string, targetTypeId?: string): string {
+    private static resolveHandleAlias(handle: string, typeId?: string, isSource: boolean = false): string {
         // Skip aliasing for Expert nodes (SY-05, etc.) because handles must match code variables exactly
-        if (targetTypeId?.startsWith('SY-')) return handle;
+        if (typeId?.startsWith('SY-')) return handle;
 
         const h = handle.toLowerCase();
-        // Common Math Aliases (MA-01 uses in_a, in_b)
-        if (h === 'a') return 'in_a';
-        if (h === 'b') return 'in_b';
-        // Base Input Alias
-        if (h === 'in') return 'in'; // Explicit 'in' is fine
-        if (h === 'base') return 'in_a'; // POW uses 'in_a' (labeled Base)
-        if (h === 'exp') return 'in_b';
-        // Logic Aliases
-        if (h === 'cond' || h === 'if') return 'condition';
-        if (h === 'sel') return 'condition';
-        if (h === 't' || h === 'true') return 'in_true';
-        if (h === 'f' || h === 'false') return 'in_false';
+
+        // 1. Vector Split (AD-09) - RAW HANDLE PASS-THROUGH
+        // AD-09 uses x, y, z directly as either source OR target. DO NOT ALIAS THESE.
+        if (typeId === 'AD-09') {
+            if (['x', 'y', 'z', 'in', 'out'].includes(h)) return h;
+        }
+
+        // 2. Common Math Aliases (MA-01 uses in_a, in_b)
+        if (!isSource) {
+            if (h === 'a') return 'in_a';
+            if (h === 'b') return 'in_b';
+            if (h === 'base') return 'in_a';
+            if (h === 'exp') return 'in_b';
+
+            // 3. Linear Algebra Aliases (x, y, z -> in_x, in_y, in_z) for standard matrix inputs
+            if (['x', 'y', 'z'].includes(h)) {
+                return `in_${h}`;
+            }
+        }
+
+        // 4. Logic Aliases
+        if (!isSource) {
+            if (h === 'cond' || h === 'if' || h === 'sel') return 'condition';
+            if (h === 't' || h === 'true') return 'in_true';
+            if (h === 'f' || h === 'false') return 'in_false';
+        }
+
+        // 5. Source aliases (rare, usually just 'out')
+        if (isSource) {
+            if (h === 'val' || h === 'ans' || h === 'res') {
+                // Common names for output ports in various nodes
+                return handle;
+            }
+        }
+
         // Fallback
         return handle;
     }
@@ -283,10 +353,13 @@ export class GraphCodec {
             if (opLower === 'num') return NODE_DEFINITIONS.find(d => d.id === 'IO-01');
             if (opLower === 'slider') return NODE_DEFINITIONS.find(d => d.id === 'IO-02');
             if (opLower === 'res') return NODE_DEFINITIONS.find(d => d.id === 'IO-11');
-            if (opLower === 'matrix') return NODE_DEFINITIONS.find(d => d.id === 'IO-16');
+            if (opLower === 'matrix') return NODE_DEFINITIONS.find(d => d.id === 'IO-08');
+            if (opLower === 'matrix-res') return NODE_DEFINITIONS.find(d => d.id === 'IO-16');
             if (opLower === 'formula') return NODE_DEFINITIONS.find(d => d.id === 'IO-17');
             if (opLower === 'text') return undefined; // Not implemented
             if (opLower === 'unit') return NODE_DEFINITIONS.find(d => d.id === 'IO-05');
+            // Support 'io-08' alias as well just in case
+            if (opLower === 'io-08') return NODE_DEFINITIONS.find(d => d.id === 'IO-08');
 
             // Fallback for IO nodes by ID (e.g. io:IO-11)
             const idMatch = NODE_DEFINITIONS.find(d => d.id.toLowerCase() === opLower);
@@ -316,6 +389,17 @@ export class GraphCodec {
             // Fallback for expert nodes by ID
             const idMatch = NODE_DEFINITIONS.find(d => d.id.toLowerCase() === opLower);
             if (idMatch) return idMatch;
+        }
+
+        // 5. Emerging Categories (LinearAlgebra, DataStructure)
+        if (catLower === 'linearalgebra' || catLower === 'datastructure') {
+            if (opLower) {
+                const match = NODE_DEFINITIONS.find(d =>
+                    d.category.toLowerCase() === catLower &&
+                    (d.id.toLowerCase() === opLower || !!d.opTokens?.map(t => t.toLowerCase()).includes(opLower))
+                );
+                if (match) return match;
+            }
         }
 
         // 5. Direct ID Match (Fallback)
@@ -378,6 +462,7 @@ export class GraphCodec {
                     if (node.type === 'IO-01') { op = 'num'; if (nodeData.value !== undefined) val = ` = ${String(nodeData.value)}`; }
                     else if (node.type === 'IO-02') { op = 'slider'; if (nodeData.value !== undefined) val = ` = ${String(nodeData.value)}`; }
                     else if (node.type === 'IO-05') { op = 'unit'; }
+                    else if (node.type === 'IO-08') { op = 'IO-08'; if (nodeData.rawExpression !== undefined) val = ` = "${String(nodeData.rawExpression).replace(/"/g, '\\"')}"`; }
                 } else if (cat === 'logic') {
                     const nodeData = (node.data || {}) as Record<string, unknown>;
                     if (node.type === 'MA-05') { op = String(nodeData.op || 'AND'); }
@@ -411,7 +496,13 @@ export class GraphCodec {
             if (targetHandle === 'in_a') targetHandle = 'a';
             if (targetHandle === 'in_b') targetHandle = 'b';
 
-            cgl += `${sourceId} -- ${targetId}:${targetHandle}\n`;
+            let sourceHandleStr = '';
+            // If the source handle is unconventional (not out, val, result, or int), append it
+            if (edge.sourceHandle && !['out', 'val', 'result', 'int'].includes(edge.sourceHandle)) {
+                sourceHandleStr = `:${edge.sourceHandle}`;
+            }
+
+            cgl += `${sourceId}${sourceHandleStr} -- ${targetId}:${targetHandle}\n`;
         }
 
         return cgl;

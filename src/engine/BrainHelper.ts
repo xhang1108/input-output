@@ -1,11 +1,15 @@
 
 import { Edge, Connection } from '@xyflow/react';
 import { Brain } from './Brain';
+import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { getHandleVariant } from '../utils/handleUtils';
 
 export class BrainHelper {
     /**
      * Checks if a connection is valid, handling strict 1-to-1 input rules by 
      * identifying if an existing edge needs to be replaced.
+     * 
+     * For 'capsule' variant handles (multi-input), NO replacement occurs.
      * 
      * @param params The proposed connection (Source -> Target)
      * @param edges The current list of edges in the graph
@@ -23,20 +27,28 @@ export class BrainHelper {
             return { isValid: false, reason: 'Incomplete connection data' };
         }
 
-        // 1. Identify Conflict
-        // Check if the Target Handle (Input) is already occupied.
-        // We only care about Target constraints for 1-to-1.
+        const targetNodeData = brain.getNode(target);
+        const variant = getHandleVariant(targetNodeData, targetHandle || '');
 
-        // Note: We perform this check manually here because we need to know WHICH edge to replace.
-        // Brain.validateConnection just says "Occupied", it doesn't return the conflicting edge.
+        // For capsule handles: no replacement, just validate directly
+        if (variant === 'capsule') {
+            const validation = brain.validateConnection(
+                source, sourceHandle, target, targetHandle, edges
+            );
+            return {
+                isValid: validation.isValid,
+                reason: validation.reason,
+                edgeToReplace: undefined  // NEVER replace for capsule
+            };
+        }
 
+        // 1. Identify Conflict (single-input handles only)
         const existingEdge = edges.find(e =>
             e.target === target &&
             e.targetHandle === targetHandle
         );
 
         // 2. Prepare Validation Context
-        // If there is an existing edge, we temporarily "remove" it to see if the NEW connection would be valid.
         const edgesForValidation = existingEdge
             ? edges.filter(e => e.id !== existingEdge.id)
             : edges;

@@ -32,7 +32,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Slider',
         category: 'Input',
         handles: [
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', y: '68%' }
         ],
         defaultData: { type: 'slider', value: 50, min: 0, max: 100, step: 1 }
     },
@@ -128,7 +128,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Matrix Input',
         category: 'Input',
         handles: [
-            { id: 'result', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
         ],
         defaultData: { rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]' }
     },
@@ -226,7 +226,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Constant',
         category: 'Math',
         handles: [
-            { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+            { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', y: '72%' }
         ],
         defaultData: { val: 'pi', label: 'Constant' }
     },
@@ -286,6 +286,81 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
         ],
         defaultData: { base: 'HEX' }
+    },
+
+    // ─── Linear Algebra & Vector (AD Family) ────────────────────
+    {
+        id: 'AD-01',
+        label: 'Matrix Tools',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { op: 'INV' },
+        opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN']
+    },
+    {
+        id: 'AD-02',
+        label: 'Vector Utils',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector', label: 'A' },
+            { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector', label: 'B' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { op: 'DOT' },
+        opTokens: ['DOT', 'CROSS']
+    },
+    {
+        id: 'AD-03',
+        label: 'Combinatorics',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'n', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'n' },
+            { id: 'r', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'r' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { op: 'nCr' },
+        opTokens: ['NCR', 'NPR']
+    },
+    {
+        id: 'AD-09',
+        label: 'Vector Split',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector' },
+            { id: 'x', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'X' },
+            { id: 'y', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Y' },
+            { id: 'z', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Z' }
+        ],
+        defaultData: { mode: 'separate' },
+        opTokens: ['SEPARATE', 'COMBINE']
+    },
+
+    // ─── Data & Array (DA Family) ───────────────────────────────
+    {
+        id: 'DA-06',
+        label: 'Array Extract',
+        category: 'DataStructure',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix' },
+            { id: 'index', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Idx' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
+        ],
+        defaultData: { indexMode: '1D' },
+        opTokens: ['EXTRACT', 'GET']
+    },
+    {
+        id: 'DA-07',
+        label: 'Array Builder',
+        category: 'DataStructure',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any', label: 'In' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { axis: 0 },
+        opTokens: ['BUILD', 'CONCAT']
     },
 
     // ─── Logic Family ───────────────────────────────────────────

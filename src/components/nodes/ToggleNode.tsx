@@ -9,16 +9,22 @@ export const ToggleNode = memo((props: NodeProps) => {
 
     const isActive = !!PayloadUtils.unwrap(data.value);
 
+    const handles = [
+        { id: 'out', type: 'source', position: 'right', variant: 'single', dataType: 'boolean' }
+    ];
+
+    const nodeData = { ...data, handles };
+
     const handleToggle = useCallback(() => {
         const newValue = !isActive;
         Brain.getInstance().applyTransaction({
-            type: 'UPDATE_VALUE',
-            payload: { id, value: newValue }
+            type: 'UPDATE_NODE_DATA',
+            payload: { id, data: { value: newValue } }
         });
     }, [id, isActive]);
 
     return (
-        <BaseNode {...props}>
+        <BaseNode {...props} data={nodeData}>
             <div className="flex flex-col items-center gap-3 p-2 min-w-[80px]">
                 <div
                     className={`

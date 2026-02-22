@@ -225,27 +225,14 @@ body {
    with transform: translate(-50%, -50%). Overriding it causes displacement. */
 /* Handle hover: subtle scale using standalone `scale` property
    (does NOT override React Flow's transform: translate(-50%, -50%)) */
-.react-flow__handle:hover {
-  scale: 1.15;
-  transform-origin: center center;
-}
-
-
 /* During active connection (React Flow v12 class names) */
-.react-flow__handle.connectingfrom {
-  scale: 1.15;
-  transform-origin: center center;
-}
-
 .react-flow__handle.connectingto {
-  scale: 1.15;
-  transform-origin: center center;
+  /* scale: 1.15; removed */
   filter: brightness(1.3);
 }
 
 .react-flow__handle.valid {
-  scale: 1.15;
-  transform-origin: center center;
+  /* scale: 1.15; removed */
   filter: brightness(1.5) drop-shadow(0 0 8px currentColor);
   box-shadow: 0 0 12px 2px currentColor;
 }

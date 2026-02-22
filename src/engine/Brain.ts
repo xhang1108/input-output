@@ -5,6 +5,7 @@ import { GraphState, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, Up
 import { HistoryManager } from './HistoryManager';
 import { NodeRegistry } from './NodeRegistry'; // Static Import
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { getHandleVariant, isProbablyInputHandle } from '../utils/handleUtils';
 // BrainWorkerProxy is imported DYNAMICALLY in initWorker() to avoid circular dependency
 import type { IncrementalPatch } from './SerializableGraph';
 
@@ -354,21 +355,44 @@ export class Brain {
 
             const inputs = this.reverseAdjacency.get(nodeId) || [];
 
-            const inputPayloads: Record<string, NodePayload> = {};
+            // Sort inputs by edge array order so capsule multi-input evaluation
+            // matches the visual display order set by user interaction.
+            const sortedInputs = [...inputs].sort((a, b) => {
+                const edgeA = this.state.edges.findIndex(e =>
+                    e.source === a.nodeId && e.sourceHandle === a.sourceHandle &&
+                    e.target === nodeId && e.targetHandle === a.targetHandle
+                );
+                const edgeB = this.state.edges.findIndex(e =>
+                    e.source === b.nodeId && e.sourceHandle === b.sourceHandle &&
+                    e.target === nodeId && e.targetHandle === b.targetHandle
+                );
+                return edgeA - edgeB;
+            });
 
-            for (const input of inputs) {
+            const inputPayloads: Record<string, any> = {};
+
+            for (const input of sortedInputs) {
                 // Pass sourceHandle to ensure multi-output nodes work
                 // Pass newPath to detect cycles downstream
                 const payload = await this.getValue(input.nodeId, input.sourceHandle, newPath);
 
                 if (input.targetHandle) {
-                    inputPayloads[input.targetHandle] = payload;
+                    if (input.targetHandle in inputPayloads) {
+                        const existing = inputPayloads[input.targetHandle];
+                        if (Array.isArray(existing)) {
+                            existing.push(payload);
+                        } else {
+                            inputPayloads[input.targetHandle] = [existing, payload];
+                        }
+                    } else {
+                        inputPayloads[input.targetHandle] = payload;
+                    }
                 }
             }
 
             // Compute
             const oldPayload = node.value;
-            resultPayload = await this.computeNode(node, inputPayloads);
+            resultPayload = await this.computeNode(node, inputPayloads as any);
 
             // Update & Clean
             node.value = resultPayload;
@@ -725,6 +749,23 @@ export class Brain {
                 }
                 return { success: true };
 
+            case 'REORDER_EDGES': {
+                // Payload: string[] of edge IDs in the desired order
+                const orderedIds = tx.payload as string[];
+                const edgeMap = new Map(this.state.edges.map(e => [e.id, e]));
+                const reordered: Edge[] = [];
+                for (const eid of orderedIds) {
+                    const edge = edgeMap.get(eid);
+                    if (edge) reordered.push(edge);
+                }
+                // Append any edges not in the ordered list (safety net)
+                for (const e of this.state.edges) {
+                    if (!orderedIds.includes(e.id)) reordered.push(e);
+                }
+                this.state.edges = reordered;
+                return { success: true };
+            }
+
             default:
                 return { success: false, reason: 'Unknown transaction type' };
         }
@@ -898,14 +939,33 @@ export class Brain {
             const node = this.state.nodes.get(nodeId);
             if (!node) return null;
 
-            // Check instance data first (for dynamically generated handles like SY-05)
+            // 1. Special Case: Vector Split (AD-09) mode-based swap
+            // This MUST come before any pre-filled or static handle checks because AD-09 handles are dynamic.
+            if (node.type === 'AD-09') {
+                const op = String(node.data?.op || '').toUpperCase();
+                const mode = (node.data?.mode || (op === 'COMBINE' ? 'combine' : 'separate')) as string;
+
+                console.log(`[Brain] getHandleType for AD-09 (${node.id}): op=${op}, mode=${mode}, handle=${handleId}`);
+
+                if (mode === 'combine' || op === 'COMBINE') {
+                    if (['x', 'y', 'z'].includes(handleId)) return 'target';
+                    if (handleId === 'out') return 'source';
+                } else { // separate
+                    if (handleId === 'in') return 'target';
+                    if (['x', 'y', 'z'].includes(handleId)) return 'source';
+                }
+            }
+
+            // 2. Check instance data for dynamically generated handles (SY-05, etc.)
             if (node.data && Array.isArray(node.data.handles)) {
                 const handleFromData = node.data.handles.find((h: any) => h.id === handleId);
                 if (handleFromData) return handleFromData.type;
             }
 
+            // 3. Check Static Definition
             const def = NODE_DEFINITIONS.find(d => d.id === node.type);
             if (!def) return null;
+
             const handle = def.handles.find(h => h.id === handleId);
             return handle?.type || null;
         };
@@ -924,7 +984,9 @@ export class Brain {
         const targetIsInput = isInput(targetHandle!, targetHandleType);
 
         if (sourceIsInput === targetIsInput) {
-            return { isValid: false, reason: 'Must connect Output to Input' };
+            // IF we still don't know for sure (both null handleType), and it's CGL injection, 
+            // maybe we should be more lenient? No, let's fix the handle discovery.
+            return { isValid: false, reason: `Invalid connectivity: ${source}:${sourceHandle}(${sourceHandleType}) -> ${target}:${targetHandle}(${targetHandleType})` };
         }
 
         const fromNode = sourceIsInput ? target : source;
@@ -940,13 +1002,18 @@ export class Brain {
         const inputHandleId = sourceIsInput ? sourceHandle : targetHandle;
 
         if (inputNodeId && inputHandleId) {
-            const existingEdge = edgesToCheck.find(e =>
-                e.target === inputNodeId &&
-                e.targetHandle === inputHandleId
-            );
+            const node = this.state.nodes.get(inputNodeId);
+            const variant = getHandleVariant(node, inputHandleId);
 
-            if (existingEdge) {
-                return { isValid: false, reason: 'Input already occupied' };
+            if (variant !== 'capsule') {
+                const existingEdge = edgesToCheck.find(e =>
+                    e.target === inputNodeId &&
+                    e.targetHandle === inputHandleId
+                );
+
+                if (existingEdge) {
+                    return { isValid: false, reason: 'Input already occupied' };
+                }
             }
         }
 

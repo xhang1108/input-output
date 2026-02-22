@@ -173,27 +173,39 @@ export function useBrainUpdates(
                     return changed ? nextNodes : currentNodes;
                 });
 
-                // Sync Edges
+                // Sync Edges — preserve Brain's array order for capsule slot ordering
                 const brainEdges = brain.getEdges();
                 setEdges(currentEdges => {
                     const brainEdgeIds = new Set(brainEdges.map(e => e.id));
-                    const uiEdgeIds = new Set(currentEdges.map(e => e.id));
+                    const uiEdgeMap = new Map(currentEdges.map(e => [e.id, e]));
                     let edgesChanged = false;
-                    const nextEdges = [...currentEdges];
 
-                    // Remove edges not in Brain
-                    for (let i = nextEdges.length - 1; i >= 0; i--) {
-                        if (!brainEdgeIds.has(nextEdges[i].id)) {
-                            nextEdges.splice(i, 1);
+                    // Build new edge array following Brain's order
+                    const nextEdges: Edge[] = [];
+                    for (const brainEdge of brainEdges) {
+                        const existing = uiEdgeMap.get(brainEdge.id);
+                        if (existing) {
+                            nextEdges.push(existing); // Keep UI edge (has extra props like data.pathType)
+                        } else {
+                            nextEdges.push(brainEdge); // Add new edge from Brain
                             edgesChanged = true;
                         }
                     }
 
-                    // Add edges from Brain
-                    for (const edge of brainEdges) {
-                        if (!uiEdgeIds.has(edge.id)) {
-                            nextEdges.push(edge);
+                    // Check if any UI edges were removed
+                    for (const uiEdge of currentEdges) {
+                        if (!brainEdgeIds.has(uiEdge.id)) {
                             edgesChanged = true;
+                        }
+                    }
+
+                    // Check if order changed
+                    if (!edgesChanged && nextEdges.length === currentEdges.length) {
+                        for (let i = 0; i < nextEdges.length; i++) {
+                            if (nextEdges[i].id !== currentEdges[i].id) {
+                                edgesChanged = true;
+                                break;
+                            }
                         }
                     }
 

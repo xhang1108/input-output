@@ -1,6 +1,8 @@
 import { ConnectionLineComponentProps, useStore, Position, getBezierPath, getStraightPath, getSmoothStepPath, getSimpleBezierPath } from '@xyflow/react';
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useHandleMagnet } from '../../hooks/useHandleMagnet';
+import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { capsulePreviewState } from './capsulePreviewState';
 
 // Define Context for Relink system
 export interface RelinkAnchor {
@@ -37,9 +39,77 @@ export const RelinkLine = ({
 }: ConnectionLineComponentProps) => {
     const { active, targetNodeId, targetHandleId, type, anchors, edgeType: relinkEdgeType } = useContext(RelinkContext);
     const nodeLookup = useStore((s) => s.nodeLookup);
+    const allEdges = useStore((s) => s.edges);
+    const transform = useStore((s) => s.transform); // [tx, ty, zoom]
+
+    // Track raw pointer position in flow coordinates (bypasses React Flow's pre-snapping)
+    const rawMouseFlowY = useRef(toY);
+    useEffect(() => {
+        const handler = (e: PointerEvent) => {
+            // Convert screen coords to flow coords: flowY = (screenY - ty) / zoom
+            rawMouseFlowY.current = (e.clientY - transform[1]) / transform[2];
+        };
+        window.addEventListener('pointermove', handler);
+        return () => window.removeEventListener('pointermove', handler);
+    }, [transform]);
 
     // Use Magnetic Snapping Hook
-    const { x: effectiveToX, y: effectiveToY, position: snappedPos } = useHandleMagnet(toX, toY);
+    const { x: effectiveToX, y: rawEffectiveToY, handleCenterY, position: snappedPos, snappedNodeId, snappedHandleId } = useHandleMagnet(toX, toY);
+
+    // ─── Capsule Live Preview Offset ───
+    // For capsule handles: X snaps to handle, Y follows raw pointer for slot selection
+    let effectiveToY = rawEffectiveToY;
+    let previewSlot = -1;
+    let previewTotal = 0;
+    let previewNodeId = '';
+    let previewHandleId = '';
+    if (snappedNodeId && snappedHandleId) {
+        const snappedNode = nodeLookup.get(snappedNodeId);
+        const snappedNodeData = snappedNode?.data as Record<string, unknown> | undefined;
+        const dynamicHandles = snappedNodeData?.handles as { id: string; variant?: string }[] | undefined;
+        const dynamicHandle = dynamicHandles?.find(h => h.id === snappedHandleId);
+        const staticDef = NODE_DEFINITIONS.find(d => d.id === snappedNode?.type);
+        const staticHandle = staticDef?.handles.find(h => h.id === snappedHandleId);
+        const variant = dynamicHandle?.variant || staticHandle?.variant || 'single';
+
+        if (variant === 'capsule') {
+            const existingEdges = allEdges.filter(e => e.target === snappedNodeId && e.targetHandle === snappedHandleId);
+            const total = existingEdges.length + 1;
+            const SPACING = 14;
+
+            // Use RAW pointer Y (not React Flow's pre-snapped toY) relative to handle center
+            const mouseOffset = rawMouseFlowY.current - handleCenterY;
+            let bestIndex = total - 1;
+            let bestDist = Infinity;
+            for (let i = 0; i < total; i++) {
+                const slotOffset = (i - (total - 1) / 2) * SPACING;
+                const dist = Math.abs(mouseOffset - slotOffset);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestIndex = i;
+                }
+            }
+
+            // Snap wire to the exact slot Y position
+            const offsetY = (bestIndex - (total - 1) / 2) * SPACING;
+            effectiveToY = handleCenterY + offsetY;
+
+            previewSlot = bestIndex;
+            previewTotal = total;
+            previewNodeId = snappedNodeId;
+            previewHandleId = snappedHandleId;
+        }
+    }
+
+    // Publish preview state via useEffect to avoid errors during render
+    useEffect(() => {
+        if (previewSlot >= 0) {
+            capsulePreviewState.set(previewNodeId, previewHandleId, previewSlot, previewTotal);
+        } else {
+            capsulePreviewState.clear();
+        }
+        return () => capsulePreviewState.clear();
+    }, [previewNodeId, previewHandleId, previewSlot, previewTotal]);
 
     const defaultRelinkPos = type === 'source' ? Position.Left : Position.Right;
     const effectiveToPos = snappedPos || (active ? defaultRelinkPos : toPosition);

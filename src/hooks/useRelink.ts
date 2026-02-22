@@ -2,10 +2,16 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import { Edge, Connection, addEdge, OnConnectStartParams, HandleType } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import { RelinkState } from '../components/edges/RelinkLine';
+import { capsulePreviewState } from '../components/edges/capsulePreviewState';
 import { Brain } from '../engine/Brain';
 import { BrainHelper } from '../engine/BrainHelper';
 import { Transaction } from '../engine/types';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import {
+    getHandleVariant,
+    findNearestSlot,
+    HANDLE_SLOT_SPACING,
+} from '../utils/handleUtils';
 
 type UseRelinkProps = {
     edges: Edge[];
@@ -33,6 +39,17 @@ export function useRelink({
     });
 
     const removedEdgeIds = useRef<string[]>([]);
+    const removedEdgesBackup = useRef<Edge[]>([]);  // Full edge objects for restore-on-cancel
+
+    // Track mouse position globally so we can read it during onConnect
+    const lastMousePosRef = useRef({ x: 0, y: 0 });
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        };
+        document.addEventListener('mousemove', handler, { passive: true });
+        return () => document.removeEventListener('mousemove', handler);
+    }, []);
 
     // Track start of ANY connection (New or Relink)
     const connectionStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null } | null>(null);
@@ -43,15 +60,70 @@ export function useRelink({
         relinkStateRef.current = relinkState;
     }, [relinkState]);
 
-    /** Submit atomic DISCONNECT+CONNECT via Brain BATCH */
+    /** Submit atomic DISCONNECT+CONNECT+REORDER via Brain BATCH */
     const submitRelinkBatch = useCallback((newEdges: Edge[]) => {
         const brain = Brain.getInstance();
-        const txs: Transaction[] = [
-            ...removedEdgeIds.current.map(eid => ({ type: 'DISCONNECT' as const, payload: eid })),
-            ...newEdges.map(e => ({ type: 'CONNECT' as const, payload: e }))
-        ];
-        brain.applyTransaction({ type: 'BATCH', payload: txs });
-    }, []);
+        const removedIds = removedEdgeIds.current;
+
+        // 1. Calculate the final edge list using the current `edges` from props.
+        // This is safe because submitRelinkBatch is an event handler triggered after render.
+        let updated = edges.filter(e => !removedIds.includes(e.id));
+
+        for (const newEdge of newEdges) {
+            const targetHandleId = newEdge.targetHandle;
+            const node = brain.getNode(newEdge.target);
+            const variant = getHandleVariant(node, targetHandleId || '');
+
+            if (variant === 'capsule') {
+                const preview = capsulePreviewState.getSnapshot();
+                const isMatch = preview.active && preview.nodeId === newEdge.target && preview.handleId === targetHandleId;
+
+                const siblingEdges = updated.filter(e =>
+                    e.target === newEdge.target && e.targetHandle === targetHandleId && e.id !== newEdge.id
+                );
+                const totalAfter = siblingEdges.length + 1;
+
+                let insertIndex = siblingEdges.length;
+
+                if (isMatch) {
+                    insertIndex = preview.slotIndex;
+                } else {
+                    const nodeDOM = document.querySelector(`[data-id="${newEdge.target}"]`);
+                    const handleDOM = nodeDOM?.querySelector(`[data-handleid="${targetHandleId}"]`);
+                    if (handleDOM) {
+                        const rect = handleDOM.getBoundingClientRect();
+                        const handleCenterY = rect.top + rect.height / 2;
+                        insertIndex = findNearestSlot(lastMousePosRef.current.y, handleCenterY, totalAfter);
+                    }
+                }
+
+                const otherEdges = updated.filter(e =>
+                    !(e.target === newEdge.target && e.targetHandle === targetHandleId)
+                );
+                const orderedSiblings = [...siblingEdges];
+                orderedSiblings.splice(insertIndex, 0, newEdge);
+                updated = [...otherEdges, ...orderedSiblings];
+            } else {
+                if (!updated.find(e => e.id === newEdge.id)) {
+                    updated.push(newEdge);
+                }
+            }
+        }
+
+        // 2. Apply the ATOMIC BATCH transaction to Brain.
+        // This is a side-effect (triggers events/logging). It must be OUTSIDE setEdges.
+        brain.applyTransaction({
+            type: 'BATCH',
+            payload: [
+                ...removedIds.map(eid => ({ type: 'DISCONNECT' as const, payload: eid })),
+                ...newEdges.map(e => ({ type: 'CONNECT' as const, payload: e })),
+                { type: 'REORDER_EDGES' as const, payload: updated.map(e => e.id) }
+            ]
+        });
+
+        // 3. Update local UI to match.
+        setEdges(updated);
+    }, [edges, setEdges, edgeType, edgeAnimation]);
 
     const performRelink = useCallback((targetN: string, targetH: string | null) => {
         const state = relinkStateRef.current;
@@ -171,6 +243,7 @@ export function useRelink({
         const brain = Brain.getInstance();
         brain.isReconnecting = false;
         removedEdgeIds.current = [];
+        removedEdgesBackup.current = [];
         const emptyState: RelinkState = {
             active: false,
             targetNodeId: null,
@@ -200,6 +273,7 @@ export function useRelink({
             if (outboundEdges.length > 0) {
                 Brain.getInstance().isReconnecting = true;
                 removedEdgeIds.current = outboundEdges.map(e => e.id);
+                removedEdgesBackup.current = [...outboundEdges];
                 const anchors = outboundEdges.map(e => ({ nodeId: e.target, handleId: e.targetHandle || null }));
                 const newState: RelinkState = { active: true, targetNodeId: anchors[0].nodeId, targetHandleId: anchors[0].handleId, type: 'target', anchors: anchors };
                 setRelinkState(newState);
@@ -211,14 +285,70 @@ export function useRelink({
         else if (handleType === 'target') {
             const inboundEdges = edges.filter(e => e.target === nodeId && e.targetHandle === handleId);
             if (inboundEdges.length > 0) {
+                // Determine if target handle is a capsule variant
+                const targetNode = Brain.getInstance().getNode(nodeId);
+                const targetDef = NODE_DEFINITIONS.find(d => d.id === targetNode?.type);
+                const staticHandleDef = targetDef?.handles.find(h => h.id === handleId);
+                const handlesRaw = targetNode?.data?.handles;
+                const dynamicHandleDef = Array.isArray(handlesRaw)
+                    ? handlesRaw.find((h: any) => h.id === handleId)
+                    : undefined;
+                const variant = dynamicHandleDef?.variant || staticHandleDef?.variant || 'single';
+
+                let edgeToDetach: Edge;
+
+                if (variant === 'capsule' && inboundEdges.length > 1) {
+                    // ─── Capsule: Pick the nearest wire based on mouse Y ───
+                    // Uses the same ordering as MagneticEdge: edge array index (insertion order)
+
+                    // Get the handle's absolute center Y from the DOM
+                    const nodeDOM = document.querySelector(`[data-id="${nodeId}"]`);
+                    const handleDOM = nodeDOM?.querySelector(`[data-handleid="${handleId}"]`);
+                    let handleCenterY = 0;
+                    if (handleDOM) {
+                        const rect = handleDOM.getBoundingClientRect();
+                        handleCenterY = rect.top + rect.height / 2;
+                    }
+
+                    // Get mouse Y from the event
+                    let mouseY = 0;
+                    if ('clientY' in event) {
+                        mouseY = (event as MouseEvent).clientY;
+                    } else {
+                        const touch = (event as TouchEvent).touches[0];
+                        mouseY = touch?.clientY ?? 0;
+                    }
+
+                    // Calculate which slot index the mouse is closest to
+                    // Using edge insertion order (same as MagneticEdge)
+                    const SPACING = 14;
+                    const total = inboundEdges.length;
+                    let bestIndex = 0;
+                    let bestDist = Infinity;
+                    for (let i = 0; i < total; i++) {
+                        const slotOffsetY = (i - (total - 1) / 2) * SPACING;
+                        const slotScreenY = handleCenterY + slotOffsetY;
+                        const dist = Math.abs(mouseY - slotScreenY);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestIndex = i;
+                        }
+                    }
+
+                    edgeToDetach = inboundEdges[bestIndex];
+                } else {
+                    // Single wire or non-capsule: detach the only wire
+                    edgeToDetach = inboundEdges[0];
+                }
+
                 Brain.getInstance().isReconnecting = true;
-                removedEdgeIds.current = inboundEdges.map(e => e.id);
-                const sourceEdge = inboundEdges[0];
-                const newState: RelinkState = { active: true, targetNodeId: sourceEdge.source, targetHandleId: sourceEdge.sourceHandle || null, type: 'source' };
+                removedEdgeIds.current = [edgeToDetach.id];
+                removedEdgesBackup.current = [edgeToDetach];
+                const newState: RelinkState = { active: true, targetNodeId: edgeToDetach.source, targetHandleId: edgeToDetach.sourceHandle || null, type: 'source' };
                 setRelinkState(newState);
                 relinkStateRef.current = newState;
-                setEdges(eds => eds.filter(e => e.id !== sourceEdge.id));
-                logAction(`Unplugged input ${handleId} from ${nodeId}`);
+                setEdges(eds => eds.filter(e => e.id !== edgeToDetach.id));
+                logAction(`Unplugged wire from ${nodeId}:${handleId}`);
             }
         }
     }, [edges, setEdges, logAction]);
@@ -229,7 +359,6 @@ export function useRelink({
 
         if (wasRelinking) {
             const { toNode, toHandle } = connectionState || {};
-            // console.log('[Relink] End:', { toNode: toNode?.id, toHandle: toHandle?.id, isValid });
 
             if (toNode && toHandle) {
                 performRelink(toNode.id, toHandle.id || null);
@@ -240,7 +369,6 @@ export function useRelink({
                     brain.applyTransaction({ type: 'DISCONNECT', payload: eid });
                 });
                 logAction(`Relink canceled — wire deleted`);
-                // console.log('[Relink] Canceled: Wire deleted');
             }
             resetRelink();
         } else {
@@ -281,10 +409,9 @@ export function useRelink({
 
             // Check for existing connection to replace (Variant: 'single' handles)
             const targetNode = brain.getNode(connection.target);
-            const targetDef = NODE_DEFINITIONS.find(d => d.id === targetNode?.type);
-            const handleDef = targetDef?.handles.find(h => h.id === connection.targetHandle);
+            const variant = getHandleVariant(targetNode, connection.targetHandle || '');
 
-            const isReplacementTarget = handleDef?.variant === 'single';
+            const isReplacementTarget = variant === 'single'; // Default is single if undefined and not dynamic
 
             const edgesForValidation = isReplacementTarget
                 ? edges.filter(e => !(e.target === connection.target && e.targetHandle === connection.targetHandle))
@@ -306,23 +433,26 @@ export function useRelink({
     const onRelinkConnect = useCallback(
         (params: Connection) => {
             const state = relinkStateRef.current;
-            if (state.active) return; // Relink handled in onConnectEnd
+            if (state.active) return; // Relink handled in onRelinkEnd/performRelink
 
-            // Check for existing connection to replace
+            // Identify existing connection to replace (for single-variant handles)
             const targetHandle = params.targetHandle;
             const existingEdge = edges.find(e =>
                 e.target === params.target &&
                 e.targetHandle === targetHandle
             );
 
-            // Filter out the existing edge for validation purposes
-            // We want to know if the NEW connection is valid *assuming* the old one is gone.
-            const edgesForValidation = existingEdge
+            const brain = Brain.getInstance();
+            const targetNode = brain.getNode(params.target);
+            const variant = getHandleVariant(targetNode, targetHandle || '');
+
+            const isReplacementTarget = variant === 'single';
+            const edgesForValidation = (existingEdge && isReplacementTarget)
                 ? edges.filter(e => e.id !== existingEdge.id)
                 : edges;
 
-            // Final Brain Check (The Firewall)
-            const validation = Brain.getInstance().validateConnection(
+            // Validate
+            const validation = brain.validateConnection(
                 params.source,
                 params.sourceHandle,
                 params.target,
@@ -335,80 +465,30 @@ export function useRelink({
                 return;
             }
 
-            // If we are replacing, we should probably record the DISCONNECT of the old edge
-            // so History is correct? 
-            // Brain 'CONNECT' transaction automatically validates. 
-            // If we send raw 'CONNECT', Brain will block if we didn't send 'DISCONNECT' first in a BATCH.
+            // Create the new edge
+            const newEdge: Edge = {
+                id: nanoid(),
+                source: params.source,
+                sourceHandle: params.sourceHandle,
+                target: params.target,
+                targetHandle: params.targetHandle,
+                type: 'magnetic' as const,
+                data: { pathType: edgeType, animate: edgeAnimation }
+            };
 
-            // To be safe and atomic, we should dispatch a BATCH to Brain.
-            // But here we are manipulating `setEdges` for local state?
-            // `Body.tsx` logic seems to rely on `setEdges` locally, and `useBrainSync` picks it up?
-            // OR `useBrainUpdates`?
-            // Actually `Brain.ts` has `applyTransaction` which updates local state if we use it?
-            // Body.tsx currently uses `setEdges` directly (lines 245-252).
-            // AND it has `useBrainSync` (line 130) which watches `edges` and syncs to Brain?
-            // Let's look at `useBrainSync.ts`... (I can't see it but I recall it).
-            // IF `Body.tsx` is the source of truth for UI, updates here trigger side-effects.
+            // Batch Commit (Remove replaced + Add new + Reorder)
+            if (isReplacementTarget && existingEdge) {
+                removedEdgeIds.current = [existingEdge.id];
+            } else {
+                removedEdgeIds.current = [];
+            }
 
-            // Wait, if `Brain.validateConnection` is now strict, checking `this.state.edges` (which might be in sync).
-            // If we update `setEdges` locally, `Brain` might not know yet?
-            // `useBrainSync` likely pushes changes to Brain.
+            submitRelinkBatch([newEdge]);
 
-            // HOWEVER, the `validateConnection` call on line 232 uses `edges` from state.
-            // So my manual filter above works for that check.
-
-            // BUT, `Brain.ts` internal state might still have the old edge.
-            // If we rely on `useBrainSync` to update Brain, there's a lag.
-            // If we want atomic validity, we should probably use `Brain.applyTransaction` here instead of `setEdges`.
-            // But `Body.tsx` seems to be Hybrid.
-
-            // Let's Stick to the Plan:
-            // 1. Validate with hypothetical removal.
-            // 2. Update `setEdges` (which already does replacement filtering).
-            // 3. `useBrainSync` will detect the difference and update Brain?
-            //    If `useBrainSync` sends a "Diff", it might send "Remove Old, Add New".
-            //    If it just sends "Here is new list", Brain might re-validate?
-
-            // CRITIAL: `Brain.ts` `CONNECT` transaction calls `validateConnection`.
-            // If `Brain` has the old edge, and we send `CONNECT`, it will BLOCK.
-            // We MUST send `DISCONNECT` (old) then `CONNECT` (new) in a BATCH to Brain.
-            // OR, rely on `useBrainSync` handling this?
-            // If `useBrainSync` is smart, it sends DISCONNECT then CONNECT.
-
-            // Assuming `useBrainSync` handles synchronization. 
-            // The `validateConnection` here is just for UI feedback.
-
-            setEdges((eds) => {
-                const targetHandleId = params.targetHandle;
-                const brain = Brain.getInstance();
-                const targetNode = brain.getNode(params.target);
-                const targetDef = NODE_DEFINITIONS.find(d => d.id === targetNode?.type);
-                const handleDef = targetDef?.handles.find(h => h.id === targetHandleId);
-
-                // If handle exists and is marked as 'single', remove existing wires to it
-                if (handleDef?.variant === 'single') {
-                    const filtered = eds.filter(e => !(e.target === params.target && e.targetHandle === targetHandleId));
-                    return addEdge(params, filtered);
-                }
-
-                // Fallback to name-based input guessing for unknown nodes/handles if they are targets
-                const isProbablyInput = (h: string | null) => {
-                    if (!h) return false;
-                    const lh = h.toLowerCase();
-                    return lh.startsWith('in') || lh === 'target' || lh.includes('input') || lh === 'condition' || lh === 'select' || lh === 'data' || lh === 'if';
-                };
-
-                if (targetHandleId && isProbablyInput(targetHandleId)) {
-                    const filtered = eds.filter(e => !(e.target === params.target && e.targetHandle === targetHandleId));
-                    return addEdge(params, filtered);
-                }
-
-                return addEdge(params, eds);
-            });
-
-            logAction(`Connect: ${params.source}:${params.sourceHandle} -> ${params.target}:${params.targetHandle}`);
+            const detail = `${params.source}:${params.sourceHandle} -> ${params.target}:${params.targetHandle}`;
+            logAction(`Connected: ${detail}`);
         },
-        [edges, setEdges, logAction]
+        [edges, edgeType, edgeAnimation, logAction, submitRelinkBatch]
     );
 
     return {

@@ -11,6 +11,7 @@ export interface HandleConfig {
     variant: 'single' | 'capsule';
     dataType?: HandleDataType;  // Determines color. Default: 'scalar'
     label?: string;             // Optional label shown near handle
+    y?: number | string;        // Optional manual Y position (percent or absolute px)
 }
 
 // Color lookup: dataType → CSS variable
@@ -46,4 +47,5 @@ export interface NodeDefinition {
     handles: HandleConfig[]; // All handles (inputs AND outputs)
     defaultData?: Record<string, unknown>; // Default data payload
     params?: NodeParameter[];
+    opTokens?: string[];     // Used for implicit CGL operation mapping
 }

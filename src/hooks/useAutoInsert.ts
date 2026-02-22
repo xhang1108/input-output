@@ -44,6 +44,13 @@ export function useAutoInsert({
 
         const node = selectedNodes[0];
 
+        // 0. Check if the node already has connections
+        const nodeHasEdges = edges.some(e => e.source === node.id || e.target === node.id);
+        if (nodeHasEdges) {
+            if (highlightedEdgeId) setHighlightedEdgeId(null);
+            return;
+        }
+
         // 1. Get Node Center
         const w = node.measured?.width || 150;
         const h = node.measured?.height || 50;

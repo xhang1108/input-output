@@ -18,8 +18,8 @@ export const ButtonNode = memo((props: NodeProps) => {
 
     const setPressed = useCallback((pressed: boolean) => {
         Brain.getInstance().applyTransaction({
-            type: 'UPDATE_VALUE',
-            payload: { id, value: pressed }
+            type: 'UPDATE_NODE_DATA',
+            payload: { id, data: { value: pressed } }
         });
     }, [id]);
 

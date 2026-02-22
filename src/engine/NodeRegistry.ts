@@ -143,6 +143,59 @@ NodeRegistry.register('IO-11', (node, inputs) => {
     return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
 });
 
+// IO-08: Matrix Input
+NodeRegistry.register('IO-08', (node) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const math = MathEngine.getInstance().getMathInstance();
+
+    // 1. Try to use data.value first (live UI input)
+    const dataVal = data.value;
+    if (dataVal !== undefined) {
+        console.log(`[NodeRegistry] IO-08 (${node.id}) using data.value:`, typeof dataVal, dataVal);
+        // If it's already a payload, return it. If it's a matrix/array, wrap it.
+        if (typeof dataVal === 'object' && dataVal !== null) {
+            if ('type' in (dataVal as any) && 'value' in (dataVal as any)) return dataVal as NodePayload;
+
+            // Check if it's a dehydrated MathJS object
+            if ('mathjs' in (dataVal as any)) {
+                return { type: DataType.Matrix, value: dataVal, symbol: null, meta: {} };
+            }
+
+            return PayloadUtils.createMatrix(dataVal);
+        }
+    }
+
+    // 2. Parse from rawExpression if available (persistence)
+    const raw = data.rawExpression as string;
+    if (raw) {
+        console.log(`[NodeRegistry] IO-08 (${node.id}) parsing rawExpression:`, raw);
+        try {
+            const parsed = JSON.parse(raw);
+            return PayloadUtils.createMatrix(parsed);
+        } catch (e) {
+            return PayloadUtils.createMatrix([]);
+        }
+    }
+
+    // 3. Last fallback: cached engine value
+    if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
+        console.log(`[NodeRegistry] IO-08 (${node.id}) using cached node.value`);
+        return node.value as NodePayload;
+    }
+
+    // 4. Default empty
+    console.log(`[NodeRegistry] IO-08 (${node.id}) using fallback default`);
+    return PayloadUtils.createMatrix([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
+}, (node) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    // Matrix symbol is typically just the identifier if it has a label, or a generic Matrix literal
+    const label = data.label as string;
+    if (label) return PayloadUtils.createSymbol('Identifier', { name: label });
+
+    // Fallback: literal representation or generic identifier
+    return PayloadUtils.createSymbol('Identifier', { name: 'Matrix' });
+});
+
 // IO-18: Color Picker
 NodeRegistry.register('IO-18', (node) => {
     const data = (node.data || {}) as Record<string, unknown>;
@@ -396,20 +449,6 @@ NodeRegistry.register('IO-06', (node) => {
     });
 });
 
-// IO-08: Matrix Input
-NodeRegistry.register('IO-08', (node) => {
-    const data = (node.data || {}) as Record<string, unknown>;
-    const raw = data.rawExpression as string || '[]';
-    const math = MathEngine.getInstance().getMathInstance();
-    // Re-hydrate matrix from raw expression if available, else zero
-    try {
-        return PayloadUtils.createMatrix(math.matrix(JSON.parse(raw)));
-    } catch (e) {
-        return PayloadUtils.createError('Invalid Matrix');
-    }
-}, (node) => {
-    return PayloadUtils.createSymbol('Literal', { value: 'Matrix' });
-});
 
 // IO-21: Abacus
 NodeRegistry.register('IO-21', (node) => {
@@ -1074,37 +1113,22 @@ NodeRegistry.register('MA-04', (node, inputs) => {
 
 // MA-08: Toggle
 NodeRegistry.register('MA-08', (node) => {
-    return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(node.value));
+    const data = (node.data || {}) as Record<string, unknown>;
+    return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(data.value));
 }, (node) => {
-    return PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap(node.value) });
+    const data = (node.data || {}) as Record<string, unknown>;
+    return PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap(data.value) });
 });
 
 // MA-09: Button
 NodeRegistry.register('MA-09', (node) => {
-    return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(node.value));
+    const data = (node.data || {}) as Record<string, unknown>;
+    return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(data.value));
 }, (node) => {
-    return PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap(node.value) });
+    const data = (node.data || {}) as Record<string, unknown>;
+    return PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap(data.value) });
 });
 
-
-// IO-17: Formula Result
-NodeRegistry.register('IO-17', (node, inputs) => {
-    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
-}, (node, inputs) => {
-    return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
-});
-
-// UI-01: Text Annotation
-NodeRegistry.register('UI-01', (node, inputs) => {
-    return {
-        type: DataType.Object,
-        value: {},
-        symbol: null,
-        meta: {}
-    };
-}, (node) => {
-    return PayloadUtils.createSymbol('Literal', { value: 'Annotation' });
-});
 
 // SY-05: Expert Node (NodeExpression)
 NodeRegistry.register('SY-05', (node, inputs) => {
@@ -1177,4 +1201,440 @@ NodeRegistry.register('SY-05', (node, inputs) => {
     } catch (e) {
         return PayloadUtils.createSymbol('Literal', { value: code });
     }
+});
+
+// --- Linear Algebra & Data Nodes ---
+
+// AD-01: Matrix Tools
+NodeRegistry.register('AD-01', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const valPayload = inputs['in'];
+    if (!valPayload) return PayloadUtils.createError('No Input');
+
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'INV';
+    const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+    const m = math as unknown as Record<string, Function>;
+
+    try {
+        let result: unknown;
+        if (op === 'INV') result = m.inv(val);
+        else if (op === 'DET') result = m.det(val);
+        else if (op === 'TRANSPOSE') result = m.transpose(val);
+        else if (op === 'TRACE') result = m.trace(val);
+        else if (op === 'EIGEN') result = m.eigs(val);
+        else if (op === 'LUP') result = m.lup(val);
+        else if (op === 'QR') result = m.qr(val);
+        else result = val;
+
+        if (op === 'QR' || op === 'LUP' || op === 'EIGEN') {
+            const outMap: Record<string, string[]> = {
+                'QR': ['Q', 'R'],
+                'LUP': ['L', 'U', 'p'],
+                'EIGEN': ['values', 'eigenvectors']
+            };
+            const keys = outMap[op];
+            const multiValue: Record<string, unknown> = {};
+            const handleMeta: Record<string, any> = {};
+
+            for (const key of keys) {
+                let subValue = (result as Record<string, unknown>)[key];
+
+                // Map internal MathJS key 'p' to external handle 'P' for UI consistency
+                const handleKey = key === 'p' ? 'P' : (key === 'eigenvectors' ? 'vectors' : key);
+
+                // Special handling for eigenvectors: Convert Array<{value, vector}> to Matrix
+                if (key === 'eigenvectors' && Array.isArray(subValue)) {
+                    try {
+                        const vectors = subValue.map(item => {
+                            const v = item.vector;
+                            return (v && typeof v === 'object' && 'toArray' in v) ? v.toArray() : v;
+                        });
+                        // Use math.transpose to make eigenvectors columns (standard convention)
+                        subValue = math.transpose(vectors);
+                    } catch (e) {
+                        console.warn('[AD-01] Failed to format eigenvectors', e);
+                    }
+                }
+
+                const matPayload = PayloadUtils.createMatrix(PayloadUtils.dehydrate(subValue) as any);
+                matPayload.meta.unit = valPayload.meta?.unit;
+                multiValue[handleKey] = matPayload;
+                handleMeta[handleKey] = { unit: valPayload.meta?.unit };
+            }
+            return {
+                type: DataType.Object,
+                value: multiValue,
+                symbol: null,
+                meta: { handleMeta }
+            };
+        }
+
+        return {
+            type: Array.isArray(result) || (result && (result as any).isMatrix) ? DataType.Matrix : DataType.Scalar,
+            value: PayloadUtils.dehydrate(result),
+            symbol: null,
+            meta: { unit: valPayload.meta?.unit }
+        };
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`${op} Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'INV';
+    const funcMap: Record<string, string> = {
+        INV: 'inv', DET: 'det', TRANSPOSE: 'transpose', TRACE: 'trace',
+        EIGEN: 'eigs', LUP: 'lup', QR: 'qr'
+    };
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: funcMap[op] || 'inv',
+        args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'Matrix' })]
+    });
+});
+
+// AD-02: Vector Utils
+NodeRegistry.register('AD-02', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'DOT';
+
+    const getVal = (key: string) => {
+        const p = inputs[key];
+        if (!p) return null;
+        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math);
+
+        // AUTO-FLATTEN: Ensure input is a 1D array for vector utils
+        if (hydrated && typeof hydrated === 'object' && (Array.isArray(hydrated) || 'isMatrix' in (hydrated as any))) {
+            try {
+                // flatten() returns a new matrix/array that is 1D
+                const flattened = math.flatten(hydrated);
+                return flattened;
+            } catch (e) {
+                return hydrated;
+            }
+        }
+        return hydrated;
+    };
+
+    const valA = getVal('in_a');
+    const valB = getVal('in_b');
+    const m = math as unknown as Record<string, Function>;
+
+    try {
+        let result: unknown;
+        if (op === 'DOT') result = m.dot(valA, valB);
+        else if (op === 'CROSS') result = m.cross(valA, valB);
+        else if (op === 'NORM') result = m.norm(valA);
+        else if (op === 'DISTANCE') result = m.distance(valA, valB);
+        else result = 0;
+
+        return {
+            type: Array.isArray(result) || (result && (result as any).isMatrix) ? DataType.Matrix : DataType.Scalar,
+            value: PayloadUtils.dehydrate(result),
+            symbol: null,
+            meta: { unit: inputs['in_a']?.meta?.unit }
+        };
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`${op} Failed`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'DOT';
+    const funcMap: Record<string, string> = {
+        DOT: 'dot', CROSS: 'cross', NORM: 'norm', DISTANCE: 'distance'
+    };
+
+    const args = [inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 'a' })];
+    if (op !== 'NORM') {
+        args.push(inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 'b' }));
+    }
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: funcMap[op] || 'dot',
+        args: args
+    });
+});
+
+// AD-03: Combinatorics
+NodeRegistry.register('AD-03', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'nCr';
+
+    const getVal = (key: string) => {
+        const p = inputs[key];
+        if (!p) return 0;
+        let v = PayloadUtils.unwrap(p);
+
+        // Ensure array scalar unpacking for combinatorics (like Vector length)
+        if (Array.isArray(v) && v.length > 0) v = v[0];
+
+        v = PayloadUtils.hydrate(v, math);
+        // Force number
+        if (typeof v === 'number') return v;
+        if (v && typeof v === 'object' && 'toNumber' in v) return (v as any).toNumber();
+        return Number(v) || 0;
+    };
+
+    const n = getVal('n');
+    const r = getVal('r');
+    const m = math as unknown as Record<string, Function>;
+
+    try {
+        let result: unknown;
+        if (op === 'nCr') result = m.combinations(n, r);
+        else if (op === 'nPr') result = m.permutations(n, r);
+        else if (op === 'n!') result = m.factorial(n);
+        else result = 0;
+
+        return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`${op} Failed: ${e instanceof Error ? e.message : 'Invalid inputs'}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'nCr';
+    const funcMap: Record<string, string> = {
+        'nCr': 'combinations', 'nPr': 'permutations', 'n!': 'factorial'
+    };
+    const args = [inputs['n'] || PayloadUtils.createSymbol('Literal', { value: 'n' })];
+    if (op !== 'n!') {
+        args.push(inputs['r'] || PayloadUtils.createSymbol('Literal', { value: 'r' }));
+    }
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: funcMap[op] || 'combinations',
+        args: args
+    });
+});
+
+// AD-09: Vector Split 
+NodeRegistry.register('AD-09', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'separate'; // 'separate' | 'combine'
+
+    const math = MathEngine.getInstance().getMathInstance();
+
+    if (mode === 'separate') {
+        const valPayload = inputs['in'] || Object.values(inputs)[0];
+        if (!valPayload) return PayloadUtils.createError('No Input');
+
+        const raw = PayloadUtils.unwrap(valPayload);
+        const hydrated = PayloadUtils.hydrate(raw, math);
+
+        let arr: any[] = [];
+        try {
+            if (hydrated && typeof hydrated === 'object' && hydrated !== null && 'toArray' in (hydrated as any)) {
+                arr = (hydrated as any).toArray().flat(Infinity);
+            } else if (Array.isArray(hydrated)) {
+                arr = hydrated.flat(Infinity);
+            } else if (hydrated !== undefined && hydrated !== null) {
+                arr = [hydrated];
+            }
+        } catch (e) {
+            return PayloadUtils.createError('Split Failed: Invalid Matrix');
+        }
+
+        // Standard Vector Split always maps to X, Y, Z (first 3 elements)
+        return {
+            type: DataType.Object,
+            value: {
+                x: PayloadUtils.wrap(arr[0] ?? 0),
+                y: PayloadUtils.wrap(arr[1] ?? 0),
+                z: PayloadUtils.wrap(arr[2] ?? 0)
+            },
+            symbol: null,
+            meta: {
+                handleMeta: {
+                    x: { unit: valPayload.meta?.unit },
+                    y: { unit: valPayload.meta?.unit },
+                    z: { unit: valPayload.meta?.unit }
+                }
+            }
+        };
+    } else {
+        // COMBINE Mode
+        let items: any[] = [];
+
+        // Use 'in' (Capsule Handle)
+        const inPayload = inputs['in'];
+        if (inPayload) {
+            if (Array.isArray(inPayload)) {
+                items = inPayload.map(p => PayloadUtils.hydrate(PayloadUtils.unwrap(p), math));
+            } else {
+                items = [PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math)];
+            }
+        } else {
+            // Fallback for old explicit 'x', 'y', 'z' handles
+            const x = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['x']), math) || 0;
+            const y = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['y']), math) || 0;
+            const z = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['z']), math) || 0;
+            items = [x, y, z];
+        }
+
+        const unit = items.length > 0 ? (inputs['in'] as any)?.meta?.unit : undefined;
+
+        try {
+            const mat = items.length > 0 ? math.matrix(items) : math.matrix([0, 0, 0]);
+            return {
+                type: DataType.Matrix,
+                value: PayloadUtils.dehydrate(mat),
+                symbol: null,
+                meta: { unit }
+            };
+        } catch (e) {
+            return PayloadUtils.createError('Combine Failed');
+        }
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'separate'; // 'separate' | 'combine'
+
+    if (mode === 'separate') {
+        return PayloadUtils.createSymbol('Identifier', { name: 'SplitVector' });
+    } else {
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: 'matrix',
+            args: Array.isArray(inputs['in'])
+                ? inputs['in']
+                : [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
+        });
+    }
+});
+
+// DA-06: Array Extract
+NodeRegistry.register('DA-06', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const valPayload = inputs['in'];
+    const idxPayload = inputs['index'];
+
+    if (!valPayload || !idxPayload) return PayloadUtils.createError('Missing Inputs');
+
+    let arr = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+    let idx = PayloadUtils.hydrate(PayloadUtils.unwrap(idxPayload), math);
+
+    const m = math as unknown as Record<string, Function>;
+    try {
+        let i = typeof idx === 'number' ? idx : (idx && typeof idx === 'object' && 'toNumber' in (idx as any)) ? (idx as any).toNumber() : 0;
+
+        let result: unknown;
+        if (arr && typeof arr === 'object' && 'get' in (arr as any)) {
+            // MathJS Matrix robust access
+            // Subtract 1 if user expects 1-based indexing? No, MathJS is 0-based by default in subset, 
+            // but we use subset with index() which is usually 0-based.
+            // Let's stick to 0-based for now.
+            try {
+                // If 1D, use single index. If 2D, we might need [row, col].
+                // For Array Extract, we usually assume a flat list or the first dimension.
+                const size = (arr as any).size();
+                if (size.length === 1) {
+                    result = (arr as any).get([Math.floor(i)]);
+                } else {
+                    // Fallback to subset for multidimensional
+                    const indexObj = m.index(Math.floor(i));
+                    result = m.subset(arr, indexObj);
+                }
+            } catch (e) {
+                // Fallback to simple array access if it's not a MathJS matrix or fails
+                const flat = (arr as any).toArray ? (arr as any).toArray() : arr;
+                result = Array.isArray(flat) ? flat[Math.floor(i)] : flat;
+            }
+        } else if (Array.isArray(arr)) {
+            result = arr[Math.floor(i)];
+        } else {
+            result = arr; // scalar fallback
+        }
+
+        return {
+            type: Array.isArray(result) || (result && (result as any).isMatrix) ? DataType.Matrix : DataType.Scalar,
+            value: PayloadUtils.dehydrate(result),
+            symbol: null,
+            meta: { unit: valPayload.meta?.unit }
+        };
+    } catch (e: unknown) {
+        return PayloadUtils.createError('Extract Failed (Out of Bounds?)');
+    }
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'subset',
+        args: [
+            inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' }),
+            inputs['index'] || PayloadUtils.createSymbol('Literal', { value: 0 })
+        ]
+    });
+});
+
+// DA-07: Array Builder
+NodeRegistry.register('DA-07', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+    const axis = data.axis as number || 0;
+
+    let items: any[] = [];
+
+    // Support for Capsule Handle (multi inputs on 'in')
+    if (inputs['in']) {
+        const val = inputs['in'];
+        if (Array.isArray(val)) {
+            items = val.map(p => PayloadUtils.hydrate(PayloadUtils.unwrap(p), math));
+        } else {
+            items = [PayloadUtils.hydrate(PayloadUtils.unwrap(val), math)];
+        }
+    } else {
+        // Fallback for older projects (in_0, in_1)
+        const inputKeys = Object.keys(inputs).filter(k => k.startsWith('in_')).sort((a, b) => {
+            return parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]);
+        });
+        items = inputKeys.map(k => PayloadUtils.hydrate(PayloadUtils.unwrap(inputs[k]), math));
+    }
+
+    if (items.length === 0) return PayloadUtils.createMatrix([]);
+
+    const m = math as unknown as Record<string, Function>;
+
+    try {
+        if (items.length === 1) {
+            return {
+                type: Array.isArray(items[0]) || (items[0] && (items[0] as any).isMatrix) ? DataType.Matrix : DataType.Scalar,
+                value: PayloadUtils.dehydrate(items[0]),
+                symbol: null,
+                meta: {}
+            };
+        }
+
+        let result: unknown;
+        try {
+            result = m.concat(...items, axis);
+        } catch (e) {
+            // Fallback for purely 1D arrays if concat fails dimensions
+            result = m.matrix(items);
+        }
+
+        return {
+            type: DataType.Matrix,
+            value: PayloadUtils.dehydrate(result),
+            symbol: null,
+            meta: {}
+        };
+    } catch (e: unknown) {
+        return PayloadUtils.createMatrix(PayloadUtils.dehydrate(items));
+    }
+}, (node, inputs) => {
+    let argList: any[] = [];
+
+    if (inputs['in']) {
+        const val = inputs['in'];
+        if (Array.isArray(val)) {
+            argList = [...val];
+        } else {
+            argList = [val];
+        }
+    } else {
+        argList = Object.keys(inputs).filter(k => k.startsWith('in_')).sort((a, b) => {
+            return parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]);
+        }).map(k => inputs[k]);
+    }
+
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'concat',
+        args: argList.length ? argList : [PayloadUtils.createSymbol('Literal', { value: '[]' })]
+    });
 });

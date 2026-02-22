@@ -36,7 +36,7 @@ describe('Color Node Evaluator', () => {
 
         // First evaluation: returns object
         const firstResult = await brain.getValue('Color1');
-        expect(firstResult.value.hex).toBe('#00ff00');
+        expect((firstResult.value as any).hex).toBe('#00ff00');
 
         // Simulate a recalculation where the node's value is already the object
         const node = brain.getNode('Color1');
@@ -46,8 +46,8 @@ describe('Color Node Evaluator', () => {
 
         const secondResult = await brain.getValue('Color1');
         expect(secondResult.type).toBe('object');
-        expect(secondResult.value.hex).toBe('#00ff00');
-        expect(secondResult.value.rgb).toEqual([0, 255, 0]);
+        expect((secondResult.value as any).hex).toBe('#00ff00');
+        expect((secondResult.value as any).rgb).toEqual([0, 255, 0]);
     });
 
     it('should handle missing # prefix gracefully', async () => {
@@ -59,8 +59,8 @@ describe('Color Node Evaluator', () => {
         });
 
         const result = await brain.getValue('Color1');
-        expect(result.value.hex).toBe('#0000ff');
-        expect(result.value.rgb).toEqual([0, 0, 255]);
+        expect((result.value as any).hex).toBe('#0000ff');
+        expect((result.value as any).rgb).toEqual([0, 0, 255]);
     });
 
     it('should handle non-string input fallback', async () => {
@@ -73,7 +73,7 @@ describe('Color Node Evaluator', () => {
 
         const result = await brain.getValue('Color1');
         // Should fallback to default color #3b82f6
-        expect(result.value.hex).toBe('#3b82f6');
+        expect((result.value as any).hex).toBe('#3b82f6');
     });
 
     it('should allow MUL operations on Color results (Vec3)', async () => {
@@ -155,7 +155,7 @@ describe('Color Node Evaluator', () => {
             expect(result.meta.error).toContain('Strict Mode');
         } else {
             expect(result.type).toBe('matrix');
-            expect(result.value[0]).toBeCloseTo(1.1);
+            expect((result.value as any)[0]).toBeCloseTo(1.1);
         }
     });
 });

@@ -1,14 +1,25 @@
-'use client';
-
 import { memo, useState, useRef, useEffect } from 'react';
-import { NodeProps, NodeResizer, Position, useReactFlow, useUpdateNodeInternals } from '@xyflow/react';
+import { NodeProps, Position, useReactFlow, useUpdateNodeInternals, useNodeConnections, useEdges, useStore, ReactFlowState, Edge } from '@xyflow/react';
 import { Pencil } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
 import { HandleConfig, getHandleColor } from '../../types/NodeDefinition';
 import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { useCapsulePreview } from '../edges/capsulePreviewState';
+import { calculateCapsuleHeight } from '../../utils/handleUtils';
 
 // Re-export HandleConfig for backward compatibility
 export type { HandleConfig } from '../../types/NodeDefinition';
+import { SingleHandle } from './SingleHandle';
+import { CapsuleHandle } from './CapsuleHandle';
+
+const DynamicNodeHandle = memo(({ h, id, isConnectable }: { h: HandleConfig, id: string, isConnectable: boolean }) => {
+    if (h.variant === 'capsule') {
+        return <CapsuleHandle h={h} id={id} isConnectable={isConnectable} />;
+    }
+    return <SingleHandle h={h} id={id} isConnectable={isConnectable} />;
+});
+DynamicNodeHandle.displayName = 'DynamicNodeHandle';
 
 export const BaseNode = memo(({ id, data, selected, isConnectable, children, type, style }: NodeProps & { children?: React.ReactNode, style?: React.CSSProperties }) => {
     const [isRenaming, setIsRenaming] = useState(false);
@@ -16,6 +27,9 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     const inputRef = useRef<HTMLInputElement>(null);
     const { updateNodeData } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
+    const allEdges = useEdges();
+    const connections = allEdges.filter((e: Edge) => e.source === id || e.target === id);
+    const preview = useCapsulePreview();
 
     // Find definition for fallback handles
     const definition = NODE_DEFINITIONS.find((d) => d.id === type);
@@ -62,8 +76,29 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     const rightHandles = allHandles.filter(h => h.position === Position.Right);
 
     // Calculate dynamic node height based on handles
-    const approximateHeight = NODE_LAYOUT.headerH + Math.max(leftHandles.length, rightHandles.length) * 40;
-    const minHeight = Math.max(100, approximateHeight + 12);
+    const getHandleHeight = (h: HandleConfig) => {
+        if (h.variant === 'capsule') {
+            const isPreviewing = preview.active && preview.nodeId === id && preview.handleId === h.id;
+            const handleConnections = connections.filter((conn: Edge) =>
+                (h.type === 'target' ? conn.targetHandle === h.id : conn.sourceHandle === h.id)
+            );
+            const count = handleConnections.length + (isPreviewing ? 1 : 0);
+            return calculateCapsuleHeight(count);
+        }
+        return NODE_LAYOUT.socketSize;
+    };
+
+    const calculateSideHeight = (handles: HandleConfig[]) => {
+        if (handles.length === 0) return 0;
+        const totalHandleHeight = handles.reduce((sum, h) => sum + getHandleHeight(h), 0);
+        const totalGapHeight = (handles.length - 1) * NODE_LAYOUT.socketGap;
+        return totalHandleHeight + totalGapHeight + 24; // 24 for top/bottom padding (pt-3 and buffer)
+    };
+
+    const minHeight = Math.max(
+        60,
+        Math.max(calculateSideHeight(leftHandles), calculateSideHeight(rightHandles)) + NODE_LAYOUT.headerH
+    );
 
     /**
      * Calculate Y position for a handle or bypass line anchor relative to body section.
@@ -140,100 +175,17 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
             </div>
 
             {/* ─── Left Handles (Targets/Inputs) ───────────────── */}
-            <div className="absolute left-0 w-0 bottom-0 flex flex-col items-center" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
-                {leftHandles.length === 1 ? (
-                    <div className="absolute top-1/2 -translate-y-1/2 left-0 h-0 flex items-center">
-                        <NodeHandle
-                            type={leftHandles[0].type}
-                            position={leftHandles[0].position}
-                            id={leftHandles[0].id}
-                            nodeId={id}
-                            className={`
-                                border-zinc-900! z-50 pointer-events-auto origin-center
-                                ${leftHandles[0].variant === 'capsule'
-                                    ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
-                                    : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
-                            `}
-                            color={getHandleColor(leftHandles[0])}
-                            isConnectable={isConnectable}
-                        />
-                    </div>
-
-                ) : (
-                    leftHandles.map((h) => (
-                        <div key={h.id} className="relative flex items-center justify-center">
-                            <NodeHandle
-                                type={h.type}
-                                position={h.position}
-                                id={h.id}
-                                nodeId={id}
-                                className={`
-                                    border-zinc-900! z-50 pointer-events-auto origin-center
-                                    ${h.variant === 'capsule'
-                                        ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
-                                        : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
-                                `}
-                                color={getHandleColor(h)}
-                                isConnectable={isConnectable}
-                            />
-                            {/* Placeholder for the handle's space in the flex column */}
-                            <div
-                                style={{
-                                    width: '1px',
-                                    height: h.variant === 'capsule' ? 'var(--handle-size-lg)' : 'var(--handle-size-sm)'
-                                }}
-                            />
-                        </div>
-                    ))
-                )}
+            <div className="absolute left-0 w-0 bottom-0 flex flex-col items-center justify-start pt-3" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
+                {leftHandles.map((h) => (
+                    <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} />
+                ))}
             </div>
 
             {/* ─── Right Handles (Sources/Outputs) ─────────────── */}
-            <div className="absolute right-0 w-0 bottom-0 flex flex-col items-center" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
-                {rightHandles.length === 1 ? (
-                    <div className="absolute top-1/2 -translate-y-1/2 right-0 h-0 flex items-center">
-                        <NodeHandle
-                            type={rightHandles[0].type}
-                            position={rightHandles[0].position}
-                            id={rightHandles[0].id}
-                            nodeId={id}
-                            className={`
-                                border-zinc-900! z-50 origin-center
-                                ${rightHandles[0].variant === 'capsule'
-                                    ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
-                                    : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
-                            `}
-                            color={getHandleColor(rightHandles[0])}
-                            isConnectable={isConnectable}
-                        />
-                    </div>
-
-                ) : (
-                    rightHandles.map((h) => (
-                        <div key={h.id} className="relative flex items-center justify-center">
-                            <NodeHandle
-                                type={h.type}
-                                position={h.position}
-                                id={h.id}
-                                nodeId={id}
-                                className={`
-                                    border-zinc-900! z-50 pointer-events-auto origin-center
-                                    ${h.variant === 'capsule'
-                                        ? 'w-(--handle-size-sm)! h-(--handle-size-lg)! rounded-full!'
-                                        : 'w-(--handle-size-sm)! h-(--handle-size-sm)!'}
-                                `}
-                                color={getHandleColor(h)}
-                                isConnectable={isConnectable}
-                            />
-                            <div
-                                style={{
-                                    width: '1px',
-                                    height: h.variant === 'capsule' ? 'var(--handle-size-lg)' : 'var(--handle-size-sm)'
-                                }}
-                            />
-                        </div>
-                    ))
-                )}
+            <div className="absolute right-0 w-0 bottom-0 flex flex-col items-center justify-start pt-3" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
+                {rightHandles.map((h) => (
+                    <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} />
+                ))}
             </div>
         </div>
     );

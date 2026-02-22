@@ -28,6 +28,12 @@ import { BaseConverterNode } from '../components/nodes/BaseConverterNode';
 import { LogNode } from '../components/nodes/LogNode';
 import { NodeExpression } from '../components/nodes/NodeExpression';
 import { DebugNode } from '../components/nodes/DebugNode';
+import { MatrixToolsNode } from '../components/nodes/MatrixToolsNode';
+import { VectorUtilsNode } from '../components/nodes/VectorUtilsNode';
+import { CombinatoricsNode } from '../components/nodes/CombinatoricsNode';
+import { VectorSplitNode } from '../components/nodes/VectorSplitNode';
+import { ArrayExtractNode } from '../components/nodes/ArrayExtractNode';
+import { ArrayBuilderNode } from '../components/nodes/ArrayBuilderNode';
 
 export const nodeTypes = {
     baseNode: BaseNode,
@@ -62,6 +68,14 @@ export const nodeTypes = {
     'UI-01': TextAnnotationNode, // Markdown
     'UI-03': RerouteNode,    // Flow alignment
     'UI-99': DebugNode,
+
+    // Linear Algebra & Array Processing
+    'AD-01': MatrixToolsNode,
+    'AD-02': VectorUtilsNode,
+    'AD-03': CombinatoricsNode,
+    'AD-09': VectorSplitNode,
+    'DA-06': ArrayExtractNode,
+    'DA-07': ArrayBuilderNode,
 };
 
 export const edgeTypes = {

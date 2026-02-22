@@ -59,8 +59,8 @@ export const PayloadUtils = {
     createScalar(value: PayloadValue, unit?: string): NodePayload {
         return {
             type: DataType.Scalar,
-            value,
-            symbol: null, // To be implemented in Phase 3
+            value: this.dehydrate(value),
+            symbol: null,
             meta: { unit }
         };
     },
@@ -92,12 +92,12 @@ export const PayloadUtils = {
     /**
      * Safe Matrix Creator
      */
-    createMatrix(value: Matrix): NodePayload {
+    createMatrix(value: Matrix, unit?: string): NodePayload {
         return {
             type: DataType.Matrix,
-            value,
+            value: this.dehydrate(value),
             symbol: null,
-            meta: {}
+            meta: { unit }
         };
     },
 

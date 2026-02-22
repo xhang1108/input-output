@@ -24,11 +24,12 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
+        const val = result.value as any;
 
         expect(result.type).toBe(DataType.Object);
-        expect(result.value.numerator.value).toBe(1);
-        expect(result.value.denominator.value).toBe(2);
-        expect(result.value.string.value).toBe('1/2');
+        expect(val.numerator.value).toBe(1);
+        expect(val.denominator.value).toBe(2);
+        expect(val.string.value).toBe('1/2');
     });
 
     test('MA-12: Should handle repeating decimals', async () => {
@@ -46,10 +47,11 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
+        const val = result.value as any;
 
-        expect(result.value.numerator.value).toBe(1);
-        expect(result.value.denominator.value).toBe(3);
-        expect(result.value.string.value).toBe('1/3');
+        expect(val.numerator.value).toBe(1);
+        expect(val.denominator.value).toBe(3);
+        expect(val.string.value).toBe('1/3');
     });
 
     test('MA-12: Should handle strings', async () => {
@@ -68,10 +70,11 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
+        const val = result.value as any;
 
-        expect(result.value.numerator.value).toBe(5);
-        expect(result.value.denominator.value).toBe(2);
-        expect(result.value.string.value).toBe('5/2');
+        expect(val.numerator.value).toBe(5);
+        expect(val.denominator.value).toBe(2);
+        expect(val.string.value).toBe('5/2');
     });
 
     test('MA-14: Should perform rounding (Regression)', async () => {
@@ -110,11 +113,12 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
+        const val = result.value as any;
 
-        expect(result.value.int.value).toBe(2);
-        expect(result.value.numerator.value).toBe(1);
-        expect(result.value.denominator.value).toBe(2);
-        expect(result.value.string.value).toBe('2 1/2');
+        expect(val.int.value).toBe(2);
+        expect(val.numerator.value).toBe(1);
+        expect(val.denominator.value).toBe(2);
+        expect(val.string.value).toBe('2 1/2');
     });
 
     test('MA-12: Should handle mixed fractions with integer result', async () => {
@@ -132,10 +136,11 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
+        const val = result.value as any;
 
-        expect(result.value.int.value).toBe(3);
-        expect(result.value.numerator.value).toBe(0);
-        expect(result.value.denominator.value).toBe(1);
-        expect(result.value.string.value).toBe('3');
+        expect(val.int.value).toBe(3);
+        expect(val.numerator.value).toBe(0);
+        expect(val.denominator.value).toBe(1);
+        expect(val.string.value).toBe('3');
     });
 });

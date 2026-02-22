@@ -207,18 +207,27 @@ async function getValue(
         newPath.add(nodeId);
 
         const inputs = reverseAdjacency.get(nodeId) || [];
-        const inputPayloads: Record<string, NodePayload> = {};
+        const inputPayloads: Record<string, any> = {};
 
         for (const input of inputs) {
             const payload = await getValue(input.nodeId, input.sourceHandle, newPath);
             if (input.targetHandle) {
-                inputPayloads[input.targetHandle] = payload;
+                if (input.targetHandle in inputPayloads) {
+                    const existing = inputPayloads[input.targetHandle];
+                    if (Array.isArray(existing)) {
+                        existing.push(payload);
+                    } else {
+                        inputPayloads[input.targetHandle] = [existing, payload];
+                    }
+                } else {
+                    inputPayloads[input.targetHandle] = payload;
+                }
             }
         }
 
         // Compute via NodeRegistry
         try {
-            resultPayload = await NodeRegistry.evaluate(node, inputPayloads);
+            resultPayload = await NodeRegistry.evaluate(node, inputPayloads as any);
         } catch (error) {
             resultPayload = PayloadUtils.createError('Computation Failed');
         }
