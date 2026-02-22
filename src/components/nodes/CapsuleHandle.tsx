@@ -18,7 +18,9 @@ export const CapsuleHandle = memo(({ h, id, isConnectable }: CapsuleHandleProps)
     const updateNodeInternals = useUpdateNodeInternals();
 
     const isPreviewing = preview.active && preview.nodeId === id && preview.handleId === h.id;
-    const count = connections.length + (isPreviewing ? 1 : 0);
+    // If the new wire is already in React Flow's state, don't double count the preview wire
+    const isAlreadyCommitted = isPreviewing && connections.length >= preview.totalSlots;
+    const count = connections.length + (isPreviewing && !isAlreadyCommitted ? 1 : 0);
     const dynamicHeight = calculateCapsuleHeight(count);
 
     // CRITICAL: When the height of the capsule handle changes (due to new connections or preview),

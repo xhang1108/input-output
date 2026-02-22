@@ -1457,10 +1457,24 @@ NodeRegistry.register('AD-09', (node, inputs) => {
         // Use 'in' (Capsule Handle)
         const inPayload = inputs['in'];
         if (inPayload) {
+            const processPayload = (p: any) => {
+                const val = PayloadUtils.unwrap(p);
+                const hydrated = PayloadUtils.hydrate(val, math);
+
+                // If the incoming payload is itself an array/matrix, flatten its values into our items list
+                if (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) {
+                    items.push(...(hydrated as any).toArray().flat(Infinity));
+                } else if (Array.isArray(hydrated)) {
+                    items.push(...hydrated.flat(Infinity));
+                } else {
+                    items.push(hydrated);
+                }
+            };
+
             if (Array.isArray(inPayload)) {
-                items = inPayload.map(p => PayloadUtils.hydrate(PayloadUtils.unwrap(p), math));
+                inPayload.forEach(processPayload);
             } else {
-                items = [PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math)];
+                processPayload(inPayload);
             }
         } else {
             // Fallback for old explicit 'x', 'y', 'z' handles
@@ -1470,7 +1484,7 @@ NodeRegistry.register('AD-09', (node, inputs) => {
             items = [x, y, z];
         }
 
-        const unit = items.length > 0 ? (inputs['in'] as any)?.meta?.unit : undefined;
+        const unit = items.length > 0 ? (Array.isArray(inputs['in']) ? inputs['in'][0]?.meta?.unit : (inputs['in'] as any)?.meta?.unit) : undefined;
 
         try {
             const mat = items.length > 0 ? math.matrix(items) : math.matrix([0, 0, 0]);

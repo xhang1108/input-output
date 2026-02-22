@@ -1,8 +1,8 @@
 import { ConnectionLineComponentProps, useStore, Position, getBezierPath, getStraightPath, getSmoothStepPath, getSimpleBezierPath } from '@xyflow/react';
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useHandleMagnet } from '../../hooks/useHandleMagnet';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 import { capsulePreviewState } from './capsulePreviewState';
+import { getHandleVariant, findNearestSlot, calculateSlotOffsetY } from '../../utils/handleUtils';
 
 // Define Context for Relink system
 export interface RelinkAnchor {
@@ -17,6 +17,7 @@ export interface RelinkState {
     type: 'source' | 'target';     // The Anchor Type: 'source' (Output) or 'target' (Input)
     anchors?: RelinkAnchor[];      // Multiple anchors for multi-wire output unplug
     edgeType?: string;             // Dynamic path type
+    startEdgeDragDisconnect?: (event: React.PointerEvent, edgeId: string) => void;
 }
 
 export const RelinkContext = createContext<RelinkState>({
@@ -65,33 +66,19 @@ export const RelinkLine = ({
     let previewHandleId = '';
     if (snappedNodeId && snappedHandleId) {
         const snappedNode = nodeLookup.get(snappedNodeId);
-        const snappedNodeData = snappedNode?.data as Record<string, unknown> | undefined;
-        const dynamicHandles = snappedNodeData?.handles as { id: string; variant?: string }[] | undefined;
-        const dynamicHandle = dynamicHandles?.find(h => h.id === snappedHandleId);
-        const staticDef = NODE_DEFINITIONS.find(d => d.id === snappedNode?.type);
-        const staticHandle = staticDef?.handles.find(h => h.id === snappedHandleId);
-        const variant = dynamicHandle?.variant || staticHandle?.variant || 'single';
+        const variant = getHandleVariant(snappedNode, snappedHandleId);
 
         if (variant === 'capsule') {
             const existingEdges = allEdges.filter(e => e.target === snappedNodeId && e.targetHandle === snappedHandleId);
             const total = existingEdges.length + 1;
-            const SPACING = 14;
 
             // Use RAW pointer Y (not React Flow's pre-snapped toY) relative to handle center
             const mouseOffset = rawMouseFlowY.current - handleCenterY;
-            let bestIndex = total - 1;
-            let bestDist = Infinity;
-            for (let i = 0; i < total; i++) {
-                const slotOffset = (i - (total - 1) / 2) * SPACING;
-                const dist = Math.abs(mouseOffset - slotOffset);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    bestIndex = i;
-                }
-            }
+            const absoluteMouseYForCalc = handleCenterY + mouseOffset;
+            const bestIndex = findNearestSlot(absoluteMouseYForCalc, handleCenterY, total);
 
             // Snap wire to the exact slot Y position
-            const offsetY = (bestIndex - (total - 1) / 2) * SPACING;
+            const offsetY = calculateSlotOffsetY(bestIndex, total);
             effectiveToY = handleCenterY + offsetY;
 
             previewSlot = bestIndex;

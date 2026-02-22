@@ -1,6 +1,12 @@
 import { useStore, Position } from '@xyflow/react';
 import { getNearestHandle } from '../utils/geometry';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { getHandleVariant } from '../utils/handleUtils';
+
+// Global state to expose the currently magnetically snapped handle for event handlers
+export const MagneticSnapState = {
+    nodeId: null as string | null,
+    handleId: null as string | null,
+};
 
 export function useHandleMagnet(targetX: number, targetY: number) {
     const nodeLookup = useStore((s) => s.nodeLookup);
@@ -54,18 +60,17 @@ export function useHandleMagnet(targetX: number, targetY: number) {
     // For capsule handles: snap X only, let Y be free (user picks slot by moving mouse up/down)
     if (isSnapped && snappedNodeId && snappedHandleId) {
         const snappedNode = nodeLookup.get(snappedNodeId);
-        const nodeData = snappedNode?.data as Record<string, unknown> | undefined;
-        const dynamicHandles = nodeData?.handles as { id: string; variant?: string }[] | undefined;
-        const dynamicHandle = dynamicHandles?.find(h => h.id === snappedHandleId);
-        const staticDef = NODE_DEFINITIONS.find(d => d.id === snappedNode?.type);
-        const staticHandle = staticDef?.handles.find(h => h.id === snappedHandleId);
-        const variant = dynamicHandle?.variant || staticHandle?.variant || 'single';
+        const variant = getHandleVariant(snappedNode, snappedHandleId);
 
         if (variant === 'capsule') {
             // Keep X snapped to handle, but let Y follow the mouse
             effectiveY = targetY;
         }
     }
+
+    // Update global state for onConnectEnd fallback (safe to do during render for this read-only use case)
+    MagneticSnapState.nodeId = snappedNodeId;
+    MagneticSnapState.handleId = snappedHandleId;
 
     return {
         x: effectiveX,

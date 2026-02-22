@@ -11,7 +11,9 @@ import {
     getHandleVariant,
     findNearestSlot,
     HANDLE_SLOT_SPACING,
+    calculateCapsuleHeight
 } from '../utils/handleUtils';
+import { MagneticSnapState } from './useHandleMagnet';
 
 type UseRelinkProps = {
     edges: Edge[];
@@ -321,19 +323,8 @@ export function useRelink({
 
                     // Calculate which slot index the mouse is closest to
                     // Using edge insertion order (same as MagneticEdge)
-                    const SPACING = 14;
                     const total = inboundEdges.length;
-                    let bestIndex = 0;
-                    let bestDist = Infinity;
-                    for (let i = 0; i < total; i++) {
-                        const slotOffsetY = (i - (total - 1) / 2) * SPACING;
-                        const slotScreenY = handleCenterY + slotOffsetY;
-                        const dist = Math.abs(mouseY - slotScreenY);
-                        if (dist < bestDist) {
-                            bestDist = dist;
-                            bestIndex = i;
-                        }
-                    }
+                    const bestIndex = findNearestSlot(mouseY, handleCenterY, total);
 
                     edgeToDetach = inboundEdges[bestIndex];
                 } else {
@@ -352,55 +343,6 @@ export function useRelink({
             }
         }
     }, [edges, setEdges, logAction]);
-
-    const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: { toNode: { id: string } | null; toHandle: { id?: string | null } | null; isValid: boolean | null } | null) => {
-        const state = relinkStateRef.current;
-        const wasRelinking = state.active; // Capture state before potential reset
-
-        if (wasRelinking) {
-            const { toNode, toHandle } = connectionState || {};
-
-            if (toNode && toHandle) {
-                performRelink(toNode.id, toHandle.id || null);
-            } else {
-                // Cancelled: Delete the removed edges via Brain
-                const brain = Brain.getInstance();
-                removedEdgeIds.current.forEach(eid => {
-                    brain.applyTransaction({ type: 'DISCONNECT', payload: eid });
-                });
-                logAction(`Relink canceled — wire deleted`);
-            }
-            resetRelink();
-        } else {
-            // NOT Relinking. Could be a Smart Link Search (Air Drop).
-            if (!connectionState?.toNode && connectionStartRef.current && connectionStartRef.current.nodeId && onSmartLinkSearch) {
-                let screenX, screenY;
-                if ('clientX' in event) {
-                    const mouseEvent = event as unknown as React.MouseEvent;
-                    screenX = mouseEvent.clientX;
-                    screenY = mouseEvent.clientY;
-                } else {
-                    const touchEvent = event as unknown as React.TouchEvent;
-                    const touch = touchEvent.changedTouches[0];
-                    screenX = touch.clientX;
-                    screenY = touch.clientY;
-                }
-
-                onSmartLinkSearch({
-                    nodeId: connectionStartRef.current.nodeId!,
-                    handleId: connectionStartRef.current.handleId!,
-                    handleType: connectionStartRef.current.handleType as 'source' | 'target',
-                    position: { x: screenX, y: screenY }
-                });
-            }
-        }
-
-        // Always clear start ref
-        connectionStartRef.current = null;
-
-    }, [resetRelink, performRelink, logAction, onSmartLinkSearch]);
-
-    // ... (rest of the file)
 
     const isValidRelinkConnection = useCallback(
         (connection: Edge | Connection) => {
@@ -491,12 +433,115 @@ export function useRelink({
         [edges, edgeType, edgeAnimation, logAction, submitRelinkBatch]
     );
 
+    const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: { toNode: { id: string } | null; toHandle: { id?: string | null } | null; isValid: boolean | null } | null) => {
+        const state = relinkStateRef.current;
+        const wasRelinking = state.active; // Capture state before potential reset
+
+        // Evaluate actual target from event (React Flow)
+        let { toNode, toHandle, isValid } = connectionState || {};
+
+        if (wasRelinking) {
+            // Priority 1: Native Hover Target
+            // Priority 2: Magnetic Target (Fallback)
+            if (!toNode || !toHandle) {
+                if (MagneticSnapState.nodeId && MagneticSnapState.handleId) {
+                    toNode = { id: MagneticSnapState.nodeId };
+                    toHandle = { id: MagneticSnapState.handleId };
+                }
+            }
+
+            if (toNode && toHandle) {
+                performRelink(toNode.id, toHandle.id || null);
+            } else {
+                // Cancelled: Delete the removed edges via Brain
+                const brain = Brain.getInstance();
+                removedEdgeIds.current.forEach(eid => {
+                    brain.applyTransaction({ type: 'DISCONNECT', payload: eid });
+                });
+                logAction(`Relink canceled — wire deleted`);
+            }
+            resetRelink();
+        } else {
+            // NOT Relinking. Standard connection or Smart Link search.
+
+            // 1. Check if React Flow Native Connection fired
+            const nativeConnectWillFire = isValid === true;
+
+            // 2. Check if we need to synthesized a connection (Magnet Snap but NO native hover)
+            const needsSyntheticConnection = !nativeConnectWillFire && MagneticSnapState.nodeId && MagneticSnapState.handleId;
+
+            if (needsSyntheticConnection && connectionStartRef.current?.nodeId) {
+                // Synthesize the connection
+                const synthesizedConnection: Connection = {
+                    source: connectionStartRef.current.nodeId,
+                    sourceHandle: connectionStartRef.current.handleId || null,
+                    target: MagneticSnapState.nodeId!,
+                    targetHandle: MagneticSnapState.handleId! || null,
+                };
+                onRelinkConnect(synthesizedConnection);
+
+            } else if (!nativeConnectWillFire && !needsSyntheticConnection && connectionStartRef.current?.nodeId && onSmartLinkSearch) {
+                // 3. Complete Miss -> Air Drop (Smart Search)
+                let screenX, screenY;
+                if ('clientX' in event) {
+                    const mouseEvent = event as unknown as React.MouseEvent;
+                    screenX = mouseEvent.clientX;
+                    screenY = mouseEvent.clientY;
+                } else {
+                    const touchEvent = event as unknown as React.TouchEvent;
+                    const touch = touchEvent.changedTouches[0];
+                    screenX = touch.clientX;
+                    screenY = touch.clientY;
+                }
+
+                onSmartLinkSearch({
+                    nodeId: connectionStartRef.current.nodeId,
+                    handleId: connectionStartRef.current.handleId!,
+                    handleType: connectionStartRef.current.handleType as 'source' | 'target',
+                    position: { x: screenX, y: screenY }
+                });
+            }
+        }
+
+        // Always clear start ref
+        connectionStartRef.current = null;
+
+    }, [resetRelink, performRelink, logAction, onSmartLinkSearch, onRelinkConnect]);
+
+    // ... (rest of the file)
+
+
+    const startEdgeDragDisconnect = useCallback((event: React.PointerEvent, edgeId: string) => {
+        if (relinkStateRef.current.active) return;
+
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+
+        Brain.getInstance().isReconnecting = true;
+        removedEdgeIds.current = [edge.id];
+        removedEdgesBackup.current = [edge];
+
+        const newState: RelinkState = {
+            active: true,
+            targetNodeId: edge.source,
+            targetHandleId: edge.sourceHandle || null,
+            type: 'source',
+            anchors: []
+        };
+        setRelinkState(newState);
+        relinkStateRef.current = newState;
+
+        setEdges(eds => eds.filter(e => e.id !== edge.id));
+        logAction(`Unplugged wire via drag`);
+    }, [edges, setEdges, logAction]);
+
     return {
         relinkState,
         onRelinkStart,
         onRelinkEnd,
         onRelinkConnect,
         isValidRelinkConnection,
-        isRelinkActive: () => relinkStateRef.current.active
+        isRelinkActive: () => relinkStateRef.current.active,
+        startEdgeDragDisconnect
     };
 }

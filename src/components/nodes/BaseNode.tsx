@@ -82,7 +82,9 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
             const handleConnections = connections.filter((conn: Edge) =>
                 (h.type === 'target' ? conn.targetHandle === h.id : conn.sourceHandle === h.id)
             );
-            const count = handleConnections.length + (isPreviewing ? 1 : 0);
+            // If the new wire is already in React Flow's state, don't double count the preview wire
+            const isAlreadyCommitted = isPreviewing && handleConnections.length >= preview.totalSlots;
+            const count = handleConnections.length + (isPreviewing && !isAlreadyCommitted ? 1 : 0);
             return calculateCapsuleHeight(count);
         }
         return NODE_LAYOUT.socketSize;

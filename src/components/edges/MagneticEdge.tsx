@@ -1,6 +1,8 @@
 import { BaseEdge, EdgeProps, getBezierPath, getStraightPath, getSmoothStepPath, useStore } from '@xyflow/react';
+import React, { useContext, useRef } from 'react';
 import { useCapsulePreview } from './capsulePreviewState';
 import { HANDLE_SLOT_SPACING, calculateSlotOffsetY } from '../../utils/handleUtils';
+import { RelinkContext } from './RelinkLine';
 
 export function MagneticEdge({
     id,
@@ -19,6 +21,8 @@ export function MagneticEdge({
     data, // Receive data
 }: EdgeProps) {
     const pathType = data?.pathType || 'bezier';
+    const { startEdgeDragDisconnect } = useContext(RelinkContext);
+    const dragStartPos = useRef<{ x: number, y: number } | null>(null);
 
     // ─── Dynamic Target Y Offset Calculation ───
     const allEdges = useStore((s) => s.edges);
@@ -119,6 +123,41 @@ export function MagneticEdge({
                         opacity: selected || style.opacity ? 1 : 0.3,
                     }}
                     className="react-flow__edge-path animate-flow pointer-events-none"
+                />
+            )}
+
+            {/* Drag-to-Disconnect Hit Area (Invisible/Secret) */}
+            {startEdgeDragDisconnect && (
+                <circle
+                    cx={targetX}
+                    cy={finalTargetY}
+                    r={12}
+                    fill="transparent"
+                    className="relative z-50 pointer-events-auto"
+                    onPointerDown={(e) => {
+                        e.stopPropagation();
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        dragStartPos.current = { x: e.clientX, y: e.clientY };
+                    }}
+                    onPointerMove={(e) => {
+                        if (!dragStartPos.current) return;
+                        const dx = e.clientX - dragStartPos.current.x;
+                        const dy = e.clientY - dragStartPos.current.y;
+                        // If moved more than 5 pixels, consider it a drag
+                        if (Math.hypot(dx, dy) > 5) {
+                            dragStartPos.current = null;
+                            e.currentTarget.releasePointerCapture(e.pointerId);
+                            startEdgeDragDisconnect(e, id);
+                        }
+                    }}
+                    onPointerUp={(e) => {
+                        dragStartPos.current = null;
+                        e.currentTarget.releasePointerCapture(e.pointerId);
+                    }}
+                    onPointerCancel={(e) => {
+                        dragStartPos.current = null;
+                        e.currentTarget.releasePointerCapture(e.pointerId);
+                    }}
                 />
             )}
         </>

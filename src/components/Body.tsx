@@ -249,7 +249,8 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         onRelinkEnd,
         onRelinkConnect,
         isValidRelinkConnection,
-        isRelinkActive
+        isRelinkActive,
+        startEdgeDragDisconnect
     } = useRelink({
         edges,
         setEdges,
@@ -286,7 +287,8 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
     const relinkValue = {
         ...relinkState,
-        edgeType // Inject current edgeType into RelinkContext
+        edgeType, // Inject current edgeType into RelinkContext
+        startEdgeDragDisconnect
     };
 
     // --- FEEL NERVES (Input Handling) ---
