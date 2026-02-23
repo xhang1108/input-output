@@ -309,6 +309,54 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { mode: 'separate' },
         opTokens: ['SEPARATE', 'COMBINE']
     },
+    {
+        id: 'AD-10',
+        label: 'Geometry',
+        category: 'LinearAlgebra',
+        handles: [
+            // Dummy handles array for parser compatibility; dynamic handles will override this in GeometryNode
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Radius' },
+            { id: 'area', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Area' },
+            { id: 'perimeter', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Perim' }
+        ],
+        defaultData: { shape: 'Circle' },
+        opTokens: ['CIRCLE', 'QUAD', 'TRIANGLE']
+    },
+
+    {
+        id: 'AD-04',
+        label: 'Derivative',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'in_expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'Expr' },
+            { id: 'in_var', type: 'target', position: Position.Left, variant: 'single', dataType: 'string', label: 'Var' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic' }
+        ],
+        defaultData: { op: 'DERIVATIVE' },
+        opTokens: ['DERIVATIVE', 'DIFF']
+    },
+    {
+        id: 'AD-05',
+        label: 'Integral',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'in_expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'Expr' },
+            { id: 'in_var', type: 'target', position: Position.Left, variant: 'single', dataType: 'string', label: 'Var' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic' }
+        ],
+        defaultData: { op: 'INTEGRAL' },
+        opTokens: ['INTEGRAL', 'INT']
+    },
+    {
+        id: 'AD-06',
+        label: 'Solver',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any', label: 'Eq' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic' }
+        ],
+        defaultData: { op: 'SOLVE' }
+    },
 
     // ─── Data & Array (DA Family) ───────────────────────────────
     {

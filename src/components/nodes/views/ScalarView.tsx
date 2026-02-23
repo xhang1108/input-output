@@ -53,7 +53,7 @@ export const ScalarView: React.FC<ScalarViewProps> = ({ rawValue, precision, uni
     }
 
     return (
-        <div className={`font-mono truncate ${isError ? 'text-red-500 text-sm' : `text-2xl ${dataTypeColor}`}`}>
+        <div className={`font-mono break-all whitespace-pre-wrap ${isError ? 'text-red-500 text-sm' : `text-2xl ${dataTypeColor}`}`}>
             {displayValue}
         </div>
     );

@@ -126,9 +126,7 @@ NodeRegistry.register('IO-01', (node) => node.value || PayloadUtils.createScalar
 
 // IO-04: String Input
 NodeRegistry.register('IO-04', (node) => {
-    const data = (node.data || {}) as Record<string, unknown>;
-    const val = data.value !== undefined ? data.value : node.value;
-    return PayloadUtils.createString(String(val));
+    return PayloadUtils.createString(String(node.value || ''));
 }, (node) => {
     const data = (node.data || {}) as Record<string, unknown>;
     const sym = PayloadUtils.createSymbol('Literal', { value: String(data.value || '') });
@@ -1405,6 +1403,237 @@ NodeRegistry.register('AD-03', (node, inputs) => {
         args: args
     });
 });
+// AD-04: Derivative
+NodeRegistry.register('AD-04', (node, inputs) => {
+    const exprPayload = inputs['in_expr'];
+    const varPayload = inputs['in_var'];
+
+    if (!exprPayload) return PayloadUtils.createError('No Expression');
+
+    try {
+        const math = MathEngine.getInstance().getMathInstance();
+
+        let exprStr = '';
+        const exprVal = PayloadUtils.unwrap(exprPayload);
+        if (typeof exprVal === 'string') exprStr = exprVal;
+        else if (typeof exprVal === 'object' && exprVal !== null) exprStr = exprVal.toString();
+        else exprStr = String(exprVal);
+
+        let varStr = 'x';
+        if (varPayload) {
+            const v = PayloadUtils.unwrap(varPayload);
+            if (typeof v === 'string' && v.trim() !== '') varStr = v.trim();
+        }
+
+        // Use mathjs symbolic derivative
+        const derivative = math.derivative(exprStr, varStr);
+
+        return PayloadUtils.createSymbolic(derivative.toString());
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Derivative Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const varName = inputs['in_var'] ? PayloadUtils.unwrap(inputs['in_var']) : 'x';
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'derivative',
+        args: [
+            inputs['in_expr'] || PayloadUtils.createSymbol('Literal', { value: '0' }),
+            PayloadUtils.createSymbol('Literal', { value: String(varName) })
+        ]
+    });
+});
+
+// AD-05: Integral
+NodeRegistry.register('AD-05', (node, inputs) => {
+    const exprPayload = inputs['in_expr'];
+    const varPayload = inputs['in_var'];
+
+    if (!exprPayload) return PayloadUtils.createError('No Expression');
+
+    try {
+        const nerdamer = require('nerdamer/all');
+
+        let exprStr = '';
+        const exprVal = PayloadUtils.unwrap(exprPayload);
+        if (typeof exprVal === 'string') exprStr = exprVal;
+        else if (typeof exprVal === 'object' && exprVal !== null) exprStr = exprVal.toString();
+        else exprStr = String(exprVal);
+
+        let varStr = 'x';
+        if (varPayload) {
+            const v = PayloadUtils.unwrap(varPayload);
+            if (typeof v === 'string' && v.trim() !== '') varStr = v.trim();
+        }
+
+        // Use nerdamer for integration: integrate(f(x), x)
+        const integration = nerdamer(`integrate(${exprStr}, ${varStr})`);
+
+        // Return nicely formatted string
+        return PayloadUtils.createSymbolic(integration.text('decimals'));
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Integration Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const varName = inputs['in_var'] ? PayloadUtils.unwrap(inputs['in_var']) : 'x';
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'integrate',
+        args: [
+            inputs['in_expr'] || PayloadUtils.createSymbol('Literal', { value: '0' }),
+            PayloadUtils.createSymbol('Literal', { value: String(varName) })
+        ]
+    });
+});
+
+// AD-06: Solver
+NodeRegistry.register('AD-06', (node, inputs) => {
+    // Collect all inputs. With capsule handles, Brain passes `in` as an array
+    // if there are multiple connections, but we should also handle dynamic `in_X` if they exist.
+    const equations: string[] = [];
+
+    const inPayload = inputs['in'];
+    if (inPayload) {
+        // We use a robust recursive flatter, similar to ArrayBuilder COMBINE mode
+        const processPayload = (p: any) => {
+            const val = PayloadUtils.unwrap(p);
+            // Re-hydrate in case it's a serialized matrix
+            // Use MathEngine if we need mathjs hydration, but here we just want strings
+            // so we don't strictly need MathEngine, but we check for toArray just in case.
+            if (val && typeof val === 'object' && 'toArray' in (val as any)) {
+                (val as any).toArray().flat(Infinity).forEach((v: any) => {
+                    if (typeof v === 'string') equations.push(v);
+                    else if (v !== null && v !== undefined) equations.push(String(v));
+                });
+            } else if (Array.isArray(val)) {
+                val.flat(Infinity).forEach(v => {
+                    if (typeof v === 'object' && v !== null && 'value' in v) {
+                        const innerVal = (v as any).value;
+                        if (typeof innerVal === 'string') equations.push(innerVal);
+                        else if (innerVal !== null && innerVal !== undefined) equations.push(String(innerVal));
+                    } else if (typeof v === 'string') {
+                        equations.push(v);
+                    } else if (v !== null && v !== undefined) {
+                        equations.push(String(v));
+                    }
+                });
+            } else if (typeof val === 'string') {
+                equations.push(val);
+            } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                // Check if it's our bundle object
+                if ('value' in val) {
+                    processPayload({ value: val.value }); // Recurse
+                } else {
+                    Object.values(val).forEach(v => {
+                        if (typeof v === 'string') equations.push(v);
+                        else if (v !== null && v !== undefined) equations.push(String(v));
+                    });
+                }
+            } else if (val !== null && val !== undefined) {
+                equations.push(String(val));
+            }
+        };
+
+        if (Array.isArray(inPayload)) {
+            inPayload.forEach(processPayload);
+        } else {
+            processPayload(inPayload);
+        }
+    }
+
+    // Also check for dynamic inputs like in_1, in_2... just in case
+    for (const [key, payload] of Object.entries(inputs)) {
+        if (key !== 'in' && key.startsWith('in')) {
+            const val = PayloadUtils.unwrap(payload);
+            if (typeof val === 'string') equations.push(val);
+        }
+    }
+
+    if (equations.length === 0) {
+        return PayloadUtils.createError('No Equation Input');
+    }
+
+    try {
+        // Dynamic require since we don't want to break the whole bundle if nerdamer fails
+        const nerdamer = require('nerdamer/all');
+
+        const solveFor = (node.data?.solveFor as string | undefined) || '';
+
+        let solutions;
+        if (equations.length === 1) {
+            // Single equation
+            if (solveFor.trim() !== '') {
+                solutions = nerdamer(equations[0]).solveFor(solveFor.trim());
+            } else {
+                solutions = nerdamer.solveEquations(equations[0]);
+            }
+        } else {
+            // Multiple equations
+            solutions = nerdamer.solveEquations(equations);
+            if (solveFor.trim() !== '' && Array.isArray(solutions)) {
+                // Return only the solution for the targeted variable
+                const targetSol = solutions.find(s => Array.isArray(s) && s[0] === solveFor.trim());
+                if (targetSol && targetSol.length > 1) {
+                    // Extract just the value to make it behave like a single-variable solve
+                    solutions = [targetSol[1]];
+                }
+            }
+        }
+
+        // Format the output
+        let outStr = '';
+        if (Array.isArray(solutions)) {
+            // For multiple equations, nerdamer typically returns an array of arrays like: [["x",1],["y",2]]
+            // For single equation, it returns an array of roots, which are Nerdamer Expression objects.
+            // We must convert them to clean text so they don't get serialized as AST Objects or raw strings.
+            // Using nerdamer(s).text() provides a cleaner, more standard math string (e.g. 1/2 instead of 1*2^(-1))
+            const mappedValues = solutions.map(s => {
+                try {
+                    if (Array.isArray(s)) {
+                        return `[${s.map(ss => {
+                            try { return nerdamer(ss).text('decimals'); }
+                            catch { return ss.toString(); }
+                        }).join(', ')}]`;
+                    }
+                    return nerdamer(s).text('decimals'); // 'decimals' forces fractions where reasonable
+                } catch (e) {
+                    return s.toString();
+                }
+            });
+
+            if (equations.length > 1) {
+                // System of equations output, typically looks like [[x, 3], [y, 2]]
+                outStr = `[${mappedValues.join(', ')}]`;
+            } else {
+                // Single equation output, typically looks like [5] or [2, 3]
+                if (mappedValues.length === 1) {
+                    // Just output the single root, e.g. "5" instead of "[5]" -- or keep it in brackets to be consistent?
+                    // Let's keep it in brackets if it's multiple roots, or just output the number if it's 1 root.
+                    outStr = `[${mappedValues[0]}]`;
+                } else {
+                    outStr = `[${mappedValues.join(', ')}]`;
+                }
+            }
+        } else if (typeof solutions === 'object' && solutions !== null) {
+            // Sometimes it might return an object
+            try {
+                if ('toString' in solutions) outStr = solutions.toString();
+                else outStr = JSON.stringify(solutions).replace(/"/g, '');
+            } catch (e) {
+                outStr = String(solutions);
+            }
+        } else {
+            outStr = String(solutions);
+        }
+
+        return PayloadUtils.createSymbolic(outStr);
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Solve Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'solve',
+        args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '0' })]
+    });
+});
 
 // AD-07: Complex Math
 NodeRegistry.register('AD-07', (node, inputs) => {
@@ -1724,6 +1953,75 @@ NodeRegistry.register('AD-09', (node, inputs) => {
                 : [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
         });
     }
+});
+
+// AD-10: Geometry
+NodeRegistry.register('AD-10', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const shape = data.shape as string || 'Circle';
+    const math = MathEngine.getInstance().getMathInstance();
+
+    let area = 0;
+    let perimeter = 0;
+    let volume = 0;
+
+    const getNum = (key: string) => {
+        const p = inputs[key];
+        if (!p) return 0;
+        const val = PayloadUtils.unwrap(p);
+        const hydrated = PayloadUtils.hydrate(val, math);
+        if (typeof hydrated === 'number') return hydrated;
+        if (hydrated && typeof hydrated === 'object' && 'toNumber' in (hydrated as any)) {
+            try { return (hydrated as any).toNumber(); } catch { return 0; }
+        }
+        return Number(hydrated) || 0;
+    };
+
+    if (shape === 'Circle') {
+        const r = getNum('in_a');
+        area = Math.PI * r * r;
+        perimeter = 2 * Math.PI * r;
+    } else if (shape === 'Quad') {
+        const w = getNum('in_a');
+        const h = getNum('in_b');
+        area = w * h;
+        perimeter = 2 * (w + h);
+    } else if (shape === 'Triangle') {
+        const b = getNum('in_a');
+        const h = getNum('in_b');
+        area = 0.5 * b * h;
+        // Simple perimeter approximation for right triangle if user only provides base/height
+        perimeter = b + h + Math.sqrt(b * b + h * h);
+    }
+
+    return {
+        type: DataType.Object,
+        value: {
+            // Re-use wrap safely
+            area: PayloadUtils.wrap(area),
+            perimeter: PayloadUtils.wrap(perimeter),
+            volume: PayloadUtils.wrap(volume)
+        },
+        symbol: null,
+        meta: {}
+    };
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const shape = data.shape as string || 'Circle';
+
+    // Simplistic Function call for formula display
+    const args = [];
+    if (shape === 'Circle') {
+        args.push(inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }));
+    } else {
+        args.push(inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }));
+        args.push(inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 }));
+    }
+
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: `${shape.toLowerCase()}`,
+        args: args
+    });
 });
 
 // DA-06: Array Extract

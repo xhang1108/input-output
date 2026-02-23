@@ -35,7 +35,8 @@ export enum DataType {
     Boolean = 'boolean',
     Error = 'error',
     Trigger = 'trigger', // For events/pulses
-    Object = 'object'    // Generic JSON
+    Object = 'object',   // Generic JSON
+    Symbolic = 'symbolic' // For algebraic expressions, equations, etc.
 }
 
 // Strict union type for value (removing 'any' progressively)

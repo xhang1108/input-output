@@ -53,6 +53,7 @@ export const ResultNode = memo((props: NodeProps) => {
 
     if (viewMode === 'auto') {
         if (payload?.type === DataType.Matrix) effectiveMode = 'grid';
+        else if (payload?.type === DataType.Symbolic) effectiveMode = 'formula'; // Default symbolic to formula view
         else if (payload?.type === DataType.Object && rawValue && typeof rawValue === 'object' && 'hex' in (rawValue as object)) effectiveMode = 'color';
         else effectiveMode = 'text';
     } else {
@@ -87,6 +88,7 @@ export const ResultNode = memo((props: NodeProps) => {
         case DataType.String: dataTypeColor = 'text-(--color-string)'; break;
         case DataType.Matrix: dataTypeColor = 'text-(--color-matrix)'; break;
         case DataType.Boolean: dataTypeColor = 'text-(--color-boolean)'; break;
+        case DataType.Symbolic: dataTypeColor = 'text-[var(--color-soul,#b084e9)]'; break; // Placeholder for soul/symbolic color
     }
 
     // --- Actions ---
@@ -130,7 +132,7 @@ export const ResultNode = memo((props: NodeProps) => {
 
     return (
         <BaseNode {...props} data={nodeData}>
-            <div className="p-3 flex flex-col gap-2 min-w-[140px]">
+            <div className="p-3 flex flex-col gap-2 min-w-[140px] max-w-[500px]">
                 {/* Header Controls */}
                 <div className="flex justify-between items-center gap-2">
                     <div className="flex items-center gap-1 overflow-hidden">
@@ -184,11 +186,11 @@ export const ResultNode = memo((props: NodeProps) => {
                 </div>
 
                 {/* Content Area */}
-                <div className={`w-full min-h-[44px] flex items-center justify-center border border-zinc-800/50 rounded-lg bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
+                <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-lg bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
                     {isError ? (
-                        <div className="font-mono truncate text-red-500 text-sm py-2 px-3">{errorStr}</div>
+                        <div className="font-mono break-all whitespace-pre-wrap text-red-500 text-sm py-2 px-3">{errorStr}</div>
                     ) : !payload ? (
-                        <div className="font-mono truncate text-zinc-500 text-sm py-2 px-3">...</div>
+                        <div className="font-mono break-all whitespace-pre-wrap text-zinc-500 text-sm py-2 px-3">...</div>
                     ) : (
                         <>
                             {effectiveMode === 'text' && <ScalarView rawValue={rawValue} precision={precision} unitStr={unitStr} dataTypeColor={dataTypeColor} isError={isError} />}

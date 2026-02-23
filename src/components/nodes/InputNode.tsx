@@ -33,7 +33,7 @@ export const InputNode = memo((props: NodeProps) => {
                         onChange={(e) => {
                             Brain.getInstance().applyTransaction({
                                 type: 'UPDATE_VALUE',
-                                payload: { id, value: e.target.value }
+                                payload: { id, value: PayloadUtils.createSymbolic(e.target.value) }
                             });
                         }}
                         onKeyDown={(e) => e.stopPropagation()}

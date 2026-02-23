@@ -4,6 +4,7 @@
  */
 
 import { BaseNode } from '../components/nodes/BaseNode';
+import { SolverNode } from '../components/nodes/SolverNode';
 import { FrameNode } from '../components/nodes/FrameNode';
 import { InputNode } from '../components/nodes/InputNode';
 import { UnitNode } from '../components/nodes/UnitNode';
@@ -32,12 +33,18 @@ import { MatrixToolsNode } from '../components/nodes/MatrixToolsNode';
 import { VectorUtilsNode } from '../components/nodes/VectorUtilsNode';
 import { CombinatoricsNode } from '../components/nodes/CombinatoricsNode';
 import { VectorSplitNode } from '../components/nodes/VectorSplitNode';
+import { GeometryNode } from '../components/nodes/GeometryNode';
 import { ArrayExtractNode } from '../components/nodes/ArrayExtractNode';
 import { ArrayBuilderNode } from '../components/nodes/ArrayBuilderNode';
+import { DerivativeNode } from '../components/nodes/DerivativeNode';
+import { IntegralNode } from '../components/nodes/IntegralNode';
 
 export const nodeTypes = {
     baseNode: BaseNode,
     frame: FrameNode,
+    'AD-04': DerivativeNode,
+    'AD-05': IntegralNode,
+    'AD-06': SolverNode,
     'MA-01': MathNode,
     'MA-02': NumberTheoryNode,
     'MA-03': ConstantNode,
@@ -74,6 +81,7 @@ export const nodeTypes = {
     'AD-02': VectorUtilsNode,
     'AD-03': CombinatoricsNode,
     'AD-09': VectorSplitNode,
+    'AD-10': GeometryNode,
     'DA-06': ArrayExtractNode,
     'DA-07': ArrayBuilderNode,
 };

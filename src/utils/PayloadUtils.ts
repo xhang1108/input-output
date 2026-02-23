@@ -20,6 +20,8 @@ export const PayloadUtils = {
         else if (typeof value === 'boolean') type = DataType.Boolean;
         else if (Array.isArray(value)) type = DataType.Matrix; // Preliminary array check
         else if (typeof value === 'object') type = DataType.Object;
+        // String with equations usually isn't wrapped magically to Symbolic unless explicitly parsed, 
+        // so we leave it as string here or let specialized nodes create Symbolic.
 
         return {
             type,
@@ -71,6 +73,18 @@ export const PayloadUtils = {
     createString(value: string): NodePayload {
         return {
             type: DataType.String,
+            value,
+            symbol: null,
+            meta: {}
+        };
+    },
+
+    /**
+     * Safe Symbolic Creator (For algebraic expressions like 'x = 2' or 'y + 3')
+     */
+    createSymbolic(value: string): NodePayload {
+        return {
+            type: DataType.Symbolic,
             value,
             symbol: null,
             meta: {}
@@ -374,6 +388,15 @@ export const PayloadUtils = {
 
         // 2. Scalar -> String
         if (payload.type === DataType.Scalar && expected === DataType.String) {
+            return {
+                ...payload,
+                type: DataType.String,
+                value: String(payload.value)
+            };
+        }
+
+        // 3. Symbolic -> String
+        if (payload.type === DataType.Symbolic && expected === DataType.String) {
             return {
                 ...payload,
                 type: DataType.String,
