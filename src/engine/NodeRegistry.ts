@@ -1406,6 +1406,218 @@ NodeRegistry.register('AD-03', (node, inputs) => {
     });
 });
 
+// AD-07: Complex Math
+NodeRegistry.register('AD-07', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'separate';
+
+    try {
+        if (mode === 'separate') {
+            const valPayload = inputs['in'];
+            if (!valPayload) return PayloadUtils.createError('No Input');
+            const val = PayloadUtils.hydrate(valPayload.value, math);
+
+            // Re, Im, Abs(r), Arg(phi)
+            const re = math.re(val);
+            const im = math.im(val);
+            const abs = math.abs(val);
+            // mathjs arg() handles scalar and complex correctly. If positive scalar: 0. If negative: pi.
+            const arg = typeof math.arg === 'function' ? math.arg(val) : 0;
+
+            const multiValue: Record<string, unknown> = {
+                're': PayloadUtils.createScalar(PayloadUtils.dehydrate(re)),
+                'im': PayloadUtils.createScalar(PayloadUtils.dehydrate(im)),
+                'abs': PayloadUtils.createScalar(PayloadUtils.dehydrate(abs)),
+                'arg': PayloadUtils.createScalar(PayloadUtils.dehydrate(arg))
+            };
+
+            return {
+                type: DataType.Object,
+                value: multiValue,
+                symbol: null,
+                meta: { unit: valPayload.meta?.unit }
+            };
+        } else if (mode === 'combine_cartesian') {
+            const re = PayloadUtils.hydrate(inputs['in_re']?.value || 0, math);
+            const im = PayloadUtils.hydrate(inputs['in_im']?.value || 0, math);
+
+            const result = math.complex(Number(re), Number(im));
+            return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+
+        } else if (mode === 'combine_polar') {
+            const r = PayloadUtils.hydrate(inputs['in_abs']?.value || 0, math);
+            const phi = PayloadUtils.hydrate(inputs['in_arg']?.value || 0, math);
+
+            const result = math.complex({ r: Number(r), phi: Number(phi) });
+            return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+        }
+
+        return PayloadUtils.createError('Invalid Mode');
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Complex Math Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'separate';
+
+    if (mode === 'separate') {
+        const inSym = inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'z' });
+        // Since Multi-outputs can't pass specific symbols downstream yet, we return a general function call
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: 'complex_parts',
+            args: [inSym]
+        });
+    } else if (mode === 'combine_cartesian') {
+        const reSym = inputs['in_re'] || PayloadUtils.createSymbol('Literal', { value: 0 });
+        const imSym = inputs['in_im'] || PayloadUtils.createSymbol('Literal', { value: 0 });
+        const iSym = PayloadUtils.createSymbol('Identifier', { name: 'i' });
+        const imParts = PayloadUtils.createSymbol('BinaryExpression', { operator: '*', left: imSym, right: iSym });
+        return PayloadUtils.createSymbol('BinaryExpression', { operator: '+', left: reSym, right: imParts });
+    } else if (mode === 'combine_polar') {
+        const rSym = inputs['in_abs'] || PayloadUtils.createSymbol('Literal', { value: 0 });
+        const phiSym = inputs['in_arg'] || PayloadUtils.createSymbol('Literal', { value: 0 });
+        const eSym = PayloadUtils.createSymbol('Identifier', { name: 'e' });
+        const iSym = PayloadUtils.createSymbol('Identifier', { name: 'i' });
+        const iphi = PayloadUtils.createSymbol('BinaryExpression', { operator: '*', left: iSym, right: phiSym });
+        const expPart = PayloadUtils.createSymbol('BinaryExpression', { operator: '^', left: eSym, right: iphi });
+        return PayloadUtils.createSymbol('BinaryExpression', { operator: '*', left: rSym, right: expPart });
+    }
+    return PayloadUtils.createSymbol('Identifier', { name: 'Complex' });
+});
+
+// AD-08: Vector Field
+NodeRegistry.register('AD-08', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+
+    const mode = data.mode as string || 'gradient';
+    const var1 = data.var1 as string || 'x';
+    const var2 = data.var2 as string || 'y';
+    const min = data.min !== undefined ? Number(data.min) : -5;
+    const max = data.max !== undefined ? Number(data.max) : 5;
+    const density = data.density !== undefined ? Number(data.density) : 10;
+
+    const inPayload = inputs['in_f'];
+    if (!inPayload) return PayloadUtils.createError('No input function/vector provided');
+
+    try {
+        // Prepare the function(s) to evaluate
+        const exprVal = PayloadUtils.unwrap(inPayload);
+        if (!exprVal) return PayloadUtils.createError('Invalid input function');
+
+        let uExpr: any;
+        let vExpr: any;
+        let outGradSymbols: Record<string, unknown> | null = null;
+        let unitMeta = inPayload.meta?.unit;
+
+        if (mode === 'gradient') {
+            // exprVal should be a scalar expression (string or parsed node)
+            const nodeExpr = typeof exprVal === 'string' ? math.parse(exprVal) : exprVal;
+            if (typeof nodeExpr !== 'object' || !nodeExpr || !('isNode' in nodeExpr)) {
+                return PayloadUtils.createError('Input must be a valid expression for gradient');
+            }
+
+            // Symbolic derivatives
+            uExpr = math.derivative(nodeExpr as any, var1);
+            vExpr = math.derivative(nodeExpr as any, var2);
+
+            // Format symbolic output for out_grad
+            outGradSymbols = {
+                type: DataType.Vector,
+                value: [uExpr.toString(), vExpr.toString()],
+                symbol: null,
+                meta: {}
+            };
+        } else {
+            // Direct mode: exprVal should be a vector of length 2
+            const hydrated = PayloadUtils.hydrate(exprVal, math);
+            let arr: any[] = [];
+            if (hydrated && typeof hydrated === 'object' && hydrated !== null && 'toArray' in (hydrated as any)) {
+                arr = (hydrated as any).toArray().flat(Infinity);
+            } else if (Array.isArray(hydrated)) {
+                arr = hydrated.flat(Infinity);
+            }
+
+            if (arr.length < 2) {
+                return PayloadUtils.createError('Input must be a 2D vector [u, v]');
+            }
+
+            // Parse array elements into executable nodes
+            uExpr = typeof arr[0] === 'string' ? math.parse(arr[0]) : (typeof arr[0] === 'object' && 'isNode' in arr[0] ? arr[0] : math.parse(String(arr[0])));
+            vExpr = typeof arr[1] === 'string' ? math.parse(arr[1]) : (typeof arr[1] === 'object' && 'isNode' in arr[1] ? arr[1] : math.parse(String(arr[1])));
+        }
+
+        // Compile for fast execution over grid
+        const uCode = uExpr.compile();
+        const vCode = vExpr.compile();
+
+        // Generate grid
+        const step = (max - min) / Math.max(1, density - 1);
+        const fieldData: number[][] = [];
+
+        // Loop over Y outer, X inner (or vice versa doesn't strictly matter for flat array)
+        for (let i = 0; i < density; i++) {
+            const y = min + i * step;
+            for (let j = 0; j < density; j++) {
+                const x = min + j * step;
+
+                const scope = { [var1]: x, [var2]: y };
+                try {
+                    const vx = Number(uCode.evaluate(scope)) || 0;
+                    const vy = Number(vCode.evaluate(scope)) || 0;
+
+                    // Format required for plotting: [x, y, vx, vy]
+                    fieldData.push([x, y, vx, vy]);
+                } catch {
+                    // Ignore errors at specific points (e.g. division by zero)
+                    fieldData.push([x, y, 0, 0]);
+                }
+            }
+        }
+
+        const multiValue: Record<string, unknown> = {
+            'out_field': {
+                type: DataType.Matrix,
+                value: fieldData,
+                symbol: null,
+                meta: { unit: unitMeta } // Propagate base unit, might need dividing by domain unit later
+            }
+        };
+
+        if (outGradSymbols) {
+            multiValue['out_grad'] = outGradSymbols;
+        }
+
+        return {
+            type: DataType.Object,
+            value: multiValue,
+            symbol: null,
+            meta: {}
+        };
+
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Vector Field Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'gradient';
+    const inSym = inputs['in_f'] || PayloadUtils.createSymbol('Literal', { value: 'f' });
+
+    if (mode === 'gradient') {
+        const nabla = PayloadUtils.createSymbol('Identifier', { name: '\\nabla' });
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: '',
+            args: [nabla, inSym]
+        });
+    } else {
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: 'VectorField',
+            args: [inSym]
+        });
+    }
+});
+
 // AD-09: Vector Split 
 NodeRegistry.register('AD-09', (node, inputs) => {
     const data = (node.data || {}) as Record<string, unknown>;
@@ -1650,5 +1862,295 @@ NodeRegistry.register('DA-07', (node, inputs) => {
     return PayloadUtils.createSymbol('FunctionCall', {
         name: 'concat',
         args: argList.length ? argList : [PayloadUtils.createSymbol('Literal', { value: '[]' })]
+    });
+});
+
+// DA-01: Statistics
+NodeRegistry.register('DA-01', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'Mean';
+    const valPayload = inputs['data'];
+    if (!valPayload) return PayloadUtils.createError('No Input');
+
+    const raw = PayloadUtils.unwrap(valPayload);
+    const hydrated = PayloadUtils.hydrate(raw, math);
+
+    let arr: any[] = [];
+    if (hydrated && typeof hydrated === 'object' && hydrated !== null && 'toArray' in (hydrated as any)) {
+        arr = (hydrated as any).toArray().flat(Infinity);
+    } else if (Array.isArray(hydrated)) {
+        arr = hydrated.flat(Infinity);
+    } else {
+        arr = [hydrated];
+    }
+
+    if (arr.length === 0) return PayloadUtils.createError('Empty Array');
+
+    try {
+        const m = math as unknown as Record<string, Function>;
+        let result: unknown = 0;
+        switch (op) {
+            case 'Mean': result = m.mean(arr); break;
+            case 'Max': result = m.max(arr); break;
+            case 'Min': result = m.min(arr); break;
+            case 'StdDev': result = m.std(arr); break;
+            case 'Median': result = m.median(arr); break;
+            case 'Variance': result = m.variance(arr); break;
+            case 'Sum': result = m.sum(arr); break;
+            default: result = m.mean(arr);
+        }
+        return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Stats Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const op = data.op as string || 'Mean';
+    const opMap: Record<string, string> = {
+        'Mean': 'mean', 'Max': 'max', 'Min': 'min', 'StdDev': 'std',
+        'Median': 'median', 'Variance': 'variance', 'Sum': 'sum'
+    };
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: opMap[op] || 'mean',
+        args: [inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
+    });
+});
+
+// DA-05: Distributions
+NodeRegistry.register('DA-05', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'Normal';
+
+    const getN = () => {
+        if (inputs['param_n']) return Number(PayloadUtils.unwrap(inputs['param_n'])) || 100;
+        return data.n !== undefined ? Number(data.n) : 100;
+    };
+
+    const getP1 = () => {
+        if (inputs['param_1']) return Number(PayloadUtils.unwrap(inputs['param_1']));
+        return data.p1 !== undefined ? Number(data.p1) : (mode === 'Normal' ? 0 : 1);
+    };
+
+    const getP2 = () => {
+        if (inputs['param_2']) return Number(PayloadUtils.unwrap(inputs['param_2']));
+        return data.p2 !== undefined ? Number(data.p2) : (mode === 'Uniform' ? 10 : 1);
+    };
+
+    const n = Math.max(1, Math.min(100000, Math.floor(getN()))); // Limit safe bound
+    const p1 = getP1();
+    const p2 = getP2();
+    const samples: number[] = new Array(n);
+
+    try {
+        if (mode === 'Normal') {
+            // Box-Muller transform
+            for (let i = 0; i < n; i++) {
+                let u = 0, v = 0;
+                while (u === 0) u = Math.random();
+                while (v === 0) v = Math.random();
+                const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+                samples[i] = z * p2 + p1; // z * sigma + mu
+            }
+        } else if (mode === 'Uniform') {
+            const min = Math.min(p1, p2);
+            const max = Math.max(p1, p2);
+            for (let i = 0; i < n; i++) {
+                samples[i] = min + Math.random() * (max - min);
+            }
+        } else if (mode === 'Poisson') {
+            // Knuth algorithm (simple version, ok for small lambda)
+            const L = Math.exp(-p1);
+            for (let i = 0; i < n; i++) {
+                let p = 1.0;
+                let k = 0;
+                do {
+                    k++;
+                    p *= Math.random();
+                } while (p > L);
+                samples[i] = k - 1;
+            }
+        }
+
+        return PayloadUtils.createMatrix(PayloadUtils.dehydrate(samples));
+    } catch (e: unknown) {
+        return PayloadUtils.createError('Distribution Generation Failed');
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'Normal';
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: `random_${mode.toLowerCase()}`,
+        args: [
+            inputs['param_n'] || PayloadUtils.createSymbol('Literal', { value: data.n as number }),
+            inputs['param_1'] || PayloadUtils.createSymbol('Literal', { value: data.p1 as number }),
+            inputs['param_2'] || PayloadUtils.createSymbol('Literal', { value: data.p2 as number })
+        ].filter(v => v !== undefined)
+    });
+});
+
+// DA-02: SmoothingNode
+NodeRegistry.register('DA-02', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+
+    let windowSize = 3;
+    if (inputs['window']) {
+        windowSize = Number(PayloadUtils.unwrap(inputs['window'])) || 3;
+    } else {
+        windowSize = data.windowMode !== undefined ? Number(data.windowMode) : 3;
+    }
+
+    const valPayload = inputs['data'];
+    if (!valPayload) return PayloadUtils.createError('No Input');
+
+    const raw = PayloadUtils.unwrap(valPayload);
+    const hydrated = PayloadUtils.hydrate(raw, math);
+
+    let arr: any[] = [];
+    if (hydrated && typeof hydrated === 'object' && hydrated !== null && 'toArray' in (hydrated as any)) {
+        arr = (hydrated as any).toArray().flat(Infinity);
+    } else if (Array.isArray(hydrated)) {
+        arr = hydrated.flat(Infinity);
+    } else {
+        arr = [hydrated];
+    }
+
+    if (arr.length === 0) return PayloadUtils.createMatrix([]);
+    windowSize = Math.max(1, Math.min(arr.length, Math.floor(windowSize)));
+
+    const result = [];
+    for (let i = 0; i < arr.length; i++) {
+        let sum = 0;
+        let count = 0;
+        const start = Math.max(0, i - Math.floor(windowSize / 2));
+        const end = Math.min(arr.length - 1, i + Math.floor(windowSize / 2));
+        for (let j = start; j <= end; j++) {
+            sum += Number(arr[j]) || 0;
+            count++;
+        }
+        result.push(sum / count);
+    }
+
+    return PayloadUtils.createMatrix(PayloadUtils.dehydrate(result));
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'smooth',
+        args: [
+            inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' }),
+            inputs['window'] || PayloadUtils.createSymbol('Literal', { value: (node.data?.windowMode || 3) as number })
+        ]
+    });
+});
+
+// DA-03: ListUtilityNode
+NodeRegistry.register('DA-03', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'Sort (Asc)';
+
+    const valPayload = inputs['data'];
+    if (!valPayload) return PayloadUtils.createError('No Input');
+
+    const raw = PayloadUtils.unwrap(valPayload);
+    const hydrated = PayloadUtils.hydrate(raw, math);
+
+    let arr: any[] = [];
+    if (hydrated && typeof hydrated === 'object' && hydrated !== null && 'toArray' in (hydrated as any)) {
+        arr = (hydrated as any).toArray().flat(Infinity);
+    } else if (Array.isArray(hydrated)) {
+        arr = hydrated.flat(Infinity);
+    } else {
+        arr = [hydrated];
+    }
+
+    if (arr.length === 0) return PayloadUtils.createMatrix([]);
+
+    let result = [...arr];
+
+    if (mode === 'Sort (Asc)') {
+        result.sort((a, b) => Number(a) - Number(b));
+    } else if (mode === 'Sort (Desc)') {
+        result.sort((a, b) => Number(b) - Number(a));
+    } else if (mode === 'Reverse') {
+        result.reverse();
+    } else if (mode === 'Unique') {
+        result = [...new Set(result.map(x => String(x)))].map(x => Number(x));
+    } else if (mode === 'Clean') {
+        result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
+    }
+
+    return PayloadUtils.createMatrix(PayloadUtils.dehydrate(result));
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'Sort (Asc)';
+    let funcName = 'listUtil';
+    if (mode.startsWith('Sort')) funcName = 'sort';
+    else if (mode === 'Reverse') funcName = 'reverse';
+    else if (mode === 'Unique') funcName = 'unique';
+    else if (mode === 'Clean') funcName = 'clean';
+
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: funcName,
+        args: [
+            inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' })
+        ]
+    });
+});
+
+// DA-04: SetOpsNode
+NodeRegistry.register('DA-04', (node, inputs) => {
+    const math = MathEngine.getInstance().getMathInstance();
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'Union';
+
+    const getArr = (key: string) => {
+        const valPayload = inputs[key];
+        if (!valPayload) return [];
+        const raw = PayloadUtils.unwrap(valPayload);
+        const hydrated = PayloadUtils.hydrate(raw, math);
+        if (hydrated && typeof hydrated === 'object' && hydrated !== null && 'toArray' in (hydrated as any)) {
+            return (hydrated as any).toArray().flat(Infinity);
+        } else if (Array.isArray(hydrated)) {
+            return hydrated.flat(Infinity);
+        } else {
+            return [hydrated];
+        }
+    };
+
+    const arrA = getArr('a');
+    const arrB = getArr('b');
+
+    const setA: string[] = Array.from(new Set(arrA.map((x: any) => String(x))));
+    const setB: string[] = Array.from(new Set(arrB.map((x: any) => String(x))));
+
+    let resultSet: string[] = [];
+
+    if (mode === 'Union') {
+        resultSet = Array.from(new Set([...setA, ...setB]));
+    } else if (mode === 'Intersection') {
+        const bLookup = new Set<string>(setB);
+        resultSet = setA.filter((x: string) => bLookup.has(x));
+    } else if (mode === 'Difference') {
+        const bLookup = new Set<string>(setB);
+        resultSet = setA.filter((x: string) => !bLookup.has(x));
+    }
+
+    const finalResult = resultSet.map((x: string) => {
+        const n = Number(x);
+        return Number.isNaN(n) ? x : n;
+    });
+
+    return PayloadUtils.createMatrix(PayloadUtils.dehydrate(finalResult));
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const mode = data.mode as string || 'Union';
+
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: mode.toLowerCase(),
+        args: [
+            inputs['a'] || PayloadUtils.createSymbol('Literal', { value: '[]' }),
+            inputs['b'] || PayloadUtils.createSymbol('Literal', { value: '[]' })
+        ]
     });
 });

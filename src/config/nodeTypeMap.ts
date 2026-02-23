@@ -43,7 +43,7 @@ export const nodeTypes = {
     'MA-03': ConstantNode,
     'MA-04': BaseNode,       // Switch
     'MA-05': LogicNode,      // Consolidated Logic Gate
-    'MA-08': ToggleNode,
+    'MA-08': ButtonNode,
     'MA-09': ButtonNode,
 
 

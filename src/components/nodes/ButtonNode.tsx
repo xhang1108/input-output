@@ -16,16 +16,43 @@ export const ButtonNode = memo((props: NodeProps) => {
 
     const nodeData = { ...data, handles };
 
+    const isSticky = (data as any).mode !== 'momentary'; // Default to sticky (toggle)
+
+    const toggleActive = useCallback(() => {
+        Brain.getInstance().applyTransaction({
+            type: 'UPDATE_NODE_DATA',
+            payload: { id, data: { value: !isActive } }
+        });
+    }, [id, isActive]);
+
     const setPressed = useCallback((pressed: boolean) => {
+        if (isSticky) return;
         Brain.getInstance().applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { value: pressed } }
         });
-    }, [id]);
+    }, [id, isSticky]);
 
     return (
         <BaseNode {...props} data={nodeData}>
             <div className="flex flex-col items-center gap-4 p-3 min-w-[100px]">
+                <div className="flex justify-between items-center w-full">
+                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Mode</label>
+                    <select
+                        className="nodrag bg-transparent text-[8px] text-zinc-500 border border-zinc-700/50 rounded-xs outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold"
+                        value={(data as any).mode || 'sticky'}
+                        onChange={(e) => {
+                            Brain.getInstance().applyTransaction({
+                                type: 'UPDATE_NODE_DATA',
+                                payload: { id, data: { mode: e.target.value, value: false } }
+                            });
+                        }}
+                    >
+                        <option value="sticky">Sticky</option>
+                        <option value="momentary">Momentary</option>
+                    </select>
+                </div>
+
                 <div className="relative">
                     {/* Outer Glow Ring */}
                     <div className={`
@@ -42,17 +69,18 @@ export const ButtonNode = memo((props: NodeProps) => {
                                 : 'bg-linear-to-b from-zinc-700 to-zinc-800 border-zinc-600 shadow-[0_6px_0_rgb(39,39,42),0_10px_15px_rgba(0,0,0,0.5)] active:translate-y-1 active:shadow-none'
                             }
                         `}
+                        onClick={() => isSticky && toggleActive()}
                         onMouseDown={(e) => {
                             e.stopPropagation();
-                            setPressed(true);
+                            if (!isSticky) setPressed(true);
                         }}
-                        onMouseUp={() => setPressed(false)}
-                        onMouseLeave={() => isActive && setPressed(false)}
+                        onMouseUp={() => !isSticky && setPressed(false)}
+                        onMouseLeave={() => !isSticky && isActive && setPressed(false)}
                         onTouchStart={(e) => {
                             e.preventDefault();
-                            setPressed(true);
+                            if (!isSticky) setPressed(true);
                         }}
-                        onTouchEnd={() => setPressed(false)}
+                        onTouchEnd={() => !isSticky && setPressed(false)}
                     >
                         {/* Inner detail */}
                         <div className={`
@@ -66,7 +94,7 @@ export const ButtonNode = memo((props: NodeProps) => {
 
                 <div className="flex flex-col items-center gap-0.5">
                     <span className={`text-[10px] font-black uppercase tracking-tighter transition-colors ${isActive ? 'text-orange-400' : 'text-zinc-500'}`}>
-                        Momentary
+                        {isSticky ? 'Toggle' : 'Momentary'}
                     </span>
                     <span className="text-[9px] font-medium text-zinc-600 uppercase">
                         {isActive ? 'Active' : 'Standby'}

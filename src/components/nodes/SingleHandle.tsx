@@ -22,13 +22,6 @@ export const SingleHandle = memo(({ h, id, isConnectable }: SingleHandleProps) =
             )}
             style={isManual ? { top: typeof h.y === 'number' ? `${h.y}px` : h.y } : undefined}
         >
-            {/* Label for Right handles (on the left of the dot) */}
-            {h.position === Position.Right && h.label && (
-                <span className="absolute right-3.5 text-[9px] text-zinc-500 font-black uppercase pointer-events-none whitespace-nowrap tracking-tighter opacity-80 group-hover:opacity-100 transition-opacity">
-                    {h.label}
-                </span>
-            )}
-
             <NodeHandle
                 type={h.type}
                 position={h.position}
@@ -38,13 +31,6 @@ export const SingleHandle = memo(({ h, id, isConnectable }: SingleHandleProps) =
                 color={getHandleColor(h)}
                 isConnectable={isConnectable}
             />
-
-            {/* Label for Left handles (on the right of the dot) */}
-            {h.position === Position.Left && h.label && (
-                <span className="absolute left-3.5 text-[9px] text-zinc-500 font-black uppercase pointer-events-none whitespace-nowrap tracking-tighter opacity-80 group-hover:opacity-100 transition-opacity">
-                    {h.label}
-                </span>
-            )}
 
             {/* Placeholder for the handle's space in the flex column (only if NOT manual) */}
             {!isManual && (

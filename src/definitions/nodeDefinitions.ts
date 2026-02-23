@@ -78,34 +78,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'result', viewMode: 'auto' }
     },
     {
-        id: 'IO-16',
-        label: 'Matrix Result',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single' }
-        ],
-        defaultData: { type: 'result', viewMode: 'grid' }
-    },
-    {
-        id: 'IO-17',
-        label: 'Formula Result',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single' }
-        ],
-        defaultData: { type: 'result', viewMode: 'formula' }
-    },
-    {
-        id: 'IO-19',
-        label: 'LaTeX Result',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single' }
-        ],
-        defaultData: { type: 'result', viewMode: 'latex' }
-    },
-
-    {
         id: 'IO-06',
         label: 'Random',
         category: 'Input',
@@ -403,21 +375,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
 
     {
         id: 'MA-08',
-        label: 'Toggle',
-        category: 'Logic',
-        handles: [
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'boolean' }
-        ],
-        defaultData: { type: 'toggle', value: false }
-    },
-    {
-        id: 'MA-09',
         label: 'Button',
         category: 'Logic',
         handles: [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'boolean' }
         ],
-        defaultData: { type: 'button', value: false }
+        defaultData: { type: 'button', value: false, mode: 'sticky' }
     },
     {
         id: 'SY-05',

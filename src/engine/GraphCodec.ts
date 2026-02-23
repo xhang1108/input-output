@@ -210,6 +210,24 @@ export class GraphCodec {
                 }
             }
 
+            // Phase 2.19: Data Family Mapping
+            if (cNode.opCode && typeInfo.category === 'Data') {
+                const op = cNode.opCode.toLowerCase();
+                if (typeInfo.id === 'DA-01') {
+                    const opMap: Record<string, string> = { 'mean': 'Mean', 'max': 'Max', 'min': 'Min', 'stddev': 'StdDev', 'median': 'Median', 'variance': 'Variance', 'sum': 'Sum' };
+                    if (opMap[op]) data.op = opMap[op];
+                } else if (typeInfo.id === 'DA-03') {
+                    const opMap: Record<string, string> = { 'sort (asc)': 'Sort (Asc)', 'sort': 'Sort (Asc)', 'sort (desc)': 'Sort (Desc)', 'reverse': 'Reverse', 'unique': 'Unique', 'clean': 'Clean' };
+                    if (opMap[op]) data.mode = opMap[op];
+                } else if (typeInfo.id === 'DA-04') {
+                    const opMap: Record<string, string> = { 'union': 'Union', 'intersection': 'Intersection', 'difference': 'Difference' };
+                    if (opMap[op]) data.mode = opMap[op];
+                } else if (typeInfo.id === 'DA-05') {
+                    const opMap: Record<string, string> = { 'normal': 'Normal', 'uniform': 'Uniform', 'poisson': 'Poisson' };
+                    if (opMap[op]) data.mode = opMap[op];
+                }
+            }
+
             // Phase 2.2: Ensure Logic Gate has correct OpCode
             if (cNode.opCode && typeInfo.id === 'MA-05') {
                 data.op = cNode.opCode.toUpperCase();
@@ -290,6 +308,11 @@ export class GraphCodec {
 
         // 2. Common Math Aliases (MA-01 uses in_a, in_b)
         if (!isSource) {
+            // Skip a/b aliasing for nodes that use raw a/b (DA Family, Vector Utils etc.)
+            if (typeId?.startsWith('DA-') || typeId === 'AD-02') {
+                if (['a', 'b', 'data'].includes(h)) return h;
+            }
+
             if (h === 'a') return 'in_a';
             if (h === 'b') return 'in_b';
             if (h === 'base') return 'in_a';
@@ -391,9 +414,16 @@ export class GraphCodec {
             if (idMatch) return idMatch;
         }
 
-        // 5. Emerging Categories (LinearAlgebra, DataStructure)
-        if (catLower === 'linearalgebra' || catLower === 'datastructure') {
+        // 5. Emerging Categories (LinearAlgebra, DataStructure, Data)
+        if (catLower === 'linearalgebra' || catLower === 'datastructure' || catLower === 'data') {
             if (opLower) {
+                // Data family explicit fallbacks
+                if (opLower === 'da-01' || ['mean', 'max', 'min', 'stddev', 'median', 'variance', 'sum', 'stats'].includes(opLower)) return NODE_DEFINITIONS.find(d => d.id === 'DA-01');
+                if (opLower === 'da-02' || opLower === 'smooth' || opLower === 'smoothing') return NODE_DEFINITIONS.find(d => d.id === 'DA-02');
+                if (opLower === 'da-03' || ['unique', 'sort (asc)', 'sort', 'reverse', 'clean', 'list'].includes(opLower)) return NODE_DEFINITIONS.find(d => d.id === 'DA-03');
+                if (opLower === 'da-04' || ['union', 'intersection', 'difference', 'set'].includes(opLower)) return NODE_DEFINITIONS.find(d => d.id === 'DA-04');
+                if (opLower === 'da-05' || ['normal', 'uniform', 'poisson', 'dist'].includes(opLower)) return NODE_DEFINITIONS.find(d => d.id === 'DA-05');
+
                 const match = NODE_DEFINITIONS.find(d =>
                     d.category.toLowerCase() === catLower &&
                     (d.id.toLowerCase() === opLower || !!d.opTokens?.map(t => t.toLowerCase()).includes(opLower))
@@ -402,7 +432,7 @@ export class GraphCodec {
             }
         }
 
-        // 5. Direct ID Match (Fallback)
+        // 6. Direct ID Match (Fallback)
         // If user types ID-01 explicitly
         return NODE_DEFINITIONS.find(d => d.id.toLowerCase() === category.toLowerCase());
     }
