@@ -36,15 +36,21 @@ import { VectorSplitNode } from '../components/nodes/VectorSplitNode';
 import { GeometryNode } from '../components/nodes/GeometryNode';
 import { ArrayExtractNode } from '../components/nodes/ArrayExtractNode';
 import { ArrayBuilderNode } from '../components/nodes/ArrayBuilderNode';
-import { DerivativeNode } from '../components/nodes/DerivativeNode';
+// Removed legacy calculus nodes
+import { DifferentialNode } from '../components/nodes/DifferentialNode';
 import { IntegralNode } from '../components/nodes/IntegralNode';
+import { LimitNode } from '../components/nodes/LimitNode';
+import { ODESolverNode } from '../components/nodes/ODESolverNode';
 
 export const nodeTypes = {
     baseNode: BaseNode,
     frame: FrameNode,
-    'AD-04': DerivativeNode,
+    // Calculus Engine (Phase 5.1)
+    'AD-04': DifferentialNode,
     'AD-05': IntegralNode,
     'AD-06': SolverNode,
+    'AD-11': LimitNode,
+    'SY-04': ODESolverNode,
     'MA-01': MathNode,
     'MA-02': NumberTheoryNode,
     'MA-03': ConstantNode,

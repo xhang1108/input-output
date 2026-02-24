@@ -3,6 +3,8 @@ import { MathEngine } from './MathEngine';
 import { NodePayload, DataType, ASTNode } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { Brain } from './Brain';
+import { NerdamerService } from './calculus/NerdamerService';
+import { RuntimeGuard } from './calculus/RuntimeGuard';
 
 /**
  * 💡 NodeRegistry: The Brain's Cortex
@@ -126,7 +128,8 @@ NodeRegistry.register('IO-01', (node) => node.value || PayloadUtils.createScalar
 
 // IO-04: String Input
 NodeRegistry.register('IO-04', (node) => {
-    return PayloadUtils.createString(String(node.value || ''));
+    const data = (node.data || {}) as Record<string, unknown>;
+    return PayloadUtils.createString(String(data.value ?? ''));
 }, (node) => {
     const data = (node.data || {}) as Record<string, unknown>;
     const sym = PayloadUtils.createSymbol('Literal', { value: String(data.value || '') });
@@ -1403,84 +1406,271 @@ NodeRegistry.register('AD-03', (node, inputs) => {
         args: args
     });
 });
-// AD-04: Derivative
-NodeRegistry.register('AD-04', (node, inputs) => {
-    const exprPayload = inputs['in_expr'];
-    const varPayload = inputs['in_var'];
+// ─── Calculus Engine (Phase 5.1) ──────────────────────────────────────
 
-    if (!exprPayload) return PayloadUtils.createError('No Expression');
+// AD-04: Derivative (Symbolic + Numeric)
+NodeRegistry.register('AD-04', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+    const order = Number(data.order) || 1;
+
+    // Get expression from input
+    const exprPayload = inputs['expr'];
+    if (!exprPayload) return PayloadUtils.createError('No Expression Input');
+
+    const exprVal = PayloadUtils.unwrap(exprPayload);
+    const exprStr = typeof exprVal === 'string' ? exprVal : String(exprVal);
+
+    if (!exprStr || exprStr === '0' || exprStr === 'null' || exprStr === 'undefined') {
+        return PayloadUtils.createSymbolic('0');
+    }
 
     try {
-        const math = MathEngine.getInstance().getMathInstance();
+        const svc = NerdamerService.getInstance();
 
-        let exprStr = '';
-        const exprVal = PayloadUtils.unwrap(exprPayload);
-        if (typeof exprVal === 'string') exprStr = exprVal;
-        else if (typeof exprVal === 'object' && exprVal !== null) exprStr = exprVal.toString();
-        else exprStr = String(exprVal);
+        const result = RuntimeGuard.safeEvaluate(() => {
+            return svc.differentiate(exprStr, variable, order);
+        });
 
-        let varStr = 'x';
-        if (varPayload) {
-            const v = PayloadUtils.unwrap(varPayload);
-            if (typeof v === 'string' && v.trim() !== '') varStr = v.trim();
-        }
-
-        // Use mathjs symbolic derivative
-        const derivative = math.derivative(exprStr, varStr);
-
-        return PayloadUtils.createSymbolic(derivative.toString());
+        if (!result.ok) return PayloadUtils.createError(result.error || 'Differentiation Failed');
+        return PayloadUtils.createSymbolic(result.value.text());
     } catch (e: unknown) {
-        return PayloadUtils.createError(`Derivative Failed: ${e instanceof Error ? e.message : String(e)}`);
+        return PayloadUtils.createError(`Diff Failed: ${e instanceof Error ? e.message : String(e)}`);
     }
 }, (node, inputs) => {
-    const varName = inputs['in_var'] ? PayloadUtils.unwrap(inputs['in_var']) : 'x';
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
     return PayloadUtils.createSymbol('FunctionCall', {
-        name: 'derivative',
-        args: [
-            inputs['in_expr'] || PayloadUtils.createSymbol('Literal', { value: '0' }),
-            PayloadUtils.createSymbol('Literal', { value: String(varName) })
-        ]
+        name: `\\frac{d}{d${variable}}`,
+        args: [inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: 'f(x)' })]
     });
 });
 
-// AD-05: Integral
+// AD-05: Integral (Symbolic + Simpson's Rule Fallback)
 NodeRegistry.register('AD-05', (node, inputs) => {
-    const exprPayload = inputs['in_expr'];
-    const varPayload = inputs['in_var'];
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+    const mode = (data.mode as string) || 'indefinite';
+    const lower = (data.lower as string) || '';
+    const upper = (data.upper as string) || '';
 
-    if (!exprPayload) return PayloadUtils.createError('No Expression');
+    const exprPayload = inputs['expr'];
+    if (!exprPayload) return PayloadUtils.createError('No Expression Input');
+
+    const exprVal = PayloadUtils.unwrap(exprPayload);
+    const exprStr = typeof exprVal === 'string' ? exprVal : String(exprVal);
+
+    if (!exprStr || exprStr === 'null' || exprStr === 'undefined') {
+        return PayloadUtils.createSymbolic('0');
+    }
 
     try {
-        const nerdamer = require('nerdamer/all');
+        const svc = NerdamerService.getInstance();
 
-        let exprStr = '';
-        const exprVal = PayloadUtils.unwrap(exprPayload);
-        if (typeof exprVal === 'string') exprStr = exprVal;
-        else if (typeof exprVal === 'object' && exprVal !== null) exprStr = exprVal.toString();
-        else exprStr = String(exprVal);
+        if (mode === 'definite' && lower && upper) {
+            // Definite integral
+            const result = RuntimeGuard.safeEvaluate(() => {
+                try {
+                    // Try symbolic definite integral first
+                    return svc.definiteIntegral(exprStr, variable, lower, upper);
+                } catch {
+                    // Fallback: Simpson's Rule numerical integration
+                    const a = Number(lower);
+                    const b = Number(upper);
+                    if (isNaN(a) || isNaN(b)) throw new Error('Bounds must be numeric for fallback');
 
-        let varStr = 'x';
-        if (varPayload) {
-            const v = PayloadUtils.unwrap(varPayload);
-            if (typeof v === 'string' && v.trim() !== '') varStr = v.trim();
+                    const compiled = svc.compileToFunction(exprStr, [variable]);
+                    const n = 100; // number of intervals (must be even)
+                    const h = (b - a) / n;
+                    let sum = Number(compiled({ [variable]: a })) + Number(compiled({ [variable]: b }));
+
+                    for (let i = 1; i < n; i++) {
+                        const x = a + i * h;
+                        const fval = Number(compiled({ [variable]: x }));
+                        sum += (i % 2 === 0 ? 2 : 4) * fval;
+                    }
+                    return { text: () => String(sum * h / 3) };
+                }
+            });
+
+            if (!result.ok) return PayloadUtils.createError(result.error || 'Integration Failed');
+
+            const textResult = result.value.text('decimals');
+            const numVal = Number(textResult);
+            if (!isNaN(numVal)) {
+                return PayloadUtils.createScalar(numVal);
+            }
+            return PayloadUtils.createSymbolic(textResult);
+        } else {
+            // Indefinite integral
+            const result = RuntimeGuard.safeEvaluate(() => {
+                return svc.integrate(exprStr, variable);
+            });
+
+            if (!result.ok) return PayloadUtils.createError(result.error || 'Integration Failed');
+            return PayloadUtils.createSymbolic(result.value.text());
         }
-
-        // Use nerdamer for integration: integrate(f(x), x)
-        const integration = nerdamer(`integrate(${exprStr}, ${varStr})`);
-
-        // Return nicely formatted string
-        return PayloadUtils.createSymbolic(integration.text('decimals'));
     } catch (e: unknown) {
-        return PayloadUtils.createError(`Integration Failed: ${e instanceof Error ? e.message : String(e)}`);
+        return PayloadUtils.createError(`Integral Failed: ${e instanceof Error ? e.message : String(e)}`);
     }
 }, (node, inputs) => {
-    const varName = inputs['in_var'] ? PayloadUtils.unwrap(inputs['in_var']) : 'x';
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
     return PayloadUtils.createSymbol('FunctionCall', {
-        name: 'integrate',
-        args: [
-            inputs['in_expr'] || PayloadUtils.createSymbol('Literal', { value: '0' }),
-            PayloadUtils.createSymbol('Literal', { value: String(varName) })
-        ]
+        name: `\\int d${variable}`,
+        args: [inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: 'f(x)' })]
+    });
+});
+
+// AD-11: Limit (Symbolic + Numeric Verification)
+NodeRegistry.register('AD-11', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+    const approach = (data.approach as string) || '0';
+    const direction = (data.direction as string) || 'both';
+
+    const exprPayload = inputs['expr'];
+    if (!exprPayload) return PayloadUtils.createError('No Expression Input');
+
+    const exprVal = PayloadUtils.unwrap(exprPayload);
+    const exprStr = typeof exprVal === 'string' ? exprVal : String(exprVal);
+
+    if (!exprStr || exprStr === 'null' || exprStr === 'undefined') {
+        return PayloadUtils.createScalar(0);
+    }
+
+    try {
+        const svc = NerdamerService.getInstance();
+
+        // Try symbolic limit first
+        const result = RuntimeGuard.safeEvaluate(() => {
+            return svc.limit(exprStr, variable, approach);
+        });
+
+        if (result.ok) {
+            const textResult = result.value.text('decimals');
+            const numVal = Number(textResult);
+            if (!isNaN(numVal) && isFinite(numVal)) {
+                // Numeric verification with bilateral approach
+                if (direction !== 'right') {
+                    const compiled = svc.compileToFunction(exprStr, [variable]);
+                    const approachNum = Number(approach);
+                    if (!isNaN(approachNum)) {
+                        const leftCheck = Number(compiled({ [variable]: approachNum - 1e-8 }));
+                        const rightCheck = Number(compiled({ [variable]: approachNum + 1e-8 }));
+
+                        // If left and right limits diverge significantly, report
+                        if (Math.abs(leftCheck - rightCheck) > 0.01 && direction === 'both') {
+                            return PayloadUtils.createError('Limit DNE: Left ≠ Right');
+                        }
+                    }
+                }
+                return PayloadUtils.createScalar(numVal);
+            }
+            return PayloadUtils.createSymbolic(textResult);
+        }
+
+        // Fallback: Numeric approach (high-precision bilateral)
+        return RuntimeGuard.evaluateToPayload(() => {
+            const compiled = svc.compileToFunction(exprStr, [variable]);
+            const approachNum = Number(approach);
+            if (isNaN(approachNum)) throw new Error('Numeric fallback requires numeric approach value');
+
+            const epsilon = 1e-10;
+            if (direction === 'left') {
+                return Number(compiled({ [variable]: approachNum - epsilon }));
+            } else if (direction === 'right') {
+                return Number(compiled({ [variable]: approachNum + epsilon }));
+            }
+
+            // Both sides
+            const left = Number(compiled({ [variable]: approachNum - epsilon }));
+            const right = Number(compiled({ [variable]: approachNum + epsilon }));
+
+            if (Math.abs(left - right) > 0.001) {
+                throw new Error('Limit DNE: Left ≠ Right');
+            }
+            return (left + right) / 2;
+        }, (v: number) => PayloadUtils.createScalar(v));
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Limit Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+    const approach = (data.approach as string) || '0';
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: `\\lim_{${variable}\\to ${approach}}`,
+        args: [inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: 'f(x)' })]
+    });
+});
+
+// SY-04: ODE Solver (RK4 Numerical Integration)
+NodeRegistry.register('SY-04', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const t0 = Number(data.t0) || 0;
+    const tEnd = Number(data.tEnd) || 10;
+    const y0 = Number(data.y0) || 1;
+    const stepSize = Number(data.stepSize) || 0.01;
+
+    const exprPayload = inputs['expr'];
+    if (!exprPayload) return PayloadUtils.createError('No ODE Expression Input');
+
+    const exprVal = PayloadUtils.unwrap(exprPayload);
+    const exprStr = typeof exprVal === 'string' ? exprVal : String(exprVal);
+
+    if (!exprStr || exprStr === 'null' || exprStr === 'undefined') {
+        return PayloadUtils.createError('Invalid ODE Expression');
+    }
+
+    try {
+        const svc = NerdamerService.getInstance();
+
+        // Compile the ODE f(t, y) into a JS function
+        const compiled = svc.compileToFunction(exprStr, ['t', 'y']);
+
+        const f = (t: number, y: number): number => {
+            return Number(compiled({ t, y })) || 0;
+        };
+
+        // RK4 integration
+        const result = RuntimeGuard.safeEvaluate(() => {
+            const points: number[][] = [];
+            let t = t0;
+            let y = y0;
+            const maxSteps = Math.min(Math.ceil((tEnd - t0) / stepSize), 10000); // Safety cap
+
+            for (let i = 0; i <= maxSteps; i++) {
+                points.push([t, y]);
+
+                // RK4 step
+                const k1 = f(t, y);
+                const k2 = f(t + stepSize / 2, y + stepSize / 2 * k1);
+                const k3 = f(t + stepSize / 2, y + stepSize / 2 * k2);
+                const k4 = f(t + stepSize, y + stepSize * k3);
+
+                y = y + (stepSize / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
+                t = t0 + (i + 1) * stepSize;
+
+                // Safety: bail on divergence
+                if (!isFinite(y) || Math.abs(y) > 1e15) {
+                    points.push([t, y]);
+                    break;
+                }
+            }
+            return points;
+        });
+
+        if (!result.ok) return PayloadUtils.createError(result.error || 'ODE Solver Failed');
+
+        return PayloadUtils.createMatrix(result.value as number[][]);
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`ODE Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'ODESolve',
+        args: [inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: "f(t,y)" })]
     });
 });
 
@@ -2452,3 +2642,249 @@ NodeRegistry.register('DA-04', (node, inputs) => {
         ]
     });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+// Phase 5.1: Calculus Engine
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Helper: Extract expression string from an input payload.
+ * Handles String, Symbolic, and Scalar payloads gracefully.
+ */
+function extractExprStr(payload: NodePayload | undefined): string | null {
+    if (!payload) return null;
+    const raw = PayloadUtils.unwrap(payload);
+    if (typeof raw === 'string') return raw;
+    if (typeof raw === 'number') return String(raw);
+    // If it's still an object (shouldn't happen), try to get the .value
+    if (raw && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)) {
+        return String((raw as Record<string, unknown>).value);
+    }
+    return String(raw);
+}
+
+// ─── AD-04: Derivative Node ────────────────────────────────────────
+
+NodeRegistry.register('AD-04', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+    const order = Number(data.order) || 1;
+
+    const exprStr = extractExprStr(inputs['expr']);
+    if (!exprStr || exprStr === 'null' || exprStr === 'undefined') {
+        return PayloadUtils.createError('No Expression Input');
+    }
+
+    try {
+        const svc = NerdamerService.getInstance();
+        const result = svc.differentiate(exprStr, variable, order);
+        const simplified = svc.simplifyForDisplay(result);
+        return PayloadUtils.createSymbolic(simplified);
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Diff Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: `\\frac{d}{d${variable}}`,
+        args: [
+            inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: '?' })
+        ]
+    });
+});
+
+// ─── AD-05: Integral Node ──────────────────────────────────────────
+
+NodeRegistry.register('AD-05', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+    const mode = (data.mode as string) || 'indefinite';
+
+    const exprStr = extractExprStr(inputs['expr']);
+    if (!exprStr || exprStr === 'null' || exprStr === 'undefined') {
+        return PayloadUtils.createError('No Expression Input');
+    }
+
+    try {
+        const svc = NerdamerService.getInstance();
+
+        if (mode === 'definite') {
+            const lower = String(data.lower || '0');
+            const upper = String(data.upper || '1');
+
+            // Try symbolic definite integral first
+            try {
+                const result = svc.definiteIntegral(exprStr, variable, lower, upper);
+                const textResult = result.text('decimals');
+                const numVal = Number(textResult);
+                if (!isNaN(numVal) && isFinite(numVal)) {
+                    return PayloadUtils.createScalar(numVal);
+                }
+                return PayloadUtils.createSymbolic(svc.simplifyForDisplay(result));
+            } catch {
+                // Fallback: Simpson's Rule (numerical)
+                return RuntimeGuard.evaluateToPayload(() => {
+                    const compiled = svc.compileToFunction(exprStr, [variable]);
+                    const a = Number(lower);
+                    const b = Number(upper);
+                    if (isNaN(a) || isNaN(b)) throw new Error('Bounds must be numeric for numerical integration');
+
+                    const n = 100; // Simpson's rule intervals (must be even)
+                    const h = (b - a) / n;
+                    let sum = Number(compiled({ [variable]: a })) + Number(compiled({ [variable]: b }));
+
+                    for (let i = 1; i < n; i++) {
+                        const xi = a + i * h;
+                        const coeff = (i % 2 === 0) ? 2 : 4;
+                        sum += coeff * Number(compiled({ [variable]: xi }));
+                    }
+                    return (h / 3) * sum;
+                }, (v: number) => PayloadUtils.createScalar(v));
+            }
+        } else {
+            // Indefinite integral
+            const result = svc.integrate(exprStr, variable);
+            return PayloadUtils.createSymbolic(svc.simplifyForDisplay(result));
+        }
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Integral Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: `\\int d${variable}`,
+        args: [
+            inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: '?' })
+        ]
+    });
+});
+
+// ─── AD-11: Limit Node ─────────────────────────────────────────────
+
+NodeRegistry.register('AD-11', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+    const approach = (data.approach as string) || '0';
+    const direction = (data.direction as string) || 'both';
+
+    const exprStr = extractExprStr(inputs['expr']);
+    if (!exprStr || exprStr === 'null' || exprStr === 'undefined') {
+        return PayloadUtils.createError('No Expression Input');
+    }
+
+    try {
+        const svc = NerdamerService.getInstance();
+
+        // Try symbolic limit first
+        const symResult = RuntimeGuard.safeEvaluate(() => {
+            return svc.limit(exprStr, variable, approach);
+        });
+
+        if (symResult.ok) {
+            const textResult = symResult.value.text('decimals');
+            const numVal = Number(textResult);
+            if (!isNaN(numVal) && isFinite(numVal)) {
+                return PayloadUtils.createScalar(numVal);
+            }
+            return PayloadUtils.createSymbolic(textResult);
+        }
+
+        // Fallback: Numeric bilateral approach
+        return RuntimeGuard.evaluateToPayload(() => {
+            const compiled = svc.compileToFunction(exprStr, [variable]);
+            const approachNum = Number(approach);
+            if (isNaN(approachNum)) throw new Error('Numeric fallback requires numeric approach value');
+
+            const epsilon = 1e-10;
+            if (direction === 'left') {
+                return Number(compiled({ [variable]: approachNum - epsilon }));
+            } else if (direction === 'right') {
+                return Number(compiled({ [variable]: approachNum + epsilon }));
+            }
+
+            // Both sides
+            const left = Number(compiled({ [variable]: approachNum - epsilon }));
+            const right = Number(compiled({ [variable]: approachNum + epsilon }));
+
+            if (Math.abs(left - right) > 0.001) {
+                throw new Error('Limit DNE: Left ≠ Right');
+            }
+            return (left + right) / 2;
+        }, (v: number) => PayloadUtils.createScalar(v));
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`Limit Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const variable = (data.variable as string) || 'x';
+    const approach = (data.approach as string) || '0';
+
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: `\\lim_{${variable}\\to ${approach}}`,
+        args: [
+            inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: '?' })
+        ]
+    });
+});
+
+// ─── SY-04: ODE Solver Node ────────────────────────────────────────
+
+NodeRegistry.register('SY-04', (node, inputs) => {
+    const data = (node.data || {}) as Record<string, unknown>;
+    const t0 = Number(data.t0) || 0;
+    const tEnd = Number(data.tEnd) || 1;
+    const y0 = Number(data.y0) || 1;
+    const stepSize = Number(data.stepSize) || 0.01;
+
+    const exprStr = extractExprStr(inputs['expr']);
+    if (!exprStr || exprStr === 'null' || exprStr === 'undefined') {
+        return PayloadUtils.createError('No Expression Input');
+    }
+
+    try {
+        const svc = NerdamerService.getInstance();
+        const compiled = svc.compileToFunction(exprStr, ['t', 'y']);
+
+        // RK4 Solver
+        const results: number[][] = [[t0, y0]];
+        let t = t0;
+        let y = y0;
+        const maxSteps = 10000;
+        let steps = 0;
+
+        while (t < tEnd && steps < maxSteps) {
+            const h = Math.min(stepSize, tEnd - t);
+            const k1 = Number(compiled({ t, y }));
+            const k2 = Number(compiled({ t: t + h / 2, y: y + h * k1 / 2 }));
+            const k3 = Number(compiled({ t: t + h / 2, y: y + h * k2 / 2 }));
+            const k4 = Number(compiled({ t: t + h, y: y + h * k3 }));
+
+            y = y + (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
+            t = t + h;
+            steps++;
+
+            // Divergence guard
+            if (!isFinite(y) || Math.abs(y) > 1e15) {
+                return PayloadUtils.createError(`ODE diverged at t=${t.toFixed(4)}`);
+            }
+
+            results.push([parseFloat(t.toFixed(10)), y]);
+        }
+
+        return PayloadUtils.createMatrix(results as any);
+    } catch (e: unknown) {
+        return PayloadUtils.createError(`ODE Failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}, (node, inputs) => {
+    return PayloadUtils.createSymbol('FunctionCall', {
+        name: 'ODESolve',
+        args: [
+            inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: '?' })
+        ]
+    });
+});
+

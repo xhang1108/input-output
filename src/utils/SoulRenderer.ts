@@ -67,6 +67,15 @@ export class SoulRenderer {
         if (lowerName === 'sqrt') return `\\sqrt{${renderedArgs[0]}}`;
         if (lowerName === 'sin') return `\\sin{${renderedArgs[0]}}`;
         if (lowerName === 'cos') return `\\cos{${renderedArgs[0]}}`;
+        if (lowerName === 'tan') return `\\tan{${renderedArgs[0]}}`;
+        if (lowerName === 'log') return `\\log{${renderedArgs[0]}}`;
+        if (lowerName === 'ln') return `\\ln{${renderedArgs[0]}}`;
+
+        // Calculus: If name already contains LaTeX commands (starts with \),
+        // render it directly — don't wrap in \text{}
+        if (name.startsWith('\\')) {
+            return `${name}\\left(${renderedArgs.join(', ')}\\right)`;
+        }
 
         return `\\text{${name}}(${renderedArgs.join(', ')})`;
     }

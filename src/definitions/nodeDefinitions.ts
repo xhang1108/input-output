@@ -323,29 +323,26 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['CIRCLE', 'QUAD', 'TRIANGLE']
     },
 
+    // ─── Calculus Engine (Phase 5.1) ────────────────────────────
     {
         id: 'AD-04',
         label: 'Derivative',
-        category: 'LinearAlgebra',
+        category: 'Calculus',
         handles: [
-            { id: 'in_expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'Expr' },
-            { id: 'in_var', type: 'target', position: Position.Left, variant: 'single', dataType: 'string', label: 'Var' },
+            { id: 'expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic', label: 'f(x)' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic' }
         ],
-        defaultData: { op: 'DERIVATIVE' },
-        opTokens: ['DERIVATIVE', 'DIFF']
+        defaultData: { variable: 'x', order: 1 }
     },
     {
         id: 'AD-05',
         label: 'Integral',
-        category: 'LinearAlgebra',
+        category: 'Calculus',
         handles: [
-            { id: 'in_expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: 'Expr' },
-            { id: 'in_var', type: 'target', position: Position.Left, variant: 'single', dataType: 'string', label: 'Var' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic' }
+            { id: 'expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic', label: 'f(x)' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'INTEGRAL' },
-        opTokens: ['INTEGRAL', 'INT']
+        defaultData: { variable: 'x', mode: 'indefinite', lower: '', upper: '' }
     },
     {
         id: 'AD-06',
@@ -356,6 +353,26 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic' }
         ],
         defaultData: { op: 'SOLVE' }
+    },
+    {
+        id: 'AD-11',
+        label: 'Limit',
+        category: 'Calculus',
+        handles: [
+            { id: 'expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic', label: 'f(x)' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { variable: 'x', approach: '0', direction: 'both' }
+    },
+    {
+        id: 'SY-04',
+        label: 'ODE Solver',
+        category: 'Calculus',
+        handles: [
+            { id: 'expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic', label: "f(t,y)" },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { method: 'RK4', t0: 0, tEnd: 10, y0: 1, stepSize: 0.01 }
     },
 
     // ─── Data & Array (DA Family) ───────────────────────────────

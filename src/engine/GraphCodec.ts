@@ -228,6 +228,14 @@ export class GraphCodec {
                 }
             }
 
+            // Phase 5.1: Calculus Family Mapping
+            if (typeInfo.category === 'Calculus') {
+                if (cNode.value !== undefined) {
+                    // For calculus nodes, value is the expression string
+                    data.expression = String(cNode.value);
+                }
+            }
+
             // Phase 2.2: Ensure Logic Gate has correct OpCode
             if (cNode.opCode && typeInfo.id === 'MA-05') {
                 data.op = cNode.opCode.toUpperCase();
@@ -432,7 +440,18 @@ export class GraphCodec {
             }
         }
 
-        // 6. Direct ID Match (Fallback)
+        // 6. Calculus Family (Phase 5.1)
+        if (catLower === 'calculus') {
+            if (opLower === 'derivative' || opLower === 'diff' || opLower === 'ad-04') return NODE_DEFINITIONS.find(d => d.id === 'AD-04');
+            if (opLower === 'integral' || opLower === 'integrate' || opLower === 'ad-05') return NODE_DEFINITIONS.find(d => d.id === 'AD-05');
+            if (opLower === 'limit' || opLower === 'lim' || opLower === 'ad-11') return NODE_DEFINITIONS.find(d => d.id === 'AD-11');
+            if (opLower === 'ode' || opLower === 'odesolver' || opLower === 'sy-04') return NODE_DEFINITIONS.find(d => d.id === 'SY-04');
+            // Fallback: try by ID
+            const idMatch = NODE_DEFINITIONS.find(d => d.id.toLowerCase() === opLower);
+            if (idMatch) return idMatch;
+        }
+
+        // 7. Direct ID Match (Fallback)
         // If user types ID-01 explicitly
         return NODE_DEFINITIONS.find(d => d.id.toLowerCase() === category.toLowerCase());
     }
