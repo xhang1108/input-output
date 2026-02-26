@@ -66,7 +66,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         showGrid, setShowGrid,
         showDebug, setShowDebug,
         edgeType, setEdgeType,
-        edgeAnimation, setEdgeAnimation,
         layoutAlgorithm, setLayoutAlgorithm,
         layoutDirection, setLayoutDirection,
         panOnScroll, setPanOnScroll,
@@ -151,7 +150,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
         palettePosition,
         edgeType,
-        edgeAnimation,
         setNodes,
         setEdges,
         logAction,
@@ -163,7 +161,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         edges,
         mode,
         edgeType,
-        edgeAnimation,
         setEdges,
         logAction,
     });
@@ -175,11 +172,10 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             data: {
                 ...e.data,
                 pathType: edgeType,
-                animate: edgeAnimation,
                 isHighlighted: e.id === highlightedEdgeId
             }
         })));
-    }, [edgeType, edgeAnimation, highlightedEdgeId, setEdges]);
+    }, [edgeType, highlightedEdgeId, setEdges]);
 
     // Brain Sync (Shadow Mirror)
     useBrainSync(nodes, edges);
@@ -256,7 +252,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         setEdges,
         logAction,
         edgeType,
-        edgeAnimation: edgeAnimation,
         onSmartLinkSearch: (params) => {
             console.log('Smart Link Search Triggered via useRelink:', params);
             setPalettePosition(params.position);
@@ -560,7 +555,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     defaultEdgeOptions={{
                         type: 'magnetic',
                         animated: false,
-                        data: { pathType: edgeType, animate: edgeAnimation }
+                        data: { pathType: edgeType }
                     }}
 
                     // Snapping Logic
@@ -587,8 +582,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                         setLayoutAlgorithm={setLayoutAlgorithm}
                         layoutDirection={layoutDirection}
                         setLayoutDirection={setLayoutDirection}
-                        edgeAnimation={edgeAnimation}
-                        setEdgeAnimation={setEdgeAnimation}
                         panOnScroll={panOnScroll}
                         setPanOnScroll={setPanOnScroll}
                         onReset={clearMemory}

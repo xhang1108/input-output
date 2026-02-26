@@ -117,7 +117,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
                 ${selected
                     ? 'border-zinc-400 animate-ring-pulse'
                     : 'border-zinc-700 hover:border-zinc-500'}
-                ${data.muted ? 'opacity-40 grayscale-40 shadow-none!' : 'node-shadow-1'}
+                ${data.muted ? 'opacity-40 grayscale-40 shadow-none!' : ''}
             `}
             style={{ minHeight: `${minHeight}px`, background: 'var(--node-bg)', ...style }}
         >

@@ -400,6 +400,66 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['BUILD', 'CONCAT']
     },
 
+    // ─── Data Analysis (DA Family) ─────────────────────────────
+    {
+        id: 'DA-01',
+        label: 'Statistics',
+        category: 'DataAnalysis',
+        handles: [
+            { id: 'data', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { op: 'Mean' },
+        opTokens: ['MEAN', 'MAX', 'MIN', 'STDDEV', 'MEDIAN', 'VARIANCE', 'SUM']
+    },
+    {
+        id: 'DA-02',
+        label: 'Smoothing',
+        category: 'DataAnalysis',
+        handles: [
+            { id: 'data', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix' },
+            { id: 'window', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Win' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { windowMode: 3 }
+    },
+    {
+        id: 'DA-03',
+        label: 'List Utility',
+        category: 'DataAnalysis',
+        handles: [
+            { id: 'data', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { mode: 'Sort (Asc)' },
+        opTokens: ['SORT', 'REVERSE', 'UNIQUE', 'CLEAN']
+    },
+    {
+        id: 'DA-04',
+        label: 'Set Operations',
+        category: 'DataAnalysis',
+        handles: [
+            { id: 'a', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix', label: 'A' },
+            { id: 'b', type: 'target', position: Position.Left, variant: 'single', dataType: 'matrix', label: 'B' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { mode: 'Union' },
+        opTokens: ['UNION', 'INTERSECTION', 'DIFFERENCE']
+    },
+    {
+        id: 'DA-05',
+        label: 'Distributions',
+        category: 'DataAnalysis',
+        handles: [
+            { id: 'param_n', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'N' },
+            { id: 'param_1', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'P1' },
+            { id: 'param_2', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'P2' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { mode: 'Normal', n: 100, p1: 0, p2: 1 },
+        opTokens: ['NORMAL', 'UNIFORM', 'POISSON']
+    },
+
     // ─── Logic Family ───────────────────────────────────────────
     {
         id: 'MA-05',

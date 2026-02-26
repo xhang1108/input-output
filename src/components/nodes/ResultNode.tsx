@@ -33,16 +33,16 @@ export const ResultNode = memo((props: NodeProps) => {
 
     // Node state derived from graph data
     const precision = typeof data.precision === 'number' ? data.precision : -1;
-    const unitStr = data.unit as string | undefined;
-    const viewMode = (data.viewMode as ResultViewMode) || 'auto';
-    const depth = (data.depth as string) || '8bit';
-
-    const [copied, setCopied] = useState(false);
-
     // Parse incoming payload
     const payload = (typeof value === 'object' && value !== null && 'type' in value)
         ? value as import('../../types/payload').NodePayload
         : (value !== undefined ? PayloadUtils.wrap(value) : null);
+
+    const unitStr = payload?.meta?.unit || (data.unit as string | undefined);
+    const viewMode = (data.viewMode as ResultViewMode) || 'auto';
+    const depth = (data.depth as string) || '8bit';
+
+    const [copied, setCopied] = useState(false);
 
     const rawValue = payload ? PayloadUtils.unwrap(payload) : null;
     const isError = payload?.type === DataType.Error;

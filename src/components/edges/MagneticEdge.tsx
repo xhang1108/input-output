@@ -83,48 +83,19 @@ export function MagneticEdge({
                 className="react-flow__edge-interaction"
             />
 
-            {/* Auto-Insert Highlight Glow */}
-            {data?.isHighlighted && (
-                <BaseEdge
-                    path={edgePath}
-                    style={{
-                        strokeWidth: 6,
-                        stroke: 'var(--color-scalar)', // Use scalar color for highlight
-                        filter: 'blur(4px)',
-                        opacity: 0.8,
-                    }}
-                    className="react-flow__edge-path animate-pulse"
-                />
-            )}
 
             {/* The Actual Edge */}
             <BaseEdge
                 path={edgePath}
                 markerEnd={markerEnd}
                 style={{
-                    strokeWidth: data?.isHighlighted ? 3 : (selected ? 3 : 2),
-                    stroke: data?.isHighlighted ? '#fff' : (selected ? '#fff' : '#71717a'), // White when highlighted
+                    strokeWidth: selected ? 3 : 2,
+                    stroke: selected ? '#fff' : '#71717a',
                     ...style,
                 }}
                 className="react-flow__edge-path opacity-80"
             />
 
-            {/* Flow Particle Animation */}
-            {/* We render a duplicate path just for the animation mask or direct stroke-dasharray animation */}
-            {(data?.animate !== false && !data?.isHighlighted) && (
-                <BaseEdge
-                    path={edgePath}
-                    style={{
-                        strokeWidth: 2,
-                        stroke: 'var(--color-scalar)', // Amber-400 (Energy Flow)
-                        fill: 'none',
-                        strokeDasharray: 10,
-                        strokeDashoffset: 0,
-                        opacity: selected || style.opacity ? 1 : 0.3,
-                    }}
-                    className="react-flow__edge-path animate-flow pointer-events-none"
-                />
-            )}
 
             {/* Drag-to-Disconnect Hit Area (Invisible/Secret) */}
             {startEdgeDragDisconnect && (

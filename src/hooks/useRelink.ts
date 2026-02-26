@@ -20,7 +20,6 @@ type UseRelinkProps = {
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
     logAction: (action: string) => void;
     edgeType: string;
-    edgeAnimation: boolean;
     onSmartLinkSearch?: (params: { nodeId: string; handleId: string; handleType: 'source' | 'target'; position: { x: number; y: number } }) => void;
 };
 
@@ -29,7 +28,6 @@ export function useRelink({
     setEdges,
     logAction,
     edgeType,
-    edgeAnimation,
     onSmartLinkSearch
 }: UseRelinkProps) {
     const [relinkState, setRelinkState] = useState<RelinkState>({
@@ -125,7 +123,7 @@ export function useRelink({
 
         // 3. Update local UI to match.
         setEdges(updated);
-    }, [edges, setEdges, edgeType, edgeAnimation]);
+    }, [edges, setEdges, edgeType]);
 
     const performRelink = useCallback((targetN: string, targetH: string | null) => {
         const state = relinkStateRef.current;
@@ -178,7 +176,7 @@ export function useRelink({
                         target: anchor.nodeId,
                         targetHandle: anchor.handleId,
                         type: 'magnetic' as const,
-                        data: { pathType: edgeType, animate: edgeAnimation }
+                        data: { pathType: edgeType }
                     };
                 })
                 .filter(Boolean) as Edge[];
@@ -207,7 +205,7 @@ export function useRelink({
                     target: dropSide.n!,
                     targetHandle: dropSide.h,
                     type: 'magnetic' as const,
-                    data: { pathType: edgeType, animate: edgeAnimation }
+                    data: { pathType: edgeType }
                 };
                 newEdgesToCreate.push(newEdge);
 
@@ -239,7 +237,7 @@ export function useRelink({
 
         logAction(`Relinked: ${detail}`);
 
-    }, [edgeType, edgeAnimation, setEdges, logAction, edges, submitRelinkBatch]);
+    }, [edgeType, setEdges, logAction, edges, submitRelinkBatch]);
 
     const resetRelink = useCallback(() => {
         const brain = Brain.getInstance();
@@ -415,7 +413,7 @@ export function useRelink({
                 target: params.target,
                 targetHandle: params.targetHandle,
                 type: 'magnetic' as const,
-                data: { pathType: edgeType, animate: edgeAnimation }
+                data: { pathType: edgeType }
             };
 
             // Batch Commit (Remove replaced + Add new + Reorder)
@@ -430,7 +428,7 @@ export function useRelink({
             const detail = `${params.source}:${params.sourceHandle} -> ${params.target}:${params.targetHandle}`;
             logAction(`Connected: ${detail}`);
         },
-        [edges, edgeType, edgeAnimation, logAction, submitRelinkBatch]
+        [edges, edgeType, logAction, submitRelinkBatch]
     );
 
     const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: { toNode: { id: string } | null; toHandle: { id?: string | null } | null; isValid: boolean | null } | null) => {

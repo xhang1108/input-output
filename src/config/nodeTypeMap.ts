@@ -41,6 +41,11 @@ import { DifferentialNode } from '../components/nodes/DifferentialNode';
 import { IntegralNode } from '../components/nodes/IntegralNode';
 import { LimitNode } from '../components/nodes/LimitNode';
 import { ODESolverNode } from '../components/nodes/ODESolverNode';
+import { StatisticsNode } from '../components/nodes/StatisticsNode';
+import { SmoothingNode } from '../components/nodes/SmoothingNode';
+import { ListUtilityNode } from '../components/nodes/ListUtilityNode';
+import { SetOpsNode } from '../components/nodes/SetOpsNode';
+import { DistributionsNode } from '../components/nodes/DistributionsNode';
 
 export const nodeTypes = {
     baseNode: BaseNode,
@@ -90,6 +95,11 @@ export const nodeTypes = {
     'AD-10': GeometryNode,
     'DA-06': ArrayExtractNode,
     'DA-07': ArrayBuilderNode,
+    'DA-01': StatisticsNode,
+    'DA-02': SmoothingNode,
+    'DA-03': ListUtilityNode,
+    'DA-04': SetOpsNode,
+    'DA-05': DistributionsNode,
 };
 
 export const edgeTypes = {

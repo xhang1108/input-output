@@ -12,7 +12,6 @@ function restoreSettings(settings: Record<string, unknown>) {
     if (typeof settings.showGrid === 'boolean') store.setShowGrid(settings.showGrid);
     if (typeof settings.showDebug === 'boolean') store.setShowDebug(settings.showDebug);
     if (typeof settings.edgeType === 'string') store.setEdgeType(settings.edgeType);
-    if (typeof settings.edgeAnimation === 'boolean') store.setEdgeAnimation(settings.edgeAnimation);
     if (typeof settings.layoutAlgorithm === 'string') store.setLayoutAlgorithm(settings.layoutAlgorithm as any);
     if (typeof settings.layoutDirection === 'string') store.setLayoutDirection(settings.layoutDirection as any);
 }

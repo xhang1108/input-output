@@ -11,7 +11,6 @@ interface UseAutoInsertProps {
     edges: Edge[];
     mode: string;
     edgeType: string;
-    edgeAnimation: boolean;
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
     logAction: (msg: string) => void;
 }
@@ -27,7 +26,6 @@ export function useAutoInsert({
     edges,
     mode,
     edgeType,
-    edgeAnimation,
     setEdges,
     logAction,
 }: UseAutoInsertProps) {
@@ -131,7 +129,7 @@ export function useAutoInsert({
                     target: node.id,
                     targetHandle: inputHandle,
                     type: 'magnetic',
-                    data: { pathType: edgeType, animate: edgeAnimation }
+                    data: { pathType: edgeType }
                 };
 
                 const e2: Edge = {
@@ -141,7 +139,7 @@ export function useAutoInsert({
                     target: targetId,
                     targetHandle: edge.targetHandle,
                     type: 'magnetic',
-                    data: { pathType: edgeType, animate: edgeAnimation }
+                    data: { pathType: edgeType }
                 };
 
                 setEdges(eds => eds.filter(e => e.id !== highlightedEdgeId).concat([e1, e2]));
@@ -149,7 +147,7 @@ export function useAutoInsert({
             }
             setHighlightedEdgeId(null);
         }
-    }, [highlightedEdgeId, nodes, edges, edgeType, edgeAnimation, setEdges, logAction]);
+    }, [highlightedEdgeId, nodes, edges, edgeType, setEdges, logAction]);
 
     return {
         highlightedEdgeId,

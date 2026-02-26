@@ -19,8 +19,6 @@ interface SettingsPanelProps {
     setLayoutAlgorithm: (type: LayoutAlgorithm) => void;
     layoutDirection: LayoutDirection;
     setLayoutDirection: (dir: LayoutDirection) => void;
-    edgeAnimation: boolean;
-    setEdgeAnimation: (enabled: boolean) => void;
     panOnScroll: boolean;
     setPanOnScroll: (enabled: boolean) => void;
     onReset: () => void;
@@ -39,7 +37,6 @@ export function SettingsPanel({
     edgeType, setEdgeType,
     layoutAlgorithm, setLayoutAlgorithm,
     layoutDirection, setLayoutDirection,
-    edgeAnimation, setEdgeAnimation,
     panOnScroll, setPanOnScroll,
     onReset,
     onBackToProjects
@@ -154,13 +151,6 @@ export function SettingsPanel({
 
                     <div className="h-px bg-zinc-800 my-1" />
 
-                    {/* Edge Animation */}
-                    <ToggleRow
-                        label="Flow Animation"
-                        icon={<span className="text-(--color-scalar) font-bold">~</span>}
-                        active={edgeAnimation}
-                        onClick={() => setEdgeAnimation(!edgeAnimation)}
-                    />
 
                     {/* Scroll to Pan */}
                     <ToggleRow

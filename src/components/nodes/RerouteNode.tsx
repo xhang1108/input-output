@@ -6,7 +6,7 @@ export const RerouteNode = memo(({ selected }: NodeProps) => {
         <div
             className={`
                 relative w-4 h-4 rounded-full flex items-center justify-center transition-all duration-200
-                ${selected ? 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.6)] scale-125' : 'bg-zinc-500 hover:bg-zinc-400'}
+                ${selected ? 'bg-amber-400 scale-125' : 'bg-zinc-500 hover:bg-zinc-400'}
             `}
         >
             {/* Input Handle (Left) - Invisible but clickable */}
