@@ -219,7 +219,7 @@ export class BrainWorkerProxy {
     }
 
     /** Atomic full-sync + eval: replace graph then compute dirty nodes */
-    public syncAndEval(snapshot: SerializedGraphSnapshot, dirtyNodeIds: string[]) {
+    public syncAndEval(snapshot: SerializedGraphSnapshot, dirtyChainNodeIds: string[]) {
         this.epoch++;
         this.pendingRequest = true;
         this.requestStartTime = Date.now();
@@ -229,7 +229,7 @@ export class BrainWorkerProxy {
             msgId: this.nextMsgId(),
             epoch: this.epoch,
             snapshot,
-            dirtyNodeIds,
+            dirtyChainNodeIds,
         });
     }
 
@@ -343,11 +343,11 @@ export class BrainWorkerProxy {
             value: node.value ? {
                 type: node.value.type,
                 value: PayloadUtils.dehydrate(node.value.value),
-                symbol: node.value.symbol,
-                meta: node.value.meta,
+                symbol: PayloadUtils.dehydrate(node.value.symbol) as import('../types/payload').ASTNode | null,
+                meta: PayloadUtils.dehydrate(node.value.meta) as Record<string, unknown>,
             } : null,
             data: PayloadUtils.dehydrate(node.data) as Record<string, unknown> || {},
-            isDirty: !!node.isDirty,
+            isInDirtyChain: !!node.isInDirtyChain,
         };
     }
 

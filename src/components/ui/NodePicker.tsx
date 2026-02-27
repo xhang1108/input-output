@@ -4,11 +4,11 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { getDefinitionsByCategory } from '../../definitions/nodeDefinitions';
 
-interface CommandPaletteProps {
+interface NodePickerProps {
     isOpen: boolean;
     position?: { x: number, y: number };
     onClose: () => void;
-    onSelect: (type: string, label: string, data?: unknown) => void;
+    onSelect: (type: string, label: string, data?: unknown, isContinuous?: boolean) => void;
     pendingConnection?: { nodeId: string; handleId: string | null; handleType: 'source' | 'target' } | null;
 }
 
@@ -39,7 +39,7 @@ function buildMenuItems() {
 
 const MENU_ITEMS = buildMenuItems();
 
-export function CommandPalette({ isOpen, position, onClose, onSelect, pendingConnection }: CommandPaletteProps) {
+export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnection }: NodePickerProps) {
     const [search, setSearch] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -98,8 +98,16 @@ export function CommandPalette({ isOpen, position, onClose, onSelect, pendingCon
             e.preventDefault();
             if (flattenedItems[selectedIndex]) {
                 const item = flattenedItems[selectedIndex];
-                onSelect(item.type, item.label, item.data);
-                onClose();
+                const isContinuous = e.ctrlKey || e.metaKey;
+                onSelect(item.type, item.label, item.data, isContinuous);
+
+                // Continuous selection
+                if (isContinuous) {
+                    setSearch('');
+                    // don't close
+                } else {
+                    onClose();
+                }
             }
         } else if (e.key === 'Escape') {
             onClose();
@@ -163,9 +171,18 @@ export function CommandPalette({ isOpen, position, onClose, onSelect, pendingCon
                                             ? 'bg-blue-600/90 text-white shadow-sm'
                                             : 'text-zinc-300 hover:bg-zinc-800'
                                             }`}
-                                        onClick={() => {
-                                            onSelect(item.type, item.label, item.data);
-                                            onClose();
+                                        onClick={(e) => {
+                                            const isContinuous = e.ctrlKey || e.metaKey;
+                                            onSelect(item.type, item.label, item.data, isContinuous);
+
+                                            // Continuous selection
+                                            if (isContinuous) {
+                                                setSearch('');
+                                                // Ensure input re-gains focus so user can type next node immediately
+                                                setTimeout(() => inputRef.current?.focus(), 0);
+                                            } else {
+                                                onClose();
+                                            }
                                         }}
                                         onMouseEnter={() => setSelectedIndex(globalIndex)}
                                     >

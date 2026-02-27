@@ -4,7 +4,7 @@ import { memo, useCallback, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
-import { MathEngine } from '../../engine/MathEngine';
+import { CalctopusEngine } from '../../engine/CalctopusEngine';
 
 export const NodeExpression = memo((props: NodeProps) => {
     const { id, data } = props;

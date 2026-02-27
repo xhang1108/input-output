@@ -2,11 +2,11 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { NodeRegistry } from '../NodeRegistry';
 import { DataType } from '../../types/payload';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { MathEngine } from '../MathEngine';
+import { CalctopusEngine } from '../CalctopusEngine';
 
 describe('Linear Algebra & Array Nodes', () => {
     beforeAll(() => {
-        MathEngine.getInstance();
+        CalctopusEngine.getInstance();
     });
 
     test('AD-01 (MatrixTools): QR Decomposition Multi-Output', async () => {
@@ -15,7 +15,7 @@ describe('Linear Algebra & Array Nodes', () => {
             type: 'AD-01',
             data: { op: 'QR' } as any,
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -44,7 +44,7 @@ describe('Linear Algebra & Array Nodes', () => {
             type: 'DA-06',
             data: {},
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -64,7 +64,7 @@ describe('Linear Algebra & Array Nodes', () => {
             type: 'DA-07',
             data: { axis: 0, count: 3 } as any,
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -89,7 +89,7 @@ describe('Linear Algebra & Array Nodes', () => {
             type: 'DA-07',
             data: { axis: 0 } as any, // No count needed anymore
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -107,7 +107,7 @@ describe('Linear Algebra & Array Nodes', () => {
         // Output format should successfully dehydrate
         expect(result.value).toBeDefined();
 
-        const math = MathEngine.getInstance().getMathInstance();
+        const math = CalctopusEngine.getInstance().getMathInstance();
         const hydrated = PayloadUtils.hydrate(result.value, math);
 
         // Assert the array contains exactly 10, 20, 30

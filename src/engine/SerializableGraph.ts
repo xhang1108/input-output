@@ -14,7 +14,7 @@ export interface SerializedNodeLogic {
     type: string;
     value: SerializedPayload | null;
     data: Record<string, unknown>;
-    isDirty: boolean;
+    isInDirtyChain: boolean;
 }
 
 export interface SerializedPayload {
@@ -42,7 +42,7 @@ export interface SerializedGraphSnapshot {
 // ─── Incremental Patch (used for EVAL) ────────────────────────────
 export interface IncrementalPatch {
     /** IDs of nodes that need recalculation */
-    dirtyNodeIds: string[];
+    dirtyChainNodeIds: string[];
     /** Nodes whose value or data changed (dehydrated) */
     updatedNodes?: SerializedNodeLogic[];
     /** Newly added nodes */
@@ -63,7 +63,7 @@ export type WorkerRequest =
     | { type: 'UPDATE_CONFIG'; msgId: number; config: MathConfig }
     | { type: 'SYNC_GRAPH'; msgId: number; snapshot: SerializedGraphSnapshot }
     | { type: 'EVAL'; msgId: number; epoch: number; patches: IncrementalPatch }
-    | { type: 'SYNC_AND_EVAL'; msgId: number; epoch: number; snapshot: SerializedGraphSnapshot; dirtyNodeIds: string[] }
+    | { type: 'SYNC_AND_EVAL'; msgId: number; epoch: number; snapshot: SerializedGraphSnapshot; dirtyChainNodeIds: string[] }
     | { type: 'CLEAR_STATE'; msgId: number }
     | { type: 'HEALTH_CHECK'; msgId: number; sampleNodeIds?: string[] };
 

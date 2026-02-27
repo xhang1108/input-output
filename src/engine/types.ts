@@ -7,7 +7,7 @@ export type NodeLogic = Node & {
     data: Record<string, unknown>;
     value?: NodePayload; // Phase 2.1: Switched to Payload System
     opCode?: string;
-    isDirty: boolean;
+    isInDirtyChain: boolean;
 };
 
 export interface GraphState {

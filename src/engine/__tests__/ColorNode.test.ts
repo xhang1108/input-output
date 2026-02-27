@@ -41,7 +41,7 @@ describe('Color Node Evaluator', () => {
         // Simulate a recalculation where the node's value is already the object
         const node = brain.getNode('Color1');
         if (node) {
-            node.isDirty = true;
+            node.isInDirtyChain = true;
         }
 
         const secondResult = await brain.getValue('Color1');

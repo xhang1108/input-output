@@ -2,11 +2,11 @@ import {
     create,
     all,
 } from 'mathjs';
-import { IMathEngine } from './interfaces/IMathEngine';
+import { CalctopusEngineInterface } from './interfaces/CalctopusEngineInterface';
 import { MATH_CONFIG } from './mathConfig';
 
-export class MathEngine implements IMathEngine {
-    private static instance: MathEngine;
+export class CalctopusEngine implements CalctopusEngineInterface {
+    private static instance: CalctopusEngine;
     private math: any;
 
     private constructor() {
@@ -14,11 +14,11 @@ export class MathEngine implements IMathEngine {
         this.math = create(all, MATH_CONFIG);
     }
 
-    public static getInstance(): MathEngine {
-        if (!MathEngine.instance) {
-            MathEngine.instance = new MathEngine();
+    public static getInstance(): CalctopusEngine {
+        if (!CalctopusEngine.instance) {
+            CalctopusEngine.instance = new CalctopusEngine();
         }
-        return MathEngine.instance;
+        return CalctopusEngine.instance;
     }
 
     public getMathInstance(): any {
@@ -47,7 +47,7 @@ export class MathEngine implements IMathEngine {
             try {
                 return this.math.unit(val as any, unit);
             } catch (e) {
-                console.warn(`[MathEngine] Failed to create unit ${val} ${unit}`, e);
+                console.warn(`[CalctopusEngine] Failed to create unit ${val} ${unit}`, e);
                 return val;
             }
         }

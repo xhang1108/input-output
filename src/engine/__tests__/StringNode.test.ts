@@ -9,7 +9,7 @@ describe('String Node (IO-04)', () => {
             type: 'IO-04',
             data: { value: 'Hello World' },
             value: { type: DataType.String, value: '', symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -25,7 +25,7 @@ describe('String Node (IO-04)', () => {
             type: 'IO-04',
             data: { value: '' },
             value: { type: DataType.String, value: '', symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -41,7 +41,7 @@ describe('String Node (IO-04)', () => {
             type: 'IO-04',
             data: { value: 123 },
             value: { type: DataType.String, value: '', symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 

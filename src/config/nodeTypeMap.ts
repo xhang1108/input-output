@@ -36,6 +36,8 @@ import { VectorSplitNode } from '../components/nodes/VectorSplitNode';
 import { GeometryNode } from '../components/nodes/GeometryNode';
 import { ArrayExtractNode } from '../components/nodes/ArrayExtractNode';
 import { ArrayBuilderNode } from '../components/nodes/ArrayBuilderNode';
+import { VectorFieldNode } from '../components/nodes/VectorFieldNode';
+import { ComplexNode } from '../components/nodes/ComplexNode';
 // Removed legacy calculus nodes
 import { DifferentialNode } from '../components/nodes/DifferentialNode';
 import { IntegralNode } from '../components/nodes/IntegralNode';
@@ -91,6 +93,8 @@ export const nodeTypes = {
     'AD-01': MatrixToolsNode,
     'AD-02': VectorUtilsNode,
     'AD-03': CombinatoricsNode,
+    'AD-07': ComplexNode,
+    'AD-08': VectorFieldNode,
     'AD-09': VectorSplitNode,
     'AD-10': GeometryNode,
     'DA-06': ArrayExtractNode,

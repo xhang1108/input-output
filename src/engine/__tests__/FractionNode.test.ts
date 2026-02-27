@@ -2,11 +2,11 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { NodeRegistry } from '../NodeRegistry';
 import { DataType } from '../../types/payload';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { MathEngine } from '../MathEngine';
+import { CalctopusEngine } from '../CalctopusEngine';
 
 describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     beforeAll(() => {
-        MathEngine.getInstance();
+        CalctopusEngine.getInstance();
     });
 
     test('MA-12: Should convert decimal to fraction', async () => {
@@ -15,7 +15,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -38,7 +38,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -60,7 +60,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -83,7 +83,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-14',
             data: { precision: 2 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -103,7 +103,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: { mixed: true },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -127,7 +127,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: { mixed: true },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 

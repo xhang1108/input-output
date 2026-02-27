@@ -28,7 +28,7 @@ import { useRelink } from '../hooks/useRelink';
 import { useAutoInsert } from '../hooks/useAutoInsert';
 import { useNodeSpawner } from '../hooks/useNodeSpawner';
 import { useProjectSave } from '../hooks/useProjectSave';
-import { CommandPalette } from './ui/CommandPalette';
+import { NodePicker } from './ui/NodePicker';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { NPanel } from './ui/NPanel';
 import { SettingsPanel } from './ui/SettingsPanel';
@@ -656,9 +656,9 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     transformValue={transformValue}
                 />
 
-                {/* Command Palette (Shift + A) - Moved outside ReactFlow to avoid transform scaling issues */}
+                {/* Node Picker (Shift + A) - Moved outside ReactFlow to avoid transform scaling issues */}
                 {showPalette && (
-                    <CommandPalette
+                    <NodePicker
                         isOpen={true}
                         position={palettePosition}
                         onClose={() => {

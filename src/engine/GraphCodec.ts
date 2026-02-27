@@ -541,14 +541,32 @@ export class GraphCodec {
             const sourceId = edge.source.replace(/\s+/g, '_');
             const targetId = edge.target.replace(/\s+/g, '_');
 
+            const targetCNode = graph.nodes.find(n => n.id === edge.target);
             let targetHandle = edge.targetHandle || 'in';
+
+            // Phase 2.20: Strict Export Handle Normalization
+            // Reverse the alias mapping for common inputs (in_a -> a, in_b -> b)
             if (targetHandle === 'in_a') targetHandle = 'a';
-            if (targetHandle === 'in_b') targetHandle = 'b';
+            else if (targetHandle === 'in_b') targetHandle = 'b';
+            else if (targetHandle === 'condition') targetHandle = 'cond';
+            else if (targetHandle === 'in_true') targetHandle = 't';
+            else if (targetHandle === 'in_false') targetHandle = 'f';
+            else if (targetHandle.startsWith('in_') && targetHandle.length === 4) {
+                // e.g. in_x -> x
+                targetHandle = targetHandle.slice(3);
+            }
 
             let sourceHandleStr = '';
             // If the source handle is unconventional (not out, val, result, or int), append it
+            // Also check for AD-09 special handles
+            const sourceNode = graph.nodes.find(n => n.id === edge.source);
             if (edge.sourceHandle && !['out', 'val', 'result', 'int'].includes(edge.sourceHandle)) {
-                sourceHandleStr = `:${edge.sourceHandle}`;
+                // Keep x, y, z for AD-09, otherwise standard 'out' is omitted
+                if (sourceNode?.type === 'AD-09' && ['x', 'y', 'z'].includes(edge.sourceHandle)) {
+                    sourceHandleStr = `:${edge.sourceHandle}`;
+                } else if (!edge.sourceHandle.startsWith('out')) {
+                    sourceHandleStr = `:${edge.sourceHandle}`;
+                }
             }
 
             cgl += `${sourceId}${sourceHandleStr} -- ${targetId}:${targetHandle}\n`;

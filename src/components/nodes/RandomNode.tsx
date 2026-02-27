@@ -24,7 +24,8 @@ export const RandomNode = memo((props: NodeProps) => {
         });
     };
 
-    const mode = data.mode as string || 'float';
+    const mode = data.mode as string || 'scalar';
+    const isFloat = data.isFloat !== false;
 
     return (
         <BaseNode {...props}>
@@ -36,10 +37,25 @@ export const RandomNode = memo((props: NodeProps) => {
                     onChange={(e) => handleChange('mode', e.target.value)}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
-                    <option value="float">Float (0.0 - 1.0)</option>
-                    <option value="int">Integer</option>
+                    <option value="scalar">Scalar</option>
+                    <option value="vector">Vector</option>
                     <option value="matrix">Matrix</option>
                 </select>
+
+                {/* Float Toggle */}
+                <div className="flex gap-2 items-center">
+                    <input
+                        type="checkbox"
+                        className="cursor-pointer"
+                        checked={isFloat}
+                        onChange={(e) => handleChange('isFloat', e.target.checked)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        id={`float-toggle-${id}`}
+                    />
+                    <label htmlFor={`float-toggle-${id}`} className="text-[10px] text-foreground font-mono opacity-80 cursor-pointer">
+                        Floating Point Values
+                    </label>
+                </div>
 
                 {/* Range Inputs */}
                 <div className="flex gap-2 items-center">
@@ -67,21 +83,27 @@ export const RandomNode = memo((props: NodeProps) => {
                     />
                 </div>
 
-                {/* Matrix Settings (Conditional) */}
+                {/* Vector Settings */}
+                {mode === 'vector' && (
+                    <div className="flex gap-2 items-center p-1.5 bg-(--node-bg-header) rounded border border-(--node-border) animate-in fade-in slide-in-from-top-1 duration-200">
+                        <label className="text-[10px] text-foreground font-mono opacity-60">Length</label>
+                        <input
+                            type="number"
+                            className="w-12 bg-(--node-bg) border border-(--node-border) rounded px-1 text-xs text-foreground nodrag outline-none focus:border-blue-500/50 transition-colors"
+                            value={Number.isNaN(data.length) ? 3 : (data.length as number ?? 3)}
+                            onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                handleChange('length', Number.isNaN(val) ? 3 : val);
+                            }}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            min={1}
+                        />
+                    </div>
+                )}
+
+                {/* Matrix Settings */}
                 {mode === 'matrix' && (
                     <div className="flex flex-col gap-2 p-1.5 bg-(--node-bg-header) rounded border border-(--node-border) animate-in fade-in slide-in-from-top-1 duration-200">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] text-foreground font-bold uppercase tracking-tight opacity-70">Item Type</label>
-                            <select
-                                className="bg-(--node-bg) text-[10px] text-foreground rounded px-1 border border-(--node-border) outline-none hover:border-(--node-border-hover)"
-                                value={data.itemMode as string || 'float'}
-                                onChange={(e) => handleChange('itemMode', e.target.value)}
-                                onPointerDown={(e) => e.stopPropagation()}
-                            >
-                                <option value="float">Float</option>
-                                <option value="int">Integer</option>
-                            </select>
-                        </div>
                         <div className="flex gap-2 items-center justify-between">
                             <div className="flex gap-1 items-center">
                                 <label className="text-[10px] text-foreground font-mono opacity-60">R</label>
@@ -94,6 +116,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                         handleChange('rows', Number.isNaN(val) ? 3 : val);
                                     }}
                                     onPointerDown={(e) => e.stopPropagation()}
+                                    min={1}
                                 />
                             </div>
                             <div className="flex gap-1 items-center">
@@ -107,6 +130,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                         handleChange('cols', Number.isNaN(val) ? 3 : val);
                                     }}
                                     onPointerDown={(e) => e.stopPropagation()}
+                                    min={1}
                                 />
                             </div>
                         </div>
@@ -117,6 +141,7 @@ export const RandomNode = memo((props: NodeProps) => {
                 <button
                     className="mt-1 bg-foreground/5 hover:bg-foreground/10 active:bg-foreground/20 text-[10px] text-foreground py-1 rounded border border-foreground/10 transition-all hover:border-foreground/20 flex justify-center items-center group"
                     onClick={handleRegenerate}
+                    onPointerDown={(e) => e.stopPropagation()}
                 >
                     Regenerate
                 </button>

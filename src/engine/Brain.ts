@@ -9,42 +9,38 @@ import { getHandleVariant, isProbablyInputHandle } from '../utils/handleUtils';
 // BrainWorkerProxy is imported DYNAMICALLY in initWorker() to avoid circular dependency
 import type { IncrementalPatch } from './SerializableGraph';
 import { useAppStore } from '../store/useStore';
+import { TopologyManager } from './TopologyManager';
+import { WorkerOrchestrator } from './WorkerOrchestrator';
 
 export class Brain {
-    // Phase 2.0.5: Forced Rebuild
     private static instance: Brain;
     private state: GraphState;
 
-    // Topology Indices for O(1) lookups
-    private adjacency: Map<string, string[]> = new Map(); // Source -> Targets[]
-    private reverseAdjacency: Map<string, { nodeId: string, sourceHandle: string, targetHandle: string }[]> = new Map(); // Target -> Inputs[]
+    private topology: TopologyManager;
+    private worker: WorkerOrchestrator;
 
-    // Phase 4.1: Web Worker Migration
-    private useWorker = true; // Auto-enabled — falls back to main-thread if Worker fails
-    private workerProxy: any = null; // Type is BrainWorkerProxy, imported dynamically
-    private workerInitPromise: Promise<void> | null = null; // Lazy init gate
     /** Tracks pending topology changes for incremental patches */
-    private pendingPatch: IncrementalPatch = { dirtyNodeIds: [] };
-    /** Tracks nodes whose value was set directly (e.g. UPDATE_VALUE) — not dirty but changed */
-    private freshlyUpdatedNodeIds: Set<string> = new Set();
+    private pendingPatch: IncrementalPatch = { dirtyChainNodeIds: [] };
 
     private constructor() {
         this.state = {
             nodes: new Map(),
             edges: [],
         };
+
+        this.topology = new TopologyManager();
+        this.worker = new WorkerOrchestrator({
+            onResults: (patches, latency) => {
+                this.applyWorkerResults(patches);
+                useAppStore.getState().setLastEvalMs(latency);
+            },
+            onTriggerDirty: (id) => this.triggerDirtyChain(id),
+            syncRequester: () => this.syncWorker(),
+            emit: (ev, p) => this.emit(ev, p)
+        });
+
         // Worker is lazily initialized on first heartbeat that needs it
         this.startHeartbeat();
-
-        // Subscribe to precision changes
-        useAppStore.subscribe(
-            (state) => state.mathPrecision,
-            (precision) => {
-                if (this.workerProxy) {
-                    this.workerProxy.updateConfig(precision);
-                }
-            }
-        );
     }
 
     private listeners: Map<string, Set<(payload: unknown) => void>> = new Map();
@@ -53,32 +49,6 @@ export class Brain {
     private heartbeatInterval: NodeJS.Timeout | null = null;
     private readonly HEARTBEAT_MS = 16; // ~60fps
 
-    /** Initialize Web Worker proxy (uses dynamic import to break circular dependency) */
-    private async initWorker() {
-        if (typeof window === 'undefined') return; // SSR guard
-        try {
-            const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
-            this.workerProxy = new BrainWorkerProxy({
-                onResults: (patches: Map<string, NodePayload>, latencyMs: number) => {
-                    this.applyWorkerResults(patches);
-                    useAppStore.getState().setLastEvalMs(latencyMs);
-                },
-                onError: (_epoch: number, error: string) => {
-                    console.error('[Brain] Worker error:', error);
-                    this.isRecalculating = false; // Prevent permanent lock
-                },
-                onSyncing: () => this.emit('workerSyncing', null),
-                onReady: () => this.emit('workerReady', null),
-            });
-            this.workerProxy.registerHealthRefs(
-                () => ({ nodeCount: this.state.nodes.size, edgeCount: this.state.edges.length }),
-                () => this.syncWorker()
-            );
-        } catch (error) {
-            console.warn('[Brain] Worker init failed, using fallback mode:', error);
-            this.useWorker = false;
-        }
-    }
 
     /** Apply Worker-computed results back into main-thread state */
     private applyWorkerResults(patches: Map<string, NodePayload>) {
@@ -86,17 +56,15 @@ export class Brain {
             const node = this.state.nodes.get(id);
             if (node) {
                 node.value = payload;
-                node.isDirty = false;
+                node.isInDirtyChain = false;
             }
         }
         this.isRecalculating = false;
 
-        // CRITICAL: Re-propagate dirty for nodes that were updated WHILE
-        // the Worker was computing. Without this, the Worker result would
-        // clear dirty flags that user actions just set, causing "two press" bug.
-        if (this.freshlyUpdatedNodeIds.size > 0) {
-            for (const nodeId of this.freshlyUpdatedNodeIds) {
-                this.propagateDirty(nodeId);
+        const freshlyUpdated = this.worker.getFreshlyUpdated();
+        if (freshlyUpdated.size > 0) {
+            for (const nodeId of freshlyUpdated) {
+                this.triggerDirtyChain(nodeId);
             }
         }
 
@@ -105,12 +73,11 @@ export class Brain {
         }
     }
 
-    /** Send full graph snapshot to Worker */
     private async syncWorker() {
-        if (!this.workerProxy || !this.useWorker) return;
+        if (!this.worker.isEnabled()) return;
         const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
         const snapshot = BrainWorkerProxy.buildSnapshot(this.state.nodes, this.state.edges);
-        this.workerProxy.syncGraph(snapshot);
+        this.worker.getProxy()?.syncGraph(snapshot);
     }
 
     /** Build incremental patch from accumulated changes and reset */
@@ -119,21 +86,20 @@ export class Brain {
         const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
         const updatedNodes: IncrementalPatch['updatedNodes'] = [];
 
-        // Include freshly-updated nodes (e.g. Input nodes after UPDATE_VALUE)
-        // These are isDirty=false but their VALUE changed — Worker needs the new value
-        for (const nodeId of this.freshlyUpdatedNodeIds) {
+        const freshlyUpdated = this.worker.getFreshlyUpdated();
+        for (const nodeId of freshlyUpdated) {
             const node = this.state.nodes.get(nodeId);
             if (node) {
                 updatedNodes.push(BrainWorkerProxy.serializeNode(node));
             }
         }
-        this.freshlyUpdatedNodeIds.clear();
+        this.worker.clearFreshlyUpdated();
 
         // Include dirty nodes
         for (const node of this.state.nodes.values()) {
-            if (node.isDirty) {
-                if (!patch.dirtyNodeIds.includes(node.id)) {
-                    patch.dirtyNodeIds.push(node.id);
+            if (node.isInDirtyChain) {
+                if (!patch.dirtyChainNodeIds.includes(node.id)) {
+                    patch.dirtyChainNodeIds.push(node.id);
                 }
                 updatedNodes.push(BrainWorkerProxy.serializeNode(node));
             }
@@ -142,24 +108,21 @@ export class Brain {
         if (updatedNodes.length > 0) {
             patch.updatedNodes = [...(patch.updatedNodes || []), ...updatedNodes];
         }
-        this.pendingPatch = { dirtyNodeIds: [] };
+        this.pendingPatch = { dirtyChainNodeIds: [] };
         return patch;
     }
 
     /** Toggle Worker mode at runtime */
     public async setWorkerMode(enabled: boolean) {
-        if (enabled && !this.workerProxy) {
-            await this.initWorker(); // Lazy init on first enable
-        }
-        this.useWorker = enabled && !!this.workerProxy;
-        if (this.useWorker) {
-            await this.syncWorker(); // Full sync when enabling
+        await this.worker.init();
+        if (this.worker.isEnabled()) {
+            await this.syncWorker();
         }
     }
 
     /** Get current Worker mode */
     public isWorkerMode(): boolean {
-        return this.useWorker;
+        return this.worker.isEnabled();
     }
 
     private startHeartbeat() {
@@ -168,47 +131,16 @@ export class Brain {
         this.heartbeatInterval = setInterval(async () => {
             if (this.isRecalculating) return;
 
-            // Check if any node is dirty, or there are freshly updated nodes
-            const hasDirty = Array.from(this.state.nodes.values()).some(n => n.isDirty)
-                || this.freshlyUpdatedNodeIds.size > 0;
+            const hasDirty = Array.from(this.state.nodes.values()).some(n => n.isInDirtyChain)
+                || this.worker.getFreshlyUpdated().size > 0;
             if (hasDirty) {
                 this.isRecalculating = true;
 
-                // Lazy Worker init on first use
-                if (this.useWorker && !this.workerProxy && !this.workerInitPromise) {
-                    this.workerInitPromise = this.initWorker().then(() => {
-                        if (this.workerProxy) this.syncWorker();
-                    });
-                }
-                if (this.workerInitPromise) {
-                    await this.workerInitPromise;
-                    this.workerInitPromise = null;
-                }
-
-                if (this.useWorker && this.workerProxy) {
-                    // Worker mode: full sync + eval (simple, correct approach)
-                    const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
-                    const snapshot = BrainWorkerProxy.buildSnapshot(this.state.nodes, this.state.edges);
-
-                    // Collect dirty node IDs
-                    const dirtyNodeIds: string[] = [];
-                    for (const node of this.state.nodes.values()) {
-                        if (node.isDirty) dirtyNodeIds.push(node.id);
-                    }
-                    // Also include freshly-updated nodes' downstream
-                    for (const nodeId of this.freshlyUpdatedNodeIds) {
-                        const children = this.adjacency.get(nodeId) || [];
-                        for (const childId of children) {
-                            if (!dirtyNodeIds.includes(childId)) dirtyNodeIds.push(childId);
-                        }
-                    }
-                    this.freshlyUpdatedNodeIds.clear();
-
-                    this.workerProxy.syncAndEval(snapshot, dirtyNodeIds);
+                if (this.worker.isEnabled()) {
+                    await this.worker.syncAndEval(this.state.nodes, this.state.edges, this.topology);
                 } else {
-                    // Fallback mode: direct computation (existing behavior)
                     try {
-                        const patches = await this.recalculateDirty();
+                        const patches = await this.recalculateDirtyChain();
                         if (patches.size > 0) {
                             this.emit('graphChanged', patches);
                         }
@@ -257,31 +189,7 @@ export class Brain {
     // --- Topology Management ---
 
     private updateAdjacency(edge: Edge, action: 'ADD' | 'REMOVE') {
-        // 1. Forward Adjacency (Source -> Targets)
-        const targets = this.adjacency.get(edge.source) || [];
-        if (action === 'ADD') {
-            targets.push(edge.target);
-            this.adjacency.set(edge.source, targets);
-        } else {
-            const index = targets.findIndex(t => t === edge.target);
-            if (index !== -1) {
-                targets.splice(index, 1);
-                this.adjacency.set(edge.source, targets);
-            }
-        }
-
-        // 2. Reverse Adjacency (Target -> Inputs)
-        const inputs = this.reverseAdjacency.get(edge.target) || [];
-        if (action === 'ADD') {
-            inputs.push({ nodeId: edge.source, sourceHandle: edge.sourceHandle!, targetHandle: edge.targetHandle! });
-            this.reverseAdjacency.set(edge.target, inputs);
-        } else {
-            const index = inputs.findIndex(i => i.nodeId === edge.source && i.sourceHandle === edge.sourceHandle && i.targetHandle === edge.targetHandle);
-            if (index !== -1) {
-                inputs.splice(index, 1);
-                this.reverseAdjacency.set(edge.target, inputs);
-            }
-        }
+        this.topology.updateAdjacency(edge, action);
     }
 
     // --- Pulse Engine (Dirty & Pull) ---
@@ -289,21 +197,10 @@ export class Brain {
     // 1. Dirty Propagation (The Pulse Wave)
     // FIX: Instead of aggressive full-depth propagation (Over-propagation),
     // we only mark the IMMEDIATELY connected children as dirty.
-    // Deep propagation will now happen stepwise during recalculateDirty
+    // Deep propagation will now happen stepwise during recalculateDirtyChain
     // if and only if the parent's actual computed value changed.
-    private propagateDirty(startNodeId: string, depth: number = 0) {
-        // Fallback: If we want immediate propagation for UI snappiness
-        // we can still propagate, but let's just mark children dirty.
-        // Wait, if a node's value is updated by UI, it's not dirty, its children are.
-        const children = this.adjacency.get(startNodeId) || [];
-        for (const childId of children) {
-            const childNode = this.state.nodes.get(childId);
-            if (childNode && !childNode.isDirty) {
-                childNode.isDirty = true;
-                // We do NOT recursively call propagateDirty here.
-                // Let the recalculate loop handle downstream.
-            }
-        }
+    private triggerDirtyChain(startNodeId: string) {
+        this.topology.triggerDirtyChain(startNodeId, this.state.nodes);
     }
 
     public clearAll() {
@@ -311,13 +208,11 @@ export class Brain {
             nodes: new Map(),
             edges: [],
         };
-        this.adjacency = new Map();
-        this.reverseAdjacency = new Map();
+        this.topology.clear();
         this.history.clear();
-        this.pendingPatch = { dirtyNodeIds: [] };
-        // Phase 4.1: Clear Worker state
-        if (this.workerProxy && this.useWorker) {
-            this.workerProxy.clearState();
+        this.pendingPatch = { dirtyChainNodeIds: [] };
+        if (this.worker.isEnabled()) {
+            this.worker.getProxy()?.clearState();
         }
         this.emit('graphChanged', null);
     }
@@ -328,18 +223,16 @@ export class Brain {
             nodes: new Map(),
             edges: [],
         };
-        this.adjacency = new Map();
-        this.reverseAdjacency = new Map();
-        this.pendingPatch = { dirtyNodeIds: [] };
-        // Phase 4.1: Clear Worker state
-        if (this.workerProxy && this.useWorker) {
-            this.workerProxy.clearState();
+        this.topology.clear();
+        this.pendingPatch = { dirtyChainNodeIds: [] };
+        if (this.worker.isEnabled()) {
+            this.worker.getProxy()?.clearState();
         }
     }
 
     private markAllDirty() {
         this.state.nodes.forEach(node => {
-            node.isDirty = true;
+            node.isInDirtyChain = true;
         });
     }
 
@@ -359,14 +252,14 @@ export class Brain {
         let resultPayload: NodePayload;
 
         // 1. Get/Calculate the node's current value
-        if (!node.isDirty && node.value) {
+        if (!node.isInDirtyChain && node.value) {
             resultPayload = node.value;
         } else {
             // We are about to compute this node. Mark it in the path to prevent infinite loops.
             const newPath = new Set(computingPath);
             newPath.add(nodeId);
 
-            const inputs = this.reverseAdjacency.get(nodeId) || [];
+            const inputs = this.topology.getInputs(nodeId);
 
             // Sort inputs by edge array order so capsule multi-input evaluation
             // matches the visual display order set by user interaction.
@@ -409,14 +302,14 @@ export class Brain {
 
             // Update & Clean
             node.value = resultPayload;
-            node.isDirty = false;
+            node.isInDirtyChain = false;
 
             // Stepwise Propagation: Only propagate if the value ACTUALLY changed.
             // This prevents "Performance Avalanches" (Fatal Flaw 4 Fix)
             if (oldPayload && JSON.stringify(oldPayload) !== JSON.stringify(resultPayload)) {
-                this.propagateDirty(nodeId);
+                this.triggerDirtyChain(nodeId);
             } else if (!oldPayload) {
-                this.propagateDirty(nodeId);
+                this.triggerDirtyChain(nodeId);
             }
         }
 
@@ -451,14 +344,14 @@ export class Brain {
     /**
      * Recalculates all dirty nodes in the graph.
      */
-    private async recalculateDirty(): Promise<Map<string, NodePayload>> {
+    private async recalculateDirtyChain(): Promise<Map<string, NodePayload>> {
         const patches = new Map<string, NodePayload>();
 
-        const dirtyNodeIds = Array.from(this.state.nodes.values())
-            .filter(n => n.isDirty)
+        const dirtyChainNodeIds = Array.from(this.state.nodes.values())
+            .filter(n => n.isInDirtyChain)
             .map(n => n.id);
 
-        for (const id of dirtyNodeIds) {
+        for (const id of dirtyChainNodeIds) {
             const node = this.state.nodes.get(id);
             if (!node) continue;
 
@@ -597,11 +490,9 @@ export class Brain {
                     value: initialPayload,
                     data: p.data || {},
                     position: p.position as { x: number; y: number },
-                    isDirty: true
+                    isInDirtyChain: true
                 };
                 this.state.nodes.set(p.id, newNode);
-                this.adjacency.set(p.id, []);
-                this.reverseAdjacency.set(p.id, []);
                 return { success: true };
             }
 
@@ -615,10 +506,9 @@ export class Brain {
                 if (node) {
                     // Phase 2.1: Wrap raw value into Payload
                     node.value = PayloadUtils.wrap(rawValue);
-                    node.isDirty = false; // Input is fresh
-                    // Phase 4.1: Track for Worker — node isn't dirty but value changed
-                    this.freshlyUpdatedNodeIds.add(targetId);
-                    this.propagateDirty(node.id);
+                    node.isInDirtyChain = false; // Input is fresh
+                    this.worker.setFreshlyUpdated(targetId);
+                    this.triggerDirtyChain(node.id);
 
                     if (!silent) this.triggerCalculation();
                     return { success: true };
@@ -640,8 +530,8 @@ export class Brain {
                     this.state.edges.push(newEdge);
                     this.updateAdjacency(newEdge, 'ADD');
                     const tNode = this.state.nodes.get(newEdge.target);
-                    if (tNode) tNode.isDirty = true;
-                    this.propagateDirty(newEdge.target);
+                    if (tNode) tNode.isInDirtyChain = true;
+                    this.triggerDirtyChain(newEdge.target);
 
                     // Phase 4.1: Track added edge for Worker
                     if (!this.pendingPatch.addedEdges) this.pendingPatch.addedEdges = [];
@@ -674,13 +564,11 @@ export class Brain {
                     this.updateAdjacency(e, 'REMOVE');
                     if (e.target !== id) {
                         const tNode = this.state.nodes.get(e.target);
-                        if (tNode) tNode.isDirty = true;
-                        this.propagateDirty(e.target);
+                        if (tNode) tNode.isInDirtyChain = true;
+                        this.triggerDirtyChain(e.target);
                     }
                 });
                 this.state.edges = this.state.edges.filter(e => e.source !== id && e.target !== id);
-                this.adjacency.delete(id);
-                this.reverseAdjacency.delete(id);
 
                 // Phase 4.1: Track removed node + edges for Worker
                 if (!this.pendingPatch.removedNodeIds) this.pendingPatch.removedNodeIds = [];
@@ -702,8 +590,8 @@ export class Brain {
                     this.updateAdjacency(edgeToRemove, 'REMOVE');
                     this.state.edges = this.state.edges.filter(e => e.id !== edgeId);
                     const tNode = this.state.nodes.get(edgeToRemove.target);
-                    if (tNode) tNode.isDirty = true;
-                    this.propagateDirty(edgeToRemove.target);
+                    if (tNode) tNode.isInDirtyChain = true;
+                    this.triggerDirtyChain(edgeToRemove.target);
 
                     // Phase 4.1: Track removed edge for Worker's shadow graph
                     if (!this.pendingPatch.removedEdgeIds) {
@@ -736,8 +624,8 @@ export class Brain {
                 const tNode = this.state.nodes.get(p.id);
                 if (tNode) {
                     tNode.data = { ...tNode.data, ...p.data };
-                    tNode.isDirty = true;
-                    this.propagateDirty(tNode.id);
+                    tNode.isInDirtyChain = true;
+                    this.triggerDirtyChain(tNode.id);
 
                     if (!silent) {
                         // 5. Success
@@ -751,13 +639,13 @@ export class Brain {
             }
 
             case 'BATCH':
-                (tx.payload as Transaction[]).forEach(t => {
+                (tx.payload as Transaction[]).forEach((t: Transaction) => {
                     this.applyTransaction(t, false, true);
                 });
                 this.emit('graphChanged', null);
                 this.triggerCalculation();
                 // Phase 4.1: BATCH transactions (undo/redo) → force full Worker sync
-                if (this.workerProxy && this.useWorker) {
+                if (this.worker.isEnabled()) {
                     this.syncWorker();
                 }
                 return { success: true };
@@ -1105,7 +993,7 @@ export class Brain {
         }
 
         // 2. If no symbol, we must construct it from inputs
-        const inputs = this.reverseAdjacency.get(nodeId) || [];
+        const inputs = this.topology.getInputs(nodeId);
         const inputSymbols: Record<string, import('../types/payload').ASTNode> = {};
 
         // Recurse inputs
@@ -1187,6 +1075,26 @@ export class Brain {
 
         const allTxs = [...nodeTxs, ...edgeTxs];
         if (allTxs.length > 0) {
+            // Pre-validation: Check for cycles across all intended connections
+            // This prevents "Double-Link" or "Infinite Loop" traps during high-authority CGL import
+            const virtualEdges = [...this.state.edges];
+            for (const t of edgeTxs) {
+                const e = t.payload as Edge;
+                const validation = this.validateConnection(e.source, e.sourceHandle, e.target, e.targetHandle, virtualEdges);
+                if (!validation.isValid) {
+                    diagnostics.push(`Pre-validation failed: ${e.source} -> ${e.target} (${validation.reason})`);
+                    // If we find a cycle in the incoming batch, we refuse to inject the edges
+                    // to keep the brain clean.
+                } else {
+                    virtualEdges.push(e);
+                }
+            }
+
+            if (diagnostics.some(d => d.includes('Pre-validation failed'))) {
+                this.log(`Batch injection aborted due to validation errors.`);
+                return diagnostics; // Return early without applying
+            }
+
             // We use a custom BATCH apply to capture individual errors
             const tx = { type: 'BATCH' as const, payload: allTxs };
 
@@ -1213,7 +1121,7 @@ export class Brain {
             if (!skipLayout) this.emit('RE-LAYOUT', null);
 
             // Phase 4.1: injectNodes = full graph change → force Worker sync
-            if (this.workerProxy && this.useWorker) {
+            if (this.worker.isEnabled()) {
                 this.syncWorker();
             }
         }

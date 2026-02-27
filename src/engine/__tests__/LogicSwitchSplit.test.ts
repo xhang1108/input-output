@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { NodeRegistry } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { MathEngine } from '../MathEngine';
+import { CalctopusEngine } from '../CalctopusEngine';
 import { DataType, NodePayload } from '../../types/payload';
 
 describe('Logic Switch & Split (MA-04/13)', () => {
     beforeAll(() => {
-        MathEngine.getInstance();
+        CalctopusEngine.getInstance();
     });
 
     const evaluate = async (type: string, inputs: Record<string, NodePayload>) => {
@@ -16,7 +16,7 @@ describe('Logic Switch & Split (MA-04/13)', () => {
             data: {},
             position: { x: 0, y: 0 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
-            isDirty: false
+            isInDirtyChain: false
         };
         return await NodeRegistry.evaluate(node, inputs);
     };

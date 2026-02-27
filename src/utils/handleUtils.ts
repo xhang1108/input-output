@@ -15,12 +15,6 @@ export const HANDLE_BASE_PADDING = 12;
 export function getHandleVariant(node: any, handleId: string): 'single' | 'capsule' {
     if (!node) return 'single';
 
-    // 1. Check dynamic handles in node data (runtime state)
-    const handlesRaw = node.data?.handles;
-    if (Array.isArray(handlesRaw)) {
-        const dynamicHandle = handlesRaw.find((h: any) => h.id === handleId);
-        if (dynamicHandle?.variant) return dynamicHandle.variant;
-    }
 
     // 2. Check static handle definitions (blueprint)
     const targetDef = NODE_DEFINITIONS.find(d => d.id === (node.type || node.nodeType));

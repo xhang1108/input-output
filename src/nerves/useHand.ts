@@ -6,7 +6,6 @@ import { Transaction } from '../engine/types';
 import { useClipboard } from './useClipboard';
 import { useSelection } from './useSelection';
 import { useKnife } from './useKnife';
-import { useModalAction } from '../hooks/useModalAction';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -971,30 +970,26 @@ export function useHand() {
     }, [mode, updateCut, updateInteraction, startGrab]);
 
     // --- Modal Action Logic ---
-    const { handleModalMouseUp } = useModalAction(
-        useCallback(() => {
-            if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
-                confirmGrab();
-            }
-        }, [mode, confirmGrab]),
-        useCallback(() => {
-            if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
-                cancelGrab();
-            }
-        }, [mode, cancelGrab]),
-        ['GRABBING', 'SCALING', 'ROTATING'].includes(mode)
-    );
+    const handleModalMouseUp = useCallback((e: MouseEvent) => {
+        const isTransformMode = ['GRABBING', 'SCALING', 'ROTATING'].includes(mode);
+        if (!isTransformMode) return;
+
+        if (e.button === 0) {
+            confirmGrab();
+        } else if (e.button === 2) {
+            cancelGrab();
+        }
+    }, [mode, confirmGrab, cancelGrab]);
 
     const handleMouseUp = useCallback((e: MouseEvent) => {
-        // Click-to-Select Logic (Deselect others if clicking a selected node without dragging)
+        // ... (Click-to-Select logic unchanged)
         if (mode === 'IDLE' && pendingGrabStart.current) {
             const target = e.target as HTMLElement;
             const nodeElement = target.closest('.react-flow__node');
             if (nodeElement) {
                 const nodeId = nodeElement.getAttribute('data-id');
-                // Only if modifiers are NOT held (standard click behavior)
                 if (nodeId && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-                    selectNode(nodeId, true); // Exclusive selection
+                    selectNode(nodeId, true);
                 }
             }
         }
@@ -1007,6 +1002,17 @@ export function useHand() {
             handleModalMouseUp(e);
         }
     }, [mode, endCut, handleModalMouseUp, selectNode]);
+
+    // Prevent context menu during transform modes to allow right-click cancel
+    useEffect(() => {
+        const handleContextMenu = (e: MouseEvent) => {
+            if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
+                e.preventDefault();
+            }
+        };
+        window.addEventListener('contextmenu', handleContextMenu);
+        return () => window.removeEventListener('contextmenu', handleContextMenu);
+    }, [mode]);
 
     const handleTypeNum = useCallback((char: string) => {
         if (!['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) return;

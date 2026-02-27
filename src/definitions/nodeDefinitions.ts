@@ -297,6 +297,30 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['NCR', 'NPR']
     },
     {
+        id: 'AD-08',
+        label: 'Vector Field',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'in_f', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f' },
+            { id: 'out_field', type: 'source', variant: 'single', dataType: 'matrix', label: 'Arrows' },
+            { id: 'out_grad', type: 'source', variant: 'single', dataType: 'vector', label: 'Grad' }
+        ],
+        defaultData: { mode: 'gradient', var1: 'x', var2: 'y', min: -5, max: 5, density: 10 }
+    },
+    {
+        id: 'AD-07',
+        label: 'Complex',
+        category: 'LinearAlgebra',
+        handles: [
+            { id: 'in', type: 'target', variant: 'single', dataType: 'any', label: 'In' },
+            { id: 're', type: 'source', variant: 'single', dataType: 'scalar', label: 'Re' },
+            { id: 'im', type: 'source', variant: 'single', dataType: 'scalar', label: 'Im' },
+            { id: 'abs', type: 'source', variant: 'single', dataType: 'scalar', label: 'Abs(r)' },
+            { id: 'arg', type: 'source', variant: 'single', dataType: 'scalar', label: 'Arg(φ)' }
+        ],
+        defaultData: { mode: 'separate' }
+    },
+    {
         id: 'AD-09',
         label: 'Vector Split',
         category: 'LinearAlgebra',

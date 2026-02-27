@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { NodeRegistry } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { MathEngine } from '../MathEngine';
+import { CalctopusEngine } from '../CalctopusEngine';
 import { DataType } from '../../types/payload';
 
 describe('Logic Gate (MA-05)', () => {
     beforeAll(() => {
-        // Ensure MathEngine is initialized
-        MathEngine.getInstance();
+        // Ensure CalctopusEngine is initialized
+        CalctopusEngine.getInstance();
     });
 
     const evaluate = async (op: string, a: string | number | boolean, b: string | number | boolean, aUnit?: string, bUnit?: string) => {
@@ -17,7 +17,7 @@ describe('Logic Gate (MA-05)', () => {
             data: { op },
             position: { x: 0, y: 0 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
-            isDirty: false
+            isInDirtyChain: false
         } as unknown as import('../types').NodeLogic;
 
         const inputs = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { Node, Edge, addEdge } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
@@ -33,13 +33,36 @@ export function useNodeSpawner({
     logAction,
 }: UseNodeSpawnerProps) {
     const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
-    const { project } = useCanvasProjection();
+    const spawnCountRef = useRef(0);
+    const { project, getCurrentZoom } = useCanvasProjection();
 
-    const spawnNode = useCallback((type: string, label: string, extraData?: unknown) => {
+    // Reset spawn count when the palette is opened in a new location
+    // Since palettePosition is re-set every time Shift+A or context menu is clicked
+    // we can use it to reset the contiguous spawn counter.
+    React.useEffect(() => {
+        spawnCountRef.current = 0;
+    }, [palettePosition.x, palettePosition.y]);
+
+    const spawnNode = useCallback((type: string, label: string, extraData?: unknown, isContinuous?: boolean) => {
         logAction(`Spawn Node: ${type}`);
+
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (isContinuous) {
+            // Adjust offset by current zoom level so the visual distance remains constant
+            const zoom = getCurrentZoom();
+            const currentCount = spawnCountRef.current;
+            // Base clearance is in screen pixels (250px overlay)
+            // Cascade steps are in scaled flow pixels (40 * zoom)
+            offsetX = 250 + (currentCount * 40 * zoom);
+            offsetY = (currentCount * 40 * zoom);
+            spawnCountRef.current += 1;
+        }
+
         const flowPos = project({
-            x: palettePosition.x,
-            y: palettePosition.y
+            x: palettePosition.x + offsetX,
+            y: palettePosition.y + offsetY
         });
 
         const newId = generateNodeId(type);
@@ -81,7 +104,7 @@ export function useNodeSpawner({
             }
             setPendingConnection(null);
         }
-    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction]);
+    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction, getCurrentZoom]);
 
     return {
         pendingConnection,

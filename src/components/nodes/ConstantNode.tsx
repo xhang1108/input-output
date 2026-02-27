@@ -5,9 +5,12 @@ import { Brain } from '../../engine/Brain';
 
 const CONSTANTS = [
     { label: 'π', value: 'pi' },
+    { label: 'τ', value: 'tau' },
     { label: 'e', value: 'e' },
+    { label: 'i', value: 'i' },
     { label: 'φ', value: 'phi' },
-    { label: '∞', value: 'Infinity' }
+    { label: '∞', value: 'Infinity' },
+    { label: 'NaN', value: 'NaN' }
 ];
 
 const HANDLES: HandleConfig[] = [

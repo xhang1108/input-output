@@ -21,7 +21,7 @@ describe('AD-04: Derivative', () => {
             type: 'AD-04',
             data: { variable: 'x', order: 1 },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -41,7 +41,7 @@ describe('AD-04: Derivative', () => {
             type: 'AD-04',
             data: { variable: 'x', order: 1 },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -59,7 +59,7 @@ describe('AD-04: Derivative', () => {
             type: 'AD-04',
             data: { variable: 'x', order: 2 },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -79,7 +79,7 @@ describe('AD-04: Derivative', () => {
             type: 'AD-04',
             data: { variable: 'x', order: 1 },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -105,7 +105,7 @@ describe('AD-05: Integral', () => {
             type: 'AD-05',
             data: { variable: 'x', mode: 'indefinite' },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -124,7 +124,7 @@ describe('AD-05: Integral', () => {
             type: 'AD-05',
             data: { variable: 'x', mode: 'definite', lower: '0', upper: '5' },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -147,7 +147,7 @@ describe('AD-11: Limit', () => {
             type: 'AD-11',
             data: { variable: 'x', approach: '0', direction: 'both' },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -166,7 +166,7 @@ describe('AD-11: Limit', () => {
             type: 'AD-11',
             data: { variable: 'x', approach: '0', direction: 'both' },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -184,7 +184,7 @@ describe('SY-04: ODE Solver', () => {
             type: 'SY-04',
             data: { method: 'RK4', t0: 0, tEnd: 1, y0: 1, stepSize: 0.01 },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
@@ -209,7 +209,7 @@ describe('SY-04: ODE Solver', () => {
             type: 'SY-04',
             data: { method: 'RK4', t0: 0, tEnd: 1, y0: 1, stepSize: 0.01 },
             value: undefined,
-            isDirty: false,
+            isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 

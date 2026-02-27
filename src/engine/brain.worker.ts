@@ -1,14 +1,14 @@
 /**
  * 🧠 Brain Web Worker
  * 
- * Runs the computation pipeline (NodeRegistry.evaluate + MathEngine) in a
+ * Runs the computation pipeline (NodeRegistry.evaluate + CalctopusEngine) in a
  * background thread. Maintains a persistent shadow graph that mirrors the
  * main-thread Brain state via incremental patches.
  * 
  * Phase 4.1: Web Worker Migration
  * 
  * IPC Protocol:
- *   INIT         → Bootstrap MathEngine with shared MATH_CONFIG
+ *   INIT         → Bootstrap CalctopusEngine with shared MATH_CONFIG
  *   SYNC_GRAPH   → Full graph replacement (project load, crash recovery)
  *   EVAL         → Apply incremental patches + compute dirty nodes
  *   CLEAR_STATE  → Purge all internal state
@@ -103,7 +103,7 @@ function hydrateNode(sn: SerializedNodeLogic): NodeLogic {
             meta: sn.value.meta,
         } : undefined,
         data: sn.data || {},
-        isDirty: sn.isDirty,
+        isInDirtyChain: sn.isInDirtyChain,
         position: { x: 0, y: 0 }, // Position not needed for computation
     };
 }
@@ -171,15 +171,15 @@ function applyPatch(patch: IncrementalPatch) {
                         meta: sn.value.meta,
                     };
                 }
-                existing.isDirty = sn.isDirty;
+                existing.isInDirtyChain = sn.isInDirtyChain;
             }
         }
     }
 
     // 6. Mark dirty
-    for (const id of patch.dirtyNodeIds) {
+    for (const id of patch.dirtyChainNodeIds) {
         const node = nodes.get(id);
-        if (node) node.isDirty = true;
+        if (node) node.isInDirtyChain = true;
     }
 }
 
@@ -200,7 +200,7 @@ async function getValue(
 
     let resultPayload: NodePayload;
 
-    if (!node.isDirty && node.value) {
+    if (!node.isInDirtyChain && node.value) {
         resultPayload = node.value;
     } else {
         const newPath = new Set(computingPath);
@@ -234,7 +234,7 @@ async function getValue(
 
         const oldPayload = node.value;
         node.value = resultPayload;
-        node.isDirty = false;
+        node.isInDirtyChain = false;
 
         // Stepwise propagation: mark children dirty only if value changed
         const changed = !oldPayload || JSON.stringify(oldPayload) !== JSON.stringify(resultPayload);
@@ -242,8 +242,8 @@ async function getValue(
             const children = adjacency.get(nodeId) || [];
             for (const childId of children) {
                 const child = nodes.get(childId);
-                if (child && !child.isDirty) {
-                    child.isDirty = true;
+                if (child && !child.isInDirtyChain) {
+                    child.isInDirtyChain = true;
                 }
             }
         }
@@ -268,20 +268,20 @@ async function getValue(
     return resultPayload;
 }
 
-async function computeDirtyNodes(): Promise<Record<string, SerializedPayload>> {
+async function computeDirtyChainNodes(): Promise<Record<string, SerializedPayload>> {
     const patches: Record<string, SerializedPayload> = {};
 
     // Loop until convergence: computing a node may dirty its children,
     // which need to be computed in the next pass
     let maxPasses = 20; // Safety limit to prevent infinite loops
     while (maxPasses-- > 0) {
-        const dirtyNodeIds = Array.from(nodes.values())
-            .filter(n => n.isDirty)
+        const dirtyChainNodeIds = Array.from(nodes.values())
+            .filter(n => n.isInDirtyChain)
             .map(n => n.id);
 
-        if (dirtyNodeIds.length === 0) break;
+        if (dirtyChainNodeIds.length === 0) break;
 
-        for (const id of dirtyNodeIds) {
+        for (const id of dirtyChainNodeIds) {
             const node = nodes.get(id);
             if (!node) continue;
 
@@ -290,8 +290,8 @@ async function computeDirtyNodes(): Promise<Record<string, SerializedPayload>> {
             patches[id] = {
                 type: newPayload.type,
                 value: PayloadUtils.dehydrate(newPayload.value),
-                symbol: newPayload.symbol,
-                meta: newPayload.meta,
+                symbol: PayloadUtils.dehydrate(newPayload.symbol) as import('../types/payload').ASTNode | null,
+                meta: PayloadUtils.dehydrate(newPayload.meta) as Record<string, unknown>,
             };
         }
     }
@@ -352,7 +352,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         case 'EVAL': {
             try {
                 applyPatch(msg.patches);
-                const patches = await computeDirtyNodes();
+                const patches = await computeDirtyChainNodes();
                 respond({ type: 'RESULT', epoch: msg.epoch, patches });
             } catch (error) {
                 const errMsg = error instanceof Error ? error.message : String(error);
@@ -366,12 +366,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
                 // 1. Full graph replacement
                 loadSnapshot(msg.snapshot);
                 // 2. Mark specified nodes dirty
-                for (const id of msg.dirtyNodeIds) {
+                for (const id of msg.dirtyChainNodeIds) {
                     const node = nodes.get(id);
-                    if (node) node.isDirty = true;
+                    if (node) node.isInDirtyChain = true;
                 }
                 // 3. Compute
-                const patches = await computeDirtyNodes();
+                const patches = await computeDirtyChainNodes();
                 respond({ type: 'RESULT', epoch: msg.epoch, patches });
             } catch (error) {
                 const errMsg = error instanceof Error ? error.message : String(error);

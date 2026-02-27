@@ -91,19 +91,13 @@ export function useClipboard() {
 
         try {
             const parsed = JSON.parse(payload);
-            let clipboardNodes: Node[] = [];
-            let clipboardEdges: Edge[] = [];
 
-            if (Array.isArray(parsed)) {
-                // Legacy support (nodes only)
-                clipboardNodes = parsed;
-            } else if (parsed && Array.isArray(parsed.nodes)) {
-                // New format { nodes: [], edges: [] }
-                clipboardNodes = parsed.nodes;
-                clipboardEdges = parsed.edges || [];
-            } else {
+            if (!parsed || !Array.isArray(parsed.nodes)) {
                 return;
             }
+
+            const clipboardNodes: Node[] = parsed.nodes;
+            const clipboardEdges: Edge[] = parsed.edges || [];
 
             const { newNodes, newEdges } = cloneElements(clipboardNodes, clipboardEdges, { x: 20, y: 20 });
             setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
