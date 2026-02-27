@@ -1,11 +1,11 @@
 import { ASTNode } from '../types/payload';
 
 /**
- * 🎨 SoulRenderer: Phase 3 Formula Generator
+ * 🎨 FormulaRenderer: Phase 3 Formula Generator
  * 
  * Converts a symbolic ASTNode into a LaTeX string.
  */
-export class SoulRenderer {
+export class FormulaRenderer {
     public static render(node: ASTNode | null): string {
         if (!node) return '';
 

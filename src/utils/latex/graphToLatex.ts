@@ -1,5 +1,5 @@
 import { Node, Edge } from '@xyflow/react';
-import { SoulRenderer } from '../SoulRenderer';
+import { FormulaRenderer } from '../FormulaRenderer';
 import { ASTNode } from '../../types/payload';
 
 /**
@@ -167,7 +167,7 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
 export async function exportGraphToLatex(nodeId: string, nodes: Node[], edges: Edge[]): Promise<string> {
     try {
         const ast = buildASTFromGraph(nodeId, nodes, edges);
-        return SoulRenderer.render(ast);
+        return FormulaRenderer.render(ast);
     } catch (e) {
         console.error("Failed to export graph to LaTeX:", e);
         return '\\text{Error}';

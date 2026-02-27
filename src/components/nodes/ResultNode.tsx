@@ -2,7 +2,7 @@ import { memo, useState, useMemo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { SoulRenderer } from '../../utils/SoulRenderer';
+import { FormulaRenderer } from '../../utils/FormulaRenderer';
 import { Brain } from '../../engine/Brain';
 import { Copy, Check } from 'lucide-react';
 import { DataType } from '../../types/payload';
@@ -77,7 +77,7 @@ export const ResultNode = memo((props: NodeProps) => {
 
     let formulaStr = '';
     if ((effectiveMode === 'formula' || effectiveMode === 'latex') && payload) {
-        if (payload.symbol) formulaStr = (effectiveMode === 'latex') ? SoulRenderer.render(payload.symbol) : PayloadUtils.stringifySymbol(payload.symbol);
+        if (payload.symbol) formulaStr = (effectiveMode === 'latex') ? FormulaRenderer.render(payload.symbol) : PayloadUtils.stringifySymbol(payload.symbol);
         else formulaStr = String(rawValue);
     }
 
@@ -88,7 +88,7 @@ export const ResultNode = memo((props: NodeProps) => {
         case DataType.String: dataTypeColor = 'text-(--color-string)'; break;
         case DataType.Matrix: dataTypeColor = 'text-(--color-matrix)'; break;
         case DataType.Boolean: dataTypeColor = 'text-(--color-boolean)'; break;
-        case DataType.Symbolic: dataTypeColor = 'text-[var(--color-soul,#b084e9)]'; break; // Placeholder for soul/symbolic color
+        case DataType.Symbolic: dataTypeColor = 'text-[var(--color-symbolic,#b084e9)]'; break; // Use symbolic color
     }
 
     // --- Actions ---

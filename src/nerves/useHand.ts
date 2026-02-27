@@ -23,7 +23,7 @@ export function useHand() {
     // --- Composed Hooks ---
     const { duplicateSelected, copyToClipboard, pasteFromClipboard } = useClipboard();
     const {
-        deleteSelected, resetSelected, groupSelected,
+        deleteSelected, resetSelected, bundleSelected,
         detachSelected, swapConnections,
         clearSelection, selectNode,
     } = useSelection();
@@ -1047,7 +1047,7 @@ export function useHand() {
         confirmGrab,
         cancelGrab,
         duplicateSelected,
-        groupSelected,
+        bundleSelected,
         copyToClipboard,
         pasteFromClipboard,
         deleteSelected,

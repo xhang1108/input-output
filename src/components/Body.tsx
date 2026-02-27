@@ -17,7 +17,7 @@ import { RelinkLine, RelinkContext } from './edges/RelinkLine';
 import '@xyflow/react/dist/style.css';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { SoulRenderer } from '../utils/SoulRenderer';
+import { FormulaRenderer } from '../utils/FormulaRenderer';
 import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
 import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
 import { useEar } from '../nerves/useEar';
@@ -115,7 +115,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         confirmGrab,
         cancelGrab,
         duplicateSelected,
-        groupSelected,
+        bundleSelected,
         copyToClipboard,
         pasteFromClipboard,
         deleteSelected,
@@ -192,7 +192,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         // @ts-expect-error - Expose for debugging
         window.NodeRegistry = NodeRegistry;
         // @ts-expect-error - Expose for debugging
-        window.SoulRenderer = SoulRenderer;
+        window.FormulaRenderer = FormulaRenderer;
 
         // @ts-expect-error - Debug helper
         window.debugBrain = () => {
@@ -331,7 +331,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     logAction('Duplicate Selected (Shift+D)');
                 }
             },
-            'f': (e) => { e.preventDefault(); groupSelected(); logAction('Group Selected (F)'); },
+            'f': (e) => { e.preventDefault(); bundleSelected(); logAction('Frame Selected (F)'); },
 
             // Node Operations
             'delete': () => {
@@ -426,7 +426,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                 }
             },
         },
-        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject]
+        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, bundleSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject]
     });
 
 

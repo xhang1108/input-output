@@ -6,7 +6,7 @@ import { Transaction } from '../engine/types';
 
 /**
  * useSelection
- * Handles node selection, deletion, reset, grouping, detach, and swap.
+ * Handles node selection, deletion, reset, bundle, detach, and swap.
  */
 export function useSelection() {
     const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
@@ -30,14 +30,14 @@ export function useSelection() {
                 ...n,
                 data: {
                     ...n.data,
-                    label: n.type === 'frame' ? 'Group' : 'Node'
+                    label: n.type === 'frame' ? 'Frame' : 'Node'
                 }
             };
         }));
     }, [setNodes]);
 
-    // --- Command: Group / Ungroup Toggle (F key) ---
-    const groupSelected = useCallback(() => {
+    // --- Command: Bundle / Unbundle Toggle (F key) ---
+    const bundleSelected = useCallback(() => {
         const nodes = getNodes();
         const selectedNonFrame = nodes.filter(n => n.selected && n.type !== 'frame');
         if (selectedNonFrame.length === 0) return;
@@ -194,7 +194,7 @@ export function useSelection() {
                 id: frameId,
                 type: 'frame',
                 position: { x: minX, y: minY },
-                data: { label: 'Group', width, height },
+                data: { label: 'Frame', width, height },
                 initialValue: { type: 'void', value: null, symbol: null }
             }
         });
@@ -321,7 +321,7 @@ export function useSelection() {
     return {
         deleteSelected,
         resetSelected,
-        groupSelected,
+        bundleSelected,
         detachSelected,
         swapConnections,
         clearSelection,

@@ -34,7 +34,7 @@ body {
   /* ── Data Type Color Tokens (§0.1.2) ── */
   --color-scalar:  hsl(38, 92%, 55%);   /* Amber Gold  – Number/Float  */
   --color-matrix:  hsl(217, 91%, 60%);  /* Electric Blue – Matrix/Array */
-  --color-soul:    hsl(270, 60%, 62%);  /* Violet       – AST/Symbol   */
+  --color-symbolic:hsl(270, 60%, 62%);  /* Violet       – AST/Symbol   */
   --color-vector:  hsl(160, 84%, 45%);  /* Emerald      – Vector       */
   --color-string:  hsl(340, 75%, 60%);  /* Rose         – String       */
   --color-boolean: hsl(30, 100%, 55%);  /* Orange       – Boolean      */
@@ -46,7 +46,7 @@ body {
   --color-input:   hsl(38, 92%, 55%);   /* Match scalar input */
   --color-output:  hsl(160, 84%, 45%);  /* Match vector/result */
   --color-math:    hsl(217, 91%, 60%);  /* Match matrix/compute */
-  --color-logic:   hsl(270, 60%, 62%);  /* Match soul/logic */
+  --color-logic:   hsl(270, 60%, 62%);  /* Match symbolic/logic */
 
   /* ── Surface Tokens (Node Chrome) ── */
   --node-bg:          hsl(240, 6%, 10%);
