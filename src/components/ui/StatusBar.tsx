@@ -13,7 +13,7 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ mode, nodeCount, selectionCount, transformValue }: StatusBarProps) {
-    const { actionLog, saveStatus } = useAppStore();
+    const { actionLog, saveStatus, mathPrecision, lastEvalMs } = useAppStore();
 
     // Hints Configuration
     const hints: Record<InteractionMode, string[]> = {
@@ -61,6 +61,23 @@ export function StatusBar({ mode, nodeCount, selectionCount, transformValue }: S
                         {saveStatus === 'SAVING' ? 'SYNCING...' : saveStatus === 'SAVED' ? 'SAVED' : 'CLOUD SYNCED'}
                     </span>
                 </span>
+
+                <div className="w-px h-3 bg-zinc-800 mx-1" />
+
+                <div className="flex gap-2.5 items-center mr-2">
+                    <span className="text-zinc-500 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
+                        Prec: <span className="text-zinc-300 font-mono">{mathPrecision}B</span>
+                    </span>
+                    {lastEvalMs !== null && (
+                        <span className="text-zinc-500 font-mono flex items-center gap-1">
+                            <span className="text-[9px] text-zinc-600">solve:</span>
+                            <span className={lastEvalMs > 50 ? 'text-orange-400' : 'text-zinc-300'}>
+                                {lastEvalMs}ms
+                            </span>
+                        </span>
+                    )}
+                </div>
 
                 <div className="w-px h-3 bg-zinc-800 mx-1" />
 

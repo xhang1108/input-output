@@ -7,11 +7,19 @@ export type HandleDataType = 'scalar' | 'matrix' | 'vector' | 'soul' | 'unit' | 
 export interface HandleConfig {
     id: string;
     type: 'source' | 'target';
-    position: Position;
+    position?: Position;         // Optional. Default: target -> Left, source -> Right
     variant: 'single' | 'capsule';
     dataType?: HandleDataType;  // Determines color. Default: 'scalar'
     label?: string;             // Optional label shown near handle
     y?: number | string;        // Optional manual Y position (percent or absolute px)
+}
+
+/**
+ * Helper to resolve the position of a handle if not explicitly provided.
+ */
+export function resolveHandlePosition(h: HandleConfig): Position {
+    if (h.position) return h.position;
+    return h.type === 'target' ? Position.Left : Position.Right;
 }
 
 // Color lookup: dataType → CSS variable

@@ -25,6 +25,9 @@ interface SettingsPanelProps {
     onBackToProjects: () => void;
 }
 
+import { useAppStore } from '../../store/useStore';
+import { SUPPORTED_PRECISIONS } from '../../engine/mathConfig';
+
 import { GraphImportModal } from './GraphImportModal';
 import { GraphExportModal } from './GraphExportModal';
 import { LatexImportModal } from './LatexImportModal';
@@ -41,6 +44,7 @@ export function SettingsPanel({
     onReset,
     onBackToProjects
 }: SettingsPanelProps) {
+    const { mathPrecision, setMathPrecision } = useAppStore();
     const [isOpen, setIsOpen] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
@@ -149,9 +153,6 @@ export function SettingsPanel({
                         </div>
                     </div>
 
-                    <div className="h-px bg-zinc-800 my-1" />
-
-
                     {/* Scroll to Pan */}
                     <ToggleRow
                         label="Scroll to Pan"
@@ -159,6 +160,31 @@ export function SettingsPanel({
                         active={panOnScroll}
                         onClick={() => setPanOnScroll(!panOnScroll)}
                     />
+
+                    <div className="h-px bg-zinc-800 my-1" />
+
+                    {/* Precision Selector */}
+                    <div className="px-3 py-2">
+                        <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Scientific Precision</div>
+                        <div className="flex gap-1.5 overflow-hidden rounded-md border border-zinc-800">
+                            {SUPPORTED_PRECISIONS.map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setMathPrecision(p)}
+                                    className={`
+                                        flex-1 text-[10px] py-1.5 transition-colors
+                                        ${mathPrecision === p
+                                            ? 'bg-zinc-700 text-(--color-unit) font-bold'
+                                            : 'bg-zinc-950 text-zinc-500 hover:bg-zinc-900'}
+                                    `}
+                                >
+                                    {p}B
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-zinc-800 my-1" />
 
                     {/* Inspector */}
                     <ToggleRow

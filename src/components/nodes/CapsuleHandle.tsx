@@ -2,7 +2,7 @@ import { memo, useEffect } from 'react';
 import { Position, useNodeConnections, useUpdateNodeInternals } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
-import { HandleConfig, getHandleColor } from '../../types/NodeDefinition';
+import { HandleConfig, getHandleColor, resolveHandlePosition } from '../../types/NodeDefinition';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
 
@@ -41,7 +41,7 @@ export const CapsuleHandle = memo(({ h, id, isConnectable }: CapsuleHandleProps)
         >
             <NodeHandle
                 type={h.type}
-                position={h.position}
+                position={resolveHandlePosition(h)}
                 id={h.id}
                 nodeId={id}
                 className="border-zinc-900! z-50 pointer-events-auto origin-center w-(--handle-size-sm)! rounded-full!"

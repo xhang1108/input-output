@@ -1,7 +1,7 @@
-
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { LayoutAlgorithm, LayoutDirection } from '../nerves/layoutEngine';
+import { MathPrecision } from '../engine/mathConfig';
 
 interface AppState {
     // UI Toggles
@@ -18,6 +18,8 @@ interface AppState {
     layoutDirection: LayoutDirection;
     panOnScroll: boolean;
     saveStatus: 'IDLE' | 'SAVING' | 'SAVED';
+    mathPrecision: MathPrecision;
+    lastEvalMs: number | null;
 
     // State
     actionLog: string[];
@@ -36,53 +38,62 @@ interface AppState {
     setLayoutDirection: (dir: LayoutDirection | ((prev: LayoutDirection) => LayoutDirection)) => void;
     setPanOnScroll: (enabled: boolean | ((prev: boolean) => boolean)) => void;
     setSaveStatus: (status: 'IDLE' | 'SAVING' | 'SAVED') => void;
+    setMathPrecision: (precision: MathPrecision) => void;
+    setLastEvalMs: (ms: number | null) => void;
 }
 
 export const useAppStore = create<AppState>()(
-    persist(
-        (set) => ({
-            // Defaults
-            showPalette: false,
-            palettePosition: { x: 0, y: 0 },
-            showInspector: false,
+    subscribeWithSelector(
+        persist(
+            (set) => ({
+                // Defaults
+                showPalette: false,
+                palettePosition: { x: 0, y: 0 },
+                showInspector: false,
 
-            manualSnap: false,
-            showGrid: true,
-            showDebug: true,
-            edgeType: 'bezier',
-            layoutAlgorithm: 'layered',
-            layoutDirection: 'RIGHT',
-            panOnScroll: typeof navigator !== 'undefined' ? /Mac|iPad|iPhone/.test(navigator.platform) : false,
-            saveStatus: 'IDLE',
-            actionLog: [],
+                manualSnap: false,
+                showGrid: true,
+                showDebug: true,
+                edgeType: 'bezier',
+                layoutAlgorithm: 'layered',
+                layoutDirection: 'RIGHT',
+                panOnScroll: typeof navigator !== 'undefined' ? /Mac|iPad|iPhone/.test(navigator.platform) : false,
+                saveStatus: 'IDLE',
+                mathPrecision: 64,
+                lastEvalMs: null,
+                actionLog: [],
 
-            // Setters
-            logAction: (action) => set((s) => ({ actionLog: [action, ...s.actionLog].slice(0, 20) })),
-            setShowPalette: (show) => set((s) => ({ showPalette: typeof show === 'function' ? show(s.showPalette) : show })),
-            setPalettePosition: (pos) => set((s) => ({ palettePosition: typeof pos === 'function' ? pos(s.palettePosition) : pos })),
-            setShowInspector: (show) => set((s) => ({ showInspector: typeof show === 'function' ? show(s.showInspector) : show })),
+                // Setters
+                logAction: (action) => set((s) => ({ actionLog: [action, ...s.actionLog].slice(0, 20) })),
+                setShowPalette: (show) => set((s) => ({ showPalette: typeof show === 'function' ? show(s.showPalette) : show })),
+                setPalettePosition: (pos) => set((s) => ({ palettePosition: typeof pos === 'function' ? pos(s.palettePosition) : pos })),
+                setShowInspector: (show) => set((s) => ({ showInspector: typeof show === 'function' ? show(s.showInspector) : show })),
 
-            setManualSnap: (snap) => set((s) => ({ manualSnap: typeof snap === 'function' ? snap(s.manualSnap) : snap })),
-            setShowGrid: (show) => set((s) => ({ showGrid: typeof show === 'function' ? show(s.showGrid) : show })),
-            setShowDebug: (show) => set((s) => ({ showDebug: typeof show === 'function' ? show(s.showDebug) : show })),
-            setEdgeType: (type) => set((s) => ({ edgeType: typeof type === 'function' ? type(s.edgeType) : type })),
-            setLayoutAlgorithm: (algo) => set((s) => ({ layoutAlgorithm: typeof algo === 'function' ? algo(s.layoutAlgorithm) : algo })),
-            setLayoutDirection: (dir) => set((s) => ({ layoutDirection: typeof dir === 'function' ? dir(s.layoutDirection) : dir })),
-            setPanOnScroll: (enabled) => set((s) => ({ panOnScroll: typeof enabled === 'function' ? enabled(s.panOnScroll) : enabled })),
-            setSaveStatus: (status) => set({ saveStatus: status }),
-        }),
-        {
-            name: 'calctopus-settings-v2',
-            partialize: (state) => ({
-                manualSnap: state.manualSnap,
-                showGrid: state.showGrid,
-                showDebug: state.showDebug,
-                edgeType: state.edgeType,
-                layoutAlgorithm: state.layoutAlgorithm,
-                layoutDirection: state.layoutDirection,
-                panOnScroll: state.panOnScroll,
-                showInspector: state.showInspector,
+                setManualSnap: (snap) => set((s) => ({ manualSnap: typeof snap === 'function' ? snap(s.manualSnap) : snap })),
+                setShowGrid: (show) => set((s) => ({ showGrid: typeof show === 'function' ? show(s.showGrid) : show })),
+                setShowDebug: (show) => set((s) => ({ showDebug: typeof show === 'function' ? show(s.showDebug) : show })),
+                setEdgeType: (type) => set((s) => ({ edgeType: typeof type === 'function' ? type(s.edgeType) : type })),
+                setLayoutAlgorithm: (algo) => set((s) => ({ layoutAlgorithm: typeof algo === 'function' ? algo(s.layoutAlgorithm) : algo })),
+                setLayoutDirection: (dir) => set((s) => ({ layoutDirection: typeof dir === 'function' ? dir(s.layoutDirection) : dir })),
+                setPanOnScroll: (enabled) => set((s) => ({ panOnScroll: typeof enabled === 'function' ? enabled(s.panOnScroll) : enabled })),
+                setSaveStatus: (status) => set({ saveStatus: status }),
+                setMathPrecision: (mathPrecision) => set({ mathPrecision }),
+                setLastEvalMs: (lastEvalMs) => set({ lastEvalMs }),
             }),
-        }
+            {
+                name: 'calctopus-settings-v2',
+                partialize: (state) => ({
+                    manualSnap: state.manualSnap,
+                    showGrid: state.showGrid,
+                    showDebug: state.showDebug,
+                    edgeType: state.edgeType,
+                    layoutAlgorithm: state.layoutAlgorithm,
+                    layoutDirection: state.layoutDirection,
+                    panOnScroll: state.panOnScroll,
+                    showInspector: state.showInspector,
+                    mathPrecision: state.mathPrecision,
+                }),
+            }
+        )
     )
 );

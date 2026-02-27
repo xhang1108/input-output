@@ -3,7 +3,7 @@ import { NodeProps, Position, useReactFlow, useUpdateNodeInternals, useNodeConne
 import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
-import { HandleConfig, getHandleColor } from '../../types/NodeDefinition';
+import { HandleConfig, getHandleColor, resolveHandlePosition } from '../../types/NodeDefinition';
 import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
@@ -72,8 +72,8 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
         { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar' },
         { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' },
     ];
-    const leftHandles = allHandles.filter(h => h.position === Position.Left);
-    const rightHandles = allHandles.filter(h => h.position === Position.Right);
+    const leftHandles = allHandles.filter(h => resolveHandlePosition(h) === Position.Left);
+    const rightHandles = allHandles.filter(h => resolveHandlePosition(h) === Position.Right);
 
     // Calculate dynamic node height based on handles
     const getHandleHeight = (h: HandleConfig) => {

@@ -8,7 +8,7 @@
  * Phase 4.1: Web Worker Migration
  */
 
-import { MATH_CONFIG } from './mathConfig';
+import { MATH_CONFIG, getMathConfig, MathPrecision } from './mathConfig';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { NodePayload } from '../types/payload';
 import type { NodeLogic } from './types';
@@ -37,7 +37,7 @@ const AUDIT_LOG_SIZE = 20;
 
 export interface WorkerProxyCallbacks {
     /** Called when Worker returns valid results (epoch matches) */
-    onResults: (patches: Map<string, NodePayload>) => void;
+    onResults: (patches: Map<string, NodePayload>, latencyMs: number) => void;
     /** Called when Worker encounters an error */
     onError: (epoch: number, error: string) => void;
     /** Called when Worker is syncing (loading state) */
@@ -53,6 +53,7 @@ export class BrainWorkerProxy {
     private epoch = 0;
     private msgId = 0;
     private pendingRequest = false;
+    private requestStartTime: number | null = null;
     private queuedPatch: IncrementalPatch | null = null;
     private auditLog: AuditEntry[] = [];
     private callbacks: WorkerProxyCallbacks;
@@ -162,7 +163,10 @@ export class BrainWorkerProxy {
                     });
                 }
 
-                this.callbacks.onResults(patches);
+                const latencyMs = this.requestStartTime ? Date.now() - this.requestStartTime : 0;
+                this.requestStartTime = null;
+
+                this.callbacks.onResults(patches, latencyMs);
 
                 // Periodic HEALTH check
                 this.evalsSinceLastHealth++;
@@ -205,6 +209,7 @@ export class BrainWorkerProxy {
         }
 
         this.pendingRequest = true;
+        this.requestStartTime = Date.now();
         this.send({
             type: 'EVAL',
             msgId: this.nextMsgId(),
@@ -217,6 +222,7 @@ export class BrainWorkerProxy {
     public syncAndEval(snapshot: SerializedGraphSnapshot, dirtyNodeIds: string[]) {
         this.epoch++;
         this.pendingRequest = true;
+        this.requestStartTime = Date.now();
         this.queuedPatch = null; // Clear any queued incremental patches
         this.send({
             type: 'SYNC_AND_EVAL',
@@ -236,6 +242,15 @@ export class BrainWorkerProxy {
             type: 'SYNC_GRAPH',
             msgId: this.nextMsgId(),
             snapshot,
+        });
+    }
+
+    /** Update worker math configuration (precision) */
+    public updateConfig(precision: MathPrecision) {
+        this.send({
+            type: 'UPDATE_CONFIG',
+            msgId: this.nextMsgId(),
+            config: getMathConfig(precision),
         });
     }
 

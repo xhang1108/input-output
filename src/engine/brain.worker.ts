@@ -335,6 +335,14 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             break;
         }
 
+        case 'UPDATE_CONFIG': {
+            math = create(all, msg.config);
+            // Optionally, we could re-trigger evaluation of all dirty nodes here,
+            // but usually the proxy will follow up with an EVAL if needed.
+            respond({ type: 'READY' });
+            break;
+        }
+
         case 'SYNC_GRAPH': {
             loadSnapshot(msg.snapshot);
             respond({ type: 'READY' });

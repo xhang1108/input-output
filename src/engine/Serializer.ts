@@ -4,7 +4,7 @@ import LZString from 'lz-string';
 
 export interface ProjectData {
     version: string;
-    computationMode: 'scientific' | 'engineering';
+    mathPrecision: number;
     viewport: { x: number; y: number; zoom: number };
     settings: Record<string, unknown>;
     graph: InjectableGraph;
@@ -19,12 +19,12 @@ export class Serializer {
     public static serialize(
         brain: Brain,
         viewport: { x: number; y: number; zoom: number },
-        settings: Record<string, unknown>
+        settings: Record<string, unknown>,
+        mathPrecision: number = 64
     ): string {
         const data: ProjectData = {
             version: this.VERSION,
-            // Phase 2 architectural change made everything BigNumber, but we keep the mode field for compatibility
-            computationMode: 'scientific',
+            mathPrecision,
             viewport,
             settings: this.cleanSettings(settings),
             graph: brain.toInjectable()

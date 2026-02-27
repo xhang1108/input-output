@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Position } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
-import { HandleConfig, getHandleColor } from '../../types/NodeDefinition';
+import { HandleConfig, getHandleColor, resolveHandlePosition } from '../../types/NodeDefinition';
 
 interface SingleHandleProps {
     h: HandleConfig;
@@ -24,7 +24,7 @@ export const SingleHandle = memo(({ h, id, isConnectable }: SingleHandleProps) =
         >
             <NodeHandle
                 type={h.type}
-                position={h.position}
+                position={resolveHandlePosition(h)}
                 id={h.id}
                 nodeId={id}
                 className="border-zinc-900! z-50 pointer-events-auto origin-center w-(--handle-size-sm)! h-(--handle-size-sm)!"

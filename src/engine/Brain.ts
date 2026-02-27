@@ -8,6 +8,7 @@ import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { getHandleVariant, isProbablyInputHandle } from '../utils/handleUtils';
 // BrainWorkerProxy is imported DYNAMICALLY in initWorker() to avoid circular dependency
 import type { IncrementalPatch } from './SerializableGraph';
+import { useAppStore } from '../store/useStore';
 
 export class Brain {
     // Phase 2.0.5: Forced Rebuild
@@ -33,8 +34,17 @@ export class Brain {
             edges: [],
         };
         // Worker is lazily initialized on first heartbeat that needs it
-        // This avoids circular dependency: Brain → BrainWorkerProxy → Worker → NodeRegistry → Brain
         this.startHeartbeat();
+
+        // Subscribe to precision changes
+        useAppStore.subscribe(
+            (state) => state.mathPrecision,
+            (precision) => {
+                if (this.workerProxy) {
+                    this.workerProxy.updateConfig(precision);
+                }
+            }
+        );
     }
 
     private listeners: Map<string, Set<(payload: unknown) => void>> = new Map();
@@ -49,7 +59,10 @@ export class Brain {
         try {
             const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
             this.workerProxy = new BrainWorkerProxy({
-                onResults: (patches: Map<string, NodePayload>) => this.applyWorkerResults(patches),
+                onResults: (patches: Map<string, NodePayload>, latencyMs: number) => {
+                    this.applyWorkerResults(patches);
+                    useAppStore.getState().setLastEvalMs(latencyMs);
+                },
                 onError: (_epoch: number, error: string) => {
                     console.error('[Brain] Worker error:', error);
                     this.isRecalculating = false; // Prevent permanent lock

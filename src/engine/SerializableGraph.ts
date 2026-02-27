@@ -60,6 +60,7 @@ import { MathConfig } from './mathConfig';
 
 export type WorkerRequest =
     | { type: 'INIT'; msgId: number; config: MathConfig }
+    | { type: 'UPDATE_CONFIG'; msgId: number; config: MathConfig }
     | { type: 'SYNC_GRAPH'; msgId: number; snapshot: SerializedGraphSnapshot }
     | { type: 'EVAL'; msgId: number; epoch: number; patches: IncrementalPatch }
     | { type: 'SYNC_AND_EVAL'; msgId: number; epoch: number; snapshot: SerializedGraphSnapshot; dirtyNodeIds: string[] }

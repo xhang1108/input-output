@@ -4,12 +4,16 @@
  * Single source of truth for MathJS initialization parameters.
  * Used by both MathEngine (main thread) and brain.worker.ts (Worker thread)
  * to guarantee calculation parity across execution contexts.
- * 
- * Phase 4.1: Web Worker Migration
  */
-export const MATH_CONFIG = {
-    number: 'BigNumber',
-    precision: 64,
-} as const;
+export const SUPPORTED_PRECISIONS = [16, 32, 64] as const;
+export type MathPrecision = (typeof SUPPORTED_PRECISIONS)[number];
 
-export type MathConfig = typeof MATH_CONFIG;
+export const getMathConfig = (precision: MathPrecision = 64) => ({
+    number: 'BigNumber' as const,
+    precision: precision,
+});
+
+export type MathConfig = ReturnType<typeof getMathConfig>;
+
+// Legacy export for initial sync before settings are fully loaded
+export const MATH_CONFIG = getMathConfig(64);
