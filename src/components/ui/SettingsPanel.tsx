@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, FileJson, Download, FolderOpen } from 'lucide-react';
+import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, Upload, Download, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
 
@@ -11,8 +11,8 @@ interface SettingsPanelProps {
     setShowGrid: (visible: boolean) => void;
     showDebug: boolean;
     setShowDebug: (visible: boolean) => void;
-    showInspector: boolean;
-    setShowInspector: (visible: boolean) => void;
+    showNPanel: boolean;
+    setShowNPanel: (visible: boolean) => void;
     edgeType: string;
     setEdgeType: (type: string) => void;
     layoutAlgorithm: LayoutAlgorithm;
@@ -30,13 +30,12 @@ import { SUPPORTED_PRECISIONS } from '../../engine/mathConfig';
 
 import { GraphImportModal } from './GraphImportModal';
 import { GraphExportModal } from './GraphExportModal';
-import { LatexImportModal } from './LatexImportModal';
 
 export function SettingsPanel({
     isSnapping, setSnapping,
     showGrid, setShowGrid,
     showDebug, setShowDebug,
-    showInspector, setShowInspector,
+    showNPanel, setShowNPanel,
     edgeType, setEdgeType,
     layoutAlgorithm, setLayoutAlgorithm,
     layoutDirection, setLayoutDirection,
@@ -48,7 +47,6 @@ export function SettingsPanel({
     const [isOpen, setIsOpen] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
-    const [showLatexModal, setShowLatexModal] = useState(false);
 
     return (
         <div className="absolute top-4 right-4 z-50 flex flex-col items-end gap-2">
@@ -186,12 +184,12 @@ export function SettingsPanel({
 
                     <div className="h-px bg-zinc-800 my-1" />
 
-                    {/* Inspector */}
+                    {/* N Panel */}
                     <ToggleRow
-                        label="Inspector Panel"
+                        label="N Panel"
                         icon={<PanelRight className="w-4 h-4" />}
-                        active={showInspector}
-                        onClick={() => setShowInspector(!showInspector)}
+                        active={showNPanel}
+                        onClick={() => setShowNPanel(!showNPanel)}
                     />
 
                     {/* Debug Log */}
@@ -204,7 +202,7 @@ export function SettingsPanel({
 
                     <div className="h-px bg-zinc-800 my-1" />
 
-                    {/* Import Graph */}
+                    {/* Import */}
                     <button
                         onClick={() => {
                             setIsOpen(false);
@@ -213,26 +211,12 @@ export function SettingsPanel({
                         className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
                     >
                         <div className="flex items-center gap-3">
-                            <span className="text-zinc-500"><FileJson className="w-4 h-4" /></span>
-                            Import JSON
+                            <span className="text-zinc-500"><Upload className="w-4 h-4" /></span>
+                            Import
                         </div>
                     </button>
 
-                    {/* Import LaTeX */}
-                    <button
-                        onClick={() => {
-                            setIsOpen(false);
-                            setShowLatexModal(true);
-                        }}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
-                    >
-                        <div className="flex items-center gap-3">
-                            <span className="text-zinc-500 font-serif italic text-xs border border-zinc-600 rounded px-0.5">Tx</span>
-                            Import LaTeX
-                        </div>
-                    </button>
-
-                    {/* Export Graph */}
+                    {/* Export */}
                     <button
                         onClick={() => {
                             setIsOpen(false);
@@ -242,7 +226,7 @@ export function SettingsPanel({
                     >
                         <div className="flex items-center gap-3">
                             <span className="text-zinc-500"><Download className="w-4 h-4" /></span>
-                            Export Graph
+                            Export
                         </div>
                     </button>
 
@@ -275,7 +259,6 @@ export function SettingsPanel({
 
             <GraphImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
             <GraphExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
-            <LatexImportModal isOpen={showLatexModal} onClose={() => setShowLatexModal(false)} />
         </div>
     );
 }

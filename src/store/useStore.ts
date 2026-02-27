@@ -7,7 +7,7 @@ interface AppState {
     // UI Toggles
     showPalette: boolean;
     palettePosition: { x: number; y: number };
-    showInspector: boolean;
+    showNPanel: boolean;
 
     // Settings
     manualSnap: boolean;
@@ -28,7 +28,7 @@ interface AppState {
     logAction: (action: string) => void;
     setShowPalette: (show: boolean | ((prev: boolean) => boolean)) => void;
     setPalettePosition: (pos: { x: number; y: number } | ((prev: { x: number; y: number }) => { x: number; y: number })) => void;
-    setShowInspector: (show: boolean | ((prev: boolean) => boolean)) => void;
+    setShowNPanel: (show: boolean | ((prev: boolean) => boolean)) => void;
 
     setManualSnap: (snap: boolean | ((prev: boolean) => boolean)) => void;
     setShowGrid: (show: boolean | ((prev: boolean) => boolean)) => void;
@@ -49,7 +49,7 @@ export const useAppStore = create<AppState>()(
                 // Defaults
                 showPalette: false,
                 palettePosition: { x: 0, y: 0 },
-                showInspector: false,
+                showNPanel: false,
 
                 manualSnap: false,
                 showGrid: true,
@@ -67,7 +67,7 @@ export const useAppStore = create<AppState>()(
                 logAction: (action) => set((s) => ({ actionLog: [action, ...s.actionLog].slice(0, 20) })),
                 setShowPalette: (show) => set((s) => ({ showPalette: typeof show === 'function' ? show(s.showPalette) : show })),
                 setPalettePosition: (pos) => set((s) => ({ palettePosition: typeof pos === 'function' ? pos(s.palettePosition) : pos })),
-                setShowInspector: (show) => set((s) => ({ showInspector: typeof show === 'function' ? show(s.showInspector) : show })),
+                setShowNPanel: (show) => set((s) => ({ showNPanel: typeof show === 'function' ? show(s.showNPanel) : show })),
 
                 setManualSnap: (snap) => set((s) => ({ manualSnap: typeof snap === 'function' ? snap(s.manualSnap) : snap })),
                 setShowGrid: (show) => set((s) => ({ showGrid: typeof show === 'function' ? show(s.showGrid) : show })),
@@ -90,7 +90,7 @@ export const useAppStore = create<AppState>()(
                     layoutAlgorithm: state.layoutAlgorithm,
                     layoutDirection: state.layoutDirection,
                     panOnScroll: state.panOnScroll,
-                    showInspector: state.showInspector,
+                    showNPanel: state.showNPanel,
                     mathPrecision: state.mathPrecision,
                 }),
             }

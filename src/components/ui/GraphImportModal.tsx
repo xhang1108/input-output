@@ -1,29 +1,35 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Upload, FileJson, Check, Copy } from 'lucide-react';
+import { X, Upload, Check, Copy, Calculator as CalcIcon, FileText } from 'lucide-react';
 import { Brain } from '../../engine/Brain';
+import { parseLatexToGraph } from '../../utils/latex/latexToGraph';
+import { toast } from 'sonner';
 
-interface JsonImportModalProps {
+interface GraphImportModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
-export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
-    const [jsonInput, setJsonInput] = useState('');
+type ImportMode = 'CGL' | 'LaTeX';
+
+export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
+    const [mode, setMode] = useState<ImportMode>('CGL');
+    const [input, setInput] = useState('');
     const [shouldClear, setShouldClear] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [diagnostics, setDiagnostics] = useState<string[]>([]);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [success, setSuccess] = useState(false);
     const [copied, setCopied] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Auto-focus on open
+    // Auto-focus on open or mode switch
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => textareaRef.current?.focus(), 50);
         }
-    }, [isOpen]);
+    }, [isOpen, mode]);
 
     if (!isOpen) return null;
 
@@ -31,76 +37,69 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
         setError(null);
         setDiagnostics([]);
         setSuccess(false);
+        setIsProcessing(true);
 
         try {
-            if (!jsonInput.trim()) {
-                throw new Error("Please enter JSON or CGL data.");
+            if (!input.trim()) {
+                throw new Error(`Please enter ${mode} data.`);
             }
 
             let graphData: import('../../engine/types').InjectableGraph = { nodes: [], edges: [] };
-
-            // Auto-detect format
-            const trimmed = jsonInput.trim();
-            let isJson = false;
-
-            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-                try {
-                    graphData = JSON.parse(jsonInput);
-                    isJson = true;
-                } catch (e) {
-                    // Failed to parse as JSON, might be a CGL string that starts with '['
-                    isJson = false;
-                }
-            }
-
             let parseDiagnostics: string[] = [];
-            if (isJson) {
-                // JSON
-                if (!graphData!.nodes || !Array.isArray(graphData!.nodes)) {
-                    throw new Error("Invalid JSON format: 'nodes' array is required.");
-                }
-            } else {
-                // CGL
-                // Dynamic import to avoid circular dependency issues if any,
-                // though standard import is likely fine.
-                // But for now let's just use the strict import at top of file.
-                // We need to add the import first.
-                // Let's assume we added "import { GraphCodec } ..."
+
+            if (mode === 'CGL') {
+                // CGL / JSON Hybrid (CGL parser handles both)
                 const { GraphCodec } = await import('../../engine/GraphCodec');
-                const result = GraphCodec.parse(jsonInput);
+                const result = GraphCodec.parse(input);
                 graphData = result.graph;
                 parseDiagnostics = result.diagnostics;
                 setDiagnostics(parseDiagnostics);
-
-                if (graphData.nodes.length === 0 && graphData.edges.length === 0 && parseDiagnostics.length === 0) {
-                    console.warn('[JsonImport] Warning: Parsed graph is empty');
+            } else {
+                // LaTeX Mode
+                const transactions = parseLatexToGraph(input, { x: 0, y: 0 });
+                if (transactions.length === 0) {
+                    throw new Error("Failed to parse LaTeX. Please check syntax.");
                 }
+
+                // LaTeX parser returns transactions; for simpler injection we rely on Brain applying them
+                // but since GraphImportModal usually uses injectNodes, we'll convert transactions back or apply directly.
+                // Actually, Brain.applyTransaction is designed for live use. 
+                // Let's stick to the Brain context for LaTeX as it's more robust there.
+                const brain = Brain.getInstance();
+                if (shouldClear) brain.clearAll();
+
+                transactions.forEach(tx => brain.applyTransaction(tx, true, true));
+
+                setSuccess(true);
+                toast.success('LaTeX imported successfully!');
+                setTimeout(() => {
+                    onClose();
+                    setInput('');
+                    setSuccess(false);
+                }, 1000);
+                return;
             }
 
-            console.log('[JsonImport] Injecting Graph:', {
-                nodes: graphData.nodes?.length,
-                edges: graphData.edges?.length,
-                nodeIds: graphData.nodes?.map((n) => n.id),
-                edgeIds: graphData.edges?.map((e) => e.targetHandle) // Check target handles
-            });
-
             const injectDiagnostics = await Brain.getInstance().injectNodes(graphData, shouldClear);
-
             setDiagnostics(prev => [...prev, ...injectDiagnostics]);
 
             setSuccess(true);
+            toast.success(`${mode} imported successfully!`);
+
             setTimeout(() => {
                 setSuccess(false);
-                // Only auto-close if there are no warnings to read
                 if (graphData.nodes.length > 0 && parseDiagnostics.length === 0 && injectDiagnostics.length === 0) {
                     onClose();
-                    setJsonInput('');
+                    setInput('');
                 }
             }, 1000);
 
         } catch (err: unknown) {
             console.error("Import failed:", err);
             setError((err as Error).message || "Failed to parse or inject data.");
+            toast.error("Import failed");
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -123,9 +122,9 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
             >
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
-                    <div className="flex items-center gap-2 text-zinc-100 font-medium">
-                        <FileJson className="w-4 h-4 text-(--color-unit)" />
-                        Import Graph
+                    <div className="flex items-center gap-2 text-zinc-100 font-medium text-sm">
+                        <Upload className="w-4 h-4 text-(--color-unit)" />
+                        Import
                     </div>
                     <button
                         onClick={onClose}
@@ -135,16 +134,42 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                     </button>
                 </div>
 
+                {/* Mode Selector Tabs */}
+                <div className="flex p-1 bg-zinc-950 border-b border-zinc-800">
+                    {(['CGL', 'LaTeX'] as ImportMode[]).map(m => (
+                        <button
+                            key={m}
+                            onClick={() => {
+                                setMode(m);
+                                setInput('');
+                                setError(null);
+                                setDiagnostics([]);
+                            }}
+                            className={`
+                                flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-bold transition-all
+                                ${mode === m
+                                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'}
+                            `}
+                        >
+                            {m === 'CGL' ? <FileText className="w-3.5 h-3.5" /> : <CalcIcon className="w-3.5 h-3.5" />}
+                            {m}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Body */}
                 <div className="p-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                        <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">JSON Data</label>
+                        <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                            {mode === 'CGL' ? 'CGL Script' : 'LaTeX Equation'}
+                        </label>
                         <textarea
                             ref={textareaRef}
                             className="w-full h-64 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs font-mono text-zinc-300 outline-none focus:border-zinc-600 resize-none placeholder-zinc-700"
-                            placeholder='{ "nodes": [...], "edges": [...] }'
-                            value={jsonInput}
-                            onChange={e => setJsonInput(e.target.value)}
+                            placeholder={mode === 'CGL' ? '# Node definitions...' : 'e.g. x^2 + 2x + 1'}
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
                             spellCheck={false}
                         />
                     </div>
@@ -154,23 +179,23 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                         <button
                             onClick={() => setShouldClear(!shouldClear)}
                             className={`
-                                flex items-center gap-2 px-2 py-1.5 rounded border text-xs font-medium transition-colors
+                                flex items-center gap-2 px-2 py-1.5 rounded border text-[10px] font-bold uppercase tracking-tight transition-colors
                                 ${shouldClear
                                     ? 'bg-red-900/20 border-red-800 text-red-300'
-                                    : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:border-zinc-600'}
+                                    : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-600'}
                             `}
                         >
-                            <div className={`w-3 h-3 rounded-sm border flex items-center justify-center ${shouldClear ? 'bg-red-500 border-red-500 text-white' : 'border-zinc-600'}`}>
+                            <div className={`w-3 h-3 rounded-sm border flex items-center justify-center ${shouldClear ? 'bg-red-500 border-red-500 text-white' : 'border-zinc-700'}`}>
                                 {shouldClear && <Check className="w-2.5 h-2.5" />}
                             </div>
-                            Clear existing canvas
+                            Clear canvas before import
                         </button>
                     </div>
 
                     {/* Status / Error */}
                     {error && (
                         <div className="text-xs text-red-400 bg-red-950/30 border border-red-900/50 p-2 rounded">
-                            Error: {error}
+                            {error}
                         </div>
                     )}
                     {success && (
@@ -183,22 +208,12 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
                     {diagnostics.length > 0 && (
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center justify-between px-1">
-                                <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Import Warnings</div>
+                                <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Warnings</div>
                                 <button
                                     onClick={handleCopyDiagnostics}
                                     className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 hover:text-amber-500 transition-colors group"
                                 >
-                                    {copied ? (
-                                        <>
-                                            <Check className="w-2.5 h-2.5" />
-                                            <span>COPIED!</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy className="w-2.5 h-2.5 group-hover:scale-110 transition-transform" />
-                                            <span>COPY</span>
-                                        </>
-                                    )}
+                                    {copied ? 'COPIED!' : 'COPY'}
                                 </button>
                             </div>
                             <div className="max-h-32 overflow-y-auto bg-amber-950/20 border border-amber-900/30 rounded p-2 flex flex-col gap-1.5 custom-scrollbar">
@@ -215,23 +230,24 @@ export function GraphImportModal({ isOpen, onClose }: JsonImportModalProps) {
 
                 {/* Footer */}
                 <div className="p-3 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-2">
-                    <div className="flex gap-2">
-
-                        <button
-                            onClick={onClose}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleImport}
-                            disabled={!jsonInput.trim()}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20"
-                        >
-                            <Upload className="w-3 h-3" />
-                            Import
-                        </button>
-                    </div>
+                    <button
+                        onClick={onClose}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleImport}
+                        disabled={!input.trim() || isProcessing}
+                        className="px-4 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                    >
+                        {isProcessing ? 'Processing...' : (
+                            <>
+                                <Upload className="w-3 h-3" />
+                                Import
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
         </div>

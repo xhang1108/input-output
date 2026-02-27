@@ -4,7 +4,7 @@ import { useStore, useReactFlow } from '@xyflow/react';
 import { useState, useEffect } from 'react';
 import { X, Cpu } from 'lucide-react';
 
-export function InspectorPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const { setNodes } = useReactFlow();
 
     // Get single selected node
@@ -86,7 +86,7 @@ export function InspectorPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
                 <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm">
                     <Cpu className="w-4 h-4" />
-                    INSPECTOR
+                    N PANEL
                 </div>
                 <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors">
                     <X className="w-4 h-4" />

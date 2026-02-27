@@ -30,7 +30,7 @@ import { useNodeSpawner } from '../hooks/useNodeSpawner';
 import { useProjectSave } from '../hooks/useProjectSave';
 import { CommandPalette } from './ui/CommandPalette';
 import { DebugOverlay } from './ui/DebugOverlay';
-import { InspectorPanel } from './ui/InspectorPanel';
+import { NPanel } from './ui/NPanel';
 import { SettingsPanel } from './ui/SettingsPanel';
 import { useBrainSync } from '../hooks/useBrainSync';
 import { ContextMenu } from './ui/ContextMenu';
@@ -61,7 +61,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     const {
         showPalette, setShowPalette,
         palettePosition, setPalettePosition,
-        showInspector, setShowInspector,
+        showNPanel, setShowNPanel,
         manualSnap, setManualSnap,
         showGrid, setShowGrid,
         showDebug, setShowDebug,
@@ -361,7 +361,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     logAction('Select All (A)');
                 }
             },
-            'n': (e) => { e.preventDefault(); setShowInspector((prev: boolean) => !prev); logAction('Toggle Inspector (N)'); },
+            'n': (e) => { e.preventDefault(); setShowNPanel((prev: boolean) => !prev); logAction('Toggle N Panel (N)'); },
             'm': () => {
                 const active = document.activeElement?.tagName;
                 if (active === 'INPUT' || active === 'TEXTAREA') return;
@@ -395,7 +395,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             'escape': () => {
                 cancelGrab();
                 setShowPalette(false);
-                setShowInspector(false);
+                setShowNPanel(false);
                 setNodes(nds => nds.map(n => ({ ...n, selected: false })));
                 logAction('Cancel/Deselect (Esc)');
             },
@@ -426,7 +426,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                 }
             },
         },
-        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowInspector, handleAutoLayout, handleTypeNum, transformBuffer, saveProject]
+        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, groupSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject]
     });
 
 
@@ -574,8 +574,8 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                         setShowGrid={setShowGrid}
                         showDebug={showDebug}
                         setShowDebug={setShowDebug}
-                        showInspector={showInspector}
-                        setShowInspector={setShowInspector}
+                        showNPanel={showNPanel}
+                        setShowNPanel={setShowNPanel}
                         edgeType={edgeType}
                         setEdgeType={setEdgeType}
                         layoutAlgorithm={layoutAlgorithm}
@@ -589,10 +589,10 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     />
 
 
-                    {/* Inspector Panel (N) */}
-                    <InspectorPanel
-                        isOpen={showInspector}
-                        onClose={() => setShowInspector(false)}
+                    {/* N Panel (N) */}
+                    <NPanel
+                        isOpen={showNPanel}
+                        onClose={() => setShowNPanel(false)}
                     />
 
                     {/* Context Menu */}

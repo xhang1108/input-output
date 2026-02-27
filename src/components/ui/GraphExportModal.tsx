@@ -47,9 +47,9 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
             >
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
-                    <div className="flex items-center gap-2 text-zinc-100 font-medium">
-                        <Download className="w-4 h-4 text-blue-400" />
-                        Export Graph
+                    <div className="flex items-center gap-2 text-zinc-100 font-medium text-sm">
+                        <Download className="w-4 h-4 text-(--color-unit)" />
+                        Export
                     </div>
                     <button
                         onClick={onClose}
@@ -63,22 +63,12 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
                 <div className="p-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">CGL Data (Calctopus Graph Language)</label>
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">CGL Script (Human-Readable)</label>
                             <button
                                 onClick={handleCopy}
                                 className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 hover:text-zinc-200 transition-colors group"
                             >
-                                {copied ? (
-                                    <>
-                                        <Check className="w-2.5 h-2.5 text-green-500" />
-                                        <span className="text-green-500">COPIED!</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Copy className="w-2.5 h-2.5 group-hover:scale-110 transition-transform" />
-                                        <span>COPY</span>
-                                    </>
-                                )}
+                                {copied ? 'COPIED!' : 'COPY'}
                             </button>
                         </div>
                         <textarea
@@ -89,8 +79,8 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
                         />
                     </div>
 
-                    <div className="text-[11px] text-zinc-500 leading-relaxed px-1">
-                        Exporting to <span className="text-blue-400 font-bold">CGL</span> format. This format is human-readable and optimized for sharing complex graphs.
+                    <div className="text-[10px] text-zinc-500 leading-relaxed px-1">
+                        Exporting to <span className="text-zinc-200 font-bold">Calctopus Graph Language</span>. This format is optimized for version control and sharing.
                     </div>
                 </div>
 

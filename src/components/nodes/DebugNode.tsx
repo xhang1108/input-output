@@ -64,7 +64,7 @@ export const DebugNode = memo((props: NodeProps) => {
             <div className="flex flex-col gap-2 p-2 min-w-[200px] max-w-[400px]">
                 <div className="flex justify-between items-center">
                     <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">
-                        Debug Inspector
+                        Debug NPanel
                     </div>
                     <button
                         onClick={() => navigator.clipboard.writeText(debugStr)}
