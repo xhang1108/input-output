@@ -89,11 +89,11 @@ export function MagneticEdge({
                 path={edgePath}
                 markerEnd={markerEnd}
                 style={{
-                    strokeWidth: selected ? 3 : 2,
-                    stroke: selected ? '#fff' : '#71717a',
+                    strokeWidth: data?.isHighlighted ? 4 : (selected ? 3 : 2),
+                    stroke: data?.isHighlighted ? '#3b82f6' : (selected ? '#fff' : '#71717a'),
                     ...style,
                 }}
-                className="react-flow__edge-path opacity-80"
+                className={`react-flow__edge-path opacity-80 ${data?.isHighlighted ? 'drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]' : ''}`}
             />
 
 

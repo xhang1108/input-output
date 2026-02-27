@@ -1,8 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Node, Edge } from '@xyflow/react';
-import { intersectsRect } from '../utils/geometry';
+import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 
@@ -30,6 +29,7 @@ export function useAutoInsert({
     logAction,
 }: UseAutoInsertProps) {
     const [highlightedEdgeId, setHighlightedEdgeId] = useState<string | null>(null);
+    const { flowToScreenPosition } = useReactFlow();
 
     const detectAutoInsert = useCallback(() => {
         if (mode !== 'GRABBING') return;
@@ -49,56 +49,69 @@ export function useAutoInsert({
             return;
         }
 
-        // 1. Get Node Center
+        // 1. Get Node Center and Bounds
         const w = node.measured?.width || 150;
         const h = node.measured?.height || 50;
+        const padding = 10; // Extra magnetic pull region
+        const left = node.position.x - padding;
+        const top = node.position.y - padding;
+        const right = node.position.x + w + padding;
+        const bottom = node.position.y + h + padding;
         const cx = node.position.x + w / 2;
         const cy = node.position.y + h / 2;
 
         let bestEdge: string | null = null;
-        const minInfo = { dist: Infinity };
+        let minCenterDist = Infinity;
 
-        // 2. Check Intersections
+        // 2. Check SVG Intersections natively
+        // Instead of sampling screen DOM pixels (which can be slow or miss parts of the node box),
+        // we directly sample points along the exact SVG vector paths of the edges. 
+        // Their transform local-space maps 1:1 with node.position!
         for (const edge of edges) {
-            const sourceNode = nodes.find(n => n.id === edge.source);
-            const targetNode = nodes.find(n => n.id === edge.target);
-            if (!sourceNode || !targetNode) continue;
+            if (edge.source === node.id || edge.target === node.id) continue;
 
-            if (sourceNode.id === targetNode.id) continue;
-            if (sourceNode.selected || targetNode.selected) continue;
+            const edgeContainer = document.querySelector(`[data-id="${edge.id}"]`);
+            if (!edgeContainer) continue;
 
-            const sx = sourceNode.position.x + (sourceNode.measured?.width || 150) / 2;
-            const sy = sourceNode.position.y + (sourceNode.measured?.height || 50) / 2;
-            const tx = targetNode.position.x + (targetNode.measured?.width || 150) / 2;
-            const ty = targetNode.position.y + (targetNode.measured?.height || 50) / 2;
+            const pathEl = edgeContainer.querySelector('path.react-flow__edge-interaction') as SVGPathElement ||
+                edgeContainer.querySelector('path.react-flow__edge-path') as SVGPathElement;
 
-            const l2 = Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2);
-            if (l2 === 0) continue;
+            if (!pathEl || typeof pathEl.getTotalLength !== 'function') continue;
 
-            let t = ((cx - sx) * (tx - sx) + (cy - sy) * (ty - sy)) / l2;
-            t = Math.max(0, Math.min(1, t));
-            const px = sx + t * (tx - sx);
-            const py = sy + t * (ty - sy);
-            const dist = Math.sqrt(Math.pow(cx - px, 2) + Math.pow(cy - py, 2));
+            try {
+                const totalLength = pathEl.getTotalLength();
+                if (totalLength === 0) continue;
 
-            // Check intersection (Segment vs Expanded Box)
-            const buffer = 2;
-            const hasIntersection = intersectsRect(
-                sx, sy, tx, ty,
-                node.position.x - buffer, node.position.y - buffer,
-                w + buffer * 2, h + buffer * 2
-            );
+                // Sample every 15 pixels along the curve path
+                const STEP = 15;
+                const steps = Math.ceil(totalLength / STEP);
 
-            if (hasIntersection && dist < minInfo.dist) {
-                minInfo.dist = dist;
-                bestEdge = edge.id;
+                let collided = false;
+                let closestDist = Infinity;
+
+                for (let i = 0; i <= steps; i++) {
+                    const point = pathEl.getPointAtLength(Math.min(i * STEP, totalLength));
+
+                    if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) {
+                        collided = true;
+                        const distToCenter = Math.hypot(point.x - cx, point.y - cy);
+                        if (distToCenter < closestDist) closestDist = distToCenter;
+                    }
+                }
+
+                if (collided && closestDist < minCenterDist) {
+                    minCenterDist = closestDist;
+                    bestEdge = edge.id;
+                }
+            } catch (err) {
+                // Ignore empty path errors
             }
         }
 
         if (bestEdge !== highlightedEdgeId) {
             setHighlightedEdgeId(bestEdge);
         }
-    }, [mode, nodes, edges, highlightedEdgeId]);
+    }, [mode, nodes, edges, highlightedEdgeId, flowToScreenPosition]);
 
     const performAutoInsert = useCallback(() => {
         if (highlightedEdgeId) {

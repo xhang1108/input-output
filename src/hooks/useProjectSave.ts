@@ -35,7 +35,6 @@ export function useProjectSave(projectId: string) {
 
     const saveProject = useCallback(() => {
         const brain = Brain.getInstance();
-        const viewport = getViewport();
         const settings = useAppStore.getState();
 
         const slotName = currentSlotIdRef.current
@@ -46,7 +45,6 @@ export function useProjectSave(projectId: string) {
             const id = SaveManager.save(
                 slotName,
                 brain,
-                viewport,
                 settings as unknown as Record<string, unknown>,
                 currentSlotIdRef.current ?? undefined
             );
@@ -55,7 +53,7 @@ export function useProjectSave(projectId: string) {
         } catch (e) {
             toast.error(String(e));
         }
-    }, [getViewport]);
+    }, []);
 
     const loadProject = useCallback((encoded: string) => {
         const data = Serializer.deserialize(encoded);
@@ -64,7 +62,7 @@ export function useProjectSave(projectId: string) {
             return;
         }
 
-        if (data.viewport) setViewport(data.viewport, { duration: 0 });
+        if ((data as any).viewport) setViewport((data as any).viewport, { duration: 0 });
         if (data.settings) restoreSettings(data.settings);
 
         if (data.graph) {
@@ -95,8 +93,8 @@ export function useProjectSave(projectId: string) {
                     const brain = Brain.getInstance();
                     brain.injectNodes(data.graph, true, true).then(() => {
                         // Set viewport AFTER nodes exist, instant (no animation)
-                        if (data.viewport) {
-                            setViewport(data.viewport, { duration: 0 });
+                        if ((data as any).viewport) {
+                            setViewport((data as any).viewport, { duration: 0 });
                         } else {
                             fitView({ duration: 0 });
                         }

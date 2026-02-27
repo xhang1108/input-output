@@ -52,7 +52,6 @@ export class SaveManager {
     static save(
         name: string,
         brain: Brain,
-        viewport: { x: number; y: number; zoom: number },
         settings: Record<string, unknown>,
         slotId?: string
     ): string {
@@ -64,7 +63,7 @@ export class SaveManager {
         }
 
         const id = slotId ?? nanoid(10);
-        const encoded = Serializer.serialize(brain, viewport, settings);
+        const encoded = Serializer.serialize(brain, settings);
 
         // Extract metadata from brain state
         const graph = brain.toInjectable();

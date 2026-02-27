@@ -5,7 +5,6 @@ import LZString from 'lz-string';
 export interface ProjectData {
     version: string;
     mathPrecision: number;
-    viewport: { x: number; y: number; zoom: number };
     settings: Record<string, unknown>;
     graph: InjectableGraph;
 }
@@ -14,18 +13,16 @@ export class Serializer {
     public static readonly VERSION = '1.0.0';
 
     /**
-     * Serializes the current graph, viewport, and settings into a compressed URL-safe string.
+     * Serializes the current graph and settings into a compressed URL-safe string.
      */
     public static serialize(
         brain: Brain,
-        viewport: { x: number; y: number; zoom: number },
         settings: Record<string, unknown>,
         mathPrecision: number = 64
     ): string {
         const data: ProjectData = {
             version: this.VERSION,
             mathPrecision,
-            viewport,
             settings: this.cleanSettings(settings),
             graph: brain.toInjectable()
         };
