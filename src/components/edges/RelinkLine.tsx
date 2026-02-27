@@ -1,6 +1,7 @@
 import { ConnectionLineComponentProps, useStore, Position, getBezierPath, getStraightPath, getSmoothStepPath, getSimpleBezierPath } from '@xyflow/react';
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useHandleMagnet } from '../../hooks/useHandleMagnet';
+import { getNearestHandle } from '../../utils/geometry';
 import { capsulePreviewState } from './capsulePreviewState';
 import { getHandleVariant, findNearestSlot, calculateSlotOffsetY } from '../../utils/handleUtils';
 
@@ -68,7 +69,11 @@ export const RelinkLine = ({
         const snappedNode = nodeLookup.get(snappedNodeId);
         const variant = getHandleVariant(snappedNode, snappedHandleId);
 
-        if (variant === 'capsule') {
+        // Find handle type from magnet results
+        const results = getNearestHandle(toX, toY, nodeLookup, 20);
+        const handleType = results?.type;
+
+        if (variant === 'capsule' && handleType === 'target') {
             const existingEdges = allEdges.filter(e => e.target === snappedNodeId && e.targetHandle === snappedHandleId);
             const total = existingEdges.length + 1;
 

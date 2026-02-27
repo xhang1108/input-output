@@ -5,6 +5,7 @@ import { X, Upload, Check, Copy, Calculator as CalcIcon, FileText } from 'lucide
 import { Brain } from '../../engine/Brain';
 import { parseLatexToGraph } from '../../utils/latex/latexToGraph';
 import { toast } from 'sonner';
+import { useMouth } from '../../hooks/useMouth';
 
 interface GraphImportModalProps {
     isOpen: boolean;
@@ -23,6 +24,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
     const [success, setSuccess] = useState(false);
     const [copied, setCopied] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const { consumeGraph } = useMouth();
 
     // Auto-focus on open or mode switch
     useEffect(() => {
@@ -40,55 +42,22 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
         setIsProcessing(true);
 
         try {
-            if (!input.trim()) {
-                throw new Error(`Please enter ${mode} data.`);
+            const result = await consumeGraph(input, mode, shouldClear);
+
+            if (!result.success) {
+                throw new Error(result.error || "Failed to parse or inject data.");
             }
 
-            let graphData: import('../../engine/types').InjectableGraph = { nodes: [], edges: [] };
-            let parseDiagnostics: string[] = [];
-
-            if (mode === 'CGL') {
-                // CGL / JSON Hybrid (CGL parser handles both)
-                const { GraphCodec } = await import('../../engine/GraphCodec');
-                const result = GraphCodec.parse(input);
-                graphData = result.graph;
-                parseDiagnostics = result.diagnostics;
-                setDiagnostics(parseDiagnostics);
-            } else {
-                // LaTeX Mode
-                const transactions = parseLatexToGraph(input, { x: 0, y: 0 });
-                if (transactions.length === 0) {
-                    throw new Error("Failed to parse LaTeX. Please check syntax.");
-                }
-
-                // LaTeX parser returns transactions; for simpler injection we rely on Brain applying them
-                // but since GraphImportModal usually uses injectNodes, we'll convert transactions back or apply directly.
-                // Actually, Brain.applyTransaction is designed for live use. 
-                // Let's stick to the Brain context for LaTeX as it's more robust there.
-                const brain = Brain.getInstance();
-                if (shouldClear) brain.clearAll();
-
-                transactions.forEach(tx => brain.applyTransaction(tx, true, true));
-
-                setSuccess(true);
-                toast.success('LaTeX imported successfully!');
-                setTimeout(() => {
-                    onClose();
-                    setInput('');
-                    setSuccess(false);
-                }, 1000);
-                return;
-            }
-
-            const injectDiagnostics = await Brain.getInstance().injectNodes(graphData, shouldClear);
-            setDiagnostics(prev => [...prev, ...injectDiagnostics]);
-
+            setDiagnostics(result.diagnostics || []);
             setSuccess(true);
             toast.success(`${mode} imported successfully!`);
 
             setTimeout(() => {
                 setSuccess(false);
-                if (graphData.nodes.length > 0 && parseDiagnostics.length === 0 && injectDiagnostics.length === 0) {
+                if (result.diagnostics && result.diagnostics.length === 0) {
+                    onClose();
+                    setInput('');
+                } else if (mode === 'LaTeX') {
                     onClose();
                     setInput('');
                 }

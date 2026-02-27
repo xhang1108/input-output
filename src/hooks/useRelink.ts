@@ -287,13 +287,7 @@ export function useRelink({
             if (inboundEdges.length > 0) {
                 // Determine if target handle is a capsule variant
                 const targetNode = Brain.getInstance().getNode(nodeId);
-                const targetDef = NODE_DEFINITIONS.find(d => d.id === targetNode?.type);
-                const staticHandleDef = targetDef?.handles.find(h => h.id === handleId);
-                const handlesRaw = targetNode?.data?.handles;
-                const dynamicHandleDef = Array.isArray(handlesRaw)
-                    ? handlesRaw.find((h: any) => h.id === handleId)
-                    : undefined;
-                const variant = dynamicHandleDef?.variant || staticHandleDef?.variant || 'single';
+                const variant = getHandleVariant(targetNode, handleId);
 
                 let edgeToDetach: Edge;
 

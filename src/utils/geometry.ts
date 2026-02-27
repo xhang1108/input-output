@@ -7,6 +7,7 @@ export interface SnapResult {
     distance: number;
     nodeId: string;
     handleId: string;
+    type: 'source' | 'target';
 }
 
 interface InternalHandle {
@@ -46,27 +47,33 @@ export function getNearestHandle(
         const handleBounds = (internals as Record<string, unknown>)?.handleBounds as { source?: InternalHandle[], target?: InternalHandle[] } | undefined;
         if (!handleBounds) continue;
 
-        const allHandles = [...(handleBounds.source || []), ...(handleBounds.target || [])];
+        const handleGroups = [
+            { type: 'source' as const, handles: handleBounds.source || [] },
+            { type: 'target' as const, handles: handleBounds.target || [] }
+        ];
 
-        for (const h of allHandles) {
-            // Handle Center in World Space
-            if (internals && internals.positionAbsolute) {
-                const pos = internals.positionAbsolute as { x: number, y: number };
-                const hCenterX = pos.x + h.x + h.width / 2;
-                const hCenterY = pos.y + h.y + h.height / 2;
+        for (const group of handleGroups) {
+            for (const h of group.handles) {
+                // Handle Center in World Space
+                if (internals && internals.positionAbsolute) {
+                    const pos = internals.positionAbsolute as { x: number, y: number };
+                    const hCenterX = pos.x + h.x + h.width / 2;
+                    const hCenterY = pos.y + h.y + h.height / 2;
 
-                const dist = getDistance(targetX, targetY, hCenterX, hCenterY);
+                    const dist = getDistance(targetX, targetY, hCenterX, hCenterY);
 
-                if (dist <= snapRadius && dist < minDistance) {
-                    minDistance = dist;
-                    result = {
-                        x: hCenterX,
-                        y: hCenterY,
-                        position: h.position,
-                        distance: dist,
-                        nodeId: id,
-                        handleId: h.id!
-                    };
+                    if (dist <= snapRadius && dist < minDistance) {
+                        minDistance = dist;
+                        result = {
+                            x: hCenterX,
+                            y: hCenterY,
+                            position: h.position,
+                            distance: dist,
+                            nodeId: id,
+                            handleId: h.id!,
+                            type: group.type
+                        };
+                    }
                 }
             }
         }

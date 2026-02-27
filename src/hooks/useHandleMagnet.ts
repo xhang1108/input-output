@@ -62,7 +62,11 @@ export function useHandleMagnet(targetX: number, targetY: number) {
         const snappedNode = nodeLookup.get(snappedNodeId);
         const variant = getHandleVariant(snappedNode, snappedHandleId);
 
-        if (variant === 'capsule') {
+        // Find the group type from result (if we just snapped) or lookup
+        const results = getNearestHandle(targetX, targetY, nodeLookup, 20);
+        const handleType = results?.type;
+
+        if (variant === 'capsule' && handleType === 'target') {
             // Keep X snapped to handle, but let Y follow the mouse
             effectiveY = targetY;
         }
