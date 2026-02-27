@@ -4,14 +4,12 @@ import { NodeProps, Position, useReactFlow } from '@xyflow/react';
 
 import { Brain } from '../../engine/Brain';
 import { AbacusRod } from './AbacusRod';
-import { useAbacusResize } from './hooks/useAbacusResize';
+import { ResizeHandle } from './ResizeHandle';
 
 export const AbacusNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
-    const { updateNodeData, setNodes, getNode } = useReactFlow();
+    const { updateNodeData, setNodes, getNode, getViewport } = useReactFlow();
     const containerRef = useRef<HTMLDivElement>(null);
-    // Store origin node X when resize starts, to compute position shift
-    const originNodeXRef = useRef<number>(0);
 
     // Custom handles: output value
     const handles = useMemo(() => [
@@ -29,42 +27,51 @@ export const AbacusNode = memo((props: NodeProps) => {
     // Dynamic Width Calculation
     const [localWidth, setLocalWidth] = useState<number | null>(null);
     const containerWidth = localWidth || (data.width as number) || (7 * 28 + 24);
-    const rodCount = Math.max(1, Math.floor((containerWidth - 24) / 28));
+    const rodCount = Math.max(7, Math.floor((containerWidth - 24) / 28));
 
-    // Custom Resize Logic (Left-side, extends left)
-    const onResizeCallback = useCallback((newWidth: number, deltaX: number) => {
-        setLocalWidth(newWidth);
-        updateNodeData(id, { width: newWidth });
-        // Shift node position: deltaX is negative when dragging left
+    // Custom Resize Logic (Left-side expansion)
+    const handleResizeLeft = useCallback(({ deltaX }: { deltaX: number }) => {
+        const { zoom } = getViewport();
+        const flowDeltaX = deltaX / zoom;
+
+        const MIN_WIDTH = 220; // 7 rods: 7*28 + 24
+        const nextWidth = Math.max(MIN_WIDTH, originPosRef.current.w - flowDeltaX);
+        const actualFlowDeltaX = originPosRef.current.w - nextWidth;
+
+        setLocalWidth(nextWidth);
+        updateNodeData(id, { width: nextWidth });
+
         setNodes(nodes => nodes.map(n => {
             if (n.id !== id) return n;
             return {
                 ...n,
-                position: { ...n.position, x: originNodeXRef.current + deltaX }
+                position: { ...n.position, x: originPosRef.current.x + actualFlowDeltaX }
             };
         }));
-    }, [id, updateNodeData, setNodes]);
+    }, [id, getViewport, updateNodeData, setNodes]);
 
-    const { handleResizeStart: rawResizeStart, isResizing } = useAbacusResize({
-        containerRef,
-        onResize: onResizeCallback
-    });
+    // Standard Resize Logic (Right-side expansion)
+    const handleResizeRight = useCallback(({ screenW }: { screenW: number }) => {
+        const { zoom } = getViewport();
+        const MIN_WIDTH = 220;
+        const nextWidth = Math.max(MIN_WIDTH, screenW / zoom);
+        setLocalWidth(nextWidth);
+        updateNodeData(id, { width: nextWidth });
+    }, [id, updateNodeData, getViewport]);
 
-    // Wrap handleResizeStart to capture node position at start
-    const handleResizeStart = useCallback((e: React.PointerEvent) => {
+    const handleResizeStart = useCallback(() => {
         const node = getNode(id);
         if (node) {
-            originNodeXRef.current = node.position.x;
+            originPosRef.current = {
+                x: node.position.x,
+                w: data.width as number || (7 * 28 + 24)
+            };
         }
-        rawResizeStart(e);
-    }, [id, getNode, rawResizeStart]);
+    }, [id, getNode, data.width]);
 
-    // Reset local width when resizing stops
-    useEffect(() => {
-        if (!isResizing) {
-            setLocalWidth(null);
-        }
-    }, [isResizing]);
+    const handleResizeEnd = useCallback(() => {
+        setLocalWidth(null);
+    }, []);
 
     // Adjust digits array when rodCount changes
     useEffect(() => {
@@ -150,24 +157,24 @@ export const AbacusNode = memo((props: NodeProps) => {
                     </div>
                 </div>
 
-                {/* Custom Resize Handle (Bottom Left) */}
-                <div
-                    className={`absolute bottom-0 left-0 w-6 h-6 cursor-sw-resize 
-                              flex items-end justify-start p-1 z-20 
-                              text-zinc-500 hover:text-orange-400 transition-colors
-                              ${isResizing ? 'text-orange-500' : 'opacity-0 group-hover:opacity-100'}`}
-                    onPointerDown={handleResizeStart}
-                >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="-scale-x-100">
-                        <path d="M22 22L12 12" />
-                        <path d="M16 22L22 16" />
-                    </svg>
-                </div>
+                {/* Unified Resize Handle (Bottom Left) */}
+                <ResizeHandle
+                    targetRef={containerRef}
+                    position="bottom-left"
+                    onResize={handleResizeLeft}
+                    onResizeStart={handleResizeStart}
+                    onResizeEnd={handleResizeEnd}
+                    className="text-orange-500 hover:text-orange-400"
+                />
 
-                {/* Overlay while resizing to prevent interaction interference */}
-                {isResizing && (
-                    <div className="absolute inset-0 z-30 bg-transparent cursor-nwse-resize" />
-                )}
+                {/* Standard Resize Handle (Bottom Right) */}
+                <ResizeHandle
+                    targetRef={containerRef}
+                    position="bottom-right"
+                    onResize={handleResizeRight}
+                    onResizeEnd={handleResizeEnd}
+                    className="text-zinc-600 hover:text-orange-400"
+                />
             </div>
         </BaseNode>
     );

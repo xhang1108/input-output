@@ -34,10 +34,10 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     // Find definition for fallback handles
     const definition = NODE_DEFINITIONS.find((d) => d.id === type);
 
-    // Sync edges when handles change (Dynamic Layout)
+    // Sync edges when handles or dimensions change (Dynamic Layout)
     useEffect(() => {
         updateNodeInternals(id);
-    }, [id, data.handles, updateNodeInternals]);
+    }, [id, data.handles, data.width, updateNodeInternals]);
 
     useEffect(() => {
         if (isRenaming && inputRef.current) {

@@ -3,7 +3,7 @@ import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import * as math from 'mathjs';
 import { useNodeDebounce } from './hooks/useNodeDebounce';
-import { useVisualGridResize } from './hooks/useVisualGridResize';
+import { ResizeHandle } from './ResizeHandle';
 
 /**
  * 🧱 MatrixInputNode (IO-08)
@@ -95,50 +95,6 @@ export const MatrixInputNode = memo((props: NodeProps) => {
         setGrid(newGrid);
     };
 
-    // Resize Logic
-    const { handleResizeStart, isResizing } = useVisualGridResize({
-        gridRef,
-        rows,
-        cols,
-        onResize: (newRows, newCols) => {
-            setGrid(currentGrid => {
-                const currentRows = currentGrid.length;
-                const currentCols = currentGrid[0]?.length || 1;
-
-                if (newRows === currentRows && newCols === currentCols) return currentGrid;
-
-                let nextGrid = [...currentGrid];
-
-                // 1. Adjust Rows
-                if (newRows > currentRows) {
-                    const rowsToAdd = newRows - currentRows;
-                    const newRowsArr = Array(rowsToAdd).fill(0).map(() => Array(currentCols).fill(0));
-                    nextGrid = [...nextGrid, ...newRowsArr];
-                } else if (newRows < currentRows) {
-                    nextGrid = nextGrid.slice(0, newRows);
-                }
-
-                // 2. Adjust Cols (for every row)
-                if (newCols !== currentCols) {
-                    nextGrid = nextGrid.map(row => {
-                        if (newCols > row.length) {
-                            const colsToAdd = newCols - row.length;
-                            return [...row, ...Array(colsToAdd).fill(0)];
-                        } else if (newCols < row.length) {
-                            return row.slice(0, newCols);
-                        }
-                        return row;
-                    });
-                }
-
-                // Update local dimension state
-                setRows(nextGrid.length);
-                setCols(nextGrid[0]?.length || 1);
-
-                return nextGrid;
-            });
-        }
-    });
 
     // Define Output Handle
     const handles = [
@@ -154,7 +110,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
 
     return (
         <BaseNode {...props} data={nodeData}>
-            <div className="min-w-[160px] p-2 relative group">
+            <div className="min-w-fit p-2 relative group">
                 {/* Grid Container */}
                 <div className="flex flex-col gap-1 w-fit mx-auto relative" ref={gridRef}>
                     {grid.map((row, r) => (
@@ -195,23 +151,47 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                 </div>
 
                 {/* Resize Handle (Bottom Right) */}
-                <div
-                    className={`absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize 
-                              flex items-end justify-end p-1 z-20 
-                              text-zinc-500 hover:text-blue-400 transition-colors
-                              ${isResizing ? 'text-blue-500' : 'opacity-0 group-hover:opacity-100'}`}
-                    onPointerDown={handleResizeStart}
-                >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 22L12 12" />
-                        <path d="M16 22L22 16" />
-                    </svg>
-                </div>
+                <ResizeHandle
+                    targetRef={gridRef}
+                    position="bottom-right"
+                    onResize={({ screenW, screenH }) => {
+                        if (!gridRef.current) return;
+                        const rect = gridRef.current.getBoundingClientRect();
+                        const cellW = rect.width / cols;
+                        const cellH = rect.height / rows;
+                        const targetW = Math.max(60, screenW);
+                        const targetH = Math.max(40, screenH);
+                        const newCols = Math.max(1, Math.round(targetW / cellW));
+                        const newRows = Math.max(1, Math.round(targetH / cellH));
+                        if (newRows === rows && newCols === cols) return;
 
-                {/* Overlay while resizing to prevent input interference */}
-                {isResizing && (
-                    <div className="absolute inset-0 z-10 bg-transparent cursor-nwse-resize" />
-                )}
+                        setGrid(currentGrid => {
+                            const currentRows = currentGrid.length;
+                            const currentCols = currentGrid[0]?.length || 1;
+                            let nextGrid = [...currentGrid];
+                            if (newRows > currentRows) {
+                                const rowsToAdd = newRows - currentRows;
+                                const newRowsArr = Array(rowsToAdd).fill(0).map(() => Array(currentCols).fill(0));
+                                nextGrid = [...nextGrid, ...newRowsArr];
+                            } else if (newRows < currentRows) {
+                                nextGrid = nextGrid.slice(0, newRows);
+                            }
+                            if (newCols !== currentCols) {
+                                nextGrid = nextGrid.map(row => {
+                                    if (newCols > row.length) {
+                                        return [...row, ...Array(newCols - row.length).fill(0)];
+                                    } else if (newCols < row.length) {
+                                        return row.slice(0, newCols);
+                                    }
+                                    return row;
+                                });
+                            }
+                            setRows(nextGrid.length);
+                            setCols(nextGrid[0]?.length || 1);
+                            return nextGrid;
+                        });
+                    }}
+                />
             </div>
         </BaseNode>
     );
