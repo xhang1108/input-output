@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
 import { useReactFlow, Node } from '@xyflow/react';
-import { generateNodeId } from '../utils/idGenerator';
+import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { Brain } from '../engine/Brain';
 import { Transaction } from '../engine/types';
+import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { HandleConfig } from '../types/NodeDefinition';
 
 /**
  * useSelection
@@ -248,51 +250,65 @@ export function useSelection() {
 
     // --- Command: Swap Inputs (Alt + S) ---
     const swapConnections = useCallback(() => {
-        const selectedNodes = getNodes().filter(n => n.selected);
+        const nodes = getNodes();
+        const edges = getEdges();
+        const selectedNodes = nodes.filter(n => n.selected);
         if (selectedNodes.length !== 1) return;
 
-        const targetId = selectedNodes[0].id;
-        const edges = getEdges();
+        const node = selectedNodes[0];
+        const targetId = node.id;
 
-        const edgeA = edges.find(e => e.target === targetId && e.targetHandle === 'in_a');
-        const edgeB = edges.find(e => e.target === targetId && e.targetHandle === 'in_b');
+        // 1. Resolve handles (from data or definition)
+        const definition = NODE_DEFINITIONS.find(d => d.id === node.type);
+        const allHandles = (node.data.handles as HandleConfig[]) || definition?.handles || [];
+        const inputHandles = allHandles.filter(h => h.type === 'target');
 
-        if (edgeA && edgeB) {
-            const txs: Transaction[] = [
-                { type: 'DISCONNECT', payload: edgeA.id },
-                { type: 'DISCONNECT', payload: edgeB.id },
-                {
-                    type: 'CONNECT',
-                    payload: { ...edgeA, id: `edge-${Date.now()}-a`, source: edgeB.source, sourceHandle: edgeB.sourceHandle }
-                },
-                {
-                    type: 'CONNECT',
-                    payload: { ...edgeB, id: `edge-${Date.now()}-b`, source: edgeA.source, sourceHandle: edgeA.sourceHandle }
+        if (inputHandles.length < 2) return;
+
+        const handleIds = inputHandles.map(h => h.id);
+        const targetEdges = edges.filter(e => e.target === targetId && handleIds.includes(e.targetHandle || ''));
+
+        if (targetEdges.length === 0) return;
+
+        // 2. Build rotation mapping: Map current handle ID to next handle ID
+        const rotationMap: Record<string, string> = {};
+        handleIds.forEach((id, idx) => {
+            const nextIdx = (idx + 1) % handleIds.length;
+            rotationMap[id] = handleIds[nextIdx];
+        });
+
+        // 3. Generate transactions
+        const txs: Transaction[] = [];
+
+        // TO PREVENT COLLISIONS: We MUST DISCONNECT ALL first, THEN CONNECT ALL.
+        // In Brain.ts, applyTransaction('CONNECT') validates against occupied handles.
+        // If we connect to handle B before disconnecting the edge currently at B, the operation fails.
+
+        // Phase A: Disconnect everything
+        targetEdges.forEach((edge) => {
+            txs.push({ type: 'DISCONNECT', payload: edge.id });
+        });
+
+        // Phase B: Connect everything to new targets
+        targetEdges.forEach((edge) => {
+            const currentHandleId = edge.targetHandle || '';
+            const nextHandleId = rotationMap[currentHandleId];
+
+            if (!nextHandleId) return;
+
+            txs.push({
+                type: 'CONNECT',
+                payload: {
+                    ...edge,
+                    id: generateEdgeId(),
+                    targetHandle: nextHandleId
                 }
-            ];
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+            });
+        });
 
-        } else if (edgeA && !edgeB) {
-            const txs: Transaction[] = [
-                { type: 'DISCONNECT', payload: edgeA.id },
-                {
-                    type: 'CONNECT',
-                    payload: { ...edgeA, id: `edge-${Date.now()}-mov`, targetHandle: 'in_b' }
-                }
-            ];
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
-
-        } else if (!edgeA && edgeB) {
-            const txs: Transaction[] = [
-                { type: 'DISCONNECT', payload: edgeB.id },
-                {
-                    type: 'CONNECT',
-                    payload: { ...edgeB, id: `edge-${Date.now()}-mov`, targetHandle: 'in_a' }
-                }
-            ];
+        if (txs.length > 0) {
             Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
         }
-
     }, [getNodes, getEdges]);
 
     // --- Selection Helpers ---
