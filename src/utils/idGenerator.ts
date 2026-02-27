@@ -1,4 +1,11 @@
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
+
+// Custom alphabet: 23456789abcdefghjkmnpqrstuvwxyz
+// Exclusions:
+// - 0, O (Zero vs Uppercase O)
+// - 1, I, l (One vs Uppercase I vs Lowercase L)
+const alphabet = '23456789abcdefghjkmnpqrstuvwxyz';
+const nanoid = customAlphabet(alphabet, 8);
 
 /**
  * Generates a semantic ID for a node.
@@ -11,8 +18,8 @@ export function generateNodeId(type: string): string {
     // Clean type string (remove spaces, special chars if any) but keep it readable
     const cleanType = type.replace(/[^a-zA-Z0-9-]/g, '');
 
-    // Use first 8 chars of nanoid for ShortHash (collision resistant enough for client-side graph)
-    const shortHash = nanoid(8);
+    // Use custom nanoid for ShortHash (collision resistant enough for client-side graph)
+    const shortHash = nanoid();
 
     return `${cleanType}_${shortHash}`;
 }
@@ -21,5 +28,5 @@ export function generateNodeId(type: string): string {
  * Generates an ID for an edge.
  */
 export function generateEdgeId(): string {
-    return `e_${nanoid(8)}`;
+    return `e_${nanoid()}`;
 }
