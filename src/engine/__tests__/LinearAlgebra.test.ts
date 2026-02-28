@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from 'vitest';
-import { NodeRegistry } from '../NodeRegistry';
+import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { DataType } from '../../types/payload';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { CalctopusEngine } from '../CalctopusEngine';
@@ -7,6 +7,7 @@ import { CalctopusEngine } from '../CalctopusEngine';
 describe('Linear Algebra & Array Nodes', () => {
     beforeAll(() => {
         CalctopusEngine.getInstance();
+        initializeNodes();
     });
 
     test('AD-01 (MatrixTools): QR Decomposition Multi-Output', async () => {

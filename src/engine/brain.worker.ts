@@ -279,6 +279,7 @@ async function computeDirtyChainNodes(): Promise<Record<string, SerializedPayloa
             .filter(n => n.isInDirtyChain)
             .map(n => n.id);
 
+        console.log(`[Worker] Pass ${20 - maxPasses}, Dirty nodes:`, dirtyChainNodeIds);
         if (dirtyChainNodeIds.length === 0) break;
 
         for (const id of dirtyChainNodeIds) {
@@ -319,8 +320,7 @@ function respond(msg: WorkerResponse) {
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const msg = event.data;
-
-    // Defensive: discard out-of-order messages
+    console.log(`[Worker] Received: ${msg.type}`, msg);
     if ('msgId' in msg && msg.msgId <= lastProcessedMsgId) {
         return;
     }
@@ -330,6 +330,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
     switch (msg.type) {
         case 'INIT': {
+            NodeRegistry.initializeNodes();
             math = create(all, msg.config);
             respond({ type: 'READY' });
             break;

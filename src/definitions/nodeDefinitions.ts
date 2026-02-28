@@ -210,7 +210,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Input' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { precision: 0 }
+        defaultData: { precision: 0 },
+        aliases: ['ceil', 'floor', 'trunc']
     },
     {
         id: 'MA-12',
@@ -234,7 +235,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'base', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Base' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'LN' }
+        defaultData: { op: 'LN' },
+        aliases: ['ln', 'log10', 'log2', 'log']
     },
 
     // ─── Number Theory ──────────────────────────────────────────
@@ -247,7 +249,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'B' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'GCD' }
+        defaultData: { op: 'GCD' },
+        aliases: ['gcd', 'lcm', 'mod', 'prime', 'modulo']
     },
     {
         id: 'MA-15',
@@ -270,7 +273,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
         ],
         defaultData: { op: 'INV' },
-        opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN']
+        opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN'],
+        aliases: ['inv', 'det', 'transpose', 'trace', 'qr', 'lu', 'lup', 'eigen', 'svd']
     },
     {
         id: 'AD-02',
@@ -282,7 +286,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'DOT' },
-        opTokens: ['DOT', 'CROSS']
+        opTokens: ['DOT', 'CROSS'],
+        aliases: ['dot', 'cross', 'norm', 'distance', 'dist']
     },
     {
         id: 'AD-03',
@@ -305,7 +310,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out_field', type: 'source', variant: 'single', dataType: 'matrix', label: 'Arrows' },
             { id: 'out_grad', type: 'source', variant: 'single', dataType: 'vector', label: 'Grad' }
         ],
-        defaultData: { mode: 'gradient', var1: 'x', var2: 'y', min: -5, max: 5, density: 10 }
+        defaultData: { mode: 'gradient', var1: 'x', var2: 'y', min: -5, max: 5, density: 10 },
+        aliases: ['grad', 'gradient', 'vector field']
     },
     {
         id: 'AD-07',
@@ -318,7 +324,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'abs', type: 'source', variant: 'single', dataType: 'scalar', label: 'Abs(r)' },
             { id: 'arg', type: 'source', variant: 'single', dataType: 'scalar', label: 'Arg(φ)' }
         ],
-        defaultData: { mode: 'separate' }
+        defaultData: { mode: 'separate' },
+        aliases: ['real', 'imaginary', 're', 'im', 'phase', 'abs', 'arg']
     },
     {
         id: 'AD-09',
@@ -331,7 +338,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'z', type: 'source', variant: 'single', dataType: 'scalar', label: 'Z' }
         ],
         defaultData: { mode: 'separate' },
-        opTokens: ['SEPARATE', 'COMBINE']
+        opTokens: ['SEPARATE', 'COMBINE'],
+        aliases: ['separate', 'combine', 'split']
     },
     {
         id: 'AD-10',
@@ -356,7 +364,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'expr', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f(x)' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic' }
         ],
-        defaultData: { variable: 'x', order: 1 }
+        defaultData: { variable: 'x', order: 1 },
+        aliases: ['d/dx', 'grad', 'nabla', 'curl', 'div', 'diff', 'derivative']
     },
     {
         id: 'AD-05',
@@ -366,7 +375,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'expr', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f(x)' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { variable: 'x', mode: 'indefinite', lower: '', upper: '' }
+        defaultData: { variable: 'x', mode: 'indefinite', lower: '', upper: '' },
+        aliases: ['int', 'integrate', 'integral']
     },
     {
         id: 'AD-06',
@@ -376,7 +386,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'Eq' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic' }
         ],
-        defaultData: { op: 'SOLVE' }
+        defaultData: { op: 'SOLVE' },
+        aliases: ['eqn', 'solve', 'equation', 'nerdamer']
     },
     {
         id: 'AD-11',
@@ -386,7 +397,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'expr', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f(x)' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { variable: 'x', approach: '0', direction: 'both' }
+        defaultData: { variable: 'x', approach: '0', direction: 'both' },
+        aliases: ['lim', 'limit']
     },
     {
         id: 'SY-04',
@@ -396,7 +408,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'expr', type: 'target', variant: 'single', dataType: 'symbolic', label: "f(t,y)" },
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
         ],
-        defaultData: { method: 'RK4', t0: 0, tEnd: 10, y0: 1, stepSize: 0.01 }
+        defaultData: { method: 'RK4', t0: 0, tEnd: 10, y0: 1, stepSize: 0.01 },
+        aliases: ['rk4', 'diffeq', 'differential equation']
     },
 
     // ─── Data & Array (DA Family) ───────────────────────────────

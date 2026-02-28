@@ -10,10 +10,10 @@ import { useAppStore } from '../store/useStore';
  * Decouples the low-level worker threading logic from the main Brain logic.
  */
 export class WorkerOrchestrator {
-    private workerProxy: any = null;
+    public workerProxy: any = null;
     private workerInitPromise: Promise<void> | null = null;
     private freshlyUpdatedNodeIds: Set<string> = new Set();
-    private useWorker = true;
+    public useWorker = true;
 
     constructor(
         private callbacks: {
@@ -36,22 +36,35 @@ export class WorkerOrchestrator {
 
     public async init() {
         if (typeof window === 'undefined') return;
-        try {
-            const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
-            this.workerProxy = new BrainWorkerProxy({
-                onResults: this.callbacks.onResults,
-                onError: (_epoch: number, error: string) => console.error('[WorkerOrchestrator] error:', error),
-                onSyncing: () => this.callbacks.emit('workerSyncing', null),
-                onReady: () => this.callbacks.emit('workerReady', null),
-            });
-            this.workerProxy.registerHealthRefs(
-                () => ({ nodeCount: 0, edgeCount: 0 }), // Base values for health check
-                () => this.callbacks.syncRequester()
-            );
-        } catch (error) {
-            console.warn('[WorkerOrchestrator] init failed, using fallback:', error);
-            this.useWorker = false;
-        }
+        if (this.workerProxy) return;
+        if (this.workerInitPromise) return this.workerInitPromise;
+
+        this.workerInitPromise = (async () => {
+            console.log('[WorkerOrchestrator] Initializing...');
+            try {
+                const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
+                console.log('[WorkerOrchestrator] BrainWorkerProxy imported');
+                this.workerProxy = new BrainWorkerProxy({
+                    onResults: this.callbacks.onResults,
+                    onError: (_epoch: number, error: string) => console.error('[WorkerOrchestrator] error:', error),
+                    onSyncing: () => this.callbacks.emit('workerSyncing', null),
+                    onReady: () => {
+                        console.log('[WorkerOrchestrator] Worker READY');
+                        this.callbacks.emit('workerReady', null);
+                    },
+                });
+                console.log('[WorkerOrchestrator] workerProxy created');
+                this.workerProxy.registerHealthRefs(
+                    () => ({ nodeCount: 0, edgeCount: 0 }), // Base values for health check
+                    () => this.callbacks.syncRequester()
+                );
+            } catch (error) {
+                console.error('[WorkerOrchestrator] init failed, using fallback:', error);
+                this.useWorker = false;
+            }
+        })();
+
+        return this.workerInitPromise;
     }
 
     public getProxy() { return this.workerProxy; }
@@ -60,8 +73,11 @@ export class WorkerOrchestrator {
     public clearFreshlyUpdated() { this.freshlyUpdatedNodeIds.clear(); }
     public getFreshlyUpdated() { return this.freshlyUpdatedNodeIds; }
 
-    public async syncAndEval(nodes: Map<string, NodeLogic>, edges: any[], adjacency: any) {
-        if (!this.workerProxy || !this.useWorker) return;
+    public async syncAndEval(nodes: Map<string, any>, edges: any[], adjacency: any) {
+        if (!this.workerProxy || !this.useWorker) {
+            console.warn('[WorkerOrchestrator] syncAndEval skipped: proxy exists?', !!this.workerProxy, 'useWorker:', this.useWorker);
+            return;
+        }
         const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
         const snapshot = BrainWorkerProxy.buildSnapshot(nodes, edges);
 
@@ -75,6 +91,8 @@ export class WorkerOrchestrator {
                 if (!dirtyChainNodeIds.includes(childId)) dirtyChainNodeIds.push(childId);
             }
         }
+
+        console.log(`[WorkerOrchestrator] Dispatching EVAL for nodes:`, dirtyChainNodeIds);
         this.clearFreshlyUpdated();
         this.workerProxy.syncAndEval(snapshot, dirtyChainNodeIds);
     }

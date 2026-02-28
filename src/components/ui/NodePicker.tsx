@@ -16,6 +16,7 @@ interface MenuItem {
     label: string;
     type: string;
     category: string;
+    aliases: string[];
     data: {
         handles?: Array<{ type: string }>;
         [key: string]: unknown;
@@ -29,6 +30,7 @@ function buildMenuItems() {
         items: items.map(def => ({
             label: def.label,
             type: def.id,
+            aliases: def.aliases || [],
             data: {
                 ...def.defaultData,
                 handles: def.handles,
@@ -68,8 +70,11 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
         }
 
         // Filter by Search Term
+        const searchLower = search.toLowerCase();
         return items.filter(item =>
-            item.label.toLowerCase().includes(search.toLowerCase())
+            item.label.toLowerCase().includes(searchLower) ||
+            item.type.toLowerCase().includes(searchLower) || // Include ID in search
+            item.aliases.some(alias => alias.toLowerCase().includes(searchLower))
         );
     }, [search, pendingConnection]);
 

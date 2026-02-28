@@ -56,4 +56,5 @@ export interface NodeDefinition {
     defaultData?: Record<string, unknown>; // Default data payload
     params?: NodeParameter[];
     opTokens?: string[];     // Used for implicit CGL operation mapping
+    aliases?: string[];      // Quick search terms for NodePicker (e.g. 'd/dx')
 }

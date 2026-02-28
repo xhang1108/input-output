@@ -1,6 +1,10 @@
-import { describe, test, expect } from 'vitest';
-import { NodeRegistry } from '../NodeRegistry';
+import { describe, test, expect, beforeAll } from 'vitest';
+import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { DataType } from '../../types/payload';
+
+beforeAll(() => {
+    initializeNodes();
+});
 
 describe('String Node (IO-04)', () => {
     test('Should output a string payload', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { NodeRegistry } from '../NodeRegistry';
+import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { CalctopusEngine } from '../CalctopusEngine';
 import { DataType, NodePayload } from '../../types/payload';
@@ -7,6 +7,7 @@ import { DataType, NodePayload } from '../../types/payload';
 describe('Logic Switch & Split (MA-04/13)', () => {
     beforeAll(() => {
         CalctopusEngine.getInstance();
+        initializeNodes();
     });
 
     const evaluate = async (type: string, inputs: Record<string, NodePayload>) => {

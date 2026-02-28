@@ -13,12 +13,24 @@ import { RuntimeGuard } from './calculus/RuntimeGuard';
  * Supports auto-propagation of symbolic ASTs for formula generation.
  */
 
-type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => Promise<NodePayload> | NodePayload;
-type NodeSymbolizer = (node: NodeLogic, inputs: Record<string, ASTNode>) => ASTNode;
+export type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => Promise<NodePayload> | NodePayload;
+export type NodeSymbolizer = (node: NodeLogic, inputs: Record<string, ASTNode>) => ASTNode;
 
 export class NodeRegistry {
     private static evaluators: Map<string, NodeEvaluator> = new Map();
     private static symbolizers: Map<string, NodeSymbolizer> = new Map();
+
+    public static registerMany(registrations: { id: string; evaluator: NodeEvaluator; symbolizer: NodeSymbolizer }[]) {
+        registrations.forEach(r => this.register(r.id, r.evaluator, r.symbolizer));
+    }
+
+    /**
+     * 💡 initializeNodes
+     * Static access to the global initialization hub.
+     */
+    static initializeNodes() {
+        initNodes();
+    }
 
     public static register(type: string, evaluator: NodeEvaluator, symbolizer?: NodeSymbolizer) {
         this.evaluators.set(type, evaluator);
@@ -37,7 +49,11 @@ export class NodeRegistry {
             return node.value || PayloadUtils.createScalar(0);
         }
 
-        const evaluator = this.evaluators.get(node.type || 'baseNode');
+        const type = node.type || 'baseNode';
+        const evaluator = this.evaluators.get(type);
+        if (!evaluator) {
+            console.warn(`[NodeRegistry] No evaluator for type: ${type}. Registered keys:`, Array.from(this.evaluators.keys()));
+        }
         const result = evaluator ? await evaluator(node, inputs) : node.value;
 
         if (!result) return node.value || PayloadUtils.createScalar(0);
@@ -114,9 +130,9 @@ export class NodeRegistry {
     }
 }
 
-import { initializeNodes } from './nodes/nodeIndex';
+import { initializeNodes as initNodes } from './nodes/nodeIndex';
 
-// Slim the registry by initializing all modular nodes
-initializeNodes();
+// Export the initialization function from nodeIndex
+export { initNodes as initializeNodes };
 
 // IO-11: Result (Display)

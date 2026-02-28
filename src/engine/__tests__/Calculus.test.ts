@@ -1,5 +1,5 @@
-import { describe, test, expect } from 'vitest';
-import { NodeRegistry } from '../NodeRegistry';
+import { describe, test, expect, beforeAll } from 'vitest';
+import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { DataType } from '../../types/payload';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { NerdamerService } from '../calculus/NerdamerService';
@@ -11,6 +11,10 @@ import { RuntimeGuard } from '../calculus/RuntimeGuard';
  * Tests core calculus nodes directly via NodeRegistry.evaluate(),
  * following the same pattern as existing tests (StringNode.test.ts, etc.).
  */
+
+beforeAll(() => {
+    initializeNodes();
+});
 
 // ─── AD-04: Derivative ─────────────────────────────────────────
 

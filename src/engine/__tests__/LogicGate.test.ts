@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { NodeRegistry } from '../NodeRegistry';
+import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { CalctopusEngine } from '../CalctopusEngine';
 import { DataType } from '../../types/payload';
@@ -8,6 +8,7 @@ describe('Logic Gate (MA-05)', () => {
     beforeAll(() => {
         // Ensure CalctopusEngine is initialized
         CalctopusEngine.getInstance();
+        initializeNodes();
     });
 
     const evaluate = async (op: string, a: string | number | boolean, b: string | number | boolean, aUnit?: string, bUnit?: string) => {

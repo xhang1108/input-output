@@ -11,6 +11,7 @@ import type { IncrementalPatch } from './SerializableGraph';
 import { useAppStore } from '../store/useStore';
 import { TopologyManager } from './TopologyManager';
 import { WorkerOrchestrator } from './WorkerOrchestrator';
+import { TransactionManager } from './TransactionManager';
 
 export class Brain {
     private static instance: Brain;
@@ -18,6 +19,7 @@ export class Brain {
 
     private topology: TopologyManager;
     private worker: WorkerOrchestrator;
+    private transactionManager: TransactionManager;
 
     /** Tracks pending topology changes for incremental patches */
     private pendingPatch: IncrementalPatch = { dirtyChainNodeIds: [] };
@@ -27,6 +29,9 @@ export class Brain {
             nodes: new Map(),
             edges: [],
         };
+
+        // Ensure nodes are registered
+        NodeRegistry.initializeNodes();
 
         this.topology = new TopologyManager();
         this.worker = new WorkerOrchestrator({
@@ -38,6 +43,8 @@ export class Brain {
             syncRequester: () => this.syncWorker(),
             emit: (ev, p) => this.emit(ev, p)
         });
+
+        this.transactionManager = new TransactionManager();
 
         // Worker is lazily initialized on first heartbeat that needs it
         this.startHeartbeat();
@@ -137,6 +144,7 @@ export class Brain {
                 this.isRecalculating = true;
 
                 if (this.worker.isEnabled()) {
+                    await this.worker.init(); // Ensure worker is ready
                     await this.worker.syncAndEval(this.state.nodes, this.state.edges, this.topology);
                 } else {
                     try {
@@ -209,7 +217,7 @@ export class Brain {
             edges: [],
         };
         this.topology.clear();
-        this.history.clear();
+        this.transactionManager.clearHistory();
         this.pendingPatch = { dirtyChainNodeIds: [] };
         if (this.worker.isEnabled()) {
             this.worker.getProxy()?.clearState();
@@ -346,6 +354,24 @@ export class Brain {
      */
     private async recalculateDirtyChain(): Promise<Map<string, NodePayload>> {
         const patches = new Map<string, NodePayload>();
+        console.log('[Brain] recalculateDirtyChain, useWorker:', this.worker.useWorker, 'hasProxy:', !!this.worker.workerProxy);
+
+        if (this.worker.useWorker && this.worker.workerProxy) {
+            console.log('[Brain] Requesting worker EVAL');
+            const workerPatches = await this.worker.workerProxy.evaluate();
+            // Assuming workerPatches is already a Map<string, NodePayload> or similar
+            // If it's an array of objects, you might need to convert it.
+            // For now, let's assume it's directly usable to populate `patches`.
+            workerPatches.forEach((payload: NodePayload, id: string) => {
+                patches.set(id, payload);
+                const node = this.state.nodes.get(id);
+                if (node) {
+                    node.value = payload;
+                    node.isInDirtyChain = false;
+                }
+            });
+            return patches; // Exit early if worker handles evaluation
+        }
 
         const dirtyChainNodeIds = Array.from(this.state.nodes.values())
             .filter(n => n.isInDirtyChain)
@@ -445,122 +471,48 @@ export class Brain {
 
 
     // --- History Management (Rule #1) ---
-    private history: HistoryManager = new HistoryManager();
-
     public undo() {
-        const entry = this.history.undo();
-        if (entry) {
-            this.log(`Undoing: ${entry.undo.type}`);
-            this.applyTransaction(entry.undo, false, true);
-            this.emit('graphChanged', null);
-        }
+        this.transactionManager.undo((tx, record, silent) => this.applyTransaction(tx, record, silent));
+        this.emit('graphChanged', null);
     }
 
     public redo() {
-        const entry = this.history.redo();
-        if (entry) {
-            this.log(`Redoing: ${entry.do.type}`);
-            this.applyTransaction(entry.do, false, true);
-            this.emit('graphChanged', null);
-        }
+        this.transactionManager.redo((tx, record, silent) => this.applyTransaction(tx, record, silent));
+        this.emit('graphChanged', null);
     }
 
     // --- Transaction Handling ---
 
     public applyTransaction(tx: Transaction, record: boolean = true, silent: boolean = false): { success: boolean; reason?: string } {
         if (record) {
-            const inverseTx = this.createInverseTransaction(tx);
-            if (inverseTx) {
-                this.history.push({ do: tx, undo: inverseTx });
-            }
+            const inverseTx = this.transactionManager.createInverseTransaction(tx, this.state);
+            this.transactionManager.recordTransaction(tx, inverseTx);
         }
 
-        switch (tx.type) {
+        const res = this.transactionManager.applyTransaction(tx, this.state, {
+            onNodeAdded: (node) => {
+                // Initial creation does not need to immediately trigger dirty chain 
+                // because it has no inputs. It evaluates on next heartbeat.
+            },
+            onEdgeAdded: (edge) => {
+                this.updateAdjacency(edge, 'ADD');
+                const tNode = this.state.nodes.get(edge.target);
+                if (tNode) tNode.isInDirtyChain = true;
+                this.triggerDirtyChain(edge.target);
 
+                if (!this.pendingPatch.addedEdges) this.pendingPatch.addedEdges = [];
+                this.pendingPatch.addedEdges.push({
+                    id: edge.id,
+                    source: edge.source,
+                    sourceHandle: edge.sourceHandle || '',
+                    target: edge.target,
+                    targetHandle: edge.targetHandle || '',
+                });
 
-            case 'ADD_NODE': {
-                const p = tx.payload as AddNodePayload;
-                // Payload: { id, initialValue, type, data }
-                // Phase 2.1: Ensure initialValue is wrapped
-                const initialPayload = PayloadUtils.wrap(p.initialValue);
-
-                const newNode: NodeLogic = {
-                    id: p.id,
-                    type: p.type || 'baseNode',
-                    value: initialPayload,
-                    data: p.data || {},
-                    position: p.position as { x: number; y: number },
-                    isInDirtyChain: true
-                };
-                this.state.nodes.set(p.id, newNode);
-                return { success: true };
-            }
-
-            case 'UPDATE_VALUE': {
-                // Payload: { id, value }
-                const p = tx.payload as UpdateValuePayload;
-                const targetId = p.id;
-                const rawValue = p.value;
-                const node = this.state.nodes.get(targetId);
-
-                if (node) {
-                    // Phase 2.1: Wrap raw value into Payload
-                    node.value = PayloadUtils.wrap(rawValue);
-                    node.isInDirtyChain = false; // Input is fresh
-                    this.worker.setFreshlyUpdated(targetId);
-                    this.triggerDirtyChain(node.id);
-
-                    if (!silent) this.triggerCalculation();
-                    return { success: true };
-                }
-                return { success: false, reason: 'Node not found' };
-            }
-
-            case 'CONNECT': {
-                const newEdge = tx.payload as Edge;
-                const validation = this.validateConnection(
-                    newEdge.source,
-                    newEdge.sourceHandle,
-                    newEdge.target,
-                    newEdge.targetHandle,
-                    this.state.edges
-                );
-
-                if (validation.isValid) {
-                    this.state.edges.push(newEdge);
-                    this.updateAdjacency(newEdge, 'ADD');
-                    const tNode = this.state.nodes.get(newEdge.target);
-                    if (tNode) tNode.isInDirtyChain = true;
-                    this.triggerDirtyChain(newEdge.target);
-
-                    // Phase 4.1: Track added edge for Worker
-                    if (!this.pendingPatch.addedEdges) this.pendingPatch.addedEdges = [];
-                    this.pendingPatch.addedEdges.push({
-                        id: newEdge.id,
-                        source: newEdge.source,
-                        sourceHandle: newEdge.sourceHandle || '',
-                        target: newEdge.target,
-                        targetHandle: newEdge.targetHandle || '',
-                    });
-
-                    this.log(`Connected ${newEdge.source} -> ${newEdge.target}`);
-                    if (!silent) {
-                        this.emit('graphChanged', null);
-                        this.triggerCalculation();
-                    }
-                    return { success: true };
-                } else {
-                    this.log(`Blocked: ${validation.reason}`);
-                    return { success: false, reason: validation.reason };
-                }
-            }
-
-            case 'REMOVE_NODE': {
-                const id = tx.payload as string;
-                if (!this.state.nodes.has(id)) return { success: false, reason: 'Node not found' };
-                this.state.nodes.delete(id);
-                const connectedEdges = this.state.edges.filter(e => e.source === id || e.target === id);
-                connectedEdges.forEach(e => {
+                this.log(`Connected ${edge.source} -> ${edge.target}`);
+            },
+            onNodeRemoved: (id, cascadeEdges) => {
+                cascadeEdges.forEach(e => {
                     this.updateAdjacency(e, 'REMOVE');
                     if (e.target !== id) {
                         const tNode = this.state.nodes.get(e.target);
@@ -568,250 +520,46 @@ export class Brain {
                         this.triggerDirtyChain(e.target);
                     }
                 });
-                this.state.edges = this.state.edges.filter(e => e.source !== id && e.target !== id);
 
-                // Phase 4.1: Track removed node + edges for Worker
                 if (!this.pendingPatch.removedNodeIds) this.pendingPatch.removedNodeIds = [];
                 this.pendingPatch.removedNodeIds.push(id);
                 if (!this.pendingPatch.removedEdgeIds) this.pendingPatch.removedEdgeIds = [];
-                connectedEdges.forEach(e => this.pendingPatch.removedEdgeIds!.push(e.id));
+                cascadeEdges.forEach(e => this.pendingPatch.removedEdgeIds!.push(e.id));
+            },
+            onEdgeRemoved: (edgeToRemove) => {
+                this.updateAdjacency(edgeToRemove, 'REMOVE');
+                const tNode = this.state.nodes.get(edgeToRemove.target);
+                if (tNode) tNode.isInDirtyChain = true;
+                this.triggerDirtyChain(edgeToRemove.target);
 
-                if (!silent) {
-                    this.emit('graphChanged', null);
-                    this.triggerCalculation();
+                if (!this.pendingPatch.removedEdgeIds) {
+                    this.pendingPatch.removedEdgeIds = [];
                 }
-                return { success: true };
+                this.pendingPatch.removedEdgeIds.push(edgeToRemove.id);
+            },
+            onNodeDataUpdated: (id) => {
+                this.worker.setFreshlyUpdated(id);
+                this.triggerDirtyChain(id);
+            },
+            onNodeMoved: (id) => { },
+            onGraphChanged: () => {
+                if (!silent) this.emit('graphChanged', null);
+            },
+            onLog: (msg) => this.log(msg),
+            validateConnection: (edge) => this.validateConnection(
+                edge.source, edge.sourceHandle, edge.target, edge.targetHandle, this.state.edges
+            )
+        });
+
+        if (res.success && !silent) {
+            this.emit('graphChanged', null);
+
+            if (tx.type === 'BATCH' && this.worker.isEnabled()) {
+                this.syncWorker();
             }
-
-            case 'DISCONNECT': {
-                const edgeId = tx.payload as string;
-                const edgeToRemove = this.state.edges.find(e => e.id === edgeId);
-                if (edgeToRemove) {
-                    this.updateAdjacency(edgeToRemove, 'REMOVE');
-                    this.state.edges = this.state.edges.filter(e => e.id !== edgeId);
-                    const tNode = this.state.nodes.get(edgeToRemove.target);
-                    if (tNode) tNode.isInDirtyChain = true;
-                    this.triggerDirtyChain(edgeToRemove.target);
-
-                    // Phase 4.1: Track removed edge for Worker's shadow graph
-                    if (!this.pendingPatch.removedEdgeIds) {
-                        this.pendingPatch.removedEdgeIds = [];
-                    }
-                    this.pendingPatch.removedEdgeIds.push(edgeId);
-
-                    if (!silent) {
-                        this.emit('graphChanged', null);
-                        this.triggerCalculation();
-                    }
-                    return { success: true };
-                }
-                return { success: false, reason: 'Edge not found' };
-            }
-
-            case 'MOVE_NODE': {
-                const p = tx.payload as MoveNodePayload;
-                const node = this.state.nodes.get(p.id);
-                if (node) {
-                    node.position = p.position;
-                    if (!silent) this.emit('graphChanged', null);
-                    return { success: true };
-                }
-                return { success: false, reason: 'Node not found' };
-            }
-
-            case 'UPDATE_NODE_DATA': {
-                const p = tx.payload as { id: string, data: Record<string, unknown> };
-                const tNode = this.state.nodes.get(p.id);
-                if (tNode) {
-                    tNode.data = { ...tNode.data, ...p.data };
-                    tNode.isInDirtyChain = true;
-                    this.triggerDirtyChain(tNode.id);
-
-                    if (!silent) {
-                        // 5. Success
-                        this.emit('graphChanged', null); // Trigger full topology sync (Phase 2.3 Unit & Data Sync)
-                        // RE-LAYOUT removed to prevent unwanted auto-layout on data change
-                        this.triggerCalculation();
-                    }
-                    return { success: true };
-                }
-                return { success: false, reason: 'Node not found' };
-            }
-
-            case 'BATCH':
-                (tx.payload as Transaction[]).forEach((t: Transaction) => {
-                    this.applyTransaction(t, false, true);
-                });
-                this.emit('graphChanged', null);
-                this.triggerCalculation();
-                // Phase 4.1: BATCH transactions (undo/redo) → force full Worker sync
-                if (this.worker.isEnabled()) {
-                    this.syncWorker();
-                }
-                return { success: true };
-
-            case 'REORDER_EDGES': {
-                // Payload: string[] of edge IDs in the desired order
-                const orderedIds = tx.payload as string[];
-                const edgeMap = new Map(this.state.edges.map(e => [e.id, e]));
-                const reordered: Edge[] = [];
-                for (const eid of orderedIds) {
-                    const edge = edgeMap.get(eid);
-                    if (edge) reordered.push(edge);
-                }
-                // Append any edges not in the ordered list (safety net)
-                for (const e of this.state.edges) {
-                    if (!orderedIds.includes(e.id)) reordered.push(e);
-                }
-                this.state.edges = reordered;
-                return { success: true };
-            }
-
-            default:
-                return { success: false, reason: 'Unknown transaction type' };
         }
-    }
 
-    // --- Async Engine (Rule #4 & Protocol Law) ---
-
-    private calculationTimeout: NodeJS.Timeout | null = null;
-    private readonly DEBOUNCE_MS = 50;
-
-    /**
-     * @deprecated Use automatic metabolism (heartbeat).
-     * This is now a no-op as the heartbeat handles calculation checks.
-     */
-    private triggerCalculation() {
-        // Heartbed handles this automatically now.
-    }
-
-    // ... createInverseTransaction and validateConnection remain mostly unchanged logic ...
-    // But verify they don't depend on 'value' internal structure deeply.
-    // createInverseTransaction uses node.value, which is now NodePayload.
-    // ADD_NODE transaction payload.initialValue will be NodePayload.
-    // When re-applying ADD_NODE, PayloadUtils.wrap is idempotent, so it works.
-
-    /**
-     * Generates the inverse transaction for Undo.
-     */
-    private createInverseTransaction(tx: Transaction): Transaction | null {
-        switch (tx.type) {
-            case 'ADD_NODE':
-                return { type: 'REMOVE_NODE', payload: (tx.payload as AddNodePayload).id };
-
-            case 'REMOVE_NODE': {
-                const id = tx.payload as string;
-                const node = this.state.nodes.get(id);
-                if (!node) return null;
-
-                const addNodeTx: Transaction = {
-                    type: 'ADD_NODE',
-                    payload: {
-                        id: node.id,
-                        initialValue: node.value, // This is NodePayload
-                        type: node.type,
-                        data: { ...node.data },
-                        position: node.position
-                    }
-                };
-
-                const connectedEdges = this.state.edges.filter(
-                    e => e.source === (tx.payload as string) || e.target === (tx.payload as string)
-                );
-
-                if (connectedEdges.length === 0) {
-                    return addNodeTx;
-                }
-
-                return {
-                    type: 'BATCH',
-                    payload: [
-                        addNodeTx,
-                        ...connectedEdges.map(e => ({
-                            type: 'CONNECT' as const,
-                            payload: { ...e }
-                        }))
-                    ]
-                };
-            }
-
-            case 'CONNECT':
-                return { type: 'DISCONNECT', payload: (tx.payload as Edge).id };
-
-            case 'DISCONNECT': {
-                const edge = this.state.edges.find(e => e.id === (tx.payload as string));
-                if (!edge) return null;
-                return { type: 'CONNECT', payload: { ...edge } };
-            }
-
-            case 'MOVE_NODE': {
-                const p = tx.payload as MoveNodePayload;
-                const node = this.state.nodes.get(p.id);
-                if (!node) return null;
-                const restorePos = p.oldPosition || node.position || { x: 0, y: 0 };
-
-                return {
-                    type: 'MOVE_NODE',
-                    payload: {
-                        id: node.id,
-                        position: restorePos
-                    }
-                };
-            }
-
-            case 'UPDATE_NODE_DATA': {
-                const p = tx.payload as { id: string, data: Record<string, unknown> };
-                const node = this.state.nodes.get(p.id);
-                if (!node) return null;
-                const oldData: Record<string, unknown> = {};
-                for (const key in p.data) {
-                    oldData[key] = node.data[key];
-                }
-                return {
-                    type: 'UPDATE_NODE_DATA',
-                    payload: { id: node.id, data: oldData }
-                };
-            }
-
-            case 'BATCH': {
-                const inverses = (tx.payload as Transaction[])
-                    .map(t => this.createInverseTransaction(t))
-                    .filter(t => t !== null)
-                    .reverse() as Transaction[];
-
-                return {
-                    type: 'BATCH',
-                    payload: inverses
-                };
-            }
-
-
-
-            case 'UPDATE_VALUE': {
-                // Inverse of value update is... restoring old value.
-                // We need the OLD value to undo. 
-                // Currently Transaction only has NEW value.
-                // This is a known issue in my HistoryManager if we don't capture state *before* apply.
-                // createInverseTransaction is called BEFORE apply, so node.value is OLD value.
-                const p = tx.payload as UpdateValuePayload;
-                const node = this.state.nodes.get(p.id);
-                if (!node) return null;
-
-                return {
-                    type: 'UPDATE_VALUE',
-                    payload: {
-                        id: node.id,
-                        value: node.value // This is the OLD value (NodePayload)
-                        // Wait, applyTransaction for UPDATE_VALUE expects raw value or Payload?
-                        // It wraps it via PayloadUtils.wrap().
-                        // So passing NodePayload is fine (wrap is idempotent).
-                    }
-                };
-            }
-
-            default:
-                return null;
-        }
+        return res;
     }
 
     public validateConnection(
@@ -819,10 +567,12 @@ export class Brain {
         sourceHandle: string | null | undefined,
         target: string,
         targetHandle: string | null | undefined,
-        edges?: Edge[]
+        edges?: Edge[],
+        nodesMap?: Map<string, NodeLogic>
     ): { isValid: boolean; reason?: string } {
 
         const edgesToCheck = edges || this.state.edges;
+        const nodesToCheck = nodesMap || this.state.nodes;
 
         if (!source || !target || !sourceHandle || !targetHandle) {
             return { isValid: false, reason: 'Incomplete connection data' };
@@ -832,12 +582,12 @@ export class Brain {
             return { isValid: false, reason: 'Cannot connect node to itself' };
         }
 
-        if (!this.state.nodes.has(source) || !this.state.nodes.has(target)) {
+        if (!nodesToCheck.has(source) || !nodesToCheck.has(target)) {
             return { isValid: false, reason: 'Source or Target node does not exist' };
         }
 
         const getHandleType = (nodeId: string, handleId: string) => {
-            const node = this.state.nodes.get(nodeId);
+            const node = nodesToCheck.get(nodeId);
             if (!node) return null;
 
             // 1. Special Case: Vector Split (AD-09) mode-based swap
@@ -903,7 +653,7 @@ export class Brain {
         const inputHandleId = sourceIsInput ? sourceHandle : targetHandle;
 
         if (inputNodeId && inputHandleId) {
-            const node = this.state.nodes.get(inputNodeId);
+            const node = nodesToCheck.get(inputNodeId);
             const variant = getHandleVariant(node, inputHandleId);
 
             if (variant !== 'capsule') {
@@ -1078,9 +828,21 @@ export class Brain {
             // Pre-validation: Check for cycles across all intended connections
             // This prevents "Double-Link" or "Infinite Loop" traps during high-authority CGL import
             const virtualEdges = [...this.state.edges];
+            const virtualNodes = new Map(this.state.nodes);
+
+            // Populate virtual nodes
+            graph.nodes.forEach(n => {
+                virtualNodes.set(n.id, {
+                    id: n.id,
+                    type: n.type,
+                    data: n.data || {},
+                    position: n.position,
+                } as NodeLogic);
+            });
+
             for (const t of edgeTxs) {
                 const e = t.payload as Edge;
-                const validation = this.validateConnection(e.source, e.sourceHandle, e.target, e.targetHandle, virtualEdges);
+                const validation = this.validateConnection(e.source, e.sourceHandle, e.target, e.targetHandle, virtualEdges, virtualNodes);
                 if (!validation.isValid) {
                     diagnostics.push(`Pre-validation failed: ${e.source} -> ${e.target} (${validation.reason})`);
                     // If we find a cycle in the incoming batch, we refuse to inject the edges
@@ -1099,10 +861,8 @@ export class Brain {
             const tx = { type: 'BATCH' as const, payload: allTxs };
 
             // Generate inverse for the entire batch
-            const inverseTx = this.createInverseTransaction(tx);
-            if (inverseTx) {
-                this.history.push({ do: tx, undo: inverseTx });
-            }
+            const inverseTx = this.transactionManager.createInverseTransaction(tx, this.state);
+            this.transactionManager.recordTransaction(tx, inverseTx);
 
             // Apply Nodes manually silently
             nodeTxs.forEach(t => this.applyTransaction(t, false, true));
@@ -1117,7 +877,6 @@ export class Brain {
             });
 
             this.emit('graphChanged', null);
-            this.triggerCalculation();
             if (!skipLayout) this.emit('RE-LAYOUT', null);
 
             // Phase 4.1: injectNodes = full graph change → force Worker sync
