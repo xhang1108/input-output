@@ -8,6 +8,7 @@ import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 export const HANDLE_SLOT_SPACING = 14;
 export const HANDLE_MIN_CAPSULE_HEIGHT = 24;
 export const HANDLE_BASE_PADDING = 12;
+export const HANDLE_RADIUS = 0; // Default visual radius of circular handles
 
 /**
  * Logic-based detection of handle variant (single vs capsule)

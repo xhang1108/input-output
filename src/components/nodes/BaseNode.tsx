@@ -27,8 +27,9 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     const inputRef = useRef<HTMLInputElement>(null);
     const { updateNodeData } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
-    const allEdges = useEdges();
-    const connections = allEdges.filter((e: Edge) => e.source === id || e.target === id);
+    const targetConnections = useNodeConnections({ handleType: 'target' });
+    const sourceConnections = useNodeConnections({ handleType: 'source' });
+    const connections = [...targetConnections, ...sourceConnections];
     const preview = useCapsulePreview();
 
     // Find definition for fallback handles
@@ -79,7 +80,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     const getHandleHeight = (h: HandleConfig) => {
         if (h.variant === 'capsule') {
             const isPreviewing = preview.active && preview.nodeId === id && preview.handleId === h.id;
-            const handleConnections = connections.filter((conn: Edge) =>
+            const handleConnections = connections.filter((conn) =>
                 (h.type === 'target' ? conn.targetHandle === h.id : conn.sourceHandle === h.id)
             );
             // If the new wire is already in React Flow's state, don't double count the preview wire

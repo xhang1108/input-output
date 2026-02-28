@@ -1,7 +1,6 @@
-'use client';
-
 import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, Upload, Download, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
+import { Panel } from '@xyflow/react';
 import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
 
 interface SettingsPanelProps {
@@ -49,7 +48,7 @@ export function SettingsPanel({
     const [showExportModal, setShowExportModal] = useState(false);
 
     return (
-        <div className="absolute top-4 right-4 z-50 flex flex-col items-end gap-2">
+        <Panel position="top-right" className="flex flex-col items-end gap-2">
             {/* Toggle Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -259,7 +258,7 @@ export function SettingsPanel({
 
             <GraphImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
             <GraphExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
-        </div>
+        </Panel>
     );
 }
 

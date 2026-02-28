@@ -157,8 +157,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
     // Auto Insert (Drag over edge to split)
     const { highlightedEdgeId, detectAutoInsert, performAutoInsert } = useAutoInsert({
-        nodes,
-        edges,
         mode,
         edgeType,
         setEdges,
@@ -248,7 +246,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         isRelinkActive,
         startEdgeDragDisconnect
     } = useRelink({
-        edges,
         setEdges,
         logAction,
         edgeType,
@@ -633,12 +630,16 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                             }
                         />
                     )}
+                    <StatusBar
+                        mode={mode}
+                        transformValue={transformValue}
+                    />
                 </ReactFlow>
 
 
                 {/* Knife Cut Path Overlay */}
                 {mode === 'CUTTING' && cutPath.length > 0 && (
-                    <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-50 overflow-visible">
+                    <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-100 overflow-visible">
                         <polyline
                             points={cutPath.map(p => `${p.x},${p.y}`).join(' ')}
                             fill="none"
@@ -649,13 +650,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                         />
                     </svg>
                 )}
-
-                <StatusBar
-                    mode={mode}
-                    nodeCount={nodes.length}
-                    selectionCount={nodes.filter(n => n.selected).length}
-                    transformValue={transformValue}
-                />
 
                 {/* Node Picker (Shift + A) - Moved outside ReactFlow to avoid transform scaling issues */}
                 {showPalette && (

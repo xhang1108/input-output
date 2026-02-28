@@ -1,13 +1,11 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Node, Edge, useReactFlow } from '@xyflow/react';
+import { Node, Edge, useReactFlow, useStore } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 
 interface UseAutoInsertProps {
-    nodes: Node[];
-    edges: Edge[];
     mode: string;
     edgeType: string;
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
@@ -21,13 +19,13 @@ interface UseAutoInsertProps {
  * an automatic edge-split insertion on mouse release.
  */
 export function useAutoInsert({
-    nodes,
-    edges,
     mode,
     edgeType,
     setEdges,
     logAction,
 }: UseAutoInsertProps) {
+    const nodes = useStore((s) => s.nodes);
+    const edges = useStore((s) => s.edges);
     const [highlightedEdgeId, setHighlightedEdgeId] = useState<string | null>(null);
     const { flowToScreenPosition } = useReactFlow();
 

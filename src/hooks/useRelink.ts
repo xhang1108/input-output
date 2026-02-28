@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { Edge, Connection, addEdge, OnConnectStartParams, HandleType } from '@xyflow/react';
+import { Edge, Connection, addEdge, OnConnectStartParams, HandleType, useStore } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import { RelinkState } from '../components/edges/RelinkLine';
 import { capsulePreviewState } from '../components/edges/capsulePreviewState';
@@ -16,7 +16,6 @@ import {
 import { MagneticSnapState } from './useHandleMagnet';
 
 type UseRelinkProps = {
-    edges: Edge[];
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
     logAction: (action: string) => void;
     edgeType: string;
@@ -24,12 +23,12 @@ type UseRelinkProps = {
 };
 
 export function useRelink({
-    edges,
     setEdges,
     logAction,
     edgeType,
     onSmartLinkSearch
 }: UseRelinkProps) {
+    const edges = useStore((s) => s.edges);
     const [relinkState, setRelinkState] = useState<RelinkState>({
         active: false,
         targetNodeId: null,

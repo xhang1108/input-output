@@ -38,8 +38,10 @@ function liftStructuralProps(logicNode: NodeLogic) {
     return {
         // Top-level structural props (React Flow reads these)
         parentId: parentId as string | undefined,
-        // Center Origin for Spatial Geometric Law
-        origin: [0.5, 0.5] as [number, number],
+        // Center Origin for Spatial Geometric Law (Exempt Matrix Input for stable resizing)
+        origin: ((logicNode.type === 'matrixInput' || logicNode.type === 'IO-08')
+            ? [0, 0]
+            : [0.5, 0.5]) as [number, number],
         // extent and expandParent intentionally omitted (see note above)
         width: width as number | undefined,
         height: height as number | undefined,

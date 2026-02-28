@@ -1,9 +1,11 @@
 import { memo, useCallback, useRef, useState } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps, Position } from '@xyflow/react';
+import { NodeProps, Position, useReactFlow } from '@xyflow/react';
 import * as math from 'mathjs';
 import { useNodeDebounce } from './hooks/useNodeDebounce';
 import { ResizeHandle } from './ResizeHandle';
+import { cn } from '@/lib/utils';
+import { NodeHandle } from './NodeHandle';
 
 /**
  * 🧱 MatrixInputNode (IO-08)
@@ -12,8 +14,9 @@ import { ResizeHandle } from './ResizeHandle';
  */
 export const MatrixInputNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
+    const { updateNode } = useReactFlow();
 
-    // Grid Dimensions State
+    // ... (keep initialGrid calculation)
     // We initialize from data if available, otherwise default to 3x3
     const initialGrid = (() => {
         try {
@@ -109,10 +112,30 @@ export const MatrixInputNode = memo((props: NodeProps) => {
     };
 
     return (
-        <BaseNode {...props} data={nodeData}>
-            <div className="min-w-fit p-2 relative group">
-                {/* Grid Container */}
-                <div className="flex flex-col gap-1 w-fit mx-auto relative" ref={gridRef}>
+        <div
+            className={cn(
+                "relative rounded-xl border transition-all duration-200 group w-fit h-fit flex flex-col items-start",
+                selected
+                    ? "border-zinc-400 animate-ring-pulse shadow-[0_0_0_1px_rgba(161,161,170,0.2)]"
+                    : "border-zinc-700 hover:border-zinc-500"
+            )}
+            style={{
+                background: 'var(--node-bg)',
+            }}
+        >
+            {/* Header - Fixed Height & Left Aligned to match BaseNode design */}
+            <div
+                className="w-full px-3 py-2 border-b border-zinc-800/60 rounded-t-xl flex items-center justify-between"
+                style={{ background: 'var(--node-bg-header)' }}
+            >
+                <span className="text-xs font-bold text-zinc-300 select-none uppercase tracking-tight">
+                    Matrix {rows}×{cols}
+                </span>
+            </div>
+
+            <div className="p-3 relative group overflow-visible">
+                {/* Grid Container - Anchored Top-Left */}
+                <div className="flex flex-col gap-1 w-fit relative" ref={gridRef}>
                     {grid.map((row, r) => (
                         <div key={r} className="flex gap-1">
                             {row.map((cell, c) => (
@@ -126,7 +149,6 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                                     value={cell === 0 && !data.value ? '' : cell}
                                     placeholder="0"
                                     onChange={(e) => handleCellChange(r, c, e.target.value)}
-                                    // Stop propagation specifically for keydown to prevent deleting node when typing backspace
                                     onKeyDown={(e) => {
                                         e.stopPropagation();
                                         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -134,12 +156,9 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                                             let step = 1;
                                             if (e.shiftKey) step = 0.1;
                                             if (e.altKey) step = 10;
-
                                             const delta = e.key === 'ArrowUp' ? step : -step;
                                             const currentVal = parseFloat(e.currentTarget.value) || 0;
-                                            const newVal = parseFloat((currentVal + delta).toFixed(2)); // Round to avoid float errors
-
-                                            // Update Grid State
+                                            const newVal = parseFloat((currentVal + delta).toFixed(2));
                                             handleCellChange(r, c, String(newVal));
                                         }
                                     }}
@@ -148,52 +167,68 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                             ))}
                         </div>
                     ))}
+                    <div className="absolute right-0 w-0 bottom-0 top-[38px] flex flex-col items-center justify-center pt-3 translate-x-3">
+                        <NodeHandle
+                            id="out"
+                            type="source"
+                            position={Position.Right}
+                            nodeId={id}
+                            isConnectable={props.isConnectable}
+                            className="w-(--handle-size-sm)! h-(--handle-size-sm)! border-zinc-900! origin-center"
+                            color="var(--color-scalar)"
+                        />
+                    </div>
+
+                    {/* Resize Handle (Anchored to Grid Bottom Right) */}
+                    <ResizeHandle
+                        targetRef={gridRef}
+                        position="bottom-right"
+                        onResize={({ screenW, screenH }) => {
+                            if (!gridRef.current) return;
+
+                            // In V12, let `node.measured` automatically handle bounding box based on our flex layout
+                            // and rows/cols state changes. No explicit width/height overrides needed.
+
+                            const rect = gridRef.current.getBoundingClientRect();
+                            const cellW = rect.width / cols;
+                            const cellH = rect.height / rows;
+                            const targetW = Math.max(60, screenW);
+                            const targetH = Math.max(40, screenH);
+                            const newCols = Math.max(1, Math.round(targetW / cellW));
+                            const newRows = Math.max(1, Math.round(targetH / cellH));
+
+                            if (newRows === rows && newCols === cols) return;
+
+                            setGrid(currentGrid => {
+                                const currentRows = currentGrid.length;
+                                const currentCols = currentGrid[0]?.length || 1;
+                                let nextGrid = [...currentGrid];
+                                if (newRows > currentRows) {
+                                    const rowsToAdd = newRows - currentRows;
+                                    const newRowsArr = Array(rowsToAdd).fill(0).map(() => Array(currentCols).fill(0));
+                                    nextGrid = [...nextGrid, ...newRowsArr];
+                                } else if (newRows < currentRows) {
+                                    nextGrid = nextGrid.slice(0, newRows);
+                                }
+                                if (newCols !== currentCols) {
+                                    nextGrid = nextGrid.map(row => {
+                                        if (newCols > row.length) {
+                                            return [...row, ...Array(newCols - row.length).fill(0)];
+                                        } else if (newCols < row.length) {
+                                            return row.slice(0, newCols);
+                                        }
+                                        return row;
+                                    });
+                                }
+                                setRows(nextGrid.length);
+                                setCols(nextGrid[0]?.length || 1);
+                                return nextGrid;
+                            });
+                        }}
+                    />
                 </div>
-
-                {/* Resize Handle (Bottom Right) */}
-                <ResizeHandle
-                    targetRef={gridRef}
-                    position="bottom-right"
-                    onResize={({ screenW, screenH }) => {
-                        if (!gridRef.current) return;
-                        const rect = gridRef.current.getBoundingClientRect();
-                        const cellW = rect.width / cols;
-                        const cellH = rect.height / rows;
-                        const targetW = Math.max(60, screenW);
-                        const targetH = Math.max(40, screenH);
-                        const newCols = Math.max(1, Math.round(targetW / cellW));
-                        const newRows = Math.max(1, Math.round(targetH / cellH));
-                        if (newRows === rows && newCols === cols) return;
-
-                        setGrid(currentGrid => {
-                            const currentRows = currentGrid.length;
-                            const currentCols = currentGrid[0]?.length || 1;
-                            let nextGrid = [...currentGrid];
-                            if (newRows > currentRows) {
-                                const rowsToAdd = newRows - currentRows;
-                                const newRowsArr = Array(rowsToAdd).fill(0).map(() => Array(currentCols).fill(0));
-                                nextGrid = [...nextGrid, ...newRowsArr];
-                            } else if (newRows < currentRows) {
-                                nextGrid = nextGrid.slice(0, newRows);
-                            }
-                            if (newCols !== currentCols) {
-                                nextGrid = nextGrid.map(row => {
-                                    if (newCols > row.length) {
-                                        return [...row, ...Array(newCols - row.length).fill(0)];
-                                    } else if (newCols < row.length) {
-                                        return row.slice(0, newCols);
-                                    }
-                                    return row;
-                                });
-                            }
-                            setRows(nextGrid.length);
-                            setCols(nextGrid[0]?.length || 1);
-                            return nextGrid;
-                        });
-                    }}
-                />
             </div>
-        </BaseNode>
+        </div>
     );
 });
 

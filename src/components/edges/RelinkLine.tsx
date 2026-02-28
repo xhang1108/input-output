@@ -106,6 +106,19 @@ export const RelinkLine = ({
     const defaultRelinkPos = type === 'source' ? Position.Left : Position.Right;
     const effectiveToPos = snappedPos || (active ? defaultRelinkPos : toPosition);
 
+    const getEdgeOffset = (nodeId: string | null, handleId: string | null) => {
+        if (!nodeId) return 0;
+        const node = nodeLookup.get(nodeId);
+
+        let handle = node?.internals.handleBounds?.target?.find(h => h.id === handleId);
+        if (!handle) {
+            handle = node?.internals.handleBounds?.source?.find(h => h.id === handleId);
+        }
+
+        if (!handle) return 0;
+        return (handle.width ?? 0) / 2;
+    };
+
     const computePath = (anchorNodeId: string, anchorHandleId: string | null) => {
         const targetNode = nodeLookup.get(anchorNodeId);
         if (!targetNode) return null;
@@ -113,9 +126,9 @@ export const RelinkLine = ({
         const handleBounds = targetNode.internals?.handleBounds;
         if (!handleBounds) return null;
 
-        // Pick the list based on Anchor Type
-        const handles = type === 'source' ? handleBounds.source : handleBounds.target;
-        const handle = handles?.find(h => h.id === (anchorHandleId || null)) || handles?.[0];
+        const handle = (type === 'source' ? handleBounds.source : handleBounds.target)
+            ?.find(h => h.id === (anchorHandleId || null)) || (type === 'source' ? handleBounds.source?.[0] : handleBounds.target?.[0]);
+
         if (!handle) return null;
 
         const anchorX = targetNode.internals.positionAbsolute.x + handle.x + (handle.width / 2);
@@ -124,23 +137,26 @@ export const RelinkLine = ({
 
         let sourceX, sourceY, sourcePos, targetX, targetY, targetPos;
 
+        const anchorOffset = getEdgeOffset(anchorNodeId, handle.id ?? null);
+        const mouseOffset = getEdgeOffset(snappedNodeId ?? null, snappedHandleId ?? null);
+
         if (type === 'source') {
             // Anchor is Source (Output). We are "Unplugging Input".
             // Visual: Source Anchor -> Mouse (Target)
-            sourceX = anchorX;
-            sourceY = anchorY;
+            sourceX = anchorX + (anchorPos === Position.Left ? -anchorOffset : (anchorPos === Position.Right ? anchorOffset : 0));
+            sourceY = anchorY + (anchorPos === Position.Top ? -anchorOffset : (anchorPos === Position.Bottom ? anchorOffset : 0));
             sourcePos = anchorPos;
-            targetX = effectiveToX;
-            targetY = effectiveToY;
+            targetX = effectiveToX + (effectiveToPos === Position.Left ? -mouseOffset : (effectiveToPos === Position.Right ? mouseOffset : 0));
+            targetY = effectiveToY + (effectiveToPos === Position.Top ? -mouseOffset : (effectiveToPos === Position.Bottom ? mouseOffset : 0));
             targetPos = effectiveToPos;
         } else {
             // Anchor is Target (Input). We are "Unplugging Output".
             // Visual: Mouse (Source) -> Target Anchor
-            targetX = anchorX;
-            targetY = anchorY;
+            targetX = anchorX + (anchorPos === Position.Left ? -anchorOffset : (anchorPos === Position.Right ? anchorOffset : 0));
+            targetY = anchorY + (anchorPos === Position.Top ? -anchorOffset : (anchorPos === Position.Bottom ? anchorOffset : 0));
             targetPos = anchorPos;
-            sourceX = effectiveToX;
-            sourceY = effectiveToY;
+            sourceX = effectiveToX + (effectiveToPos === Position.Left ? -mouseOffset : (effectiveToPos === Position.Right ? mouseOffset : 0));
+            sourceY = effectiveToY + (effectiveToPos === Position.Top ? -mouseOffset : (effectiveToPos === Position.Bottom ? mouseOffset : 0));
             sourcePos = effectiveToPos;
         }
 
@@ -190,12 +206,27 @@ export const RelinkLine = ({
 
     // Standard connection line (no Relink active)
     if (!active || pathsToRender.length === 0) {
+        // Standard connection line: fromX/Y is provided by React Flow (usually handle center)
+        // effectiveToX/Y is our snapped or mouse position.
+        // We need to find the "from_node" and "from_handle" to get the offset.
+        // ConnectionLineComponentProps doesn't give fromNodeId/fromHandleId directly in older versions,
+        // but RelinkContext should have it during active connection or we can infer it.
+
+        // Wait, fromX/Y is usually ALREADY at the handle center. 
+        // We need to look up which handle is at fromX/Y or use the store's current connection state if available.
+        // Actually, RelinkLine is often used for BOTH standard dragging AND relinking.
+
+        // New Line (Standard connection drag). React Flow provides fromX and fromY
+        // already snapped to the edge of the source handle bounding box. We only need
+        // to offset the mouse/snap target if it's magnetically snapped to a target.
+        const toOffset = getEdgeOffset(snappedNodeId, snappedHandleId ?? null);
+
         const pathParams = {
             sourceX: fromX,
             sourceY: fromY,
             sourcePosition: fromPosition,
-            targetX: effectiveToX,
-            targetY: effectiveToY,
+            targetX: effectiveToX + (effectiveToPos === Position.Left ? -toOffset : (effectiveToPos === Position.Right ? toOffset : 0)),
+            targetY: effectiveToY + (effectiveToPos === Position.Top ? -toOffset : (effectiveToPos === Position.Bottom ? toOffset : 0)),
             targetPosition: effectiveToPos,
         };
 

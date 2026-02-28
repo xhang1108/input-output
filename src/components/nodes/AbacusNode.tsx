@@ -29,27 +29,6 @@ export const AbacusNode = memo((props: NodeProps) => {
     const containerWidth = localWidth || (data.width as number) || (7 * 28 + 24);
     const rodCount = Math.max(7, Math.floor((containerWidth - 24) / 28));
 
-    // Custom Resize Logic (Left-side expansion)
-    const handleResizeLeft = useCallback(({ deltaX }: { deltaX: number }) => {
-        const { zoom } = getViewport();
-        const flowDeltaX = deltaX / zoom;
-
-        const MIN_WIDTH = 220; // 7 rods: 7*28 + 24
-        const nextWidth = Math.max(MIN_WIDTH, originPosRef.current.w - flowDeltaX);
-        const actualFlowDeltaX = originPosRef.current.w - nextWidth;
-
-        setLocalWidth(nextWidth);
-        updateNodeData(id, { width: nextWidth });
-
-        setNodes(nodes => nodes.map(n => {
-            if (n.id !== id) return n;
-            return {
-                ...n,
-                position: { ...n.position, x: originPosRef.current.x + actualFlowDeltaX }
-            };
-        }));
-    }, [id, getViewport, updateNodeData, setNodes]);
-
     // Standard Resize Logic (Right-side expansion)
     const handleResizeRight = useCallback(({ screenW }: { screenW: number }) => {
         const { zoom } = getViewport();
@@ -58,16 +37,6 @@ export const AbacusNode = memo((props: NodeProps) => {
         setLocalWidth(nextWidth);
         updateNodeData(id, { width: nextWidth });
     }, [id, updateNodeData, getViewport]);
-
-    const handleResizeStart = useCallback(() => {
-        const node = getNode(id);
-        if (node) {
-            originPosRef.current = {
-                x: node.position.x,
-                w: data.width as number || (7 * 28 + 24)
-            };
-        }
-    }, [id, getNode, data.width]);
 
     const handleResizeEnd = useCallback(() => {
         setLocalWidth(null);
@@ -98,7 +67,7 @@ export const AbacusNode = memo((props: NodeProps) => {
         let carry = delta;
 
         while (currentIdx >= 0 && currentIdx < newDigits.length && carry !== 0) {
-            let newVal = newDigits[currentIdx] + carry;
+            const newVal = newDigits[currentIdx] + carry;
             if (newVal > 9) {
                 newDigits[currentIdx] = newVal - 10;
                 carry = 1;
@@ -156,16 +125,6 @@ export const AbacusNode = memo((props: NodeProps) => {
                         ))}
                     </div>
                 </div>
-
-                {/* Unified Resize Handle (Bottom Left) */}
-                <ResizeHandle
-                    targetRef={containerRef}
-                    position="bottom-left"
-                    onResize={handleResizeLeft}
-                    onResizeStart={handleResizeStart}
-                    onResizeEnd={handleResizeEnd}
-                    className="text-orange-500 hover:text-orange-400"
-                />
 
                 {/* Standard Resize Handle (Bottom Right) */}
                 <ResizeHandle

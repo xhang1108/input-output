@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps, useReactFlow, useNodes, useEdges } from '@xyflow/react';
+import { NodeProps, useReactFlow, useNodes, useHandleConnections } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 
 export const SolverNode = memo((props: NodeProps) => {
@@ -9,7 +9,7 @@ export const SolverNode = memo((props: NodeProps) => {
 
     // Use hooks to react to graph changes
     const nodes = useNodes();
-    const edges = useEdges();
+    const incomingConnections = useHandleConnections({ type: 'target', id: 'in' });
 
     const variables = useMemo(() => {
         const vars = new Set<string>();
@@ -28,11 +28,8 @@ export const SolverNode = memo((props: NodeProps) => {
             });
         };
 
-        // Find incoming nodes to the 'in' handle
-        const incomingEdges = edges.filter(e => e.target === id && (e.targetHandle === 'in' || e.targetHandle?.startsWith('in')));
-
-        incomingEdges.forEach(edge => {
-            const sourceNode = nodes.find(n => n.id === edge.source);
+        incomingConnections.forEach((conn: any) => {
+            const sourceNode = nodes.find(n => n.id === conn.source);
             if (sourceNode && sourceNode.data && sourceNode.data.value !== undefined) {
                 // We fetch the value. In Calctopus, Brain writes the evaluated output to `node.data.value`.
                 const payload = sourceNode.data.value;
@@ -53,7 +50,7 @@ export const SolverNode = memo((props: NodeProps) => {
         });
 
         return Array.from(vars).sort();
-    }, [id, nodes, edges]);
+    }, [id, nodes, incomingConnections]);
 
     const solveFor = (data.solveFor as string) || '';
 

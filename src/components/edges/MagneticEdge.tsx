@@ -13,12 +13,13 @@ export function MagneticEdge({
     targetX,
     targetY,
     targetHandleId,
+    sourceHandleId,
     sourcePosition,
     targetPosition,
     style = {},
     markerEnd,
     selected,
-    data, // Receive data
+    data,
 }: EdgeProps) {
     const pathType = data?.pathType || 'bezier';
     const { startEdgeDragDisconnect } = useContext(RelinkContext);
@@ -27,7 +28,8 @@ export function MagneticEdge({
     // ─── Dynamic Target Y Offset Calculation ───
     const allEdges = useStore((s) => s.edges);
     const siblingEdges = allEdges.filter((e) => e.target === target && e.targetHandle === targetHandleId);
-    const preview = useCapsulePreview(); // Must be at top level (React rules of hooks)
+    const nodeLookup = useStore((s) => s.nodeLookup);
+    const preview = useCapsulePreview();
 
     let finalTargetY = targetY;
     if (siblingEdges.length > 0) {
@@ -49,7 +51,9 @@ export function MagneticEdge({
         }
     }
 
-    let edgePath = '';
+    // --- Dynamic Edge Alignment ---
+    // React Flow 11+ natively calculates sourceX/Y and targetX/Y at the exact boundary
+    // edge of the handle bounding box. Any manual offset here would duplicate that push.
     const params = {
         sourceX,
         sourceY,
@@ -59,6 +63,7 @@ export function MagneticEdge({
         targetPosition,
     };
 
+    let edgePath = '';
     switch (pathType) {
         case 'straight':
             [edgePath] = getStraightPath(params);

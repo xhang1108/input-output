@@ -887,5 +887,22 @@ export class Brain {
 
         return diagnostics;
     }
+
+    // --- Future-Proof API Aliases (MASTER_TODO §1.2) ---
+
+    /** Recalculates all dirty nodes in the graph (Alias for recalculateDirtyChain) */
+    public async evaluate(): Promise<Map<string, NodePayload>> {
+        return this.recalculateDirtyChain();
+    }
+
+    /** Gets the value of a specific node (Alias for getValue) */
+    public async solve(nodeId: string): Promise<NodePayload> {
+        return this.getValue(nodeId);
+    }
+
+    /** Injects nodes into the graph (Alias for injectNodes) */
+    public async import(graph: import('./types').InjectableGraph, clear: boolean = false): Promise<string[]> {
+        return this.injectNodes(graph, clear);
+    }
 }
 
