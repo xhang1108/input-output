@@ -54,8 +54,14 @@ export function useSelection() {
             parentedNodes.forEach(node => {
                 // Find parent frame to convert relative → absolute position
                 const parentFrame = nodes.find(n => n.id === node.parentId);
-                const absX = (parentFrame?.position.x ?? 0) + node.position.x;
-                const absY = (parentFrame?.position.y ?? 0) + node.position.y;
+                const frameWidth = Number(parentFrame?.data?.width ?? parentFrame?.measured?.width ?? parentFrame?.width ?? 0);
+                const frameHeight = Number(parentFrame?.data?.height ?? parentFrame?.measured?.height ?? parentFrame?.height ?? 0);
+
+                const frameTL_X = (parentFrame?.position.x ?? 0) - frameWidth / 2;
+                const frameTL_Y = (parentFrame?.position.y ?? 0) - frameHeight / 2;
+
+                const absX = frameTL_X + node.position.x;
+                const absY = frameTL_Y + node.position.y;
 
                 if (node.parentId) affectedFrameIds.add(node.parentId);
 
@@ -94,10 +100,10 @@ export function useSelection() {
                     remainingChildren.forEach(child => {
                         const w = child.measured?.width ?? child.width ?? 150;
                         const h = child.measured?.height ?? child.height ?? 50;
-                        minX = Math.min(minX, child.position.x);
-                        minY = Math.min(minY, child.position.y);
-                        maxX = Math.max(maxX, child.position.x + w);
-                        maxY = Math.max(maxY, child.position.y + h);
+                        minX = Math.min(minX, child.position.x - w / 2);
+                        minY = Math.min(minY, child.position.y - h / 2);
+                        maxX = Math.max(maxX, child.position.x + w / 2);
+                        maxY = Math.max(maxY, child.position.y + h / 2);
                     });
 
                     const PAD = 40;
@@ -108,9 +114,16 @@ export function useSelection() {
                     const newWidth = (maxX + PAD) - targetLeft;
                     const newHeight = (maxY + PAD) - targetTop;
 
-                    // Shift delta (how much the frame moves)
-                    const shiftX = targetLeft;
-                    const shiftY = targetTop;
+                    const oldFrameWidth = Number(parentFrame.data?.width ?? parentFrame.measured?.width ?? parentFrame.width ?? 0);
+                    const oldFrameHeight = Number(parentFrame.data?.height ?? parentFrame.measured?.height ?? parentFrame.height ?? 0);
+                    const oldFrameTL_X = parentFrame.position.x - oldFrameWidth / 2;
+                    const oldFrameTL_Y = parentFrame.position.y - oldFrameHeight / 2;
+
+                    const newFrameTL_X = oldFrameTL_X + targetLeft;
+                    const newFrameTL_Y = oldFrameTL_Y + targetTop;
+
+                    const newAbsCenterX = newFrameTL_X + newWidth / 2;
+                    const newAbsCenterY = newFrameTL_Y + newHeight / 2;
 
                     // 1. Move/Resize Frame
                     txs.push({
@@ -118,8 +131,8 @@ export function useSelection() {
                         payload: {
                             id: frameId,
                             position: {
-                                x: parentFrame.position.x + shiftX,
-                                y: parentFrame.position.y + shiftY
+                                x: newAbsCenterX,
+                                y: newAbsCenterY
                             },
                             oldPosition: { ...parentFrame.position }
                         }
@@ -137,15 +150,14 @@ export function useSelection() {
                     });
 
                     // 2. Shift Children (to stay in place absolute)
-                    // New Relative = Old Relative - Shift
                     remainingChildren.forEach(child => {
                         txs.push({
                             type: 'MOVE_NODE',
                             payload: {
                                 id: child.id,
                                 position: {
-                                    x: child.position.x - shiftX,
-                                    y: child.position.y - shiftY
+                                    x: child.position.x - targetLeft,
+                                    y: child.position.y - targetTop
                                 },
                                 oldPosition: { ...child.position }
                             }
@@ -169,23 +181,24 @@ export function useSelection() {
         selectedNodes.forEach(node => {
             const w = node.measured?.width ?? node.width ?? 150;
             const h = node.measured?.height ?? node.height ?? 50;
-            minX = Math.min(minX, node.position.x);
-            minY = Math.min(minY, node.position.y);
-            maxX = Math.max(maxX, node.position.x + w);
-            maxY = Math.max(maxY, node.position.y + h);
+            minX = Math.min(minX, node.position.x - w / 2);
+            minY = Math.min(minY, node.position.y - h / 2);
+            maxX = Math.max(maxX, node.position.x + w / 2);
+            maxY = Math.max(maxY, node.position.y + h / 2);
         });
 
         // 2. Add padding (extra top for label)
         const PAD = 40;
         const TOP_PAD = 40;
-        minX -= PAD;
-        minY -= TOP_PAD;
-        maxX += PAD;
-        maxY += PAD;
 
-        const width = maxX - minX;
-        const height = maxY - minY;
+        const targetLeft = minX - PAD;
+        const targetTop = minY - TOP_PAD;
+        const width = (maxX + PAD) - targetLeft;
+        const height = (maxY + PAD) - targetTop;
         const frameId = generateNodeId('frame');
+
+        const frameCenterX = targetLeft + width / 2;
+        const frameCenterY = targetTop + height / 2;
 
         // 3. Build Brain transactions
         const txs: Transaction[] = [];
@@ -195,8 +208,11 @@ export function useSelection() {
             payload: {
                 id: frameId,
                 type: 'frame',
-                position: { x: minX, y: minY },
-                data: { label: 'Frame', width, height },
+                position: { x: frameCenterX, y: frameCenterY },
+                width: Math.round(width),
+                height: Math.round(height),
+                style: { width: Math.round(width), height: Math.round(height) },
+                data: { label: 'Frame', width: Math.round(width), height: Math.round(height) },
                 initialValue: { type: 'void', value: null, symbol: null }
             }
         });
@@ -210,7 +226,7 @@ export function useSelection() {
                 type: 'MOVE_NODE',
                 payload: {
                     id: node.id,
-                    position: { x: node.position.x - minX, y: node.position.y - minY },
+                    position: { x: node.position.x - targetLeft, y: node.position.y - targetTop },
                     oldPosition: { ...node.position }
                 }
             });

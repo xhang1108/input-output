@@ -53,12 +53,12 @@ export function useAutoInsert({
         const w = node.measured?.width || 150;
         const h = node.measured?.height || 50;
         const padding = 10; // Extra magnetic pull region
-        const left = node.position.x - padding;
-        const top = node.position.y - padding;
-        const right = node.position.x + w + padding;
-        const bottom = node.position.y + h + padding;
-        const cx = node.position.x + w / 2;
-        const cy = node.position.y + h / 2;
+        const cx = node.position.x;
+        const cy = node.position.y;
+        const left = cx - w / 2 - padding;
+        const top = cy - h / 2 - padding;
+        const right = cx + w / 2 + padding;
+        const bottom = cy + h / 2 + padding;
 
         let bestEdge: string | null = null;
         let minCenterDist = Infinity;

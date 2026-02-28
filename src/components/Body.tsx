@@ -496,6 +496,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     // Explicitly disable native edge updates to prioritize our Relink system
                     edgesReconnectable={false}
 
+                    nodeOrigin={[0.5, 0.5]}
                     snapToGrid={effectiveSnap}
 
                     onPaneContextMenu={(e) => {
