@@ -20,6 +20,9 @@ interface AppState {
     saveStatus: 'IDLE' | 'SAVING' | 'SAVED';
     mathPrecision: MathPrecision;
     lastEvalMs: number | null;
+    lastImportMs: number | null;
+    uiRenderMs: number | null;
+    isFastMode: boolean;
 
     // State
     actionLog: string[];
@@ -40,6 +43,9 @@ interface AppState {
     setSaveStatus: (status: 'IDLE' | 'SAVING' | 'SAVED') => void;
     setMathPrecision: (precision: MathPrecision) => void;
     setLastEvalMs: (ms: number | null) => void;
+    setLastImportMs: (ms: number | null) => void;
+    setUiRenderMs: (ms: number | null) => void;
+    setFastMode: (enabled: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -61,6 +67,9 @@ export const useAppStore = create<AppState>()(
                 saveStatus: 'IDLE',
                 mathPrecision: 64,
                 lastEvalMs: null,
+                lastImportMs: null,
+                uiRenderMs: null,
+                isFastMode: false,
                 actionLog: [],
 
                 // Setters
@@ -79,6 +88,9 @@ export const useAppStore = create<AppState>()(
                 setSaveStatus: (status) => set({ saveStatus: status }),
                 setMathPrecision: (mathPrecision) => set({ mathPrecision }),
                 setLastEvalMs: (lastEvalMs) => set({ lastEvalMs }),
+                setLastImportMs: (lastImportMs) => set({ lastImportMs }),
+                setUiRenderMs: (uiRenderMs) => set({ uiRenderMs }),
+                setFastMode: (enabled) => set((s) => ({ isFastMode: typeof enabled === 'function' ? enabled(s.isFastMode) : enabled })),
             }),
             {
                 name: 'calctopus-settings-v2',

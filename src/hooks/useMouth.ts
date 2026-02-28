@@ -67,7 +67,12 @@ export function useMouth() {
      * Consumes Graph data (CGL or LaTeX) and injects it into the Brain.
      * Returns diagnostics from the parsing and injection steps.
      */
-    const consumeGraph = useCallback(async (input: string, mode: 'CGL' | 'LaTeX', shouldClear: boolean = false): Promise<{ success: boolean; diagnostics: string[]; error?: string }> => {
+    const consumeGraph = useCallback(async (
+        input: string,
+        mode: 'CGL' | 'LaTeX',
+        shouldClear: boolean = false,
+        onProgress?: (processed: number, total: number) => void
+    ): Promise<{ success: boolean; diagnostics: string[]; error?: string }> => {
         try {
             if (!input.trim()) {
                 throw new Error(`Please enter ${mode} data.`);
@@ -83,7 +88,7 @@ export function useMouth() {
                 parseDiagnostics = result.diagnostics;
 
                 // Inject the graph data
-                injectDiagnostics = await brain.injectNodes(graphData, shouldClear);
+                injectDiagnostics = await brain.injectNodes(graphData, shouldClear, false, onProgress);
 
                 return {
                     success: true,
@@ -100,7 +105,18 @@ export function useMouth() {
                     brain.clearAll();
                 }
 
-                transactions.forEach(tx => brain.applyTransaction(tx, true, true));
+                let processed = 0;
+                const CHUNK_SIZE = 50;
+
+                for (let i = 0; i < transactions.length; i += CHUNK_SIZE) {
+                    const chunk = transactions.slice(i, i + CHUNK_SIZE);
+                    chunk.forEach(tx => brain.applyTransaction(tx, true, true));
+                    processed += chunk.length;
+
+                    if (onProgress) onProgress(processed, transactions.length);
+                    // Yield to browser UI for a paint
+                    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+                }
 
                 return {
                     success: true,

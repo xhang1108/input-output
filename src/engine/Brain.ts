@@ -12,6 +12,7 @@ import { useAppStore } from '../store/useStore';
 import { TopologyManager } from './TopologyManager';
 import { WorkerOrchestrator } from './WorkerOrchestrator';
 import { TransactionManager } from './TransactionManager';
+import deepEqual from 'fast-deep-equal';
 
 export class Brain {
     private static instance: Brain;
@@ -314,7 +315,7 @@ export class Brain {
 
             // Stepwise Propagation: Only propagate if the value ACTUALLY changed.
             // This prevents "Performance Avalanches" (Fatal Flaw 4 Fix)
-            if (oldPayload && JSON.stringify(oldPayload) !== JSON.stringify(resultPayload)) {
+            if (oldPayload && !deepEqual(oldPayload, resultPayload)) {
                 this.triggerDirtyChain(nodeId);
             } else if (!oldPayload) {
                 this.triggerDirtyChain(nodeId);
@@ -764,7 +765,12 @@ export class Brain {
 
     // --- Dev Tools ---
 
-    public async injectNodes(graph: import('./types').InjectableGraph, clear: boolean = false, skipLayout: boolean = false): Promise<string[]> {
+    public async injectNodes(
+        graph: import('./types').InjectableGraph,
+        clear: boolean = false,
+        skipLayout: boolean = false,
+        onProgress?: (processed: number, total: number) => void
+    ): Promise<string[]> {
         this.log(`Injecting ${graph.nodes.length} nodes and ${graph.edges.length} edges...`);
         const diagnostics: string[] = [];
         const nodeTxs: Transaction[] = [];
@@ -857,6 +863,8 @@ export class Brain {
                 return diagnostics; // Return early without applying
             }
 
+            const startTime = performance.now();
+
             // We use a custom BATCH apply to capture individual errors
             const tx = { type: 'BATCH' as const, payload: allTxs };
 
@@ -864,25 +872,70 @@ export class Brain {
             const inverseTx = this.transactionManager.createInverseTransaction(tx, this.state);
             this.transactionManager.recordTransaction(tx, inverseTx);
 
-            // Apply Nodes manually silently
-            nodeTxs.forEach(t => this.applyTransaction(t, false, true));
+            // Helper to yield control to the browser for a paint
+            const yieldToPaint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 
-            // Apply Edges manually and catch validation errors
-            edgeTxs.forEach(t => {
-                const res = this.applyTransaction(t, false, true);
-                if (!res.success) {
-                    const payload = t.payload as Edge;
-                    diagnostics.push(`Failed to connect ${payload.source}:${payload.sourceHandle} to ${payload.target}:${payload.targetHandle} - ${res.reason}`);
+            const totalTxs = nodeTxs.length + edgeTxs.length;
+            let processed = 0;
+            const CHUNK_SIZE = 50;
+
+            // Apply Nodes manually silently in chunks
+            for (let i = 0; i < nodeTxs.length; i += CHUNK_SIZE) {
+                const chunk = nodeTxs.slice(i, i + CHUNK_SIZE);
+                chunk.forEach(t => this.applyTransaction(t, false, true));
+                processed += chunk.length;
+
+                if (onProgress) onProgress(processed, totalTxs);
+
+                // Re-enable incremental rendering every 2 chunks (100 nodes) 
+                // to prevent massive single render cycle at the end
+                if (i > 0 && (i / CHUNK_SIZE) % 2 === 0) {
+                    this.emit('graphChanged', null);
                 }
-            });
 
+                // Force a browser paint so the user sees the progress bar moving
+                await yieldToPaint();
+            }
+
+            // Apply Edges manually and catch validation errors in chunks
+            for (let i = 0; i < edgeTxs.length; i += CHUNK_SIZE) {
+                const chunk = edgeTxs.slice(i, i + CHUNK_SIZE);
+                chunk.forEach(t => {
+                    const res = this.applyTransaction(t, false, true);
+                    if (!res.success) {
+                        const payload = t.payload as Edge;
+                        diagnostics.push(`Failed to connect ${payload.source}:${payload.sourceHandle} to ${payload.target}:${payload.targetHandle} - ${res.reason}`);
+                    }
+                });
+                processed += chunk.length;
+
+                if (onProgress) onProgress(processed, totalTxs);
+
+                if (i > 0 && (i / CHUNK_SIZE) % 2 === 0) {
+                    this.emit('graphChanged', null);
+                }
+
+                await yieldToPaint();
+            }
+
+            // Single final emission after background processing completes
             this.emit('graphChanged', null);
-            if (!skipLayout) this.emit('RE-LAYOUT', null);
+            // Phase 4.3: Conditional Auto-Layout
+            // Massive graphs > 100 nodes skip auto-layout to prevent ELK from freezing the UI for seconds.
+            const shouldAutoLayout = !skipLayout && graph.nodes.length <= 100;
+            if (shouldAutoLayout) {
+                this.emit('RE-LAYOUT', null);
+            } else if (graph.nodes.length > 100) {
+                diagnostics.push(`[Performance] Auto-layout skipped for ${graph.nodes.length} nodes to prevent UI freeze. Use 'L' to layout manually.`);
+            }
 
             // Phase 4.1: injectNodes = full graph change → force Worker sync
             if (this.worker.isEnabled()) {
                 this.syncWorker();
             }
+
+            const endTime = performance.now();
+            this.emit('importFinished', Math.round(endTime - startTime));
         }
 
         return diagnostics;
@@ -901,8 +954,12 @@ export class Brain {
     }
 
     /** Injects nodes into the graph (Alias for injectNodes) */
-    public async import(graph: import('./types').InjectableGraph, clear: boolean = false): Promise<string[]> {
-        return this.injectNodes(graph, clear);
+    public async import(
+        graph: import('./types').InjectableGraph,
+        clear: boolean = false,
+        onProgress?: (processed: number, total: number) => void
+    ): Promise<string[]> {
+        return this.injectNodes(graph, clear, false, onProgress);
     }
 }
 

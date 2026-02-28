@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { Brain } from '../../../engine/Brain';
+import deepEqual from 'fast-deep-equal';
 
 /**
  * Standardizes the debounce pattern for node data updates.
@@ -22,7 +23,7 @@ export function useNodeDebounce<T>(
 
     // Deep compare to avoid unnecessary syncs
     const initialValueChanged = useMemo(() =>
-        JSON.stringify(initialValue) !== JSON.stringify(lastInitialValue),
+        !deepEqual(initialValue, lastInitialValue),
         [initialValue, lastInitialValue]);
 
     if (initialValueChanged) {
@@ -33,7 +34,7 @@ export function useNodeDebounce<T>(
     useEffect(() => {
         const handler = setTimeout(() => {
             // Only sync if localValue is different from what we last received from initialValue
-            if (JSON.stringify(localValue) === JSON.stringify(lastInitialValue)) return;
+            if (deepEqual(localValue, lastInitialValue)) return;
 
             const updatePayload = onSync(localValue);
 

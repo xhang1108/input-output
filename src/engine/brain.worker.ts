@@ -30,6 +30,7 @@ import type {
     IncrementalPatch,
     SerializedPayload,
 } from './SerializableGraph';
+import deepEqual from 'fast-deep-equal';
 
 // ─── Internal State ────────────────────────────────────────────────
 
@@ -237,7 +238,7 @@ async function getValue(
         node.isInDirtyChain = false;
 
         // Stepwise propagation: mark children dirty only if value changed
-        const changed = !oldPayload || JSON.stringify(oldPayload) !== JSON.stringify(resultPayload);
+        const changed = !oldPayload || !deepEqual(oldPayload, resultPayload);
         if (changed) {
             const children = adjacency.get(nodeId) || [];
             for (const childId of children) {

@@ -21,6 +21,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
     const [error, setError] = useState<string | null>(null);
     const [diagnostics, setDiagnostics] = useState<string[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [progress, setProgress] = useState<{ current: number, total: number } | null>(null);
     const [success, setSuccess] = useState(false);
     const [copied, setCopied] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -40,9 +41,12 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
         setDiagnostics([]);
         setSuccess(false);
         setIsProcessing(true);
+        setProgress(null);
 
         try {
-            const result = await consumeGraph(input, mode, shouldClear);
+            const result = await consumeGraph(input, mode, shouldClear, (current, total) => {
+                setProgress({ current, total });
+            });
 
             if (!result.success) {
                 throw new Error(result.error || "Failed to parse or inject data.");
@@ -167,6 +171,28 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                             {error}
                         </div>
                     )}
+
+                    {isProcessing && progress && progress.total > 0 && (
+                        <div className="flex flex-col gap-1 w-full mt-2">
+                            <div className="flex justify-between text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">
+                                <span>Injecting & Rendering...</span>
+                                <span>{Math.round((progress.current / progress.total) * 100)}%</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                                <div
+                                    className="h-full bg-amber-500 transition-all duration-300 ease-out rounded-full"
+                                    style={{ width: `${Math.max(5, (progress.current / progress.total) * 100)}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {isProcessing && progress && progress.total > 200 && (
+                        <div className="text-[10px] text-amber-400/60 bg-amber-900/10 border border-amber-900/20 p-2 rounded mt-2 italic">
+                            Large graph detected. Auto-layout skipped to maintain performance.
+                        </div>
+                    )}
+
                     {success && (
                         <div className="text-xs text-green-400 bg-green-950/30 border border-green-900/50 p-2 rounded flex items-center gap-2">
                             <Check className="w-3 h-3" />

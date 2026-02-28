@@ -106,9 +106,16 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     /**
      * Calculate Y position for a handle or bypass line anchor relative to body section.
      */
-    const calculateY = (index: number, total: number) => {
-        if (total === 1) return `calc(${NODE_LAYOUT.headerH}px + (100% - ${NODE_LAYOUT.headerH}px) / 2)`;
-        return `calc(${NODE_LAYOUT.headerH}px + ${index * (NODE_LAYOUT.socketSize + NODE_LAYOUT.socketGap) + NODE_LAYOUT.socketSize / 2}px)`;
+    const getFirstHandleY = (handles: HandleConfig[]) => {
+        if (handles.length === 0) return `calc(${NODE_LAYOUT.headerH}px + (100% - ${NODE_LAYOUT.headerH}px) / 2)`;
+
+        const first = handles[0];
+        if (first.y !== undefined) {
+            return typeof first.y === 'number' ? `${first.y}px` : first.y;
+        }
+
+        const firstHandleHeight = getHandleHeight(first);
+        return `calc(${NODE_LAYOUT.headerH}px + 12px + ${firstHandleHeight / 2}px)`;
     };
 
     return (
@@ -128,9 +135,9 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
                     <svg className="w-full h-full">
                         <line
                             x1="0"
-                            y1={calculateY(0, leftHandles.length)}
+                            y1={getFirstHandleY(leftHandles)}
                             x2="100%"
-                            y2={calculateY(0, rightHandles.length)}
+                            y2={getFirstHandleY(rightHandles)}
                             stroke="var(--color-scalar)"
                             strokeWidth="2"
                             strokeDasharray="4 4"

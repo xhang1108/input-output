@@ -3,6 +3,8 @@ import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { NodeLogic } from '../engine/types';
 import { PayloadUtils } from '../utils/PayloadUtils';
+import { useAppStore } from '../store/useStore';
+import deepEqual from 'fast-deep-equal';
 
 /**
  * liftStructuralProps
@@ -132,7 +134,7 @@ export function useBrainUpdates(
                             let needsUpdate = false;
 
                             // Check data changes
-                            if (JSON.stringify(uiNode.data) !== JSON.stringify(targetData)) {
+                            if (!deepEqual(uiNode.data, targetData)) {
                                 needsUpdate = true;
                             }
 
@@ -221,6 +223,16 @@ export function useBrainUpdates(
         };
 
         const cleanup = brain.on('graphChanged', (payload: unknown) => handleGraphChange(payload as Map<string, unknown>));
-        return cleanup;
+
+        // Listen for import performance metrics
+        const { setLastImportMs } = useAppStore.getState();
+        const cleanupImport = brain.on('importFinished', (ms: unknown) => {
+            setLastImportMs(ms as number);
+        });
+
+        return () => {
+            cleanup();
+            cleanupImport();
+        };
     }, [setNodes, setEdges]);
 }

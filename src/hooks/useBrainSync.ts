@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
+import deepEqual from 'fast-deep-equal';
 
 /**
  * useBrainSync
@@ -59,7 +60,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                 const { value: _v, ...currentData } = node.data || {};
                 const { value: _pv, ...prevData } = prevNode.data || {};
 
-                if (JSON.stringify(currentData) !== JSON.stringify(prevData)) {
+                if (!deepEqual(currentData, prevData)) {
                     syncTxs.push({
                         type: 'UPDATE_NODE_DATA',
                         payload: {

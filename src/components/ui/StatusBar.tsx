@@ -10,7 +10,12 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ mode, transformValue }: StatusBarProps) {
-    const { actionLog, saveStatus, mathPrecision, lastEvalMs } = useAppStore();
+    const { actionLog, saveStatus, mathPrecision, lastEvalMs, lastImportMs, uiRenderMs, isFastMode, setFastMode } = useAppStore();
+
+    // Interaction Performance Monitor
+    // We don't call it here to avoid re-rendering the whole status bar 
+    // too frequently if StatusBar is reactive to renderMs.
+    // Instead, the root layout or App should call it.
 
     // Selectively subscribe to only the counts to prevent re-renders on every node movement
     const nodeCount = useStore((s) => s.nodes.length);
@@ -77,6 +82,19 @@ export function StatusBar({ mode, transformValue }: StatusBarProps) {
                                 <span className={lastEvalMs > 50 ? 'text-orange-400' : 'text-zinc-300'}>
                                     {lastEvalMs}ms
                                 </span>
+                            </span>
+                        )}
+                        {uiRenderMs !== null && (
+                            <span className="text-zinc-500 font-mono flex items-center gap-1">
+                                <span className="text-[9px] text-zinc-600 ml-1">render:</span>
+                                <span className={uiRenderMs > 40 ? 'text-red-500' : uiRenderMs > 20 ? 'text-orange-400' : 'text-green-500'}>
+                                    {uiRenderMs}ms
+                                </span>
+                            </span>
+                        )}
+                        {isFastMode && (
+                            <span className="text-amber-500 font-bold px-1.5 py-0.5 bg-amber-500/10 rounded border border-amber-500/20 ml-1">
+                                FAST MODE
                             </span>
                         )}
                     </div>
