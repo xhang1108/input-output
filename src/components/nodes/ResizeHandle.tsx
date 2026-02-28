@@ -44,25 +44,25 @@ export const ResizeHandle = memo(({
             case 'bottom-right':
                 return {
                     cursor: 'nwse-resize',
-                    class: 'bottom-0 right-0 items-end justify-end',
+                    class: 'bottom-0.5 right-0.5 items-end justify-end',
                     rotate: 'rotate-0'
                 };
             case 'bottom-left':
                 return {
                     cursor: 'sw-resize',
-                    class: 'bottom-0 left-0 items-end justify-start',
+                    class: 'bottom-0.5 left-0.5 items-end justify-start',
                     rotate: '-scale-x-100' // Flip horizontally
                 };
             case 'top-right':
                 return {
                     cursor: 'nesw-resize',
-                    class: 'top-0 right-0 items-start justify-end',
+                    class: 'top-1.5 right-1.5 items-start justify-end',
                     rotate: '-scale-y-100' // Flip vertically
                 };
             case 'top-left':
                 return {
                     cursor: 'nwse-resize',
-                    class: 'top-0 left-0 items-start justify-start',
+                    class: 'top-1.5 left-1.5 items-start justify-start',
                     rotate: 'rotate-180'
                 };
             default:
@@ -76,7 +76,7 @@ export const ResizeHandle = memo(({
         <>
             <div
                 className={cn(
-                    "absolute w-6 h-6 p-1 z-20 flex transition-colors",
+                    "absolute w-5 h-5 z-50 flex transition-colors rounded-br-md",
                     "text-zinc-500 hover:text-blue-400 group-hover:opacity-100 opacity-0",
                     isResizing && "text-blue-500 opacity-100",
                     style.class,
@@ -86,18 +86,16 @@ export const ResizeHandle = memo(({
                 onPointerDown={handleResizeStart}
             >
                 <svg
-                    width="12"
-                    height="12"
+                    width="100%"
+                    height="100%"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="3"
                     strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={style.rotate}
+                    className={cn(style.rotate, "drop-shadow-sm")}
                 >
-                    <path d="M22 22L12 12" />
-                    <path d="M16 22L22 16" />
+                    <path d="M 10 22 A 12 12 0 0 0 22 10" />
                 </svg>
             </div>
 

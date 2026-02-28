@@ -125,16 +125,16 @@ export const AbacusNode = memo((props: NodeProps) => {
                         ))}
                     </div>
                 </div>
-
-                {/* Standard Resize Handle (Bottom Right) */}
-                <ResizeHandle
-                    targetRef={containerRef}
-                    position="bottom-right"
-                    onResize={handleResizeRight}
-                    onResizeEnd={handleResizeEnd}
-                    className="text-zinc-600 hover:text-orange-400"
-                />
             </div>
+
+            {/* Standard Resize Handle (Bottom Right) */}
+            <ResizeHandle
+                targetRef={containerRef}
+                position="bottom-right"
+                onResize={handleResizeRight}
+                onResizeEnd={handleResizeEnd}
+                className="text-zinc-600 hover:text-orange-400"
+            />
         </BaseNode>
     );
 });

@@ -112,28 +112,8 @@ export const MatrixInputNode = memo((props: NodeProps) => {
     };
 
     return (
-        <div
-            className={cn(
-                "relative rounded-xl border transition-all duration-200 group w-fit h-fit flex flex-col items-start",
-                selected
-                    ? "border-zinc-400 animate-ring-pulse shadow-[0_0_0_1px_rgba(161,161,170,0.2)]"
-                    : "border-zinc-700 hover:border-zinc-500"
-            )}
-            style={{
-                background: 'var(--node-bg)',
-            }}
-        >
-            {/* Header - Fixed Height & Left Aligned to match BaseNode design */}
-            <div
-                className="w-full px-3 py-2 border-b border-zinc-800/60 rounded-t-xl flex items-center justify-between"
-                style={{ background: 'var(--node-bg-header)' }}
-            >
-                <span className="text-xs font-bold text-zinc-300 select-none uppercase tracking-tight">
-                    Matrix {rows}×{cols}
-                </span>
-            </div>
-
-            <div className="p-3 relative group overflow-visible">
+        <BaseNode {...props} data={nodeData}>
+            <div className="p-1 relative group overflow-visible">
                 {/* Grid Container - Anchored Top-Left */}
                 <div className="flex flex-col gap-1 w-fit relative" ref={gridRef}>
                     {grid.map((row, r) => (
@@ -167,68 +147,53 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                             ))}
                         </div>
                     ))}
-                    <div className="absolute right-0 w-0 bottom-0 top-[38px] flex flex-col items-center justify-center pt-3 translate-x-3">
-                        <NodeHandle
-                            id="out"
-                            type="source"
-                            position={Position.Right}
-                            nodeId={id}
-                            isConnectable={props.isConnectable}
-                            className="w-(--handle-size-sm)! h-(--handle-size-sm)! border-zinc-900! origin-center"
-                            color="var(--color-scalar)"
-                        />
-                    </div>
-
-                    {/* Resize Handle (Anchored to Grid Bottom Right) */}
-                    <ResizeHandle
-                        targetRef={gridRef}
-                        position="bottom-right"
-                        onResize={({ screenW, screenH }) => {
-                            if (!gridRef.current) return;
-
-                            // In V12, let `node.measured` automatically handle bounding box based on our flex layout
-                            // and rows/cols state changes. No explicit width/height overrides needed.
-
-                            const rect = gridRef.current.getBoundingClientRect();
-                            const cellW = rect.width / cols;
-                            const cellH = rect.height / rows;
-                            const targetW = Math.max(60, screenW);
-                            const targetH = Math.max(40, screenH);
-                            const newCols = Math.max(1, Math.round(targetW / cellW));
-                            const newRows = Math.max(1, Math.round(targetH / cellH));
-
-                            if (newRows === rows && newCols === cols) return;
-
-                            setGrid(currentGrid => {
-                                const currentRows = currentGrid.length;
-                                const currentCols = currentGrid[0]?.length || 1;
-                                let nextGrid = [...currentGrid];
-                                if (newRows > currentRows) {
-                                    const rowsToAdd = newRows - currentRows;
-                                    const newRowsArr = Array(rowsToAdd).fill(0).map(() => Array(currentCols).fill(0));
-                                    nextGrid = [...nextGrid, ...newRowsArr];
-                                } else if (newRows < currentRows) {
-                                    nextGrid = nextGrid.slice(0, newRows);
-                                }
-                                if (newCols !== currentCols) {
-                                    nextGrid = nextGrid.map(row => {
-                                        if (newCols > row.length) {
-                                            return [...row, ...Array(newCols - row.length).fill(0)];
-                                        } else if (newCols < row.length) {
-                                            return row.slice(0, newCols);
-                                        }
-                                        return row;
-                                    });
-                                }
-                                setRows(nextGrid.length);
-                                setCols(nextGrid[0]?.length || 1);
-                                return nextGrid;
-                            });
-                        }}
-                    />
                 </div>
             </div>
-        </div>
+
+            {/* Resize Handle (Anchored to Node Bottom Right) */}
+            <ResizeHandle
+                targetRef={gridRef}
+                position="bottom-right"
+                onResize={({ screenW, screenH }) => {
+                    if (!gridRef.current) return;
+                    const rect = gridRef.current.getBoundingClientRect();
+                    const cellW = rect.width / cols;
+                    const cellH = rect.height / rows;
+                    const targetW = Math.max(60, screenW);
+                    const targetH = Math.max(40, screenH);
+                    const newCols = Math.max(1, Math.round(targetW / cellW));
+                    const newRows = Math.max(1, Math.round(targetH / cellH));
+
+                    if (newRows === rows && newCols === cols) return;
+
+                    setGrid(currentGrid => {
+                        const currentRows = currentGrid.length;
+                        const currentCols = currentGrid[0]?.length || 1;
+                        let nextGrid = [...currentGrid];
+                        if (newRows > currentRows) {
+                            const rowsToAdd = newRows - currentRows;
+                            const newRowsArr = Array(rowsToAdd).fill(0).map(() => Array(currentCols).fill(0));
+                            nextGrid = [...nextGrid, ...newRowsArr];
+                        } else if (newRows < currentRows) {
+                            nextGrid = nextGrid.slice(0, newRows);
+                        }
+                        if (newCols !== currentCols) {
+                            nextGrid = nextGrid.map(row => {
+                                if (newCols > row.length) {
+                                    return [...row, ...Array(newCols - row.length).fill(0)];
+                                } else if (newCols < row.length) {
+                                    return row.slice(0, newCols);
+                                }
+                                return row;
+                            });
+                        }
+                        setRows(nextGrid.length);
+                        setCols(nextGrid[0]?.length || 1);
+                        return nextGrid;
+                    });
+                }}
+            />
+        </BaseNode>
     );
 });
 
