@@ -100,7 +100,7 @@ Complex_Node:math:ADD-VALUES @0,0
 
             const encoded = GraphCodec.encode(injectable);
             expect(encoded).toContain('N1:io:num @10,20 = 3.14');
-            expect(encoded).toContain('# Calctopus Graph Language');
+            expect(encoded).toContain('# input-output Graph Language');
         });
     });
 });

@@ -158,7 +158,11 @@ export class TransactionManager {
             onNodeMoved?: (id: string) => void;
             onGraphChanged?: () => void;
             onLog?: (msg: string) => void;
-            validateConnection: (edge: Edge) => { isValid: boolean, reason?: string };
+            validateConnection: (edge: Edge) => {
+                isValid: boolean,
+                reason?: string,
+                normalized?: { source: string, sourceHandle: string, target: string, targetHandle: string }
+            };
         }
     ): { success: boolean; reason?: string } {
         switch (tx.type) {
@@ -192,10 +196,19 @@ export class TransactionManager {
             }
 
             case 'CONNECT': {
-                const newEdge = tx.payload as Edge;
+                let newEdge = tx.payload as Edge;
                 const validation = hooks.validateConnection(newEdge);
 
                 if (validation.isValid) {
+                    if (validation.normalized) {
+                        newEdge = {
+                            ...newEdge,
+                            source: validation.normalized.source,
+                            sourceHandle: validation.normalized.sourceHandle,
+                            target: validation.normalized.target,
+                            targetHandle: validation.normalized.targetHandle
+                        };
+                    }
                     state.edges.push(newEdge);
                     hooks.onEdgeAdded?.(newEdge);
                     return { success: true };

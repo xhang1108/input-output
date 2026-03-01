@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { CalctopusEngine } from '../CalctopusEngine';
+import { InputOutputEngine } from '../InputOutputEngine';
 import { DataType, NodePayload } from '../../types/payload';
 
 describe('Logic Switch & Split (MA-04/13)', () => {
     beforeAll(() => {
-        CalctopusEngine.getInstance();
+        InputOutputEngine.getInstance();
         initializeNodes();
     });
 

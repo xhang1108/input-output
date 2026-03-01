@@ -570,7 +570,11 @@ export class Brain {
         targetHandle: string | null | undefined,
         edges?: Edge[],
         nodesMap?: Map<string, NodeLogic>
-    ): { isValid: boolean; reason?: string } {
+    ): {
+        isValid: boolean;
+        reason?: string;
+        normalized?: { source: string, sourceHandle: string, target: string, targetHandle: string }
+    } {
 
         const edgesToCheck = edges || this.state.edges;
         const nodesToCheck = nodesMap || this.state.nodes;
@@ -636,13 +640,15 @@ export class Brain {
         const targetIsInput = isInput(targetHandle!, targetHandleType);
 
         if (sourceIsInput === targetIsInput) {
-            // IF we still don't know for sure (both null handleType), and it's CGL injection, 
+            // IF we still don't know for sure (both null handleType), and it's CGL injection,
             // maybe we should be more lenient? No, let's fix the handle discovery.
             return { isValid: false, reason: `Invalid connectivity: ${source}:${sourceHandle}(${sourceHandleType}) -> ${target}:${targetHandle}(${targetHandleType})` };
         }
 
         const fromNode = sourceIsInput ? target : source;
+        const fromHandle = sourceIsInput ? targetHandle : sourceHandle;
         const toNode = sourceIsInput ? source : target;
+        const toHandle = sourceIsInput ? sourceHandle : targetHandle;
 
         // Reactivate UI-level cycle prevention, since users usually don't intend to build infinite loops
         // and it's cleaner to reject it at connection time.
@@ -658,28 +664,31 @@ export class Brain {
             const variant = getHandleVariant(node, inputHandleId);
 
             if (variant !== 'capsule') {
-                const existingEdge = edgesToCheck.find(e =>
-                    e.target === inputNodeId &&
-                    e.targetHandle === inputHandleId
-                );
-
-                if (existingEdge) {
-                    return { isValid: false, reason: 'Input already occupied' };
+                const existing = edgesToCheck.find(e => e.target === inputNodeId && e.targetHandle === inputHandleId);
+                if (existing) {
+                    return { isValid: false, reason: 'Handle already connected' };
                 }
             }
         }
 
-        return { isValid: true };
+        return {
+            isValid: true,
+            normalized: {
+                source: fromNode,
+                sourceHandle: fromHandle!,
+                target: toNode,
+                targetHandle: toHandle!
+            }
+        };
     }
 
     private detectCycle(sourceNode: string, targetNode: string, edges: Edge[]): boolean {
         const graph = new Map<string, string[]>();
-
         for (const edge of edges) {
             if (!graph.has(edge.source)) {
                 graph.set(edge.source, []);
             }
-            graph.get(edge.source)?.push(edge.target);
+            graph.get(edge.source)!.push(edge.target);
         }
 
         const visited = new Set<string>();

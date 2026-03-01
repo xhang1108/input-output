@@ -2,11 +2,11 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { DataType } from '../../types/payload';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { CalctopusEngine } from '../CalctopusEngine';
+import { InputOutputEngine } from '../InputOutputEngine';
 
 describe('Linear Algebra & Array Nodes', () => {
     beforeAll(() => {
-        CalctopusEngine.getInstance();
+        InputOutputEngine.getInstance();
         initializeNodes();
     });
 
@@ -108,7 +108,7 @@ describe('Linear Algebra & Array Nodes', () => {
         // Output format should successfully dehydrate
         expect(result.value).toBeDefined();
 
-        const math = CalctopusEngine.getInstance().getMathInstance();
+        const math = InputOutputEngine.getInstance().getMathInstance();
         const hydrated = PayloadUtils.hydrate(result.value, math);
 
         // Assert the array contains exactly 10, 20, 30

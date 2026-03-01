@@ -1,6 +1,6 @@
 
 
-export interface CalctopusEngineInterface {
+export interface InputOutputEngineInterface {
     evaluate(op: string, ...args: unknown[]): unknown;
     processInput(val: unknown, unit?: string): unknown;
     getMathInstance(): unknown;

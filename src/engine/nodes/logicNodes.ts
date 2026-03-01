@@ -1,4 +1,4 @@
-import { CalctopusEngine } from '../CalctopusEngine';
+import { InputOutputEngine } from '../InputOutputEngine';
 import { DataType } from '../../types/payload';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { NodeRegistry } from '../NodeRegistry';
@@ -6,7 +6,7 @@ import { NodeRegistry } from '../NodeRegistry';
 export function registerLogicNodes() {
     // MA-05: Logic Gate (AND, OR, NOT, XOR, NAND, NOR, XNOR)
     NodeRegistry.register('MA-05', (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'AND';
         const getVal = (key: string) => {
@@ -49,7 +49,7 @@ export function registerLogicNodes() {
 
     // MA-13: Logic Split
     NodeRegistry.register('MA-13', (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance();
+        const math = InputOutputEngine.getInstance().getMathInstance();
         const condition = PayloadUtils.toBoolean(inputs['condition'], math);
         const data = inputs['data'] || PayloadUtils.createScalar(0);
         return {
@@ -62,7 +62,7 @@ export function registerLogicNodes() {
 
     // MA-04: Switch
     NodeRegistry.register('MA-04', (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance();
+        const math = InputOutputEngine.getInstance().getMathInstance();
         const condition = PayloadUtils.toBoolean(inputs['condition'], math);
         return (condition ? inputs['in_true'] : inputs['in_false']) || PayloadUtils.createError('No Input');
     }, (node, inputs) => {

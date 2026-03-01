@@ -459,7 +459,7 @@ export class GraphCodec {
     // ─── Encoding ────────────────────────────────────────────────────────────
 
     public static encode(graph: InjectableGraph): string {
-        let cgl = `# Calctopus Graph Language (Auto-Generated)\n# ${new Date().toISOString()}\n\n`;
+        let cgl = `# input-output Graph Language (Auto-Generated)\n# ${new Date().toISOString()}\n\n`;
 
         // 1. Nodes
         cgl += '# Nodes\n';

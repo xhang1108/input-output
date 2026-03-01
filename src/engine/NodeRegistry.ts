@@ -1,5 +1,5 @@
 import { NodeLogic } from './types';
-import { CalctopusEngine } from './CalctopusEngine';
+import { InputOutputEngine } from './InputOutputEngine';
 import { NodePayload, DataType, ASTNode } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { Brain } from './Brain';

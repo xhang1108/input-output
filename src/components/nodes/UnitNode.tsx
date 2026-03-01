@@ -2,7 +2,7 @@ import { memo, useCallback, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
-import { CalctopusEngine } from '../../engine/CalctopusEngine';
+import { InputOutputEngine } from '../../engine/InputOutputEngine';
 
 const UNITS = [
     // Length
@@ -40,7 +40,7 @@ export const UnitNode = memo((props: NodeProps) => {
     }, [data.unit]);
 
     const validateAndApply = (unit: string) => {
-        const math = CalctopusEngine.getInstance().getMathInstance();
+        const math = InputOutputEngine.getInstance().getMathInstance();
         try {
             math.unit(unit);
             setIsValid(true);

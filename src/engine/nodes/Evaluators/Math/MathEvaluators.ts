@@ -1,4 +1,4 @@
-import { CalctopusEngine } from '../../../CalctopusEngine';
+import { InputOutputEngine } from '../../../InputOutputEngine';
 import { DataType, NodePayload } from '../../../../types/payload';
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeEvaluator } from '../../../NodeRegistry';
@@ -21,7 +21,7 @@ function extractExprStr(payload: NodePayload | undefined): string | null {
 
 export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-01': (node, inputs) => {
-        const engine = CalctopusEngine.getInstance();
+        const engine = InputOutputEngine.getInstance();
         const mathInstance = engine.getMathInstance();
 
         const getHydrated = (key: string) => {
@@ -123,7 +123,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         }
     },
     'MA-03': (node) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const label = data.val || 'pi';
         let value = math[label] ?? (label === 'Infinity' ? Infinity : 0);
@@ -139,7 +139,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         };
     },
     'MA-14': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const prec = data.precision ?? 0;
@@ -155,7 +155,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         } catch (e) { return PayloadUtils.createError('Op Failed'); }
     },
     'MA-12': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const raw = PayloadUtils.unwrap(inputs['in']);
         const data = (node.data || {}) as any;
         const isMixed = data.mixed === true;
@@ -183,7 +183,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         } catch (e) { return PayloadUtils.createError('Invalid Fraction'); }
     },
     'MA-02': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'GCD';
         const getVal = (key: string) => {
@@ -221,7 +221,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             const raw = PayloadUtils.unwrap(inputPayload);
             if (typeof raw === 'number') finalValue = raw;
             else {
-                const hydrated = PayloadUtils.hydrate(raw, CalctopusEngine.getInstance().getMathInstance());
+                const hydrated = PayloadUtils.hydrate(raw, InputOutputEngine.getInstance().getMathInstance());
                 if (typeof hydrated === 'number') finalValue = hydrated;
                 else if (hydrated && typeof hydrated === 'object' && 'toNumber' in hydrated) {
                     finalValue = (hydrated as any).toNumber((hydrated as any).isUnit ? undefined : '');
@@ -231,7 +231,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         return { type: DataType.Scalar, value: finalValue, symbol: inputPayload?.symbol || null, meta: { unit: targetBase } };
     },
     'MA-16': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.op || 'LN';
@@ -247,7 +247,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
     // DA-06: Array Extract
     'DA-06': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in'];
         const idxPayload = inputs['index'];
         if (!valPayload || !idxPayload) return PayloadUtils.createError('Missing Inputs');
@@ -281,7 +281,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
     // DA-07: Array Builder
     'DA-07': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as Record<string, unknown>;
         const axis = data.axis as number || 0;
         let items: any[] = [];
@@ -307,7 +307,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
     // DA-01: Statistics
     'DA-01': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'Mean';
         const valPayload = inputs['data'];
@@ -336,7 +336,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
     // DA-02: Smoothing
     'DA-02': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         let windowSize = inputs['window'] ? Number(PayloadUtils.unwrap(inputs['window'])) || 3 : (data.windowMode ?? 3);
         const valPayload = inputs['data'];
@@ -357,7 +357,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
     // DA-03: List Utility
     'DA-03': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any, mode = data.mode || 'Sort (Asc)';
         const valPayload = inputs['data'];
         if (!valPayload) return PayloadUtils.createError('No Input');
@@ -375,7 +375,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
     // DA-04: Set Operations
     'DA-04': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const mode = ((node.data || {}) as any).mode || 'Union';
         const getArr = (key: string) => {
             const p = inputs[key]; if (!p) return [];

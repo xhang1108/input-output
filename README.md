@@ -1,6 +1,6 @@
-# 🐙 Calctopus
+# 🧠 input-output
 
-**Calctopus** is a high-performance, node-based visual calculator designed for complex calculation workflows. Built with a robust **React/Next.js** architecture using **React Flow**, Calctopus provides a seamless and intuitive way to design, visualize, and execute mathematical logic.
+**input-output** is a high-performance, node-based visual calculator designed for complex calculation workflows. Built with a robust **React/Next.js** architecture using **React Flow**, input-output provides a seamless and intuitive way to design, visualize, and execute mathematical logic.
 
 ## ✨ Key Features
 
@@ -35,7 +35,7 @@
 
 ## 🔄 System Architecture
 
-Calctopus adopts a unique "Body Metaphor" for its codebase naming convention:
+input-output adopts a unique "Body Metaphor" for its codebase naming convention:
 
 - **🧠 Brain** (`src/engine/Brain.ts`): The core computational engine.
 - **⚡ Nerves** (`src/nerves/`): Custom hooks connecting the Brain to the Body (e.g., `useHand` for interactions, `useEye` for viewport).
@@ -82,4 +82,4 @@ npm run test:run
 - [ ] **Cloud Sync:** Multi-device synchronization.
 
 ---
-Built with ❤️ by the Calctopus Team.
+Built with ❤️ by the input-output Team.

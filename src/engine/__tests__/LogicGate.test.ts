@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { CalctopusEngine } from '../CalctopusEngine';
+import { InputOutputEngine } from '../InputOutputEngine';
 import { DataType } from '../../types/payload';
 
 describe('Logic Gate (MA-05)', () => {
     beforeAll(() => {
-        // Ensure CalctopusEngine is initialized
-        CalctopusEngine.getInstance();
+        // Ensure InputOutputEngine is initialized
+        InputOutputEngine.getInstance();
         initializeNodes();
     });
 

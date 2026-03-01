@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 import { AppProviders } from "@/components/AppProviders";
 
 export const metadata: Metadata = {
-    title: "Calctopus",
-    description: "Advanced Node-based Calculator",
+    title: "input-output",
+    description: "Advanced Node-based Mathematical Engine",
 };
 
 export default function RootLayout({

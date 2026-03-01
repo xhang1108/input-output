@@ -4,25 +4,13 @@ import { memo, useCallback, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
-import { CalctopusEngine } from '../../engine/CalctopusEngine';
+import { InputOutputEngine } from '../../engine/InputOutputEngine';
 
 export const NodeExpression = memo((props: NodeProps) => {
     const { id, data } = props;
     const [code, setCode] = useState<string>((data.code as string) || '');
 
     // Cleanup lingering handles from previous logic/state
-    useEffect(() => {
-        if (data.handles && (data.handles as any[]).length > 1) {
-            Brain.getInstance().applyTransaction({
-                type: 'UPDATE_NODE_DATA',
-                payload: {
-                    id,
-                    data: { handles: undefined } // Reset to use static definition (output-only)
-                }
-            }, false, true); // Silent, no undo record for cleanup
-        }
-    }, [id, data.handles]);
-
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         setCode(val);

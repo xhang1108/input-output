@@ -1,7 +1,7 @@
 import { DataType, NodePayload } from '../../../../types/payload';
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeEvaluator } from '../../../NodeRegistry';
-import { CalctopusEngine } from '../../../CalctopusEngine';
+import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NerdamerService } from '../../../calculus/NerdamerService';
 import { RuntimeGuard } from '../../../calculus/RuntimeGuard';
 
@@ -22,7 +22,7 @@ function extractExprStr(payload: NodePayload | undefined): string | null {
 export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // AD-01: Matrix Tools
     'AD-01': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const data = (node.data || {}) as any;
@@ -62,7 +62,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
     // AD-02: Vector Utils
     'AD-02': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'DOT';
         const getVal = (key: string) => {
@@ -85,7 +85,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
     // AD-03: Combinatorics
     'AD-03': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'nCr';
         const getVal = (key: string) => {
@@ -208,7 +208,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
     // AD-07: Complex Math
     'AD-07': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as Record<string, unknown>;
         const mode = data.mode as string || 'separate';
         try {
@@ -244,7 +244,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
     // AD-08: Vector Field
     'AD-08': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const mode = data.mode || 'gradient', var1 = data.var1 || 'x', var2 = data.var2 || 'y';
         const min = Number(data.min ?? -5), max = Number(data.max ?? 5), density = Number(data.density ?? 10);
@@ -283,7 +283,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
     // AD-09: Vector Split
     'AD-09': (node, inputs) => {
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any, mode = data.mode || 'separate';
         if (mode === 'separate') {
             const valPayload = inputs['in'] || Object.values(inputs)[0];
@@ -318,7 +318,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // AD-10: Geometry
     'AD-10': (node, inputs) => {
         const data = (node.data || {}) as any, shape = data.shape || 'Circle';
-        const math = CalctopusEngine.getInstance().getMathInstance() as any;
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const getNum = (key: string) => {
             const val = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs[key]), math);
             return typeof val === 'number' ? val : (val?.toNumber ? val.toNumber() : Number(val) || 0);
@@ -374,7 +374,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as Record<string, unknown>;
         const code = (data.code as string) || '';
         if (!code) return PayloadUtils.createScalar(0);
-        const math = CalctopusEngine.getInstance().getMathInstance();
+        const math = InputOutputEngine.getInstance().getMathInstance();
         try {
             const scope: Record<string, any> = {};
             for (const [key, val] of Object.entries(inputs)) scope[key] = PayloadUtils.hydrate(PayloadUtils.unwrap(val), math);

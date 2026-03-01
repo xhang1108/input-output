@@ -1,6 +1,6 @@
 import { DataType } from '../../../../types/payload';
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
-import { CalctopusEngine } from '../../../CalctopusEngine';
+import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NodeEvaluator } from '../../../NodeRegistry';
 
 export const IOEvaluators: Record<string, NodeEvaluator> = {
@@ -169,7 +169,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const unit = data.unit as string || 'm';
         const inputUnit = inputPayload.meta?.unit;
 
-        const math = CalctopusEngine.getInstance().getMathInstance();
+        const math = InputOutputEngine.getInstance().getMathInstance();
         const hydratedInput = PayloadUtils.hydrate(val, math);
 
         let finalVal: number;
@@ -186,7 +186,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
 
         if (inputUnit && inputUnit !== unit) {
             try {
-                finalVal = CalctopusEngine.getInstance().convertUnit(finalVal, inputUnit, unit);
+                finalVal = InputOutputEngine.getInstance().convertUnit(finalVal, inputUnit, unit);
             } catch (e) {
                 return PayloadUtils.createError(`Cannot convert ${inputUnit} to ${unit}`);
             }
@@ -196,7 +196,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IO-02': (node) => node.value || PayloadUtils.createScalar(0),
     'IO-06': (node) => {
-        const engine = CalctopusEngine.getInstance();
+        const engine = InputOutputEngine.getInstance();
         const math = engine.getMathInstance();
         const data = (node.data || {}) as Record<string, unknown>;
         const mode = data.mode as string || 'scalar';

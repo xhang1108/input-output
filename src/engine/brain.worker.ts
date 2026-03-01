@@ -1,14 +1,14 @@
 /**
  * 🧠 Brain Web Worker
  * 
- * Runs the computation pipeline (NodeRegistry.evaluate + CalctopusEngine) in a
+ * Runs the computation pipeline (NodeRegistry.evaluate + InputOutputEngine) in a
  * background thread. Maintains a persistent shadow graph that mirrors the
  * main-thread Brain state via incremental patches.
  * 
  * Phase 4.1: Web Worker Migration
  * 
  * IPC Protocol:
- *   INIT         → Bootstrap CalctopusEngine with shared MATH_CONFIG
+ *   INIT         → Bootstrap InputOutputEngine with shared MATH_CONFIG
  *   SYNC_GRAPH   → Full graph replacement (project load, crash recovery)
  *   EVAL         → Apply incremental patches + compute dirty nodes
  *   CLEAR_STATE  → Purge all internal state

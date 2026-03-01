@@ -2,7 +2,7 @@
  * 🔧 Shared MathJS Configuration
  * 
  * Single source of truth for MathJS initialization parameters.
- * Used by both CalctopusEngine (main thread) and brain.worker.ts (Worker thread)
+ * Used by both InputOutputEngine (main thread) and brain.worker.ts (Worker thread)
  * to guarantee calculation parity across execution contexts.
  */
 export const SUPPORTED_PRECISIONS = [16, 32, 64] as const;

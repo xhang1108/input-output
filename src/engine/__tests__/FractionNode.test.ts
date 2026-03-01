@@ -2,11 +2,11 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { DataType } from '../../types/payload';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { CalctopusEngine } from '../CalctopusEngine';
+import { InputOutputEngine } from '../InputOutputEngine';
 
 describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     beforeAll(() => {
-        CalctopusEngine.getInstance();
+        InputOutputEngine.getInstance();
         initializeNodes();
     });
 
