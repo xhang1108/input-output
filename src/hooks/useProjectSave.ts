@@ -16,7 +16,7 @@ function restoreSettings(settings: Record<string, unknown>) {
     if (typeof settings.layoutDirection === 'string') store.setLayoutDirection(settings.layoutDirection as any);
 }
 
-export function useProjectSave(projectId: string) {
+export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev: any[]) => any[])) => void) {
     const { getViewport, setViewport, fitView } = useReactFlow();
     const [isLoaded, setIsLoaded] = useState(false);
     const currentSlotIdRef = useRef<string | null>(
@@ -32,6 +32,25 @@ export function useProjectSave(projectId: string) {
             });
         });
     }, []);
+
+    // Helper: Focus on all nodes and select them
+    const focusAndSelectAll = useCallback((options: { duration?: number } = {}) => {
+        const { duration = 0 } = options;
+
+        // Step 1: Immediate Select All
+        setNodes((nds: any[]) => nds.map(n => ({ ...n, selected: true })));
+
+        // Step 2: Ensure React Flow has processed node positions
+        requestAnimationFrame(() => {
+            // Step 3: Fit view with padding
+            fitView({ duration, padding: 0.2, includeHiddenNodes: false });
+
+            // Step 4: Double check after paint (handles async node measurements)
+            setTimeout(() => {
+                fitView({ duration: Math.max(0, duration - 100), padding: 0.2 });
+            }, 100);
+        });
+    }, [setNodes, fitView]);
 
     const saveProject = useCallback(() => {
         const brain = Brain.getInstance();
@@ -62,16 +81,16 @@ export function useProjectSave(projectId: string) {
             return;
         }
 
-        if ((data as any).viewport) setViewport((data as any).viewport, { duration: 0 });
         if (data.settings) restoreSettings(data.settings);
 
         if (data.graph) {
             const brain = Brain.getInstance();
             brain.injectNodes(data.graph, true).then(() => {
                 toast.success('Project loaded successfully');
+                focusAndSelectAll({ duration: 400 });
             });
         }
-    }, [setViewport]);
+    }, [focusAndSelectAll]);
 
     // Initial Load — delayed to ensure useBrainUpdates listener is registered first
     useEffect(() => {
@@ -92,13 +111,7 @@ export function useProjectSave(projectId: string) {
                 if (data.graph) {
                     const brain = Brain.getInstance();
                     brain.injectNodes(data.graph, true, true).then(() => {
-                        // Set viewport AFTER nodes exist, instant (no animation)
-                        if ((data as any).viewport) {
-                            setViewport((data as any).viewport, { duration: 0 });
-                        } else {
-                            fitView({ duration: 0 });
-                        }
-                        // Let React Flow paint at the correct position, then reveal
+                        focusAndSelectAll({ duration: 0 });
                         revealAfterPaint();
                     });
                 } else {
@@ -111,7 +124,7 @@ export function useProjectSave(projectId: string) {
         });
 
         return () => cancelAnimationFrame(rafId);
-    }, [projectId, setViewport, fitView, revealAfterPaint]);
+    }, [projectId, focusAndSelectAll, revealAfterPaint]);
 
     return { saveProject, loadProject, currentSlotId: currentSlotIdRef, isLoaded };
 }

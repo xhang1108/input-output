@@ -87,7 +87,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     const effectiveSnap = isSnapping || manualSnap;
 
     // Save/Load Hook
-    const { saveProject, isLoaded } = useProjectSave(projectId);
+    const { saveProject, isLoaded } = useProjectSave(projectId, setNodes);
 
     // Sync Edge Type for existing edges
     // (Removed duplicate useEffect that caused ReferenceError)
