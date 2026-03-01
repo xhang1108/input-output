@@ -711,8 +711,20 @@ export function useHand() {
             }
 
             // 3. Calculate absolute center of the node
-            const absCenterX = node.position.x + (node.parentId ? (nodes.find(n => n.id === node.parentId)?.position.x ?? 0) : 0);
-            const absCenterY = node.position.y + (node.parentId ? (nodes.find(n => n.id === node.parentId)?.position.y ?? 0) : 0);
+            let absCenterX = node.position.x;
+            let absCenterY = node.position.y;
+
+            if (node.parentId) {
+                const parent = nodes.find(n => n.id === node.parentId);
+                if (parent) {
+                    const pw = Number(parent.measured?.width ?? parent.width ?? parent.data?.width ?? 0);
+                    const ph = Number(parent.measured?.height ?? parent.height ?? parent.data?.height ?? 0);
+                    const parentTL_X = parent.position.x - pw / 2;
+                    const parentTL_Y = parent.position.y - ph / 2;
+                    absCenterX += parentTL_X;
+                    absCenterY += parentTL_Y;
+                }
+            }
 
             // 4. Find the smallest containing frame (avoids wrong match with nested frames)
             let targetFrame: Node | undefined;
@@ -740,9 +752,25 @@ export function useHand() {
             const oldParentId = node.parentId;
             let newParentId = targetFrame?.id;
 
-            // FIX: Removed the "sticky detach" check. 
-            // If newParentId is undefined, it means the node is no longer over a frame.
-            // We should allow it to detach to 'parentId: null'.
+            // --- STICKY DETACHMENT LOGIC ---
+            // If the node is currently in a frame (oldParentId), we don't kick it out 
+            // unless it's genuinely inside a NEW frame or significantly outside the OLD one.
+            if (oldParentId && !newParentId) {
+                const oldParent = nodes.find(p => p.id === oldParentId);
+                if (oldParent) {
+                    const { w: ow, h: oh } = getSize(oldParent);
+                    const stickyPad = 100; // 100px "sticky" zone
+                    const fLeft = oldParent.position.x - ow / 2 - stickyPad;
+                    const fRight = oldParent.position.x + ow / 2 + stickyPad;
+                    const fTop = oldParent.position.y - oh / 2 - stickyPad;
+                    const fBottom = oldParent.position.y + oh / 2 + stickyPad;
+
+                    if (absCenterX >= fLeft && absCenterX <= fRight &&
+                        absCenterY >= fTop && absCenterY <= fBottom) {
+                        newParentId = oldParentId; // Stay in current frame (sticky)
+                    }
+                }
+            }
 
             if (newParentId !== oldParentId) {
                 // Parent changed — coordinate space transform needed

@@ -62,7 +62,7 @@ export class TransactionManager {
                         type: node.type,
                         data: { ...node.data },
                         position: node.position
-                    }
+                    } as AddNodePayload
                 };
 
                 const connectedEdges = state.edges.filter(
@@ -176,7 +176,9 @@ export class TransactionManager {
                     value: initialPayload,
                     data: p.data || {},
                     position: p.position as { x: number; y: number },
-                    isInDirtyChain: true
+                    isInDirtyChain: true,
+                    // Preserve subGraph for Macro Nodes
+                    // subGraph: (p as any).subGraph // Removed as per instruction
                 };
                 state.nodes.set(p.id, newNode);
                 hooks.onNodeAdded?.(newNode);

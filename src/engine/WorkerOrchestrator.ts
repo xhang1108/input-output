@@ -40,20 +40,16 @@ export class WorkerOrchestrator {
         if (this.workerInitPromise) return this.workerInitPromise;
 
         this.workerInitPromise = (async () => {
-            console.log('[WorkerOrchestrator] Initializing...');
             try {
                 const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
-                console.log('[WorkerOrchestrator] BrainWorkerProxy imported');
                 this.workerProxy = new BrainWorkerProxy({
                     onResults: this.callbacks.onResults,
                     onError: (_epoch: number, error: string) => console.error('[WorkerOrchestrator] error:', error),
                     onSyncing: () => this.callbacks.emit('workerSyncing', null),
                     onReady: () => {
-                        console.log('[WorkerOrchestrator] Worker READY');
                         this.callbacks.emit('workerReady', null);
                     },
                 });
-                console.log('[WorkerOrchestrator] workerProxy created');
                 this.workerProxy.registerHealthRefs(
                     () => ({ nodeCount: 0, edgeCount: 0 }), // Base values for health check
                     () => this.callbacks.syncRequester()
@@ -92,7 +88,6 @@ export class WorkerOrchestrator {
             }
         }
 
-        console.log(`[WorkerOrchestrator] Dispatching EVAL for nodes:`, dirtyChainNodeIds);
         this.clearFreshlyUpdated();
         this.workerProxy.syncAndEval(snapshot, dirtyChainNodeIds);
     }

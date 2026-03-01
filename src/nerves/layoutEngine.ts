@@ -1,7 +1,6 @@
-import ELK, { ElkNode, ElkPrimitiveEdge } from 'elkjs/lib/elk.bundled';
 import { Node, Edge, Position } from '@xyflow/react';
 
-const elk = new ELK();
+let elkInstance: any = null;
 
 export type LayoutAlgorithm = 'layered' | 'force' | 'tree' | 'radial';
 export type LayoutDirection = 'RIGHT' | 'DOWN' | 'LEFT' | 'UP';
@@ -54,33 +53,37 @@ const getOptions = (cfg: LayoutConfig = {}) => {
 };
 
 // Map XYFlow nodes to Elk nodes
-const toElkNode = (node: Node): ElkNode => ({
+const toElkNode = (node: Node): any => ({
     id: node.id,
     width: node.measured?.width ?? 150,
     height: node.measured?.height ?? 100,
 });
 
 // Map XYFlow edges to Elk edges
-const toElkEdge = (edge: Edge): ElkPrimitiveEdge => ({
+const toElkEdge = (edge: Edge): any => ({
     id: edge.id,
     source: edge.source,
     target: edge.target,
 });
 
 export const getLayoutedElements = async (nodes: Node[], edges: Edge[], config: LayoutConfig = {}) => {
-    const graph: ElkNode = {
+    if (!elkInstance) {
+        const ELK = (await import('elkjs/lib/elk.bundled.js')).default;
+        elkInstance = new ELK();
+    }
+
+    const graph: any = {
         id: 'root',
         layoutOptions: getOptions(config),
         children: nodes.map(toElkNode),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        edges: edges.map(toElkEdge) as any,
+        edges: edges.map(toElkEdge),
     };
 
     try {
-        const layoutedGraph = await elk.layout(graph);
+        const layoutedGraph = await elkInstance.layout(graph);
 
         const layoutedNodes = nodes.map((node) => {
-            const elkNode = layoutedGraph.children?.find((n) => n.id === node.id);
+            const elkNode = layoutedGraph.children?.find((n: any) => n.id === node.id);
             if (!elkNode) return node;
 
             return {

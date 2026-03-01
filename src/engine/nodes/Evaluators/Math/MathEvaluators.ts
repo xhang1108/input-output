@@ -382,12 +382,13 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             const h = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math) as any;
             return (h && typeof h === 'object' && 'toArray' in h) ? h.toArray().flat(Infinity) : (Array.isArray(h) ? h.flat(Infinity) : [h]);
         };
-        const setA = new Set(getArr('a').map((x: any) => String(x))), setB = new Set(getArr('b').map((x: any) => String(x)));
+        const setA = new Set<string>(getArr('a').map((x: any) => String(x)));
+        const setB = new Set<string>(getArr('b').map((x: any) => String(x)));
         let resultSet: string[] = [];
-        if (mode === 'Union') resultSet = Array.from(new Set([...Array.from(setA), ...Array.from(setB)]));
-        else if (mode === 'Intersection') resultSet = Array.from(setA).filter(x => setB.has(x));
-        else if (mode === 'Difference') resultSet = Array.from(setA).filter(x => !setB.has(x));
-        const final = resultSet.map((x: any) => (isNaN(Number(x)) ? x : Number(x)));
+        if (mode === 'Union') resultSet = Array.from(new Set<string>([...Array.from(setA), ...Array.from(setB)]));
+        else if (mode === 'Intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
+        else if (mode === 'Difference') resultSet = Array.from(setA).filter((x: string) => !setB.has(x));
+        const final = resultSet.map((x: string) => (isNaN(Number(x)) ? x : Number(x)));
         return PayloadUtils.createMatrix(PayloadUtils.dehydrate(final));
     },
 

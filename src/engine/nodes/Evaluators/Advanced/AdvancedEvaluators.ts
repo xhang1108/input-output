@@ -260,7 +260,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 outGrad = { type: DataType.Vector, value: [uExpr.toString(), vExpr.toString()], symbol: null, meta: {} };
             } else {
                 const hydrated = PayloadUtils.hydrate(exprVal, math);
-                const arr = (hydrated?.toArray ? hydrated.toArray() : Array.isArray(hydrated) ? hydrated : []).flat(Infinity);
+                const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : []).flat(Infinity);
                 if (arr.length < 2) return PayloadUtils.createError('Requires 2D vector [u, v]');
                 uExpr = typeof arr[0] === 'string' ? math.parse(arr[0]) : math.parse(String(arr[0]));
                 vExpr = typeof arr[1] === 'string' ? math.parse(arr[1]) : math.parse(String(arr[1]));
@@ -289,7 +289,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             const valPayload = inputs['in'] || Object.values(inputs)[0];
             if (!valPayload) return PayloadUtils.createError('No Input');
             const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-            const arr = (hydrated?.toArray ? hydrated.toArray() : Array.isArray(hydrated) ? hydrated : [hydrated]).flat(Infinity);
+            const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : [hydrated]).flat(Infinity);
             return {
                 type: DataType.Object,
                 value: { x: PayloadUtils.wrap(arr[0] ?? 0), y: PayloadUtils.wrap(arr[1] ?? 0), z: PayloadUtils.wrap(arr[2] ?? 0) },
@@ -302,7 +302,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             if (inPayload) {
                 const process = (p: any) => {
                     const h = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math);
-                    if (h?.toArray) items.push(...h.toArray().flat(Infinity));
+                    if (h && typeof h === 'object' && 'toArray' in h) items.push(...(h as any).toArray().flat(Infinity));
                     else if (Array.isArray(h)) items.push(...h.flat(Infinity));
                     else items.push(h);
                 };
@@ -321,7 +321,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const getNum = (key: string) => {
             const val = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs[key]), math);
-            return typeof val === 'number' ? val : (val?.toNumber ? val.toNumber() : Number(val) || 0);
+            return typeof val === 'number' ? val : (val && typeof val === 'object' && 'toNumber' in val ? (val as any).toNumber() : Number(val) || 0);
         };
         let area = 0, perimeter = 0;
         if (shape === 'Circle') {

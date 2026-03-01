@@ -206,6 +206,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         return () => { cleanupLog(); };
     }, [logAction]);
 
+
     // Debug: Log Mode Changes
     useEffect(() => {
         logAction(`Mode: ${mode}`);
@@ -250,7 +251,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         logAction,
         edgeType,
         onSmartLinkSearch: (params) => {
-            console.log('Smart Link Search Triggered via useRelink:', params);
             setPalettePosition(params.position);
             setShowPalette(true);
             paletteGuardRef.current = true; // Block immediate close from background click
@@ -564,6 +564,8 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                 >
                     {showGrid && <Background color="#555" gap={20} size={1} />}
                     {showDebug && <DebugOverlay mode={mode} />}
+
+
 
                     <SettingsPanel
                         isSnapping={manualSnap}

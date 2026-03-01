@@ -9,6 +9,9 @@
 import { PayloadValue, DataType, ASTNode, PayloadMetadata } from '../types/payload';
 
 // ─── Serialized Node ───────────────────────────────────────────────
+
+// (Removed SerializedSubGraph)
+
 export interface SerializedNodeLogic {
     id: string;
     type: string;
@@ -65,6 +68,8 @@ export type WorkerRequest =
     | { type: 'EVAL'; msgId: number; epoch: number; patches: IncrementalPatch }
     | { type: 'SYNC_AND_EVAL'; msgId: number; epoch: number; snapshot: SerializedGraphSnapshot; dirtyChainNodeIds: string[] }
     | { type: 'CLEAR_STATE'; msgId: number }
+    | { type: 'PUSH_CONTEXT'; msgId: number; node: SerializedNodeLogic }
+    | { type: 'POP_CONTEXT'; msgId: number }
     | { type: 'HEALTH_CHECK'; msgId: number; sampleNodeIds?: string[] };
 
 export type WorkerResponse =

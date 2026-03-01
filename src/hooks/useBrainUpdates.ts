@@ -66,7 +66,10 @@ export function useBrainUpdates(
     useEffect(() => {
         const brain = Brain.getInstance();
 
-        const handleGraphChange = (updates?: Map<string, unknown>) => {
+        const handleGraphChange = (payload?: unknown) => {
+            const forceFullSync = payload === true;
+            const updates = payload instanceof Map ? payload as Map<string, unknown> : null;
+
             if (updates) {
                 // Partial update (value changes only)
                 setNodes(currentNodes => {
@@ -207,8 +210,9 @@ export function useBrainUpdates(
                         }
                     }
 
-                    // Check if order changed
-                    if (!edgesChanged && nextEdges.length === currentEdges.length) {
+                    // Check if order changed OR if we are forcing a full context swap
+                    if (forceFullSync || (!edgesChanged && nextEdges.length === currentEdges.length)) {
+                        if (forceFullSync) edgesChanged = true;
                         for (let i = 0; i < nextEdges.length; i++) {
                             if (nextEdges[i].id !== currentEdges[i].id) {
                                 edgesChanged = true;
@@ -222,7 +226,7 @@ export function useBrainUpdates(
             }
         };
 
-        const cleanup = brain.on('graphChanged', (payload: unknown) => handleGraphChange(payload as Map<string, unknown>));
+        const cleanup = brain.on('graphChanged', (payload: unknown) => handleGraphChange(payload));
 
         // Listen for import performance metrics
         const { setLastImportMs } = useAppStore.getState();

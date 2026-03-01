@@ -552,10 +552,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { type: 'expression', code: '1 + 2' }
-    },
+    }
 ];
-
-
 
 // Helper: Get definitions grouped by category (for menu rendering)
 export function getDefinitionsByCategory(): { category: string; items: NodeDefinition[] }[] {

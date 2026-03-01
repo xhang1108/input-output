@@ -27,7 +27,7 @@ export const SingleHandle = memo(({ h, id, isConnectable }: SingleHandleProps) =
                 position={resolveHandlePosition(h)}
                 id={h.id}
                 nodeId={id}
-                className="border-zinc-900! z-50 pointer-events-auto origin-center w-(--handle-size-sm)! h-(--handle-size-sm)!"
+                className="z-50 pointer-events-auto origin-center w-(--handle-size-sm)! h-(--handle-size-sm)!"
                 color={getHandleColor(h)}
                 isConnectable={isConnectable}
             />

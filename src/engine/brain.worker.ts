@@ -38,13 +38,15 @@ let math: any = null;
 let lastProcessedMsgId = -1;
 
 /** Shadow graph: persistent node store */
-const nodes: Map<string, NodeLogic> = new Map();
+let nodes: Map<string, NodeLogic> = new Map();
 /** Shadow graph: persistent edge store */
 let edges: SerializedEdge[] = [];
 /** Adjacency index: source → targets[] */
-const adjacency: Map<string, string[]> = new Map();
+let adjacency: Map<string, string[]> = new Map();
 /** Reverse adjacency: target → inputs[] */
-const reverseAdjacency: Map<string, { nodeId: string; sourceHandle: string; targetHandle: string }[]> = new Map();
+let reverseAdjacency: Map<string, { nodeId: string; sourceHandle: string; targetHandle: string }[]> = new Map();
+// ─── Stack-based Context Management Removed ────────────────────────
+
 
 // ─── Topology Helpers ──────────────────────────────────────────────
 
@@ -105,7 +107,7 @@ function hydrateNode(sn: SerializedNodeLogic): NodeLogic {
         } : undefined,
         data: sn.data || {},
         isInDirtyChain: sn.isInDirtyChain,
-        position: { x: 0, y: 0 }, // Position not needed for computation
+        position: { x: 0, y: 0 } // Position not needed for computation
     };
 }
 
@@ -192,7 +194,7 @@ async function getValue(
     computingPath: Set<string> = new Set()
 ): Promise<NodePayload> {
     const node = nodes.get(nodeId);
-    if (!node) return PayloadUtils.createError('Node not found');
+    if (!node) return PayloadUtils.createError(`Node ${nodeId} not found`);
 
     // Cycle detection
     if (computingPath.has(nodeId)) {
@@ -206,6 +208,8 @@ async function getValue(
     } else {
         const newPath = new Set(computingPath);
         newPath.add(nodeId);
+
+        // --- Standard Node Logic ---
 
         const inputs = reverseAdjacency.get(nodeId) || [];
         const inputPayloads: Record<string, any> = {};
@@ -280,7 +284,6 @@ async function computeDirtyChainNodes(): Promise<Record<string, SerializedPayloa
             .filter(n => n.isInDirtyChain)
             .map(n => n.id);
 
-        console.log(`[Worker] Pass ${20 - maxPasses}, Dirty nodes:`, dirtyChainNodeIds);
         if (dirtyChainNodeIds.length === 0) break;
 
         for (const id of dirtyChainNodeIds) {
@@ -321,7 +324,6 @@ function respond(msg: WorkerResponse) {
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const msg = event.data;
-    console.log(`[Worker] Received: ${msg.type}`, msg);
     if ('msgId' in msg && msg.msgId <= lastProcessedMsgId) {
         return;
     }

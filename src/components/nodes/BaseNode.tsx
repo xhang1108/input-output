@@ -21,7 +21,7 @@ const DynamicNodeHandle = memo(({ h, id, isConnectable }: { h: HandleConfig, id:
 });
 DynamicNodeHandle.displayName = 'DynamicNodeHandle';
 
-export const BaseNode = memo(({ id, data, selected, isConnectable, children, type, style }: NodeProps & { children?: React.ReactNode, style?: React.CSSProperties }) => {
+export const BaseNode = memo(({ id, data, selected, isConnectable, children, type, style, hideDefaultHandles, onDoubleClick }: NodeProps & { children?: React.ReactNode, style?: React.CSSProperties, hideDefaultHandles?: boolean, onDoubleClick?: (e: React.MouseEvent) => void }) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [title, setTitle] = useState((data.label as string) || 'Node');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +128,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
                 ${data.muted ? 'opacity-40 grayscale-40 shadow-none!' : ''}
             `}
             style={{ minHeight: `${minHeight}px`, background: 'var(--node-bg)', ...style }}
+            onDoubleClick={onDoubleClick}
         >
             {/* Muted Bypass Visual */}
             {!!data.muted && (
@@ -185,18 +186,22 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
             </div>
 
             {/* ─── Left Handles (Targets/Inputs) ───────────────── */}
-            <div className="absolute left-0 w-0 bottom-0 flex flex-col items-center justify-start pt-3" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
-                {leftHandles.map((h) => (
-                    <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} />
-                ))}
-            </div>
+            {!hideDefaultHandles && (
+                <div className="absolute left-0 w-0 bottom-0 flex flex-col items-center justify-start pt-3" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
+                    {leftHandles.map((h) => (
+                        <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} />
+                    ))}
+                </div>
+            )}
 
             {/* ─── Right Handles (Sources/Outputs) ─────────────── */}
-            <div className="absolute right-0 w-0 bottom-0 flex flex-col items-center justify-start pt-3" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
-                {rightHandles.map((h) => (
-                    <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} />
-                ))}
-            </div>
+            {!hideDefaultHandles && (
+                <div className="absolute right-0 w-0 bottom-0 flex flex-col items-center justify-start pt-3" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
+                    {rightHandles.map((h) => (
+                        <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 });

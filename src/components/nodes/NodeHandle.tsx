@@ -20,15 +20,19 @@ interface CustomHandleProps extends HandleProps {
  * React Flow already applies these classes natively. Zero JS overhead.
  */
 export function NodeHandle({ className, color, id, nodeId, ...props }: CustomHandleProps) {
+    const isPending = id.endsWith('_pending');
+
     return (
         <Handle
             id={id}
             className={cn(
-                "w-(--handle-size-sm) h-(--handle-size-sm) rounded-full border-2 border-zinc-900 z-50",
+                "z-50 pointer-events-auto origin-center w-(--handle-size-sm)! h-(--handle-size-sm) rounded-full border-2 border-zinc-900",
+                isPending && "border-dashed opacity-100 border-zinc-300! bg-transparent!",
                 className
             )}
             style={{
-                background: color || 'var(--color-scalar)'
+                background: isPending ? 'transparent' : (color || 'var(--color-scalar)'),
+                ...props.style
             }}
             {...props}
         />

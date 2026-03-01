@@ -23,4 +23,14 @@ export function registerUtilityNodes() {
     });
 
     // SY-05: Expert Node (Handled in Advanced as it uses Nerdamer, but could be here too)
+
+    // UI-02: Frame (No-op structural node)
+    NodeRegistry.register('frame', (node) => {
+        return node.value || { type: DataType.Object, value: {}, symbol: null, meta: {} };
+    });
+
+    // baseNode: Fallback structural node
+    NodeRegistry.register('baseNode', (node) => {
+        return node.value || { type: DataType.Object, value: {}, symbol: null, meta: {} };
+    });
 }
