@@ -85,7 +85,7 @@ export function useClipboard() {
     }, [getNodes, getEdges]);
 
     // --- Command: Paste from Clipboard ---
-    const pasteFromClipboard = useCallback(() => {
+    const pasteFromClipboard = useCallback((targetPos?: { x: number, y: number }) => {
         const payload = localStorage.getItem(CLIPBOARD_KEY);
         if (!payload) return;
 
@@ -99,7 +99,30 @@ export function useClipboard() {
             const clipboardNodes: Node[] = parsed.nodes;
             const clipboardEdges: Edge[] = parsed.edges || [];
 
-            const { newNodes, newEdges } = cloneElements(clipboardNodes, clipboardEdges, { x: 20, y: 20 });
+            let offset = { x: 20, y: 20 };
+
+            if (targetPos && clipboardNodes.length > 0) {
+                // Calculate bounding box of clipboard nodes to find center
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                clipboardNodes.forEach(n => {
+                    const x = n.position.x;
+                    const y = n.position.y;
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                });
+
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+
+                offset = {
+                    x: targetPos.x - centerX,
+                    y: targetPos.y - centerY
+                };
+            }
+
+            const { newNodes, newEdges } = cloneElements(clipboardNodes, clipboardEdges, offset);
             setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
             setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
         } catch (e) {

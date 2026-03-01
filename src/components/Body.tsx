@@ -238,6 +238,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     // spawnNode managed by useNodeSpawner hook
 
     // --- Custom Handle Interactions State ---
+    const { project } = useCanvasProjection();
     const {
         relinkState,
         onRelinkStart,
@@ -380,8 +381,8 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             // Clipboard
             'ctrl+c': () => { copyToClipboard(); logAction('Copy (Ctrl+C)'); },
             'cmd+c': () => { copyToClipboard(); logAction('Copy (Cmd+C)'); },
-            'ctrl+v': () => { pasteFromClipboard(); logAction('Paste (Ctrl+V)'); },
-            'cmd+v': () => { pasteFromClipboard(); logAction('Paste (Cmd+V)'); },
+            'ctrl+v': () => { pasteFromClipboard(project(mousePosRef.current)); logAction('Paste (Ctrl+V)'); },
+            'cmd+v': () => { pasteFromClipboard(project(mousePosRef.current)); logAction('Paste (Cmd+V)'); },
 
             // Save
             'ctrl+s': (e) => { e.preventDefault(); saveProject(); logAction('Save Project (Ctrl+S)'); },
@@ -662,7 +663,13 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                             setShowPalette(false);
                             setPendingConnection(null);
                         }}
-                        onSelect={spawnNode}
+                        onSelect={(type, label, data, isContinuous) => {
+                            const newNode = spawnNode(type, label, data, isContinuous, mousePosRef.current);
+                            if (newNode && !isContinuous) {
+                                // Start sticky grab
+                                startGrab(mousePosRef.current, false, [newNode]);
+                            }
+                        }}
                         pendingConnection={pendingConnection}
                     />
                 )}

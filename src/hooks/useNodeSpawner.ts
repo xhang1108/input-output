@@ -43,7 +43,7 @@ export function useNodeSpawner({
         spawnCountRef.current = 0;
     }, [palettePosition.x, palettePosition.y]);
 
-    const spawnNode = useCallback((type: string, label: string, extraData?: unknown, isContinuous?: boolean) => {
+    const spawnNode = useCallback((type: string, label: string, extraData?: unknown, isContinuous?: boolean, screenPos?: { x: number, y: number }): Node | null => {
         logAction(`Spawn Node: ${type}`);
 
         let offsetX = 0;
@@ -60,9 +60,11 @@ export function useNodeSpawner({
             spawnCountRef.current += 1;
         }
 
+        const basePos = screenPos || palettePosition;
+
         const flowPos = project({
-            x: palettePosition.x + offsetX,
-            y: palettePosition.y + offsetY
+            x: basePos.x + offsetX,
+            y: basePos.y + offsetY
         });
 
         const newId = generateNodeId(type);
@@ -70,6 +72,7 @@ export function useNodeSpawner({
             id: newId,
             type: type || 'baseNode',
             position: flowPos,
+            selected: true, // Default to selected so it can be grabbed immediately
             data: {
                 label,
                 type: type === 'baseNode' ? undefined : type,
@@ -79,7 +82,7 @@ export function useNodeSpawner({
 
         setNodes((nds) => nds.concat(newNode));
 
-        // Auto-Link if we have a pending connection
+        // ... existing auto-link logic ...
         if (pendingConnection) {
             const nodeDef = NODE_DEFINITIONS.find(d => d.id === type);
             if (nodeDef) {
@@ -104,6 +107,8 @@ export function useNodeSpawner({
             }
             setPendingConnection(null);
         }
+
+        return newNode;
     }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction, getCurrentZoom]);
 
     return {
