@@ -24,9 +24,9 @@ export const VectorFieldNode = memo((props: NodeProps) => {
     return (
         <BaseNode {...props}>
             <div className="flex flex-col gap-2 p-1 min-w-[140px] nodrag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="flex bg-black/40 rounded-lg p-0.5 border border-zinc-700/50">
+                <div className="flex bg-black/40 rounded-(--radius-lg) p-0.5 border border-zinc-700/50">
                     <button
-                        className={`flex-1 text-[10px] py-1 px-1.5 rounded-md transition-all duration-200 ${mode === 'gradient' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        className={`flex-1 text-[10px] py-1 px-1.5 rounded-(--radius-sm) transition-all duration-200 ${mode === 'gradient' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
                         onClick={() => updateData({ mode: 'gradient' })}
                     >
                         Gradient
@@ -44,7 +44,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Var 1</label>
                         <input
                             type="text"
-                            className="bg-black/20 border border-zinc-700/50 rounded px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
+                            className="bg-black/20 border border-zinc-700/50 rounded-(--radius-sm) px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
                             value={var1}
                             onChange={(e) => updateData({ var1: e.target.value })}
                         />
@@ -53,7 +53,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Var 2</label>
                         <input
                             type="text"
-                            className="bg-black/20 border border-zinc-700/50 rounded px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
+                            className="bg-black/20 border border-zinc-700/50 rounded-(--radius-sm) px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
                             value={var2}
                             onChange={(e) => updateData({ var2: e.target.value })}
                         />
@@ -65,7 +65,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Min</label>
                         <input
                             type="number"
-                            className="bg-black/20 border border-zinc-700/50 rounded px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
+                            className="bg-black/20 border border-zinc-700/50 rounded-(--radius-sm) px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
                             value={min}
                             onChange={(e) => updateData({ min: Number(e.target.value) })}
                         />
@@ -74,14 +74,14 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Max</label>
                         <input
                             type="number"
-                            className="bg-black/20 border border-zinc-700/50 rounded px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
+                            className="bg-black/20 border border-zinc-700/50 rounded-(--radius-sm) px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
                             value={max}
                             onChange={(e) => updateData({ max: Number(e.target.value) })}
                         />
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between border border-zinc-700/50 rounded p-1 bg-black/10 mt-1">
+                <div className="flex items-center justify-between border border-zinc-700/50 rounded-(--radius-sm) p-1 bg-black/10 mt-1">
                     <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1 w-full flex-1">Density</label>
                     <input
                         type="number"

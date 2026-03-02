@@ -34,7 +34,7 @@ export const ScalarView: React.FC<ScalarViewProps> = ({ rawValue, precision, uni
             <div className="flex flex-col items-end">
                 <div className="flex items-baseline gap-1.5 leading-none">
                     <span className={`font-mono transition-all duration-200 text-2xl text-(--color-scalar)`}>{combined}</span>
-                    <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800/50 px-1 rounded">{finalUnit}</span>
+                    <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800/50 px-1 rounded-(--radius-sm)">{finalUnit}</span>
                 </div>
             </div>
         );

@@ -1,20 +1,25 @@
-import { memo, useMemo } from 'react';
+
+import { memo, useMemo, useState, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow, useNodes, useHandleConnections } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { useNodeMenu } from '../../hooks/useNodeMenu';
+import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
 export const SolverNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const { updateNodeData } = useReactFlow();
 
-    // Use hooks to react to graph changes
+
+
+
     const nodes = useNodes();
     const incomingConnections = useHandleConnections({ type: 'target', id: 'in' });
 
     const variables = useMemo(() => {
         const vars = new Set<string>();
 
-        // Simple regex to find variables avoiding basic math functions
         const extractVars = (text: string) => {
             if (typeof text !== 'string') return;
             const matches = text.match(/\b[a-zA-Z_]\w*\b/g);
@@ -31,7 +36,6 @@ export const SolverNode = memo((props: NodeProps) => {
         incomingConnections.forEach((conn: any) => {
             const sourceNode = nodes.find(n => n.id === conn.source);
             if (sourceNode && sourceNode.data && sourceNode.data.value !== undefined) {
-                // We fetch the value. In Calctopus, Brain writes the evaluated output to `node.data.value`.
                 const payload = sourceNode.data.value;
                 const val = payload ? PayloadUtils.unwrap(payload) : null;
                 if (val) {
@@ -50,17 +54,37 @@ export const SolverNode = memo((props: NodeProps) => {
         });
 
         return Array.from(vars).sort();
-    }, [id, nodes, incomingConnections]);
+    }, [nodes, incomingConnections]);
 
     const solveFor = (data.solveFor as string) || '';
 
-    const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        updateNodeData(id, { solveFor: e.target.value });
-    };
+    const menuItems = useMemo(() => {
+        const items: CategorizedMenuItem[] = [
+            { id: '', label: 'Auto (Detected)', category: 'Automatic' }
+        ];
+
+        variables.forEach(v => {
+            items.push({ id: v, label: v, category: 'Detected Variables' });
+        });
+
+        if (solveFor && !variables.includes(solveFor) && solveFor !== '') {
+            items.push({ id: solveFor, label: `${solveFor} (Custom)`, category: 'Manual Entry' });
+        }
+
+        return items;
+    }, [variables, solveFor]);
+
+    const handleSelect = useCallback((item: CategorizedMenuItem) => {
+        updateNodeData(id, { solveFor: item.id });
+        closeMenu();
+    }, [id, updateNodeData]);
 
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         updateNodeData(id, { solveFor: e.target.value });
     };
+
+
+    const currentLabel = solveFor === '' ? 'Auto' : solveFor;
 
     return (
         <BaseNode {...props}>
@@ -69,34 +93,39 @@ export const SolverNode = memo((props: NodeProps) => {
                     Solver
                 </div>
 
-                <div className="w-full flex flex-col gap-1">
-                    <div className="text-[9px] text-zinc-500 uppercase tracking-wider">Solve For</div>
+                <div className="w-full flex flex-col gap-1.5">
+                    <div className="text-[9px] text-zinc-500 uppercase tracking-wider pl-1 font-semibold">Solve For</div>
                     {variables.length > 0 ? (
-                        <div className="flex gap-1">
-                            <select
-                                value={variables.includes(solveFor) ? solveFor : (solveFor ? solveFor : '')}
-                                onChange={handleSelect}
-                                className="nodrag bg-zinc-900 text-zinc-300 text-[10px] w-full p-1 rounded border border-zinc-700 focus:outline-none focus:border-zinc-500"
-                            >
-                                <option value="">Auto</option>
-                                {variables.map(v => (
-                                    <option key={v} value={v}>{v}</option>
-                                ))}
-                                {/* Add current custom value if it's not in the auto-detected list */}
-                                {solveFor && !variables.includes(solveFor) && (
-                                    <option value={solveFor}>{solveFor} (Custom)</option>
-                                )}
-                            </select>
-                        </div>
+                        <button
+                            className="nodrag w-full bg-zinc-900 border border-zinc-700/50 rounded-(--radius-lg) px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group shadow-sm"
+                            onClick={handleTrigger}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <span className="truncate font-mono">{currentLabel}</span>
+                            <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 Transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
                     ) : (
                         <input
-                            className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-full text-center focus:outline-none focus:border-zinc-500 transition-colors"
+                            className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-2 py-1.5 rounded-(--radius-lg) text-xs w-full text-center focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
                             value={solveFor}
                             onChange={handleInput}
-                            placeholder="e.g. x"
+                            placeholder="Type variable..."
                         />
                     )}
                 </div>
+
+                <CategorizedMenu
+                    isOpen={menuOpen}
+                    items={menuItems}
+                    position={menuPos}
+                    trigger={trigger}
+                    onClose={closeMenu}
+                    onSelect={handleSelect}
+                    placeholder="Select Variable..."
+                    width="32"
+                />
             </div>
         </BaseNode>
     );

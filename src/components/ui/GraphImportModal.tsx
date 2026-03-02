@@ -90,7 +90,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
             onClick={onClose}
         >
             <div
-                className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[500px] max-w-[90vw] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+                className="bg-zinc-900 border border-zinc-700 rounded-(--radius-xl) w-[500px] max-w-[90vw] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -101,7 +101,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        className="p-1 rounded-(--radius-sm) hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -119,9 +119,9 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                                 setDiagnostics([]);
                             }}
                             className={`
-                                flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-bold transition-all
+                                flex-1 flex items-center justify-center gap-2 py-1.5 rounded-(--radius-lg) text-xs font-bold transition-all
                                 ${mode === m
-                                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                                    ? 'bg-zinc-800 text-zinc-100'
                                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'}
                             `}
                         >
@@ -139,7 +139,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                         </label>
                         <textarea
                             ref={textareaRef}
-                            className="w-full h-64 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs font-mono text-zinc-300 outline-none focus:border-zinc-600 resize-none placeholder-zinc-700"
+                            className="w-full h-64 bg-zinc-950 border border-zinc-800 rounded-(--radius-lg) p-3 text-xs font-mono text-zinc-300 outline-none focus:border-zinc-600 resize-none placeholder-zinc-700"
                             placeholder={mode === 'CGL' ? '# Node definitions...' : 'e.g. x^2 + 2x + 1'}
                             value={input}
                             onChange={e => setInput(e.target.value)}
@@ -152,7 +152,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                         <button
                             onClick={() => setShouldClear(!shouldClear)}
                             className={`
-                                flex items-center gap-2 px-2 py-1.5 rounded border text-[10px] font-bold uppercase tracking-tight transition-colors
+                                flex items-center gap-2 px-2 py-1.5 rounded-(--radius-sm) border text-[10px] font-bold uppercase tracking-tight transition-colors
                                 ${shouldClear
                                     ? 'bg-red-900/20 border-red-800 text-red-300'
                                     : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-600'}
@@ -167,7 +167,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
 
                     {/* Status / Error */}
                     {error && (
-                        <div className="text-xs text-red-400 bg-red-950/30 border border-red-900/50 p-2 rounded">
+                        <div className="text-xs text-red-400 bg-red-950/30 border border-red-900/50 p-2 rounded-(--radius-sm)">
                             {error}
                         </div>
                     )}
@@ -188,7 +188,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                     )}
 
                     {isProcessing && progress && progress.total > 200 && (
-                        <div className="text-[10px] text-amber-400/60 bg-amber-900/10 border border-amber-900/20 p-2 rounded mt-2 italic">
+                        <div className="text-[10px] text-amber-400/60 bg-amber-900/10 border border-amber-900/20 p-2 rounded-(--radius-sm) mt-2 italic">
                             Large graph detected. Auto-layout skipped to maintain performance.
                         </div>
                     )}
@@ -211,7 +211,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                                     {copied ? 'COPIED!' : 'COPY'}
                                 </button>
                             </div>
-                            <div className="max-h-32 overflow-y-auto bg-amber-950/20 border border-amber-900/30 rounded p-2 flex flex-col gap-1.5 custom-scrollbar">
+                            <div className="max-h-32 overflow-y-auto bg-amber-950/20 border border-amber-900/30 rounded-(--radius-sm) p-2 flex flex-col gap-1.5 custom-scrollbar">
                                 {diagnostics.map((d, i) => (
                                     <div key={i} className="text-[11px] text-amber-200/80 leading-relaxed flex gap-2">
                                         <span className="text-amber-500 shrink-0">•</span>
@@ -227,14 +227,14 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                 <div className="p-3 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-2">
                     <button
                         onClick={onClose}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+                        className="px-3 py-1.5 rounded-(--radius-lg) text-xs font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleImport}
                         disabled={!input.trim() || isProcessing}
-                        className="px-4 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                        className="px-4 py-1.5 rounded-(--radius-lg) text-xs font-bold bg-zinc-100 text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                     >
                         {isProcessing ? 'Processing...' : (
                             <>

@@ -5,6 +5,15 @@ import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { useNodeMenu } from '../../hooks/useNodeMenu';
+import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
+import { ChevronDown } from 'lucide-react';
+
+const DEPTH_ITEMS: CategorizedMenuItem[] = [
+    { id: '8bit', label: '8-bit', category: 'Standard' },
+    { id: '10bit', label: '10-bit', category: 'High Depth' },
+    { id: '12bit', label: '12-bit', category: 'Pro Depth' },
+];
 
 /**
  * ColorNode (IO-18)
@@ -13,6 +22,7 @@ import { PayloadUtils } from '../../utils/PayloadUtils';
  */
 export const ColorNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const depthMenu = useNodeMenu();
 
     const depth = (data.depth as string) || '8bit';
     const maxRange = depth === '10bit' ? 1023 : depth === '12bit' ? 4095 : 255;
@@ -154,25 +164,36 @@ export const ColorNode = memo((props: NodeProps) => {
                     </div>
                 </div>
 
+
                 {/* Depth Control */}
                 <div className="flex items-center justify-between px-1 pt-2 border-t border-zinc-800/50 mt-1">
                     <label className="text-[9px] text-zinc-500 font-bold uppercase">Depth</label>
-                    <select
-                        className="h-4 text-[8px] bg-zinc-900 border border-zinc-700 rounded px-1 focus:outline-none focus:border-blue-500 text-zinc-300"
-                        value={depth}
-                        onChange={(e) => {
-                            Brain.getInstance().applyTransaction({
-                                type: 'UPDATE_NODE_DATA',
-                                payload: { id, data: { ...data, depth: e.target.value ?? '8bit' } }
-                            });
-                        }}
+                    <button
+                        className="nodrag h-5 text-[8px] bg-zinc-900 border border-zinc-700 rounded px-1.5 focus:outline-none focus:border-blue-500 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-all flex items-center gap-1 group font-bold"
+                        onClick={depthMenu.handleTrigger}
                         onMouseDown={(e) => e.stopPropagation()}
                     >
-                        <option value="8bit">8-bit</option>
-                        <option value="10bit">10-bit</option>
-                        <option value="12bit">12-bit</option>
-                    </select>
+                        {depth.toUpperCase()}
+                        <ChevronDown size={8} className="text-zinc-600 group-hover:text-zinc-400" />
+                    </button>
                 </div>
+
+                <CategorizedMenu
+                    isOpen={depthMenu.menuOpen}
+                    items={DEPTH_ITEMS}
+                    position={depthMenu.menuPos}
+                    trigger={depthMenu.trigger}
+                    onClose={depthMenu.closeMenu}
+                    onSelect={(item) => {
+                        Brain.getInstance().applyTransaction({
+                            type: 'UPDATE_NODE_DATA',
+                            payload: { id, data: { ...data, depth: item.id } }
+                        });
+                        depthMenu.closeMenu();
+                    }}
+                    placeholder="Select Depth..."
+                    width="24"
+                />
 
                 <div className="text-[8px] text-zinc-600 text-right px-1">Max: {maxRange}</div>
             </div>
@@ -226,4 +247,3 @@ const FloatInput = ({ value, onChange, min = 0, max = 1, step = 0.01, decimals =
         />
     );
 };
-

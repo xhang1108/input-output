@@ -81,14 +81,14 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
     if (!isOpen) return null;
 
     return (
-        <div className="absolute top-0 right-0 h-full w-80 bg-zinc-950 border-l border-zinc-800 shadow-2xl z-40 animate-in slide-in-from-right duration-200">
+        <div className="absolute top-0 right-0 h-full w-80 bg-zinc-950 border-l border-zinc-800 z-40 animate-in slide-in-from-right duration-200">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
                 <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm">
                     <Cpu className="w-4 h-4" />
                     N PANEL
                 </div>
-                <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors">
+                <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded-(--radius-sm) text-zinc-400 hover:text-white transition-colors">
                     <X className="w-4 h-4" />
                 </button>
             </div>
@@ -110,13 +110,13 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                                 <input
                                     value={label}
                                     onChange={e => handleLabelChange(e.target.value)}
-                                    className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200 focus:border-blue-500 outline-none transition-colors"
+                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-(--radius-sm) px-2 py-1.5 text-sm text-zinc-200 focus:border-blue-500 outline-none transition-colors"
                                 />
                             </div>
 
                             <div className="space-y-1">
                                 <label className="text-[10px] text-zinc-400">ID</label>
-                                <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-500 font-mono select-all">
+                                <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded-(--radius-sm) px-2 py-1.5 text-xs text-zinc-500 font-mono select-all">
                                     {selectedNode.id}
                                 </div>
                             </div>
@@ -154,7 +154,7 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                                 Raw Data
                                 <span className="text-[9px] bg-zinc-800 px-1 py-0.5 rounded text-zinc-400">READ ONLY</span>
                             </h3>
-                            <div className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-[10px] text-zinc-400 font-mono overflow-auto max-h-40">
+                            <div className="w-full bg-zinc-950 border border-zinc-800 rounded-(--radius-sm) p-2 text-[10px] text-zinc-400 font-mono overflow-auto max-h-40">
                                 <pre>{JSON.stringify(selectedNode.data, null, 2)}</pre>
                             </div>
                         </div>

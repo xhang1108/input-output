@@ -1,22 +1,33 @@
-import { memo, useCallback } from 'react';
+
+import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { useNodeMenu } from '../../hooks/useNodeMenu';
+import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
+
+const MODE_ITEMS: CategorizedMenuItem[] = [
+    { id: 'sticky', label: 'Sticky (Toggle)', category: 'Interaction' },
+    { id: 'momentary', label: 'Momentary (Push)', category: 'Interaction' },
+];
 
 export const ButtonNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
 
-    // We unwrap the value to check if it's currently true (pressed)
+
+
+
     const isActive = !!PayloadUtils.unwrap(data.value);
+    const mode = (data as any).mode || 'sticky';
+    const isSticky = mode !== 'momentary';
 
     const handles = [
         { id: 'out', type: 'source', position: 'right', variant: 'single', dataType: 'boolean' }
     ];
 
     const nodeData = { ...data, handles };
-
-    const isSticky = (data as any).mode !== 'momentary'; // Default to sticky (toggle)
 
     const toggleActive = useCallback(() => {
         Brain.getInstance().applyTransaction({
@@ -33,28 +44,35 @@ export const ButtonNode = memo((props: NodeProps) => {
         });
     }, [id, isSticky]);
 
+    const handleSelect = useCallback((item: CategorizedMenuItem) => {
+        Brain.getInstance().applyTransaction({
+            type: 'UPDATE_NODE_DATA',
+            payload: { id, data: { mode: item.id, value: false } }
+        });
+        closeMenu();
+    }, [id]);
+
+
+    const currentModeLabel = isSticky ? 'Sticky' : 'Momentary';
+
     return (
         <BaseNode {...props} data={nodeData}>
-            <div className="flex flex-col items-center gap-4 p-3 min-w-[100px]">
-                <div className="flex justify-between items-center w-full">
-                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Mode</label>
-                    <select
-                        className="nodrag bg-transparent text-[8px] text-zinc-500 border border-zinc-700/50 rounded-xs outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold"
-                        value={(data as any).mode || 'sticky'}
-                        onChange={(e) => {
-                            Brain.getInstance().applyTransaction({
-                                type: 'UPDATE_NODE_DATA',
-                                payload: { id, data: { mode: e.target.value, value: false } }
-                            });
-                        }}
+            <div className="flex flex-col items-center gap-4 p-3 min-w-[120px]">
+                <div className="flex justify-between items-center w-full gap-2">
+                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold shrink-0">Mode</label>
+                    <button
+                        className="nodrag flex-1 bg-transparent text-[8px] text-zinc-500 border border-zinc-700/50 rounded-xs px-1 py-0.5 outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold flex items-center justify-between group"
+                        onClick={handleTrigger}
+                        onMouseDown={(e) => e.stopPropagation()}
                     >
-                        <option value="sticky">Sticky</option>
-                        <option value="momentary">Momentary</option>
-                    </select>
+                        <span>{currentModeLabel}</span>
+                        <svg className="w-2 h-2 text-zinc-600 group-hover:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
                 </div>
 
                 <div className="relative">
-                    {/* Outer Glow Ring */}
                     <div className={`
                         absolute -inset-2 rounded-full blur-lg transition-opacity duration-300
                         ${isActive ? 'bg-orange-500/40 opacity-100' : 'opacity-0'}
@@ -82,7 +100,6 @@ export const ButtonNode = memo((props: NodeProps) => {
                         }}
                         onTouchEnd={() => !isSticky && setPressed(false)}
                     >
-                        {/* Inner detail */}
                         <div className={`
                             w-8 h-8 rounded-full border-2 flex items-center justify-center
                             ${isActive ? 'border-white/30 bg-white/10' : 'border-zinc-500/20 bg-black/5'}
@@ -100,6 +117,17 @@ export const ButtonNode = memo((props: NodeProps) => {
                         {isActive ? 'Active' : 'Standby'}
                     </span>
                 </div>
+
+                <CategorizedMenu
+                    isOpen={menuOpen}
+                    items={MODE_ITEMS}
+                    position={menuPos}
+                    trigger={trigger}
+                    onClose={closeMenu}
+                    onSelect={handleSelect}
+                    placeholder="Select Mode..."
+                    width="32"
+                />
             </div>
         </BaseNode>
     );

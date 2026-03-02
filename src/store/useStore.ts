@@ -23,6 +23,7 @@ interface AppState {
     lastImportMs: number | null;
     uiRenderMs: number | null;
     isFastMode: boolean;
+    lastAddedNodeType: string;
 
     // State
     actionLog: string[];
@@ -46,6 +47,7 @@ interface AppState {
     setLastImportMs: (ms: number | null) => void;
     setUiRenderMs: (ms: number | null) => void;
     setFastMode: (enabled: boolean | ((prev: boolean) => boolean)) => void;
+    setLastAddedNodeType: (type: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -70,6 +72,7 @@ export const useAppStore = create<AppState>()(
                 lastImportMs: null,
                 uiRenderMs: null,
                 isFastMode: false,
+                lastAddedNodeType: 'add',
                 actionLog: [],
 
                 // Setters
@@ -91,6 +94,7 @@ export const useAppStore = create<AppState>()(
                 setLastImportMs: (lastImportMs) => set({ lastImportMs }),
                 setUiRenderMs: (uiRenderMs) => set({ uiRenderMs }),
                 setFastMode: (enabled) => set((s) => ({ isFastMode: typeof enabled === 'function' ? enabled(s.isFastMode) : enabled })),
+                setLastAddedNodeType: (type) => set({ lastAddedNodeType: type }),
             }),
             {
                 name: 'calctopus-settings-v2',
@@ -104,6 +108,7 @@ export const useAppStore = create<AppState>()(
                     panOnScroll: state.panOnScroll,
                     showNPanel: state.showNPanel,
                     mathPrecision: state.mathPrecision,
+                    lastAddedNodeType: state.lastAddedNodeType,
                 }),
             }
         )

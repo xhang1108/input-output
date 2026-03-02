@@ -1,0 +1,317 @@
+
+import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { Search } from 'lucide-react';
+import { useReactFlow } from '@xyflow/react';
+
+export interface CategorizedMenuItem {
+    id: string;
+    label: string;
+    category: string;
+    aliases?: string[];
+    description?: ReactNode;
+    data?: any;
+    icon?: ReactNode;
+}
+
+interface CategorizedMenuProps {
+    isOpen: boolean;
+    items: CategorizedMenuItem[];
+    trigger?: HTMLElement | null;
+    position?: { x: number; y: number };
+    onClose: () => void;
+    onSelect: (item: CategorizedMenuItem, isContinuous: boolean) => void;
+    placeholder?: string;
+    width?: string;
+    maxHeight?: string;
+    followZoom?: boolean;
+    yOffset?: number;
+}
+
+/**
+ * CategorizedMenu
+ * A Blender-style searchable menu with category grouping and keyboard navigation.
+ */
+export function CategorizedMenu({
+    isOpen,
+    items,
+    trigger,
+    position,
+    onClose,
+    onSelect,
+    placeholder = "Search...",
+    width = "36",
+    maxHeight = "500px",
+    followZoom = true,
+    yOffset = 6
+}: CategorizedMenuProps) {
+    const [search, setSearch] = useState('');
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [mounted, setMounted] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    const { getViewport } = useReactFlow();
+    const { zoom } = getViewport();
+
+    // Ensure we are on the client
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Flatten and filter items based on search
+    const filteredItems = useMemo(() => {
+        const searchLower = search.toLowerCase();
+        return items.filter(item =>
+            item.label.toLowerCase().includes(searchLower) ||
+            item.id.toLowerCase().includes(searchLower) ||
+            item.aliases?.some(alias => alias.toLowerCase().includes(searchLower))
+        );
+    }, [items, search]);
+
+    // Reset selection when search changes
+    useEffect(() => {
+        setSelectedIndex(0);
+    }, [search]);
+
+    // Focus input on open
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => inputRef.current?.focus(), 50);
+        }
+    }, [isOpen]);
+
+
+    // group items by category for rendering
+    const groupedItems = useMemo(() => {
+        return filteredItems.reduce((acc, item) => {
+            if (!acc[item.category]) acc[item.category] = [];
+            acc[item.category].push(item);
+            return acc;
+        }, {} as Record<string, CategorizedMenuItem[]>);
+    }, [filteredItems]);
+
+    // Handle viewport boundaries for smart positioning
+    const menuRef = useRef<HTMLDivElement>(null);
+    const [flipState, setFlipState] = useState({ x: false, y: false });
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        let requestId: number;
+
+        const updatePosition = () => {
+            if (!menuRef.current) return;
+
+            let x = position?.x || 0;
+            let y = position?.y || 0;
+
+            const currentZoom = followZoom ? zoom : 1;
+
+            let flipY = y;
+
+            // If trigger element is provided, use it for real-time tracking
+            if (trigger) {
+                const rect = trigger.getBoundingClientRect();
+                x = rect.left;
+                y = rect.bottom + yOffset;
+                flipY = rect.top - yOffset;
+            }
+
+            const menuEl = menuRef.current;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // 1. Position Y (flip up if no space below)
+            const menuRawHeight = menuEl.offsetHeight;
+            const scaledHeight = menuRawHeight * currentZoom;
+            const shouldFlipY = y + scaledHeight > viewportHeight;
+            const finalY = shouldFlipY ? Math.max(0, flipY - menuRawHeight) : y;
+
+            // 2. Position X (Always start at mouse, but cap width if no space on right)
+            // Instead of flipping X, we limit the element's maxWidth so it stays on screen
+            const availableWidth = viewportWidth - x - 20; // 20px padding from edge
+            const minPossibleWidth = 200; // Minimum usable width
+
+            menuEl.style.left = `${x}px`;
+            menuEl.style.top = `${finalY}px`;
+            menuEl.style.transform = `scale(${currentZoom})`;
+            menuEl.style.transformOrigin = `${shouldFlipY ? 'bottom' : 'top'} left`;
+            menuEl.style.maxWidth = `min(95vw, ${Math.max(minPossibleWidth, availableWidth / currentZoom)}px)`;
+            menuEl.style.visibility = 'visible';
+
+            requestId = requestAnimationFrame(updatePosition);
+        };
+
+        // Run synchronously once first to set initial layout before animation frame
+        updatePosition();
+
+        requestId = requestAnimationFrame(updatePosition);
+        return () => cancelAnimationFrame(requestId);
+    }, [isOpen, position, trigger, zoom]);
+
+    const handleWheel = (e: React.WheelEvent) => {
+        if (!scrollContainerRef.current) return;
+
+        // Horizontal Menu Scrolling Shortcuts
+        // Shift + Scroll -> scrolls horizontally
+        // Ctrl + Scroll -> scrolls horizontally (faster)
+
+        if (e.shiftKey) {
+            scrollContainerRef.current.scrollLeft += e.deltaY;
+        } else if (e.ctrlKey) {
+            e.preventDefault();
+            scrollContainerRef.current.scrollLeft += e.deltaY * 2;
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSelectedIndex(i => Math.min(i + 1, filteredItems.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSelectedIndex(i => Math.max(i - 1, 0));
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (filteredItems[selectedIndex]) {
+                const item = filteredItems[selectedIndex];
+                const isContinuous = e.ctrlKey || e.metaKey;
+                onSelect(item, isContinuous);
+
+                if (isContinuous) {
+                    setSearch('');
+                    setTimeout(() => inputRef.current?.focus(), 0);
+                } else {
+                    onClose();
+                }
+            }
+        } else if (e.key === 'Escape') {
+            onClose();
+        }
+    };
+
+    // Auto-scroll to selected item
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            const selectedElement = scrollContainerRef.current.querySelector('[data-selected="true"]');
+            if (selectedElement) {
+                selectedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+    }, [selectedIndex]);
+
+    if (!isOpen || !mounted) return null;
+
+    return createPortal(
+        <>
+            {/* Backdrop for click-away closing */}
+            <div
+                className="fixed inset-0 z-9999 content-none cursor-default"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }}
+                onContextMenu={(e) => {
+                    e.preventDefault();
+                    onClose();
+                }}
+            />
+            <div
+                ref={menuRef}
+                className={`fixed z-10000 w-auto min-w-[${width}] bg-(--node-bg) border border-(--node-border) rounded-(--radius-lg) overflow-visible animate-in fade-in zoom-in-95 duration-100 flex flex-col [transition-property:opacity,transform]`}
+                style={{
+                    backdropFilter: 'blur(12px)',
+                    visibility: 'hidden',
+                    maxHeight: maxHeight,
+                    maxWidth: '95vw',
+                }}
+                onClick={e => e.stopPropagation()}
+                onContextMenu={e => e.preventDefault()}
+            >
+                {/* Search Input */}
+                <div className="p-1 border-b border-(--node-border) bg-zinc-900/30">
+                    <div className="flex items-center px-1 py-0.5 bg-zinc-950 rounded-(--radius-sm) border border-(--node-border) ring-1 ring-white/5">
+                        <Search className="w-2.5 h-2.5 text-zinc-500 mr-1" />
+                        <input
+                            ref={inputRef}
+                            className="bg-transparent text-[10px] text-zinc-200 outline-none w-full placeholder-zinc-600 font-medium"
+                            placeholder={placeholder}
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                        />
+                    </div>
+                </div>
+
+                {/* Items Container: Horizontal Categorical Flow */}
+                <div
+                    ref={scrollContainerRef}
+                    className="flex flex-row p-1 gap-2 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    style={{ maxHeight: `calc(${maxHeight} - 50px)` }}
+                >
+                    {filteredItems.length === 0 ? (
+                        <div className="px-4 py-8 text-zinc-500 text-[10px] text-center italic w-full">
+                            No results found
+                        </div>
+                    ) : (
+                        Object.entries(groupedItems).map(([category, categoryItems]) => (
+                            <div key={category} className="flex flex-col flex-wrap gap-x-0.5 content-start border-r border-white/5 last:border-r-0 pr-2 last:pr-0">
+                                {/* Category Header */}
+                                <div className="px-1 py-1 text-[8px] uppercase tracking-widest font-black text-zinc-500/60 flex items-center gap-1 mb-0.5 sticky left-0 bg-(--node-bg)">
+                                    {category}
+                                </div>
+
+                                {/* Items Wrap horizontally within the category if height exceeded */}
+                                <div className="flex flex-col flex-wrap content-start gap-0.5" style={{ maxHeight: `calc(${maxHeight} - 80px)` }}>
+                                    {categoryItems.map((item) => {
+                                        const globalIndex = filteredItems.indexOf(item);
+                                        const isSelected = globalIndex === selectedIndex;
+
+                                        return (
+                                            <button
+                                                key={`${item.category}-${item.id}-${item.label}`}
+                                                data-selected={isSelected}
+                                                className={`min-w-[100px] text-left px-1.5 py-0.5 text-[10px] flex items-center justify-between group transition-all duration-75 relative rounded-(--radius-sm) ${isSelected
+                                                    ? 'bg-blue-600 text-white z-10 scale-[1.02]'
+                                                    : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
+                                                    }`}
+                                                onClick={(e) => {
+                                                    const isContinuous = e.ctrlKey || e.metaKey;
+                                                    onSelect(item, isContinuous);
+                                                    if (isContinuous) {
+                                                        setSearch('');
+                                                        setTimeout(() => inputRef.current?.focus(), 0);
+                                                    } else {
+                                                        onClose();
+                                                    }
+                                                }}
+                                                onMouseEnter={() => setSelectedIndex(globalIndex)}
+                                            >
+                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                    {item.icon && <span className="opacity-70">{item.icon}</span>}
+                                                    <span className="truncate font-medium">{item.label}</span>
+                                                </div>
+                                                <span className={`text-[8px] opacity-40 font-mono tracking-tighter ${isSelected ? 'text-blue-100' : 'text-zinc-600'
+                                                    }`}>
+                                                    {item.id}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Footer / Hint */}
+                <div className="px-2 py-0.5 text-[8px] text-zinc-600 bg-black/40 border-t border-white/5 flex justify-between uppercase tracking-tighter rounded-b-[calc(var(--radius-lg)-1px)]">
+                    <span>↑↓ Navigate</span>
+                    <span>Ctrl+Enter Multi</span>
+                </div>
+            </div>
+        </>,
+        document.body
+    );
+}

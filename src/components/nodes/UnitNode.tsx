@@ -1,40 +1,72 @@
-import { memo, useCallback, useState, useEffect } from 'react';
+
+import { memo, useCallback, useState, useEffect, useMemo } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
 import { InputOutputEngine } from '../../engine/InputOutputEngine';
+import { useNodeMenu } from '../../hooks/useNodeMenu';
+import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
-const UNITS = [
+const UNIT_ITEMS: CategorizedMenuItem[] = [
     // Length
-    'm', 'cm', 'mm', 'km', 'ft', 'in',
+    { id: 'm', label: 'Meter (m)', category: 'Length' },
+    { id: 'cm', label: 'Centimeter (cm)', category: 'Length' },
+    { id: 'mm', label: 'Millimeter (mm)', category: 'Length' },
+    { id: 'km', label: 'Kilometer (km)', category: 'Length' },
+    { id: 'ft', label: 'Feet (ft)', category: 'Length' },
+    { id: 'in', label: 'Inch (in)', category: 'Length' },
     // Mass
-    'kg', 'g', 'lb',
+    { id: 'kg', label: 'Kilogram (kg)', category: 'Mass' },
+    { id: 'g', label: 'Gram (g)', category: 'Mass' },
+    { id: 'lb', label: 'Pound (lb)', category: 'Mass' },
     // Time
-    's', 'min', 'h',
+    { id: 's', label: 'Second (s)', category: 'Time' },
+    { id: 'min', label: 'Minute (min)', category: 'Time' },
+    { id: 'h', label: 'Hour (h)', category: 'Time' },
     // Physics
-    'N', 'J', 'W', 'Pa', 'V', 'A', 'C', 'degC', 'degF',
-    // Common Compounds
-    'm/s', 'km/h', 'm/s^2', 'N*m'
+    { id: 'N', label: 'Newton (N)', category: 'Physics' },
+    { id: 'J', label: 'Joule (J)', category: 'Physics' },
+    { id: 'W', label: 'Watt (W)', category: 'Physics' },
+    { id: 'Pa', label: 'Pascal (Pa)', category: 'Physics' },
+    { id: 'V', label: 'Volt (V)', category: 'Physics' },
+    { id: 'A', label: 'Ampere (A)', category: 'Physics' },
+    { id: 'C', label: 'Coulomb (C)', category: 'Physics' },
+    { id: 'degC', label: 'Celsius (°C)', category: 'Physics' },
+    { id: 'degF', label: 'Fahrenheit (°F)', category: 'Physics' },
+    // Compound
+    { id: 'm/s', label: 'm/s', category: 'Compound' },
+    { id: 'km/h', label: 'km/h', category: 'Compound' },
+    { id: 'm/s^2', label: 'm/s²', category: 'Compound' },
+    { id: 'N*m', label: 'N·m', category: 'Compound' },
+    // Special
+    { id: 'CUSTOM_ENTRY', label: 'Custom Unit...', category: 'Special', icon: <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> }
 ];
+
+const PREDEFINED_UNIT_IDS = UNIT_ITEMS.map(u => u.id);
 
 export const UnitNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const initialUnit = data.unit as string || 'm';
 
     const [mode, setMode] = useState<'select' | 'custom'>(
-        UNITS.includes(initialUnit) ? 'select' : 'custom'
+        PREDEFINED_UNIT_IDS.includes(initialUnit) ? 'select' : 'custom'
     );
     const [localUnit, setLocalUnit] = useState(initialUnit);
     const [isValid, setIsValid] = useState(true);
+
+
+
 
     // Sync local state with remote data
     useEffect(() => {
         if (data.unit && data.unit !== localUnit) {
             setLocalUnit(data.unit as string);
             setIsValid(true);
-            // Auto-switch to custom if loaded data is a custom unit
-            if (!UNITS.includes(data.unit as string)) {
+            if (!PREDEFINED_UNIT_IDS.includes(data.unit as string)) {
                 setMode('custom');
+            } else {
+                setMode('select');
             }
         }
     }, [data.unit]);
@@ -53,14 +85,14 @@ export const UnitNode = memo((props: NodeProps) => {
         }
     };
 
-    const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = e.target.value;
-        if (value === 'CUSTOM_ENTRY') {
+    const handleMenuSelect = (item: CategorizedMenuItem) => {
+        if (item.id === 'CUSTOM_ENTRY') {
             setMode('custom');
         } else {
-            setLocalUnit(value);
-            validateAndApply(value);
+            setLocalUnit(item.id);
+            validateAndApply(item.id);
         }
+        closeMenu();
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,33 +105,32 @@ export const UnitNode = memo((props: NodeProps) => {
         if (e.key === 'Enter') validateAndApply(localUnit);
     };
 
+
     const toggleMode = () => setMode(mode === 'select' ? 'custom' : 'select');
+
+    const currentUnitLabel = UNIT_ITEMS.find(u => u.id === localUnit)?.label || localUnit;
 
     return (
         <BaseNode {...props}>
             <div className="flex flex-col gap-2 p-1">
                 <div className="flex items-center justify-center">
                     <div className={`relative group flex items-center bg-zinc-900 border ${isValid ? 'border-zinc-700/50' : 'border-red-500/50'
-                        } rounded-md px-1 py-0.5 transition-all duration-200`}>
+                        } rounded-md px-1 py-0.5 transition-all duration-200 min-h-[28px]`}>
 
                         {mode === 'select' ? (
                             <div className="flex items-center">
-                                <select
-                                    className="nodrag bg-transparent text-zinc-100 text-[11px] px-1 py-0.5 outline-none min-w-[70px] appearance-none cursor-pointer"
-                                    value={UNITS.includes(localUnit) ? localUnit : 'CUSTOM_ENTRY'}
-                                    onChange={handleSelectChange}
+                                <button
+                                    className="nodrag bg-transparent text-zinc-100 text-[11px] px-1.5 py-0.5 outline-none min-w-[70px] flex items-center justify-between group/btn"
+                                    onClick={handleTrigger}
                                     onMouseDown={(e) => e.stopPropagation()}
                                 >
-                                    {UNITS.map(u => (
-                                        <option key={u} value={u} className="bg-zinc-800">{u}</option>
-                                    ))}
-                                    <option value="CUSTOM_ENTRY" className="bg-zinc-800 text-blue-400 font-bold">Custom...</option>
-                                </select>
-                                <div className="text-zinc-600 ml-0.5 pointer-events-none pr-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="m6 9 6 6 6-6" />
-                                    </svg>
-                                </div>
+                                    <span className="truncate group-hover/btn:text-blue-400 transition-colors uppercase font-bold">{localUnit}</span>
+                                    <div className="text-zinc-600 ml-1 group-hover/btn:text-zinc-400 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="m6 9 6 6 6-6" />
+                                        </svg>
+                                    </div>
+                                </button>
                             </div>
                         ) : (
                             <div className="flex items-center">
@@ -137,6 +168,17 @@ export const UnitNode = memo((props: NodeProps) => {
                         )}
                     </div>
                 </div>
+
+                <CategorizedMenu
+                    isOpen={menuOpen}
+                    items={UNIT_ITEMS}
+                    position={menuPos}
+                    trigger={trigger}
+                    onClose={closeMenu}
+                    onSelect={handleMenuSelect}
+                    placeholder="Search Units..."
+                    width="48"
+                />
             </div>
         </BaseNode>
     );

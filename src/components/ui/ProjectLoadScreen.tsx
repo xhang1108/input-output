@@ -55,7 +55,7 @@ function SaveSlotCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="group relative bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden
+            className="group relative bg-zinc-900 border border-zinc-800 rounded-(--radius-xl) overflow-hidden
                        hover:border-zinc-600 transition-all duration-200 cursor-pointer"
             onClick={() => { if (!isRenaming && !confirmDelete) onOpen(); }}
         >
@@ -91,7 +91,7 @@ function SaveSlotCard({
                                 value={nameInput}
                                 onChange={e => setNameInput(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setIsRenaming(false); }}
-                                className="flex-1 bg-zinc-800 border border-zinc-600 rounded px-2 py-0.5 text-sm text-zinc-100
+                                className="flex-1 bg-zinc-800 border border-zinc-600 rounded-(--radius-sm) px-2 py-0.5 text-sm text-zinc-100
                                            outline-none focus:border-unit"
                             />
                             <button onClick={submitRename} className="p-1 text-emerald-400 hover:text-emerald-300">
@@ -126,14 +126,14 @@ function SaveSlotCard({
                 >
                     <button
                         onClick={onOpen}
-                        className="flex-1 text-xs py-1.5 rounded-md bg-unit/15 text-unit
+                        className="flex-1 text-xs py-1.5 rounded-(--radius-sm) bg-unit/15 text-unit
                                    hover:bg-unit/25 font-medium transition-colors"
                     >
                         Open
                     </button>
                     <button
                         onClick={() => { setNameInput(meta.name); setIsRenaming(true); }}
-                        className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+                        className="p-1.5 rounded-(--radius-sm) text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
                         title="Rename"
                     >
                         <Pencil className="w-3.5 h-3.5" />
@@ -142,7 +142,7 @@ function SaveSlotCard({
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={onDelete}
-                                className="text-[10px] px-2 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 font-medium"
+                                className="text-[10px] px-2 py-1 rounded-(--radius-sm) bg-red-500/20 text-red-400 hover:bg-red-500/30 font-medium"
                             >
                                 Confirm
                             </button>
@@ -156,7 +156,7 @@ function SaveSlotCard({
                     ) : (
                         <button
                             onClick={() => setConfirmDelete(true)}
-                            className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="p-1.5 rounded-(--radius-sm) text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                             title="Delete"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -178,10 +178,10 @@ function NewProjectCard({ onClick }: { onClick: () => void }) {
             transition={{ duration: 0.2, delay: 0.05 }}
             onClick={onClick}
             className="flex flex-col items-center justify-center bg-zinc-900/50 border-2 border-dashed border-zinc-800
-                       rounded-xl min-h-[220px] cursor-pointer
+                       rounded-(--radius-xl) min-h-[220px] cursor-pointer
                        hover:border-unit/50 hover:bg-zinc-900/80 transition-all duration-200 group"
         >
-            <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3
+            <div className="w-12 h-12 rounded-(--radius-xl) bg-zinc-800 flex items-center justify-center mb-3
                           group-hover:bg-unit/20 transition-colors duration-200">
                 <Plus className="w-6 h-6 text-zinc-500 group-hover:text-unit transition-colors" />
             </div>
@@ -229,7 +229,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
             <header className="shrink-0 border-b border-zinc-900 px-8 py-6">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-linear-to-br from-unit to-[hsl(270,60%,62%)] flex items-center justify-center">
+                        <div className="w-9 h-9 rounded-(--radius-lg) bg-linear-to-br from-unit to-[hsl(270,60%,62%)] flex items-center justify-center">
                             <span className="text-white font-bold text-lg">🐙</span>
                         </div>
                         <div>

@@ -41,7 +41,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
     return (
         <div
             ref={menuRef}
-            className="fixed z-50 w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col py-1"
+            className="fixed z-50 w-48 bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col py-1"
             style={style}
             onContextMenu={(e) => e.preventDefault()} // Prevent browser menu on top of ours
         >

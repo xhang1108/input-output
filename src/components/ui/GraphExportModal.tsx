@@ -42,7 +42,7 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
             onClick={onClose}
         >
             <div
-                className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[500px] max-w-[90vw] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+                className="bg-zinc-900 border border-zinc-700 rounded-xl w-[500px] max-w-[90vw] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -94,7 +94,7 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
                     </button>
                     <button
                         onClick={handleDownload}
-                        className="px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20"
+                        className="px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center gap-2"
                     >
                         <Download className="w-3.5 h-3.5" />
                         Download .cgl File

@@ -21,7 +21,7 @@ export const GridView: React.FC<GridViewProps> = ({ grid, precision }) => {
                             <div
                                 key={c}
                                 className="w-12 h-8 flex shrink-0 items-center justify-center text-[10px] 
-                                         bg-zinc-800/50 border border-zinc-700/50 rounded overflow-hidden px-1"
+                                         bg-zinc-800/50 border border-zinc-700/50 rounded-(--radius-sm) overflow-hidden px-1"
                                 title={DisplayUtils.formatValue(val, -1)}
                             >
                                 <span className="truncate">{DisplayUtils.formatValue(val, precision)}</span>

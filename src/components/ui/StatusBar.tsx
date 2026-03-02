@@ -41,7 +41,7 @@ export function StatusBar({ mode, transformValue }: StatusBarProps) {
 
                     {/* Transform Value Display */}
                     {transformValue && (
-                        <span className="text-white bg-zinc-800 px-2 rounded font-mono">
+                        <span className="text-white bg-zinc-800 px-2 rounded-(--radius-sm) font-mono">
                             {transformValue}
                         </span>
                     )}
@@ -56,7 +56,7 @@ export function StatusBar({ mode, transformValue }: StatusBarProps) {
                 {/* Right: Stats */}
                 <div className="flex gap-4 items-center">
                     {/* Save Status Indicator */}
-                    <span className={`transition-all duration-300 flex items-center gap-1.5 px-1.5 py-0.5 rounded ${saveStatus === 'SAVING' ? 'text-blue-400 bg-blue-400/10' :
+                    <span className={`transition-all duration-300 flex items-center gap-1.5 px-1.5 py-0.5 rounded-(--radius-sm) ${saveStatus === 'SAVING' ? 'text-blue-400 bg-blue-400/10' :
                         saveStatus === 'SAVED' ? 'text-green-400 bg-green-400/10' :
                             'text-zinc-600'
                         }`}>
@@ -93,7 +93,7 @@ export function StatusBar({ mode, transformValue }: StatusBarProps) {
                             </span>
                         )}
                         {isFastMode && (
-                            <span className="text-amber-500 font-bold px-1.5 py-0.5 bg-amber-500/10 rounded border border-amber-500/20 ml-1">
+                            <span className="text-amber-500 font-bold px-1.5 py-0.5 bg-amber-500/10 rounded-(--radius-sm) border border-amber-500/20 ml-1">
                                 FAST MODE
                             </span>
                         )}

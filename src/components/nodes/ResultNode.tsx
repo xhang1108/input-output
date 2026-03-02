@@ -4,8 +4,10 @@ import { NodeProps, Position } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { FormulaRenderer } from '../../utils/FormulaRenderer';
 import { Brain } from '../../engine/Brain';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, ChevronDown } from 'lucide-react';
 import { DataType } from '../../types/payload';
+import { useNodeMenu } from '../../hooks/useNodeMenu';
+import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
 import { ScalarView } from './views/ScalarView';
 import { GridView } from './views/GridView';
@@ -15,10 +17,29 @@ import { LatexView } from './views/LatexView';
 
 export type ResultViewMode = 'auto' | 'text' | 'grid' | 'color' | 'formula' | 'latex';
 
+const VIEW_MODE_ITEMS: CategorizedMenuItem[] = [
+    { id: 'auto', label: 'Auto', category: 'General' },
+    { id: 'text', label: 'Text', category: 'Display' },
+    { id: 'grid', label: 'Grid', category: 'Display' },
+    { id: 'color', label: 'Color', category: 'Display' },
+    { id: 'formula', label: 'Formula', category: 'Symbolic' },
+    { id: 'latex', label: 'LaTeX', category: 'Symbolic' },
+];
+
+const PRECISION_ITEMS: CategorizedMenuItem[] = [
+    { id: '-1', label: 'Auto', category: 'Precision' },
+    ...[0, 1, 2, 3, 4, 5, 6, 8, 10].map(p => ({
+        id: String(p),
+        label: `${p} d.p.`,
+        category: 'Precision'
+    })),
+];
+
 export const ResultNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const viewMenu = useNodeMenu();
+    const precMenu = useNodeMenu();
 
-    // Custom single input handle
     const handles = useMemo(() => [
         {
             id: 'in',
@@ -31,9 +52,7 @@ export const ResultNode = memo((props: NodeProps) => {
     const nodeData = { ...data, handles };
     const value = data.value;
 
-    // Node state derived from graph data
     const precision = typeof data.precision === 'number' ? data.precision : -1;
-    // Parse incoming payload
     const payload = (typeof value === 'object' && value !== null && 'type' in value)
         ? value as import('../../types/payload').NodePayload
         : (value !== undefined ? PayloadUtils.wrap(value) : null);
@@ -48,19 +67,17 @@ export const ResultNode = memo((props: NodeProps) => {
     const isError = payload?.type === DataType.Error;
     const errorStr = isError ? String(payload?.meta?.error || 'Error') : '';
 
-    // Determine effective view mode
     let effectiveMode: 'text' | 'grid' | 'color' | 'formula' | 'latex' = 'text';
 
     if (viewMode === 'auto') {
         if (payload?.type === DataType.Matrix) effectiveMode = 'grid';
-        else if (payload?.type === DataType.Symbolic) effectiveMode = 'formula'; // Default symbolic to formula view
+        else if (payload?.type === DataType.Symbolic) effectiveMode = 'formula';
         else if (payload?.type === DataType.Object && rawValue && typeof rawValue === 'object' && 'hex' in (rawValue as object)) effectiveMode = 'color';
         else effectiveMode = 'text';
     } else {
         effectiveMode = viewMode;
     }
 
-    // Prepare data for specific views
     let matrixData: unknown[][] = [];
     if (effectiveMode === 'grid') {
         if (Array.isArray(rawValue)) {
@@ -69,9 +86,9 @@ export const ResultNode = memo((props: NodeProps) => {
             const r = rawValue as any;
             if (r.mathjs === 'Matrix') matrixData = r.data || [];
             else if (r.toArray) matrixData = r.toArray();
-            else matrixData = [[rawValue]]; // Wrap object in 1x1
+            else matrixData = [[rawValue]];
         } else if (rawValue !== undefined && rawValue !== null) {
-            matrixData = [[rawValue]]; // Wrap scalar in 1x1
+            matrixData = [[rawValue]];
         }
     }
 
@@ -81,17 +98,14 @@ export const ResultNode = memo((props: NodeProps) => {
         else formulaStr = String(rawValue);
     }
 
-    // Determine type color for scalar/text mode
     let dataTypeColor = 'text-zinc-400';
     switch (payload?.type) {
         case DataType.Scalar: dataTypeColor = 'text-(--color-scalar)'; break;
         case DataType.String: dataTypeColor = 'text-(--color-string)'; break;
         case DataType.Matrix: dataTypeColor = 'text-(--color-matrix)'; break;
         case DataType.Boolean: dataTypeColor = 'text-(--color-boolean)'; break;
-        case DataType.Symbolic: dataTypeColor = 'text-[var(--color-symbolic,#b084e9)]'; break; // Use symbolic color
+        case DataType.Symbolic: dataTypeColor = 'text-[var(--color-symbolic,#b084e9)]'; break;
     }
-
-    // --- Actions ---
 
     const copyToClipboard = useCallback(() => {
         let copyStr = '';
@@ -109,19 +123,21 @@ export const ResultNode = memo((props: NodeProps) => {
         }
     }, [isError, errorStr, effectiveMode, matrixData, rawValue, formulaStr]);
 
-    const handlePrecisionChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handlePrecisionSelect = useCallback((item: CategorizedMenuItem) => {
         Brain.getInstance().applyTransaction({
             type: 'UPDATE_NODE_DATA',
-            payload: { id, data: { precision: parseInt(e.target.value) } }
+            payload: { id, data: { precision: parseInt(item.id) } }
         });
-    }, [id]);
+        precMenu.closeMenu();
+    }, [id, precMenu]);
 
-    const handleViewModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleViewModeSelect = useCallback((item: CategorizedMenuItem) => {
         Brain.getInstance().applyTransaction({
             type: 'UPDATE_NODE_DATA',
-            payload: { id, data: { viewMode: e.target.value as ResultViewMode } }
+            payload: { id, data: { viewMode: item.id as ResultViewMode } }
         });
-    }, [id]);
+        viewMenu.closeMenu();
+    }, [id, viewMenu]);
 
     const handleDepthChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
         Brain.getInstance().applyTransaction({
@@ -130,17 +146,19 @@ export const ResultNode = memo((props: NodeProps) => {
         });
     }, [id]);
 
+    const currentModeLabel = VIEW_MODE_ITEMS.find(v => v.id === viewMode)?.label || viewMode;
+    const currentPrecLabel = precision === -1 ? 'Auto' : `${precision} d.p.`;
+
     return (
         <BaseNode {...props} data={nodeData}>
             <div className="p-3 flex flex-col gap-2 min-w-[140px] max-w-[500px]">
-                {/* Header Controls */}
                 <div className="flex justify-between items-center gap-2">
                     <div className="flex items-center gap-1 overflow-hidden">
                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold shrink-0">Result</label>
                         {payload?.symbol && effectiveMode !== 'formula' && (
                             <button
-                                onClick={() => handleViewModeChange({ target: { value: 'formula' } } as any)}
-                                className="text-[8px] bg-(--color-math)/20 text-(--color-math) px-1 rounded hover:bg-(--color-math)/40 transition-colors"
+                                onClick={() => handleViewModeSelect({ id: 'formula' } as any)}
+                                className="text-[8px] bg-(--color-math)/20 text-(--color-math) px-1 rounded-(--radius-sm) hover:bg-(--color-math)/40 transition-colors"
                                 title="Has Formula Trace"
                             >
                                 ƒx
@@ -149,35 +167,29 @@ export const ResultNode = memo((props: NodeProps) => {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                        <select
-                            className="nodrag bg-transparent text-[9px] text-zinc-500 border border-zinc-700/50 rounded-xs outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold"
-                            value={viewMode}
-                            onChange={handleViewModeChange}
+                        <button
+                            className="nodrag bg-transparent text-[9px] text-zinc-500 border border-zinc-700/50 rounded-xs px-1.5 py-0.5 outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold flex items-center gap-1"
+                            onClick={viewMenu.handleTrigger}
+                            onMouseDown={(e) => e.stopPropagation()}
                         >
-                            <option value="auto">Auto</option>
-                            <option value="text">Text</option>
-                            <option value="grid">Grid</option>
-                            <option value="color">Color</option>
-                            <option value="formula">Formula</option>
-                            <option value="latex">LaTeX</option>
-                        </select>
+                            {currentModeLabel}
+                            <ChevronDown size={8} />
+                        </button>
 
                         {effectiveMode !== 'formula' && effectiveMode !== 'latex' && effectiveMode !== 'color' && (
-                            <select
-                                className="nodrag bg-transparent text-[9px] text-zinc-500 border border-zinc-700/50 rounded-xs outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold"
-                                value={precision}
-                                onChange={handlePrecisionChange}
+                            <button
+                                className="nodrag bg-transparent text-[9px] text-zinc-500 border border-zinc-700/50 rounded-xs px-1.5 py-0.5 outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold flex items-center gap-1"
+                                onClick={precMenu.handleTrigger}
+                                onMouseDown={(e) => e.stopPropagation()}
                             >
-                                <option value={-1}>Auto</option>
-                                {[0, 1, 2, 3, 4, 5, 6, 8, 10].map(p => (
-                                    <option key={p} value={p}>{p} d.p.</option>
-                                ))}
-                            </select>
+                                {currentPrecLabel}
+                                <ChevronDown size={8} />
+                            </button>
                         )}
 
                         <button
                             onClick={copyToClipboard}
-                            className={`nodrag p-1 rounded hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
+                            className={`nodrag p-1 rounded-(--radius-sm) hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
                             title="Copy Value"
                         >
                             {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -185,8 +197,7 @@ export const ResultNode = memo((props: NodeProps) => {
                     </div>
                 </div>
 
-                {/* Content Area */}
-                <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-lg bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
+                <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-(--radius-lg) bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
                     {isError ? (
                         <div className="font-mono break-all whitespace-pre-wrap text-red-500 text-sm py-2 px-3">{errorStr}</div>
                     ) : !payload ? (
@@ -201,6 +212,28 @@ export const ResultNode = memo((props: NodeProps) => {
                         </>
                     )}
                 </div>
+
+                <CategorizedMenu
+                    isOpen={viewMenu.menuOpen}
+                    items={VIEW_MODE_ITEMS}
+                    position={viewMenu.menuPos}
+                    trigger={viewMenu.trigger}
+                    onClose={viewMenu.closeMenu}
+                    onSelect={handleViewModeSelect}
+                    placeholder="Select View..."
+                    width="28"
+                />
+
+                <CategorizedMenu
+                    isOpen={precMenu.menuOpen}
+                    items={PRECISION_ITEMS}
+                    position={precMenu.menuPos}
+                    trigger={precMenu.trigger}
+                    onClose={precMenu.closeMenu}
+                    onSelect={handlePrecisionSelect}
+                    placeholder="Set Precision..."
+                    width="28"
+                />
             </div>
         </BaseNode>
     );

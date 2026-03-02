@@ -53,7 +53,7 @@ export function SettingsPanel({
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
-                    p-2 rounded-lg border shadow-lg transition-all duration-200
+                    p-2 rounded-(--radius-lg) border shadow-lg transition-all duration-200
                     ${isOpen ? 'bg-zinc-800 border-zinc-600 text-zinc-100' : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}
                 `}
                 title="Settings"
@@ -63,14 +63,14 @@ export function SettingsPanel({
 
             {/* Menu Panel */}
             {isOpen && (
-                <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                <div className="bg-zinc-900 border border-zinc-700 rounded-(--radius-xl) shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2 fade-in duration-200">
 
                     {/* Snapping */}
                     <ToggleRow
                         label="Grid Snapping"
                         icon={<Magnet className="w-4 h-4" />}
                         active={isSnapping}
-                        onClick={() => setSnapping(!isSnapping)}
+                        onClick={() => { setSnapping(!isSnapping); setIsOpen(false); }}
                     />
 
                     {/* Grid Visibility */}
@@ -78,7 +78,7 @@ export function SettingsPanel({
                         label="Show Grid"
                         icon={<Grid className="w-4 h-4" />}
                         active={showGrid}
-                        onClick={() => setShowGrid(!showGrid)}
+                        onClick={() => { setShowGrid(!showGrid); setIsOpen(false); }}
                     />
 
                     <div className="h-px bg-zinc-800 my-1" />
@@ -90,7 +90,7 @@ export function SettingsPanel({
                             {['bezier', 'straight', 'step', 'smoothstep'].map(type => (
                                 <button
                                     key={type}
-                                    onClick={() => setEdgeType(type)}
+                                    onClick={() => { setEdgeType(type); setIsOpen(false); }}
                                     className={`
                                         text-xs py-1.5 px-2 rounded-md border text-center capitalize transition-colors
                                         ${edgeType === type
@@ -115,7 +115,7 @@ export function SettingsPanel({
                             {(['layered', 'force', 'tree', 'radial'] as LayoutAlgorithm[]).map(algo => (
                                 <button
                                     key={algo}
-                                    onClick={() => setLayoutAlgorithm(algo)}
+                                    onClick={() => { setLayoutAlgorithm(algo); setIsOpen(false); }}
                                     className={`
                                         text-xs py-1.5 px-2 rounded-md border text-center capitalize transition-colors
                                         ${layoutAlgorithm === algo
@@ -133,10 +133,10 @@ export function SettingsPanel({
                             {(['RIGHT', 'DOWN'] as LayoutDirection[]).map(dir => (
                                 <button
                                     key={dir}
-                                    onClick={() => setLayoutDirection(dir)}
+                                    onClick={() => { setLayoutDirection(dir); setIsOpen(false); }}
                                     disabled={layoutAlgorithm === 'force' || layoutAlgorithm === 'radial'}
                                     className={`
-                                        flex-1 text-[10px] py-1 px-2 rounded border text-center uppercase transition-colors
+                                        flex-1 text-[10px] py-1 px-2 rounded-(--radius-sm) border text-center uppercase transition-colors
                                         ${(layoutAlgorithm === 'force' || layoutAlgorithm === 'radial')
                                             ? 'opacity-30 cursor-not-allowed bg-zinc-900 border-zinc-900 text-zinc-600'
                                             : layoutDirection === dir
@@ -155,7 +155,7 @@ export function SettingsPanel({
                         label="Scroll to Pan"
                         icon={<Mouse className="w-4 h-4" />}
                         active={panOnScroll}
-                        onClick={() => setPanOnScroll(!panOnScroll)}
+                        onClick={() => { setPanOnScroll(!panOnScroll); setIsOpen(false); }}
                     />
 
                     <div className="h-px bg-zinc-800 my-1" />
@@ -163,11 +163,11 @@ export function SettingsPanel({
                     {/* Precision Selector */}
                     <div className="px-3 py-2">
                         <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Scientific Precision</div>
-                        <div className="flex gap-1.5 overflow-hidden rounded-md border border-zinc-800">
+                        <div className="flex gap-1.5 overflow-hidden rounded-(--radius-sm) border border-zinc-800">
                             {SUPPORTED_PRECISIONS.map(p => (
                                 <button
                                     key={p}
-                                    onClick={() => setMathPrecision(p)}
+                                    onClick={() => { setMathPrecision(p); setIsOpen(false); }}
                                     className={`
                                         flex-1 text-[10px] py-1.5 transition-colors
                                         ${mathPrecision === p
@@ -188,7 +188,7 @@ export function SettingsPanel({
                         label="N Panel"
                         icon={<PanelRight className="w-4 h-4" />}
                         active={showNPanel}
-                        onClick={() => setShowNPanel(!showNPanel)}
+                        onClick={() => { setShowNPanel(!showNPanel); setIsOpen(false); }}
                     />
 
                     {/* Debug Log */}
@@ -196,7 +196,7 @@ export function SettingsPanel({
                         label="Debug Overlay"
                         icon={<Bug className="w-4 h-4" />}
                         active={showDebug}
-                        onClick={() => setShowDebug(!showDebug)}
+                        onClick={() => { setShowDebug(!showDebug); setIsOpen(false); }}
                     />
 
                     <div className="h-px bg-zinc-800 my-1" />
@@ -267,7 +267,7 @@ function ToggleRow({ label, icon, active, onClick }: { label: string, icon: Reac
         <button
             onClick={onClick}
             className={`
-                flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full
+                flex items-center justify-between px-3 py-2 rounded-(--radius-lg) text-sm font-medium transition-colors w-full
                 ${active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'}
             `}
         >
