@@ -322,3 +322,114 @@ input[type="number"] {
 .animate-mute-bypass {
   animation: mute-bypass-flow 1s linear infinite;
 }
+/* ───────────────────────────────────────
+    § Markdown & Prose Styles (Manual fallback for v4)
+    ─────────────────────────────────────── */
+
+.prose-xs {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.prose-invert h1 { color: hsl(0, 0%, 95%); font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+.prose-invert h2 { color: hsl(0, 0%, 90%); font-size: 1.1rem; font-weight: 600; margin-bottom: 0.4rem; }
+.prose-invert h3 { color: hsl(0, 0%, 85%); font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+.prose-invert p { margin-bottom: 0.5rem; color: hsl(240, 5%, 80%); }
+.prose-invert ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.prose-invert li { margin-bottom: 0.2rem; }
+.prose-invert code { 
+  background: hsla(240, 5%, 20%, 0.8); 
+  padding: 0.1em 0.3em; 
+  border-radius: 4px; 
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  color: hsl(38, 92%, 55%);
+}
+.prose-invert strong { color: white; font-weight: 700; }
+.prose-invert em { color: hsl(240, 5%, 90%); font-style: italic; }
+.prose-invert table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.75rem; }
+.prose-invert th { border-bottom: 1px solid var(--node-border); padding: 4px; text-align: left; color: white; background: hsla(240, 5%, 15%, 0.5); }
+.prose-invert td { border-bottom: 1px dotted var(--node-border); padding: 4px; }
+
+/* Checkbox / Task-list Styles */
+.prose-invert ul.contains-task-list {
+  list-style-type: none;
+  padding-left: 0.5rem;
+}
+.prose-invert .task-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.prose-invert .task-list-item input[type="checkbox"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--node-border);
+  border-radius: 3px;
+  background: hsla(240, 5%, 20%, 0.8);
+  cursor: default;
+  position: relative;
+}
+.prose-invert .task-list-item input[type="checkbox"]:checked {
+  background: hsl(160, 84%, 45%); /* color-vector / success */
+  border-color: transparent;
+}
+.prose-invert .task-list-item input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.prose-invert blockquote {
+  border-left: 4px solid var(--node-border);
+  padding: 0.5rem 0 0.5rem 1rem;
+  margin: 1rem 0;
+  background: hsla(240, 5%, 15%, 0.3);
+  color: hsl(240, 5%, 75%);
+}
+
+.prose-invert blockquote blockquote {
+  margin-left: 0.5rem;
+  border-left-color: hsl(240, 4%, 35%);
+  background: transparent;
+}
+
+/* GitHub Style Alerts / Admonitions */
+.markdown-alert {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid;
+  border-radius: 0 4px 4px 0;
+}
+
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.markdown-alert-note { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+.markdown-alert-note .markdown-alert-title { color: #3b82f6; }
+
+.markdown-alert-tip { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+.markdown-alert-tip .markdown-alert-title { color: #10b981; }
+
+.markdown-alert-important { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+.markdown-alert-important .markdown-alert-title { color: #8b5cf6; }
+
+.markdown-alert-warning { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+.markdown-alert-warning .markdown-alert-title { color: #f59e0b; }
+
+.markdown-alert-caution { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+.markdown-alert-caution .markdown-alert-title { color: #ef4444; }
+
