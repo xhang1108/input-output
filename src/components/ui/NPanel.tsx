@@ -23,24 +23,41 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         id: selectedNode?.id,
         label: selectedNode?.data.label,
         x: selectedNode?.position.x,
-        y: selectedNode?.position.y
+        y: selectedNode?.position.y,
+        minX: selectedNode?.data.minX,
+        maxX: selectedNode?.data.maxX,
+        points: selectedNode?.data.points
     });
+
+    // Local state for Plot precision
+    const [plotMin, setPlotMin] = useState('-10');
+    const [plotMax, setPlotMax] = useState('10');
+    const [plotPoints, setPlotPoints] = useState('100');
 
     if (selectedNode && (
         selectedNode.id !== prevSyncData.id ||
         selectedNode.data.label !== prevSyncData.label ||
         selectedNode.position.x !== prevSyncData.x ||
-        selectedNode.position.y !== prevSyncData.y
+        selectedNode.position.y !== prevSyncData.y ||
+        selectedNode.data.minX !== prevSyncData.minX ||
+        selectedNode.data.maxX !== prevSyncData.maxX ||
+        selectedNode.data.points !== prevSyncData.points
     )) {
         setPrevSyncData({
             id: selectedNode.id,
             label: selectedNode.data.label,
             x: selectedNode.position.x,
-            y: selectedNode.position.y
+            y: selectedNode.position.y,
+            minX: selectedNode.data.minX,
+            maxX: selectedNode.data.maxX,
+            points: selectedNode.data.points
         });
         setLabel((selectedNode.data.label as string) || '');
         setPosX(selectedNode.position.x.toFixed(1));
         setPosY(selectedNode.position.y.toFixed(1));
+        setPlotMin(String(selectedNode.data.minX ?? -10));
+        setPlotMax(String(selectedNode.data.maxX ?? 10));
+        setPlotPoints(String(selectedNode.data.points ?? 100));
     }
 
     const handleUpdate = (updates: Partial<import('@xyflow/react').Node<Record<string, unknown>>>) => {
@@ -78,6 +95,22 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         handleUpdate({ data: { label: val } });
     };
 
+    const handlePlotParamChange = (field: 'minX' | 'maxX' | 'points', value: string) => {
+        if (field === 'minX') setPlotMin(value);
+        if (field === 'maxX') setPlotMax(value);
+        if (field === 'points') setPlotPoints(value);
+
+        const num = parseFloat(value);
+        if (!isNaN(num) && selectedNode) {
+            handleUpdate({
+                data: {
+                    ...selectedNode.data,
+                    [field]: num
+                }
+            });
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -88,7 +121,7 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                     <Cpu className="w-4 h-4" />
                     N PANEL
                 </div>
-                <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded-(--radius-sm) text-zinc-400 hover:text-white transition-colors">
+                <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded-sm text-zinc-400 hover:text-white transition-colors">
                     <X className="w-4 h-4" />
                 </button>
             </div>
@@ -110,13 +143,13 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                                 <input
                                     value={label}
                                     onChange={e => handleLabelChange(e.target.value)}
-                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-(--radius-sm) px-2 py-1.5 text-sm text-zinc-200 focus:border-blue-500 outline-none transition-colors"
+                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-sm px-2 py-1.5 text-sm text-zinc-200 focus:border-blue-500 outline-none transition-colors"
                                 />
                             </div>
 
                             <div className="space-y-1">
                                 <label className="text-[10px] text-zinc-400">ID</label>
-                                <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded-(--radius-sm) px-2 py-1.5 text-xs text-zinc-500 font-mono select-all">
+                                <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded-sm px-2 py-1.5 text-xs text-zinc-500 font-mono select-all">
                                     {selectedNode.id}
                                 </div>
                             </div>
@@ -148,13 +181,53 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                             </div>
                         </div>
 
+                        {/* Plot Settings (Phase 4.3 Support) */}
+                        {selectedNode.type === 'IO-14' && (
+                            <div className="space-y-3 p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg">
+                                <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider">Plot Precision</h3>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-zinc-400 font-mono">Min X</label>
+                                        <input
+                                            type="number"
+                                            value={plotMin}
+                                            onChange={e => handlePlotParamChange('minX', e.target.value)}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-purple-500 outline-none font-mono transition-colors"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-zinc-400 font-mono">Max X</label>
+                                        <input
+                                            type="number"
+                                            value={plotMax}
+                                            onChange={e => handlePlotParamChange('maxX', e.target.value)}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-purple-500 outline-none font-mono transition-colors"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-zinc-400 font-mono uppercase">Sampling Points</label>
+                                    <input
+                                        type="number"
+                                        step="10"
+                                        value={plotPoints}
+                                        onChange={e => handlePlotParamChange('points', e.target.value)}
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-purple-500 outline-none font-mono transition-colors"
+                                    />
+                                    <p className="text-[8px] text-zinc-500 italic mt-1">Higher points = smoother curves, more CPU</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Data (Debug) */}
                         <div className="space-y-3">
                             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
                                 Raw Data
                                 <span className="text-[9px] bg-zinc-800 px-1 py-0.5 rounded text-zinc-400">READ ONLY</span>
                             </h3>
-                            <div className="w-full bg-zinc-950 border border-zinc-800 rounded-(--radius-sm) p-2 text-[10px] text-zinc-400 font-mono overflow-auto max-h-40">
+                            <div className="w-full bg-zinc-950 border border-zinc-800 rounded-sm p-2 text-[10px] text-zinc-400 font-mono overflow-auto max-h-40">
                                 <pre>{JSON.stringify(selectedNode.data, null, 2)}</pre>
                             </div>
                         </div>

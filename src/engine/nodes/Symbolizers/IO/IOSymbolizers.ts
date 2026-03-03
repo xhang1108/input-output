@@ -12,8 +12,10 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
             : PayloadUtils.createSymbol('Literal', { value: value as string | number | boolean | undefined });
     },
     'IO-04': (node) => {
+        const val = PayloadUtils.unwrap(node.value);
         const data = (node.data || {}) as Record<string, unknown>;
-        const sym = PayloadUtils.createSymbol('Literal', { value: String(data.value || '') });
+        const strVal = val !== undefined ? String(val) : String(data.value || '');
+        const sym = PayloadUtils.createSymbol('Literal', { value: strVal });
         if (node.id) sym.sourceId = node.id;
         return sym;
     },

@@ -79,81 +79,50 @@ export function useHand() {
             if (!parent || parent.type !== 'frame') return;
 
             const children = Array.from(nodeMap.values()).filter(n => n.parentId === parentId);
+            if (children.length === 0) return;
 
             let minAbsX = Infinity, minAbsY = Infinity;
             let maxAbsX = -Infinity, maxAbsY = -Infinity;
 
             const oldWidth = Number(parent.measured?.width ?? parent.width ?? parent.data?.width ?? 0);
             const oldHeight = Number(parent.measured?.height ?? parent.height ?? parent.data?.height ?? 0);
-            const parentTL_X = parent.position.x - oldWidth / 2;
-            const parentTL_Y = parent.position.y - oldHeight / 2;
+            const parentTL_X = parent.position.x - oldWidth / 2, parentTL_Y = parent.position.y - oldHeight / 2;
 
             children.forEach(child => {
-                const w = Number(child.measured?.width ?? child.width ?? 150);
-                const h = Number(child.measured?.height ?? child.height ?? 50);
-
-                const absCenterX = parentTL_X + child.position.x;
-                const absCenterY = parentTL_Y + child.position.y;
-
-                minAbsX = Math.min(minAbsX, absCenterX - w / 2);
-                minAbsY = Math.min(minAbsY, absCenterY - h / 2);
-                maxAbsX = Math.max(maxAbsX, absCenterX + w / 2);
-                maxAbsY = Math.max(maxAbsY, absCenterY + h / 2);
+                const w = Number(child.measured?.width ?? child.width ?? 150), h = Number(child.measured?.height ?? child.height ?? 50);
+                const absCX = parentTL_X + child.position.x, absCY = parentTL_Y + child.position.y;
+                minAbsX = Math.min(minAbsX, absCX - w / 2); minAbsY = Math.min(minAbsY, absCY - h / 2);
+                maxAbsX = Math.max(maxAbsX, absCX + w / 2); maxAbsY = Math.max(maxAbsY, absCY + h / 2);
             });
 
-            if (minAbsX === Infinity) return;
+            const PAD = 40, TOP_PAD = 40;
+            const newAbsTL_X = minAbsX - PAD, newAbsTL_Y = minAbsY - TOP_PAD;
+            const newW = (maxAbsX + PAD) - newAbsTL_X, newH = (maxAbsY + PAD) - newAbsTL_Y;
+            const newAbsCX = newAbsTL_X + newW / 2, newAbsCY = newAbsTL_Y + newH / 2;
 
-            const PAD = 40;
-            const TOP_PAD = 40;
+            const diffX = newAbsCX - parent.position.x, diffY = newAbsCY - parent.position.y;
+            const diffW = newW - oldWidth, diffH = newH - oldHeight;
 
-            const newAbsTL_X = minAbsX - PAD;
-            const newAbsTL_Y = minAbsY - TOP_PAD;
-            const newWidth = (maxAbsX + PAD) - newAbsTL_X;
-            const newHeight = (maxAbsY + PAD) - newAbsTL_Y;
-
-            const newAbsCenterX = newAbsTL_X + newWidth / 2;
-            const newAbsCenterY = newAbsTL_Y + newHeight / 2;
-
-            const needsShift = Math.abs(parent.position.x - newAbsCenterX) > 0.1 || Math.abs(parent.position.y - newAbsCenterY) > 0.1;
-            const needsResize = Math.abs(oldWidth - newWidth) > 0.1 || Math.abs(oldHeight - newHeight) > 0.1;
-
-            if (needsShift || needsResize) {
+            if (Math.abs(diffX) > 0.01 || Math.abs(diffY) > 0.01 || Math.abs(diffW) > 0.01 || Math.abs(diffH) > 0.01) {
                 if (!initialFrameStates.current.has(parentId)) {
                     initialFrameStates.current.set(parentId, { ...parent });
-                    children.forEach(c => {
-                        if (!initialPositions.current.has(c.id)) {
-                            initialFrameChildrenStates.current.set(c.id, { ...c });
-                        }
-                    });
+                    children.forEach(c => { if (!initialPositions.current.has(c.id)) initialFrameChildrenStates.current.set(c.id, { ...c }); });
                 }
-
                 modifiedFrameIds.current.add(parentId);
 
                 const newParent = {
                     ...parent,
-                    position: { x: newAbsCenterX, y: newAbsCenterY },
-                    width: Math.round(newWidth),
-                    height: Math.round(newHeight),
-                    measured: { width: Math.round(newWidth), height: Math.round(newHeight) },
-                    style: { ...parent.style, width: Math.round(newWidth), height: Math.round(newHeight) },
-                    data: { ...parent.data, width: Math.round(newWidth), height: Math.round(newHeight) }
+                    position: { x: newAbsCX, y: newAbsCY },
+                    width: newW, height: newH, measured: { width: newW, height: newH },
+                    style: { ...parent.style, width: newW, height: newH },
+                    data: { ...parent.data, width: newW, height: newH }
                 };
                 nodeMap.set(parentId, newParent);
 
-                // Adjust child local coordinates so they stay pinned in absolute space
-                const shiftX = newAbsTL_X - parentTL_X;
-                const shiftY = newAbsTL_Y - parentTL_Y;
-
-                if (Math.abs(shiftX) > 0.1 || Math.abs(shiftY) > 0.1) {
+                const shiftX = newAbsTL_X - parentTL_X, shiftY = newAbsTL_Y - parentTL_Y;
+                if (Math.abs(shiftX) > 0.01 || Math.abs(shiftY) > 0.01) {
                     children.forEach(child => {
-                        const newChild = {
-                            ...child,
-                            position: {
-                                x: child.position.x - shiftX,
-                                y: child.position.y - shiftY
-                            }
-                        };
-                        nodeMap.set(child.id, newChild);
+                        nodeMap.set(child.id, { ...child, position: { x: child.position.x - shiftX, y: child.position.y - shiftY } });
                     });
                 }
             }
@@ -677,310 +646,184 @@ export function useHand() {
             h: n.measured?.height ?? n.height ?? (n.data?.height as number) ?? 50,
         });
 
-        // 1. Identify moved nodes
-        const movedNodes: Node[] = [];
+        // 1. Identify moved or resized nodes
+        const movedNodeIds = new Set<string>();
         initialPositions.current.forEach((initPos, id) => {
             const node = nodes.find(n => n.id === id);
             if (node) {
-                const dx = node.position.x - initPos.x;
-                const dy = node.position.y - initPos.y;
-                if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                    movedNodes.push(node);
+                const initDim = initialDimensions.current.get(id);
+                const { w, h } = getSize(node);
+                const dw = initDim ? Math.abs(w - initDim.w) : 0;
+                const dh = initDim ? Math.abs(h - initDim.h) : 0;
+                if (Math.abs(node.position.x - initPos.x) > 0.5 || Math.abs(node.position.y - initPos.y) > 0.5 || dw > 0.5 || dh > 0.5) {
+                    movedNodeIds.add(id);
                 }
             }
         });
 
-        if (movedNodes.length === 0) {
+        if (movedNodeIds.size === 0) {
             setMode('IDLE');
             initialPositions.current.clear();
+            initialDimensions.current.clear();
+            initialFrameStates.current.clear();
+            startMousePos.current = null;
             return;
         }
 
-        // 2. Get all frames (for intersection checks)
+        // 2. Identify and Process Parents
         const frames = nodes.filter(n => n.type === 'frame');
+        const affectedParents = new Set<string>();
+        const plannedParentId = new Map<string, string | undefined>();
+        const plannedDimensions = new Map<string, { w: number, h: number }>();
 
-        movedNodes.forEach(node => {
-            // Frames don't get reparented
-            if (node.type === 'frame') {
-                const initPos = initialPositions.current.get(node.id)!;
-                txs.push({
-                    type: 'MOVE_NODE',
-                    payload: { id: node.id, position: { ...node.position }, oldPosition: { ...initPos } }
-                });
-                return;
-            }
+        // Find parent for each moved node (absolute detect)
+        movedNodeIds.forEach(id => {
+            const node = nodes.find(n => n.id === id);
+            if (!node || node.type === 'frame') return;
 
-            // 3. Calculate absolute center of the node
-            let absCenterX = node.position.x;
-            let absCenterY = node.position.y;
+            const oldParentId = node.parentId;
+            const absPos = getAbsolutePosition(id, nodeMap);
+            const { w, h } = getSize(node);
 
-            if (node.parentId) {
-                const parent = nodes.find(n => n.id === node.parentId);
-                if (parent) {
-                    const pw = Number(parent.measured?.width ?? parent.width ?? parent.data?.width ?? 0);
-                    const ph = Number(parent.measured?.height ?? parent.height ?? parent.data?.height ?? 0);
-                    const parentTL_X = parent.position.x - pw / 2;
-                    const parentTL_Y = parent.position.y - ph / 2;
-                    absCenterX += parentTL_X;
-                    absCenterY += parentTL_Y;
-                }
-            }
-
-            // 4. Find the smallest containing frame (avoids wrong match with nested frames)
+            // Detect new parent
             let targetFrame: Node | undefined;
             let targetArea = Infinity;
-
-            for (const frame of frames) {
-                if (frame.id === node.id) continue;
-                const { w: fw, h: fh } = getSize(frame);
-                const fLeft = frame.position.x - fw / 2;
-                const fRight = frame.position.x + fw / 2;
-                const fTop = frame.position.y - fh / 2;
-                const fBottom = frame.position.y + fh / 2;
-
-                if (absCenterX >= fLeft && absCenterX <= fRight &&
-                    absCenterY >= fTop && absCenterY <= fBottom) {
-                    const area = fw * fh;
-                    if (area < targetArea) {
-                        targetArea = area;
-                        targetFrame = frame;
-                    }
+            frames.forEach(f => {
+                if (f.id === id) return;
+                const { w: fw, h: fh } = getSize(f);
+                if (absPos.x >= f.position.x - fw / 2 && absPos.x <= f.position.x + fw / 2 &&
+                    absPos.y >= f.position.y - fh / 2 && absPos.y <= f.position.y + fh / 2) {
+                    if (fw * fh < targetArea) { targetArea = fw * fh; targetFrame = f; }
                 }
-            }
+            });
 
-            // 5. Determine parent change
-            const oldParentId = node.parentId;
+            // Sticky logic
             let newParentId = targetFrame?.id;
-
-            // --- STICKY DETACHMENT LOGIC ---
-            // If the node is currently in a frame (oldParentId), we don't kick it out 
-            // unless it's genuinely inside a NEW frame or significantly outside the OLD one.
             if (oldParentId && !newParentId) {
-                const oldParent = nodes.find(p => p.id === oldParentId);
-                if (oldParent) {
-                    const { w: ow, h: oh } = getSize(oldParent);
-                    const stickyPad = 100; // 100px "sticky" zone
-                    const fLeft = oldParent.position.x - ow / 2 - stickyPad;
-                    const fRight = oldParent.position.x + ow / 2 + stickyPad;
-                    const fTop = oldParent.position.y - oh / 2 - stickyPad;
-                    const fBottom = oldParent.position.y + oh / 2 + stickyPad;
-
-                    if (absCenterX >= fLeft && absCenterX <= fRight &&
-                        absCenterY >= fTop && absCenterY <= fBottom) {
-                        newParentId = oldParentId; // Stay in current frame (sticky)
+                const op = nodes.find(p => p.id === oldParentId);
+                if (op) {
+                    const { w: ow, h: oh } = getSize(op);
+                    const pad = 100;
+                    if (absPos.x >= op.position.x - ow / 2 - pad && absPos.x <= op.position.x + ow / 2 + pad &&
+                        absPos.y >= op.position.y - oh / 2 - pad && absPos.y <= op.position.y + oh / 2 + pad) {
+                        newParentId = oldParentId;
                     }
                 }
             }
 
             if (newParentId !== oldParentId) {
-                // Parent changed — coordinate space transform needed
-                const newPos = { ...node.position };
+                plannedParentId.set(id, newParentId);
+                if (oldParentId) affectedParents.add(oldParentId);
+            }
+            if (newParentId) affectedParents.add(newParentId);
 
-                // Convert to absolute (if was child)
-                if (oldParentId) {
-                    const oldParent = nodes.find(n => n.id === oldParentId);
-                    if (oldParent) {
-                        const oldWidth = Number(oldParent.measured?.width ?? oldParent.width ?? oldParent.data?.width ?? 0);
-                        const oldHeight = Number(oldParent.measured?.height ?? oldParent.height ?? oldParent.data?.height ?? 0);
-                        const oldTL_X = oldParent.position.x - oldWidth / 2;
-                        const oldTL_Y = oldParent.position.y - oldHeight / 2;
+            // Record dimensions
+            const initDim = initialDimensions.current.get(id);
+            if (initDim && (Math.abs(w - initDim.w) > 0.5 || Math.abs(h - initDim.h) > 0.5)) {
+                plannedDimensions.set(id, { w: Math.round(w), h: Math.round(h) });
+            }
+        });
 
-                        newPos.x += oldTL_X;
-                        newPos.y += oldTL_Y;
+        // 3. Reconcile Frame Bounds and Child Coordinates
+        affectedParents.forEach(parentId => {
+            const parent = nodes.find(n => n.id === parentId);
+            if (!parent) return;
 
-                        // --- FIX: Resize OLD Parent Frame (Hub abandoned) ---
-                        // ... code stays the same ...
-                        const remainingSiblings = nodes.filter(n => n.parentId === oldParentId && n.id !== node.id);
+            // Find all children (after new parent assignments)
+            const children = nodes.filter(n => {
+                if (n.id === parentId) return false;
+                const actualParentId = plannedParentId.has(n.id) ? plannedParentId.get(n.id) : n.parentId;
+                return actualParentId === parentId;
+            });
 
-                        if (remainingSiblings.length === 0) {
-                            txs.push({ type: 'REMOVE_NODE', payload: oldParentId });
-                        } else {
-                            // Resize frame to fit remaining siblings (already uses TL logic)
-                            const remainingSiblingsWithData = remainingSiblings.map(s => {
-                                const m = nodeMap.get(s.id);
-                                return m || s;
-                            });
+            if (children.length === 0) {
+                txs.push({ type: 'REMOVE_NODE', payload: parentId });
+                return;
+            }
 
-                            let minAbsX = Infinity, minAbsY = Infinity, maxAbsX = -Infinity, maxAbsY = -Infinity;
+            // Calculate new bounds in absolute space
+            const oldWidth = Number(parent.measured?.width ?? parent.width ?? 150);
+            const oldHeight = Number(parent.measured?.height ?? parent.height ?? 50);
+            const oldTL_X = parent.position.x - oldWidth / 2, oldTL_Y = parent.position.y - oldHeight / 2;
 
-                            remainingSiblingsWithData.forEach(child => {
-                                const w = Number(child.measured?.width ?? child.width ?? 150);
-                                const h = Number(child.measured?.height ?? child.height ?? 50);
-                                const absCenterX = oldTL_X + child.position.x;
-                                const absCenterY = oldTL_Y + child.position.y;
-                                minAbsX = Math.min(minAbsX, absCenterX - w / 2);
-                                minAbsY = Math.min(minAbsY, absCenterY - h / 2);
-                                maxAbsX = Math.max(maxAbsX, absCenterX + w / 2);
-                                maxAbsY = Math.max(maxAbsY, absCenterY + h / 2);
-                            });
-
-                            const PAD = 40;
-                            const TOP_PAD = 40;
-
-                            const newAbsTL_X = minAbsX - PAD;
-                            const newAbsTL_Y = minAbsY - TOP_PAD;
-                            const newWidth = (maxAbsX + PAD) - newAbsTL_X;
-                            const newHeight = (maxAbsY + PAD) - newAbsTL_Y;
-
-                            const newAbsCenterX = newAbsTL_X + newWidth / 2;
-                            const newAbsCenterY = newAbsTL_Y + newHeight / 2;
-
-                            const shiftX = newAbsTL_X - oldTL_X;
-                            const shiftY = newAbsTL_Y - oldTL_Y;
-
-                            txs.push({
-                                type: 'MOVE_NODE',
-                                payload: { id: oldParentId, position: { x: newAbsCenterX, y: newAbsCenterY }, oldPosition: { ...oldParent.position } }
-                            });
-                            txs.push({
-                                type: 'UPDATE_NODE_DATA',
-                                payload: { id: oldParentId, data: { width: Math.round(newWidth), height: Math.round(newHeight) } }
-                            });
-
-                            remainingSiblings.forEach(child => {
-                                txs.push({
-                                    type: 'MOVE_NODE',
-                                    payload: { id: child.id, position: { x: child.position.x - shiftX, y: child.position.y - shiftY }, oldPosition: { ...child.position } }
-                                });
-                            });
-                        }
-                    }
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            children.forEach(c => {
+                const { w, h } = getSize(c);
+                // Current absolute position of the child
+                let cAbs;
+                if (movedNodeIds.has(c.id)) {
+                    // Get absolute pos from initial parent TL + current relative pos
+                    const parentOfInit = nodes.find(p => p.id === c.parentId);
+                    if (parentOfInit) {
+                        const { w: pw, h: ph } = getSize(parentOfInit);
+                        cAbs = { x: parentOfInit.position.x - pw / 2 + c.position.x, y: parentOfInit.position.y - ph / 2 + c.position.y };
+                    } else { cAbs = c.position; }
+                } else {
+                    cAbs = getAbsolutePosition(c.id, nodeMap);
                 }
+                minX = Math.min(minX, cAbs.x - w / 2); minY = Math.min(minY, cAbs.y - h / 2);
+                maxX = Math.max(maxX, cAbs.x + w / 2); maxY = Math.max(maxY, cAbs.y + h / 2);
+            });
 
-                // Convert to relative (if becoming child)
-                if (newParentId && targetFrame) {
-                    const targetWidth = Number(targetFrame.measured?.width ?? targetFrame.width ?? targetFrame.data?.width ?? 0);
-                    const targetHeight = Number(targetFrame.measured?.height ?? targetFrame.height ?? targetFrame.data?.height ?? 0);
-                    const targetTL_X = targetFrame.position.x - targetWidth / 2;
-                    const targetTL_Y = targetFrame.position.y - targetHeight / 2;
+            const PAD = 40;
+            const newAbsTL_X = minX - PAD, newAbsTL_Y = minY - PAD;
+            const newWidth = (maxX + PAD) - newAbsTL_X, newHeight = (maxY + PAD) - newAbsTL_Y;
+            // const shiftX = newAbsTL_X - oldTL_X, shiftY = newAbsTL_Y - oldTL_Y; // Not used
 
-                    newPos.x -= targetTL_X;
-                    newPos.y -= targetTL_Y;
+            txs.push({ type: 'MOVE_NODE', payload: { id: parentId, position: { x: newAbsTL_X + newWidth / 2, y: newAbsTL_Y + newHeight / 2 }, oldPosition: parent.position } });
+            txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: parentId, data: { width: Math.round(newWidth), height: Math.round(newHeight) } } });
+
+            // Update all children positions to be relative to new TL
+            children.forEach(c => {
+                // const { w, h } = getSize(c); // Not used
+                let cAbs;
+                if (movedNodeIds.has(c.id)) {
+                    const parentOfInit = nodes.find(p => p.id === c.parentId);
+                    if (parentOfInit) {
+                        const { w: pw, h: ph } = getSize(parentOfInit);
+                        cAbs = { x: parentOfInit.position.x - pw / 2 + c.position.x, y: parentOfInit.position.y - ph / 2 + c.position.y };
+                    } else { cAbs = c.position; }
+                } else {
+                    cAbs = getAbsolutePosition(c.id, nodeMap);
                 }
+                const newRelativePos = { x: cAbs.x - newAbsTL_X, y: cAbs.y - newAbsTL_Y };
+                const initPos = initialPositions.current.get(c.id) || c.position;
+                txs.push({ type: 'MOVE_NODE', payload: { id: c.id, position: newRelativePos, oldPosition: initPos } });
 
-                // 5a. Update structure
-                txs.push({
-                    type: 'UPDATE_NODE_DATA',
-                    payload: {
-                        id: node.id,
-                        data: {
-                            parentId: newParentId
-                        }
-                    }
-                });
-
-                // 5b. Update position
-                txs.push({
-                    type: 'MOVE_NODE',
-                    payload: {
-                        id: node.id,
-                        position: newPos,
-                        oldPosition: initialPositions.current.get(node.id)!
-                    }
-                });
-            } else {
-                // Standard move (no parent change)
-                const finalPos = { ...node.position };
-
-                // Auto-Resize Parent Frame
-                if (node.parentId) {
-                    const parent = nodes.find(n => n.id === node.parentId);
-                    if (parent) {
-                        const siblings = nodes.filter(n => n.parentId === node.parentId && n.id !== node.id);
-
-                        // Calculate bounds including the dragged node
-                        const oldWidth = Number(parent.measured?.width ?? parent.width ?? parent.data?.width ?? 0);
-                        const oldHeight = Number(parent.measured?.height ?? parent.height ?? parent.data?.height ?? 0);
-                        const parentTL_X = parent.position.x - oldWidth / 2;
-                        const parentTL_Y = parent.position.y - oldHeight / 2;
-
-                        let minAbsX = Infinity, minAbsY = Infinity, maxAbsX = -Infinity, maxAbsY = -Infinity;
-
-                        const draggedW = Number(node.measured?.width ?? node.width ?? 150);
-                        const draggedH = Number(node.measured?.height ?? node.height ?? 50);
-                        const draggedAbsCenterX = parentTL_X + finalPos.x;
-                        const draggedAbsCenterY = parentTL_Y + finalPos.y;
-
-                        minAbsX = Math.min(minAbsX, draggedAbsCenterX - draggedW / 2);
-                        minAbsY = Math.min(minAbsY, draggedAbsCenterY - draggedH / 2);
-                        maxAbsX = Math.max(maxAbsX, draggedAbsCenterX + draggedW / 2);
-                        maxAbsY = Math.max(maxAbsY, draggedAbsCenterY + draggedH / 2);
-
-                        siblings.forEach(child => {
-                            const w = Number(child.measured?.width ?? child.width ?? 150);
-                            const h = Number(child.measured?.height ?? child.height ?? 50);
-                            const absCenterX = parentTL_X + child.position.x;
-                            const absCenterY = parentTL_Y + child.position.y;
-                            minAbsX = Math.min(minAbsX, absCenterX - w / 2);
-                            minAbsY = Math.min(minAbsY, absCenterY - h / 2);
-                            maxAbsX = Math.max(maxAbsX, absCenterX + w / 2);
-                            maxAbsY = Math.max(maxAbsY, absCenterY + h / 2);
-                        });
-
-                        const PAD = 40;
-                        const TOP_PAD = 40;
-
-                        const newAbsTL_X = minAbsX - PAD;
-                        const newAbsTL_Y = minAbsY - TOP_PAD;
-                        const newWidth = (maxAbsX + PAD) - newAbsTL_X;
-                        const newHeight = (maxAbsY + PAD) - newAbsTL_Y;
-
-                        const newAbsCenterX = newAbsTL_X + newWidth / 2;
-                        const newAbsCenterY = newAbsTL_Y + newHeight / 2;
-
-                        const shiftX = newAbsTL_X - parentTL_X;
-                        const shiftY = newAbsTL_Y - parentTL_Y;
-
-                        // If the frame origin shifted OR was modified (real-time resize), sync payload
-                        if (Math.abs(shiftX) > 0.5 || Math.abs(shiftY) > 0.5 || modifiedFrameIds.current.has(parent.id)) {
-                            // Move Parent Frame
-                            txs.push({
-                                type: 'MOVE_NODE',
-                                payload: {
-                                    id: parent.id,
-                                    position: {
-                                        x: newAbsCenterX,
-                                        y: newAbsCenterY
-                                    },
-                                    oldPosition: { ...parent.position }
-                                }
-                            });
-
-                            // Adjust Siblings
-                            siblings.forEach(child => {
-                                txs.push({
-                                    type: 'MOVE_NODE',
-                                    payload: {
-                                        id: child.id,
-                                        position: {
-                                            x: child.position.x - shiftX,
-                                            y: child.position.y - shiftY
-                                        },
-                                        oldPosition: { ...child.position }
-                                    }
-                                });
-                            });
-
-                            // Adjust Dragged Node (finalPos) logic locally
-                            finalPos.x -= shiftX;
-                            finalPos.y -= shiftY;
-                        }
-
-                        // Update frame dimensions
-                        txs.push({
-                            type: 'UPDATE_NODE_DATA',
-                            payload: { id: parent.id, data: { width: Math.round(newWidth), height: Math.round(newHeight) } }
-                        });
-                    }
+                // Commit parentId and dimension if changed
+                const data: any = {};
+                if (plannedParentId.has(c.id)) data.parentId = plannedParentId.get(c.id);
+                if (plannedDimensions.has(c.id)) {
+                    const dim = plannedDimensions.get(c.id)!;
+                    data.width = dim.w; data.height = dim.h;
                 }
+                if (Object.keys(data).length > 0) {
+                    txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: c.id, data } });
+                }
+            });
+        });
 
+        // 4. Final non-framed moved nodes
+        movedNodeIds.forEach(id => {
+            const node = nodes.find(n => n.id === id);
+            if (!node || node.type === 'frame') return;
+            const actualParentId = plannedParentId.has(id) ? plannedParentId.get(id) : node.parentId;
 
+            if (!actualParentId) {
+                let absPos = node.position;
+                const oldParent = nodes.find(p => p.id === node.parentId);
+                if (oldParent) {
+                    const { w, h } = getSize(oldParent);
+                    absPos = { x: oldParent.position.x - w / 2 + node.position.x, y: oldParent.position.y - h / 2 + node.position.y };
+                }
+                txs.push({ type: 'MOVE_NODE', payload: { id, position: absPos, oldPosition: initialPositions.current.get(id)! } });
 
-                const initPos = initialPositions.current.get(node.id)!;
-                txs.push({
-                    type: 'MOVE_NODE',
-                    payload: { id: node.id, position: finalPos, oldPosition: { ...initPos } }
-                });
+                const data: any = { parentId: null };
+                if (plannedDimensions.has(id)) {
+                    const dim = plannedDimensions.get(id)!;
+                    data.width = dim.w; data.height = dim.h;
+                }
+                txs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data } });
             }
         });
 
@@ -998,7 +841,7 @@ export function useHand() {
         setAxisLock(null);
         setTransformBuffer('');
         setTransformValue('');
-    }, [getNodes]);
+    }, [getNodes, getAbsolutePosition]);
 
     const cancelGrab = useCallback(() => {
         const positionsToRestore = new Map(initialPositions.current);

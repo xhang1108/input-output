@@ -19,6 +19,7 @@ import { ColorNode } from '../components/nodes/ColorNode';
 import { AbacusNode } from '../components/nodes/AbacusNode';
 import { NumberTheoryNode } from '../components/nodes/NumberTheoryNode';
 import { FractionNode } from '../components/nodes/FractionNode';
+import { PlotNode } from '../components/nodes/PlotNode';
 import { LogicNode } from '../components/nodes/LogicNode';
 import { ToggleNode } from '../components/nodes/ToggleNode';
 import { ButtonNode } from '../components/nodes/ButtonNode';
@@ -79,6 +80,7 @@ export const nodeTypes = {
     'IO-06': RandomNode,     // Random
     'IO-08': MatrixInputNode, // Matrix Provider
     'IO-11': ResultNode,     // Universal Result (Scalar, Matrix, Color, Formula)
+    'IO-14': PlotNode,       // Plot Graph Output Node
     'IO-16': ResultNode,     // Fallback mapping to prevent crashes from old graphs
     'IO-17': ResultNode,     // Fallback mapping
     'IO-18': ColorNode,      // Color Provider

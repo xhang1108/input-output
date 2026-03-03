@@ -21,7 +21,7 @@ const DynamicNodeHandle = memo(({ h, id, isConnectable }: { h: HandleConfig, id:
 });
 DynamicNodeHandle.displayName = 'DynamicNodeHandle';
 
-export const BaseNode = memo(({ id, data, selected, isConnectable, children, type, style, hideDefaultHandles, onDoubleClick }: NodeProps & { children?: React.ReactNode, style?: React.CSSProperties, hideDefaultHandles?: boolean, onDoubleClick?: (e: React.MouseEvent) => void }) => {
+export const BaseNode = memo(({ id, data, selected, isConnectable, children, type, style, hideDefaultHandles, onDoubleClick, handleVariants }: NodeProps & { children?: React.ReactNode, style?: React.CSSProperties, hideDefaultHandles?: boolean, onDoubleClick?: (e: React.MouseEvent) => void, handleVariants?: Record<string, 'single' | 'capsule'> }) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [title, setTitle] = useState((data.label as string) || 'Node');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -69,10 +69,19 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
 
     // Separate handles by position
     // Priority: 1. Dynamic handles from data | 2. Definition handles | 3. DEFAULT_HANDLES
-    const allHandles = (data.handles as HandleConfig[]) || definition?.handles || [
+    const rawHandles = (data.handles as HandleConfig[]) || definition?.handles || [
         { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar' },
         { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' },
     ];
+
+    // Apply prop-based handle overrides (Phase 3: Dynamic Shape)
+    const allHandles = rawHandles.map(h => {
+        if (handleVariants && handleVariants[h.id]) {
+            return { ...h, variant: handleVariants[h.id] };
+        }
+        return h;
+    });
+
     const leftHandles = allHandles.filter(h => resolveHandlePosition(h) === Position.Left);
     const rightHandles = allHandles.filter(h => resolveHandlePosition(h) === Position.Right);
 

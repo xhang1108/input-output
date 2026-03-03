@@ -1,0 +1,19 @@
+# PlotNode Matrix Tests
+# Tests for Nx1, Nx2, and Nx3 data types in PlotNode
+
+# --- Nx1 (Line) ---
+MatrixNx1:IO-08 @0,0 = [[10], [35], [12], [45], [-5], [20]]
+PlotNx1:IO-14 @400,0
+
+# --- Nx2 (XY Line) ---
+MatrixNx2:IO-08 @0,300 = [[-10, 100], [-5, 25], [0, 0], [5, 25], [10, 100]]
+PlotNx2:IO-14 @400,300
+
+# --- Nx3 (Bubble) ---
+MatrixNx3:IO-08 @0,600 = [[1, 10, 50], [2, 30, 300], [3, 15, 100], [4, 40, 500], [5, 20, 50]]
+PlotNx3:IO-14 @400,600
+
+# Connections
+MatrixNx1 -- PlotNx1:in
+MatrixNx2 -- PlotNx2:in
+MatrixNx3 -- PlotNx3:in

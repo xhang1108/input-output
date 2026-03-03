@@ -6,6 +6,10 @@ import { NodeEvaluator } from '../../../NodeRegistry';
 export const IOEvaluators: Record<string, NodeEvaluator> = {
     'IO-01': (node) => node.value || PayloadUtils.createScalar(0),
     'IO-04': (node) => {
+        if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
+            return node.value as any;
+        }
+
         const data = (node.data || {}) as Record<string, unknown>;
         return PayloadUtils.createString(String(data.value ?? ''));
     },
@@ -255,5 +259,22 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             symbol: null,
             meta: {}
         };
+    },
+    'IO-14': (node, inputs) => {
+        // PlotNode (Graph UI terminal node)
+        // We just pass through the input so the Engine pushes it to node.data.value
+        const input = inputs['in'] || Object.values(inputs)[0];
+
+        // If the input is an array of payloads (multiple incoming edges to the capsule handle)
+        if (Array.isArray(input)) {
+            return {
+                type: DataType.Object,
+                value: input,
+                symbol: null,
+                meta: {}
+            };
+        }
+
+        return input || PayloadUtils.createMatrix([]);
     }
 };

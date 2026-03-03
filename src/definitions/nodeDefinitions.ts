@@ -113,6 +113,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] }
     },
+    {
+        id: 'IO-14',
+        label: 'Plot',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any' }
+        ],
+        defaultData: {}
+    },
 
     // ─── Utility Family ─────────────────────────────────────────
     {

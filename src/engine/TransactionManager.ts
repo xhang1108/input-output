@@ -190,7 +190,7 @@ export class TransactionManager {
                 const node = state.nodes.get(p.id);
                 if (node) {
                     node.value = PayloadUtils.wrap(p.value);
-                    node.isInDirtyChain = false;
+                    node.isInDirtyChain = true;
                     hooks.onNodeDataUpdated?.(p.id);
                     return { success: true };
                 }

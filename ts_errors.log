@@ -1,0 +1,8 @@
+node_modules/react-vega/dist/react-vega.d.ts(1,21): error TS1259: Module '"D:/Antigravity/input-output/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/react-vega/dist/react-vega.d.ts(2,57): error TS2307: Cannot find module 'vega-embed' or its corresponding type declarations.
+  There are types at 'D:/Antigravity/input-output/node_modules/vega-embed/build/embed.d.ts', but this result could not be resolved under your current 'moduleResolution' setting. Consider updating to 'node16', 'nodenext', or 'bundler'.
+src/components/nodes/PlotNode.tsx(3,26): error TS6142: Module './BaseNode' was resolved to 'D:/Antigravity/input-output/src/components/nodes/BaseNode.tsx', but '--jsx' is not set.
+src/components/nodes/PlotNode.tsx(96,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/nodes/PlotNode.tsx(97,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/nodes/PlotNode.tsx(98,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/nodes/PlotNode.tsx(99,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.

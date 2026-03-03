@@ -4,6 +4,7 @@ import { NodeEvaluator } from '../../../NodeRegistry';
 import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NerdamerService } from '../../../calculus/NerdamerService';
 import { RuntimeGuard } from '../../../calculus/RuntimeGuard';
+import { MathCompileCache } from '../../../calculus/MathCompileCache';
 
 /**
  * Helper: Extract expression string from an input payload.
@@ -262,10 +263,10 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 const hydrated = PayloadUtils.hydrate(exprVal, math);
                 const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : []).flat(Infinity);
                 if (arr.length < 2) return PayloadUtils.createError('Requires 2D vector [u, v]');
-                uExpr = typeof arr[0] === 'string' ? math.parse(arr[0]) : math.parse(String(arr[0]));
-                vExpr = typeof arr[1] === 'string' ? math.parse(arr[1]) : math.parse(String(arr[1]));
+                uExpr = typeof arr[0] === 'string' ? MathCompileCache.getCompiled(arr[0], math) : MathCompileCache.getCompiled(String(arr[0]), math);
+                vExpr = typeof arr[1] === 'string' ? MathCompileCache.getCompiled(arr[1], math) : MathCompileCache.getCompiled(String(arr[1]), math);
             }
-            const uCode = uExpr.compile(), vCode = vExpr.compile(), step = (max - min) / Math.max(1, density - 1), fieldData: number[][] = [];
+            const uCode = mode === 'gradient' ? uExpr.compile() : uExpr, vCode = mode === 'gradient' ? vExpr.compile() : vExpr, step = (max - min) / Math.max(1, density - 1), fieldData: number[][] = [];
             for (let i = 0; i < density; i++) {
                 const y = min + i * step;
                 for (let j = 0; j < density; j++) {
@@ -378,7 +379,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         try {
             const scope: Record<string, any> = {};
             for (const [key, val] of Object.entries(inputs)) scope[key] = PayloadUtils.hydrate(PayloadUtils.unwrap(val), math);
-            const result = math.evaluate(code, scope);
+            const result = MathCompileCache.evaluate(code, scope, math);
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
         } catch (error) { return PayloadUtils.createError(String(error)); }
     }

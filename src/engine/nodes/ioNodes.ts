@@ -14,4 +14,5 @@ export function registerIONodes() {
     NodeRegistry.register('IO-02', IOEvaluators['IO-02'], IOSymbolizers['IO-02']);
     NodeRegistry.register('IO-06', IOEvaluators['IO-06'], IOSymbolizers['IO-06']);
     NodeRegistry.register('IO-21', IOEvaluators['IO-21'], IOSymbolizers['IO-21']);
+    NodeRegistry.register('IO-14', IOEvaluators['IO-14']); // Plot Node
 }

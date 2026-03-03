@@ -300,13 +300,17 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     const paletteGuardRef = useRef(false);
 
     // --- FEEL NERVES (Input Handling) ---
+    const autoConfirm = useCallback((fn: (e: any) => void) => (e: any) => {
+        if (mode !== 'IDLE') confirmGrab();
+        fn(e);
+    }, [mode, confirmGrab]);
 
     useEar({
         shortcuts: {
             // Creation & Layout
-            'shift+a': (e) => { e.preventDefault(); setPalettePosition(mousePosRef.current); setShowPalette(true); logAction('Show Palette (Shift+A)'); },
-            'alt+s': (e) => { e.preventDefault(); swapConnections(); logAction('Swap Inputs (Alt+S)'); },
-            'l': () => { handleAutoLayout(); },
+            'shift+a': autoConfirm((e) => { e.preventDefault(); setPalettePosition(mousePosRef.current); setShowPalette(true); logAction('Show Palette (Shift+A)'); }),
+            'alt+s': autoConfirm((e) => { e.preventDefault(); swapConnections(); logAction('Swap Inputs (Alt+S)'); }),
+            'l': autoConfirm(() => { handleAutoLayout(); }),
             '.': (e) => {
                 if (mode === 'GRABBING' || mode === 'SCALING' || mode === 'ROTATING') {
                     handleTypeNum('.');
@@ -318,23 +322,30 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             },
 
             // Transform Commands
-            'g': (e) => { startGrab(mousePosRef.current, e.altKey); logAction('Start Grab (G)'); },
-            's': (e) => { startScale(mousePosRef.current); logAction('Start Scale (S)'); },
-            'r': (e) => { startRotate(mousePosRef.current); logAction('Start Rotate (R)'); },
-            'shift+d': (e) => {
+            'g': autoConfirm((e) => { startGrab(mousePosRef.current, e.altKey); logAction('Start Grab (G)'); }),
+            's': autoConfirm((e) => { startScale(mousePosRef.current); logAction('Start Scale (S)'); }),
+            'r': autoConfirm((e) => { startRotate(mousePosRef.current); logAction('Start Rotate (R)'); }),
+            'shift+d': autoConfirm((e) => {
                 e.preventDefault();
                 const duplicated = duplicateSelected();
                 if (duplicated) {
                     startGrab(mousePosRef.current, false, duplicated.nodes);
                     logAction('Duplicate Selected (Shift+D)');
                 }
+            }),
+            'f': (e) => {
+                if (mode === 'IDLE') {
+                    e.preventDefault();
+                    bundleSelected();
+                    logAction('Frame Selected (F)');
+                }
             },
-            'f': (e) => { e.preventDefault(); bundleSelected(); logAction('Frame Selected (F)'); },
 
             // Node Operations
             'delete': () => {
                 const active = document.activeElement?.tagName;
-                if (active !== 'INPUT' && active !== 'TEXTAREA' && mode === 'IDLE') {
+                if (active !== 'INPUT' && active !== 'TEXTAREA') {
+                    if (mode !== 'IDLE') confirmGrab();
                     deleteSelected();
                     logAction('Delete Selected');
                 }
@@ -350,17 +361,20 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     deleteSelected();
                     logAction('Delete Selected');
                 }
-                // During ROTATING or CUTTING, 'x' does nothing (doesn't delete)
             },
 
-            'a': (e) => {
+            'a': autoConfirm((e) => {
                 if (!e.shiftKey && !e.ctrlKey) {
                     setNodes(nds => nds.map(n => ({ ...n, selected: true })));
                     logAction('Select All (A)');
                 }
+            }),
+            'n': (e) => {
+                e.preventDefault();
+                setShowNPanel((prev: boolean) => !prev);
+                logAction('Toggle N Panel (N)');
             },
-            'n': (e) => { e.preventDefault(); setShowNPanel((prev: boolean) => !prev); logAction('Toggle N Panel (N)'); },
-            'm': () => {
+            'm': autoConfirm(() => {
                 const active = document.activeElement?.tagName;
                 if (active === 'INPUT' || active === 'TEXTAREA') return;
 
@@ -373,20 +387,20 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     });
                 });
                 if (selected.length > 0) logAction(`Toggle Mute [${selected.length}] (M)`);
-            },
+            }),
 
             // Axis Lock (While Grabbing/Scaling)
             'y': () => { if (mode === 'GRABBING' || mode === 'SCALING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
 
             // Clipboard
-            'ctrl+c': () => { copyToClipboard(); logAction('Copy (Ctrl+C)'); },
-            'cmd+c': () => { copyToClipboard(); logAction('Copy (Cmd+C)'); },
-            'ctrl+v': () => { pasteFromClipboard(project(mousePosRef.current)); logAction('Paste (Ctrl+V)'); },
-            'cmd+v': () => { pasteFromClipboard(project(mousePosRef.current)); logAction('Paste (Cmd+V)'); },
+            'ctrl+c': autoConfirm(() => { copyToClipboard(); logAction('Copy (Ctrl+C)'); }),
+            'cmd+c': autoConfirm(() => { copyToClipboard(); logAction('Copy (Cmd+C)'); }),
+            'ctrl+v': autoConfirm(() => { pasteFromClipboard(project(mousePosRef.current)); logAction('Paste (Ctrl+V)'); }),
+            'cmd+v': autoConfirm(() => { pasteFromClipboard(project(mousePosRef.current)); logAction('Paste (Cmd+V)'); }),
 
             // Save
-            'ctrl+s': (e) => { e.preventDefault(); saveProject(); logAction('Save Project (Ctrl+S)'); },
-            'cmd+s': (e) => { e.preventDefault(); saveProject(); logAction('Save Project (Cmd+S)'); },
+            'ctrl+s': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project (Ctrl+S)'); }),
+            'cmd+s': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project (Cmd+S)'); }),
 
             // Confirmation & Navigation
             'enter': () => { confirmGrab(); logAction('Confirm (Enter)'); },
@@ -417,7 +431,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     if (transformBuffer) {
                         handleTypeNum('Backspace');
                     } else {
-                        // Standard Backspace Logic (Reset)
+                        if (mode !== 'IDLE') confirmGrab();
                         resetSelected();
                         logAction('Reset Selected');
                     }
@@ -664,11 +678,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                             setPendingConnection(null);
                         }}
                         onSelect={(type, label, data, isContinuous) => {
-                            const newNode = spawnNode(type, label, data, isContinuous, mousePosRef.current);
-                            if (newNode && !isContinuous) {
-                                // Start sticky grab
-                                startGrab(mousePosRef.current, false, [newNode]);
-                            }
+                            spawnNode(type, label, data, isContinuous, mousePosRef.current);
                         }}
                         pendingConnection={pendingConnection}
                     />
