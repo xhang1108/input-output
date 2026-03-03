@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef } from 'react';
+import { memo, useMemo, useRef, useCallback } from 'react';
 import { NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import { PayloadUtils } from '../../utils/PayloadUtils';
@@ -124,106 +124,314 @@ export const PlotNode = memo((props: NodeProps) => {
     }, [payloads, data.minX, data.maxX, data.points]);
 
     // Vega-Lite Specification (Phase 2.2)
-    const hasSize = plotData.table.length > 0 && plotData.table.some(pt => pt.size !== undefined);
+    const hasSize = useMemo(() => plotData.table.length > 0 && plotData.table.some(pt => pt.size !== undefined), [plotData.table]);
 
-    const spec: any = {
-        $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
-        width: 'container',
-        height: 'container',
-        autosize: { type: 'fit', contains: 'padding' },
-        background: 'transparent',
-        data: { name: 'table' },
-        mark: {
+    const spec = useMemo(() => {
+        // Debugging logs
+        console.log('[PlotNode] dualAxis:', data.dualAxis);
+        console.log('[PlotNode] table length:', plotData.table.length);
+        if (plotData.table.length > 0) {
+            console.log('[PlotNode] unique series:', Array.from(new Set(plotData.table.map(p => p.series))));
+        }
+
+        // Dual Axis Support Variables moved outside
+        let encoding: any;
+        let layer: any[] | undefined;
+        let resolve: any;
+
+        const xDomain = [data.minX ?? -10, data.maxX ?? 10];
+
+        const mark = {
             type: viewMode === 'scatter' ? (hasSize ? 'circle' : 'point') : viewMode === 'bar' ? 'bar' : viewMode === 'area' ? 'area' : 'line',
             color: '#b084e9',
             interpolate: 'monotone',
             invalid: 'filter',
             tooltip: true,
-            // If it's a line but has size, maybe show points? 
             point: (viewMode === 'line' && hasSize) ? { filled: true } : false
-        },
-        encoding: {
-            x: {
-                field: 'x',
-                type: 'quantitative',
-                axis: {
-                    labelColor: '#52525b',
-                    labelFont: 'Roboto Mono',
-                    labelFontSize: 9,
-                    gridColor: {
-                        condition: { test: 'datum.value === 0', value: '#71717a' }, // Zinc-500 (Medium Gray)
-                        value: '#27272a' // Zinc-800 for normal grids
-                    },
-                    gridWidth: {
-                        condition: { test: 'datum.value === 0', value: 1.5 },
-                        value: 0.5
-                    },
-                    grid: true,
-                    domain: true,
-                    domainColor: '#71717a',
-                    tickAmount: 5,
-                    title: null
+        };
+
+        if (data.dualAxis && new Set(plotData.table.map(p => p.series)).size > 1) {
+            const uniqueSeries = Array.from(new Set(plotData.table.map(p => p.series)));
+            const series1 = uniqueSeries[0];
+            const series2 = uniqueSeries[1];
+            const seriesrest = uniqueSeries.slice(2);
+
+            encoding = {
+                x: {
+                    field: 'x',
+                    type: 'quantitative',
+                    scale: { domain: xDomain },
+                    axis: {
+                        labelColor: '#52525b',
+                        labelFont: 'Roboto Mono',
+                        labelFontSize: 9,
+                        gridColor: {
+                            condition: { test: 'datum.value === 0', value: '#71717a' },
+                            value: '#27272a'
+                        },
+                        gridWidth: {
+                            condition: { test: 'datum.value === 0', value: 1.5 },
+                            value: 0.5
+                        },
+                        grid: true,
+                        domain: true,
+                        domainColor: '#71717a',
+                        tickAmount: 5,
+                        title: null
+                    }
+                },
+                color: {
+                    field: 'series',
+                    type: 'nominal',
+                    scale: { range: ['#b084e9', '#34d399', '#38bdf8', '#fbbf24', '#f87171'] }
                 }
-            },
-            y: {
-                field: 'y',
-                type: 'quantitative',
-                axis: {
-                    labelColor: '#52525b',
-                    labelFont: 'Roboto Mono',
-                    labelFontSize: 9,
-                    gridColor: {
-                        condition: { test: 'datum.value === 0', value: '#71717a' }, // Zinc-500
-                        value: '#27272a'
-                    },
-                    gridWidth: {
-                        condition: { test: 'datum.value === 0', value: 1.5 },
-                        value: 0.5
-                    },
-                    grid: true,
-                    domain: true,
-                    domainColor: '#71717a',
-                    tickAmount: 5,
-                    title: null
+            };
+
+            layer = [
+                {
+                    mark,
+                    transform: [{ filter: { field: 'series', equal: series1 } }],
+                    params: [
+                        {
+                            name: 'grid',
+                            select: {
+                                type: 'interval',
+                                encodings: ['x']
+                            },
+                            bind: 'scales',
+                        }
+                    ],
+                    encoding: {
+                        y: {
+                            field: 'y',
+                            type: 'quantitative',
+                            axis: {
+                                labelColor: '#b084e9',
+                                labelFont: 'Roboto Mono',
+                                labelFontSize: 9,
+                                gridColor: {
+                                    condition: { test: 'datum.value === 0', value: '#71717a' },
+                                    value: '#27272a'
+                                },
+                                gridWidth: {
+                                    condition: { test: 'datum.value === 0', value: 1.5 },
+                                    value: 0.5
+                                },
+                                grid: true,
+                                domain: true,
+                                domainColor: '#71717a',
+                                tickAmount: 5,
+                                title: series1,
+                                titleColor: '#b084e9',
+                                titleFontWeight: 'bold',
+                                titleFontSize: 10
+                            }
+                        }
+                    }
+                },
+                {
+                    mark,
+                    transform: [{ filter: { field: 'series', equal: series2 } }],
+                    encoding: {
+                        y: {
+                            field: 'y',
+                            type: 'quantitative',
+                            axis: {
+                                orient: 'right',
+                                labelColor: '#34d399',
+                                labelFont: 'Roboto Mono',
+                                labelFontSize: 9,
+                                grid: false,
+                                domain: true,
+                                domainColor: '#71717a',
+                                tickAmount: 5,
+                                title: series2,
+                                titleColor: '#34d399',
+                                titleFontWeight: 'bold',
+                                titleFontSize: 10
+                            }
+                        }
+                    }
                 }
-            },
-            color: {
-                field: 'series',
-                type: 'nominal',
-                scale: {
-                    // Vibrant multi-series palette
-                    range: ['#b084e9', '#34d399', '#38bdf8', '#fbbf24', '#f87171']
+            ];
+
+            // If there's more than 2 series, adding them to the second Y axis but hiding their axis labels
+            if (seriesrest.length > 0) {
+                layer.push({
+                    mark,
+                    transform: [{ filter: { field: 'series', oneOf: seriesrest } }],
+                    encoding: {
+                        y: {
+                            field: 'y',
+                            type: 'quantitative',
+                            axis: null // Hide axis for remaining series
+                        }
+                    }
+                });
+            }
+
+            resolve = {
+                scale: { y: 'independent' }
+            };
+        } else {
+            // Standard Single Axis Encoding
+            encoding = {
+                x: {
+                    field: 'x',
+                    type: 'quantitative',
+                    scale: { domain: xDomain },
+                    axis: {
+                        labelColor: '#52525b',
+                        labelFont: 'Roboto Mono',
+                        labelFontSize: 9,
+                        gridColor: {
+                            condition: { test: 'datum.value === 0', value: '#71717a' },
+                            value: '#27272a'
+                        },
+                        gridWidth: {
+                            condition: { test: 'datum.value === 0', value: 1.5 },
+                            value: 0.5
+                        },
+                        grid: true,
+                        domain: true,
+                        domainColor: '#71717a',
+                        tickAmount: 5,
+                        title: null
+                    }
+                },
+                y: {
+                    field: 'y',
+                    type: 'quantitative',
+                    scale: (data.minY !== undefined && data.maxY !== undefined)
+                        ? { domain: [data.minY, data.maxY] }
+                        : undefined,
+                    axis: {
+                        labelColor: '#52525b',
+                        labelFont: 'Roboto Mono',
+                        labelFontSize: 9,
+                        gridColor: {
+                            condition: { test: 'datum.value === 0', value: '#71717a' },
+                            value: '#27272a'
+                        },
+                        gridWidth: {
+                            condition: { test: 'datum.value === 0', value: 1.5 },
+                            value: 0.5
+                        },
+                        grid: true,
+                        domain: true,
+                        domainColor: '#71717a',
+                        tickAmount: 5,
+                        title: null
+                    }
+                },
+                color: {
+                    field: 'series',
+                    type: 'nominal',
+                    scale: {
+                        range: ['#b084e9', '#34d399', '#38bdf8', '#fbbf24', '#f87171']
+                    }
+                }
+            };
+        }
+
+        const baseSpec: any = {
+            $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+            width: 'container',
+            height: 'container',
+            autosize: { type: 'fit', contains: 'padding' },
+            background: 'transparent',
+            data: { values: plotData.table },
+            config: {
+                view: { stroke: 'transparent' },
+                legend: {
+                    title: null,
+                    labelColor: '#a1a1aa',
+                    labelFont: 'Inter',
+                    labelFontSize: 9,
+                    orient: 'top',
+                    direction: 'horizontal',
+                    offset: 5,
+                    padding: 0,
+                    disable: plotData.table.length > 0 && new Set(plotData.table.map(p => p.series)).size <= 1
                 }
             }
-        },
-        config: {
-            view: { stroke: 'transparent' },
-            legend: {
-                title: null,
-                labelColor: '#a1a1aa',
-                labelFont: 'Inter',
-                labelFontSize: 9,
-                orient: 'top',
-                direction: 'horizontal',
-                offset: 5,
-                padding: 0,
-                // Automatically hide if only one series to keep UI clean
-                disable: plotData.table.length > 0 && new Set(plotData.table.map(p => p.series)).size <= 1
+        };
+
+        if (layer) {
+            baseSpec.layer = layer;
+            baseSpec.resolve = resolve;
+        } else {
+            baseSpec.mark = mark;
+            // Only add params at top level for non-layered view
+            baseSpec.params = [
+                {
+                    name: 'grid',
+                    select: {
+                        type: 'interval',
+                        encodings: ['x']
+                    },
+                    bind: 'scales',
+                }
+            ];
+        }
+        // Set encoding once
+        baseSpec.encoding = encoding;
+
+        // If size field detected in data, add the encoding
+        if (hasSize) {
+            const sizeEncoding = {
+                field: 'size',
+                type: 'quantitative',
+                legend: null,
+                scale: { range: [20, 2000] }
+            };
+
+            if (layer) {
+                layer.forEach((l: any) => {
+                    if (!l.encoding) l.encoding = {};
+                    l.encoding.size = sizeEncoding;
+                });
+            } else {
+                baseSpec.encoding.size = sizeEncoding;
             }
         }
-    };
 
-    // If size field detected in data, add the encoding
-    if (hasSize) {
-        spec.encoding.size = {
-            field: 'size',
-            type: 'quantitative',
-            legend: null,
-            scale: { range: [20, 2000] } // Better scaling for visibility
-        };
-    }
+        console.log('[PlotNode] Generated Spec:', baseSpec);
+        return baseSpec;
+    }, [viewMode, hasSize, data.dualAxis, plotData.table, data.minX, data.maxX, data.minY, data.maxY]);
 
     const lastSyncedRange = useRef<[number, number] | null>(null);
+
+    const handleGridSignal = useCallback((name: string, value: any) => {
+        if (value && value.x) {
+            const [newMinX, newMaxX] = value.x;
+
+            // Avoid infinite loops by checking if significant change occurred relative to LAST SYNCED range
+            const last = lastSyncedRange.current || [data.minX ?? -10, data.maxX ?? 10];
+            const dx = Math.abs((newMinX as number) - (last[0] as number)) + Math.abs((newMaxX as number) - (last[1] as number));
+
+            if (dx > 0.001) {
+                // Update ref BEFORE transaction to block feedback re-renders from triggering another update
+                lastSyncedRange.current = [Number(newMinX), Number(newMaxX)];
+
+                const brain = require('../../engine/Brain').Brain.getInstance();
+                brain.applyTransaction({
+                    type: 'UPDATE_NODE_DATA',
+                    payload: {
+                        id: props.id,
+                        data: {
+                            minX: Number(Number(newMinX).toFixed(4)),
+                            maxX: Number(Number(newMaxX).toFixed(4))
+                        }
+                    }
+                });
+            }
+        }
+    }, [props.id, data.minX, data.maxX]);
+
+    const signalListeners = useMemo(() => ({
+        grid: handleGridSignal
+    }), [handleGridSignal]);
 
     return (
         <BaseNode
@@ -235,23 +443,44 @@ export const PlotNode = memo((props: NodeProps) => {
         >
             <div className="w-[320px] bg-zinc-950/50 rounded-b-md relative flex flex-col" style={{ height: 240 }}>
                 {/* 3.1 Mode Toggle UI */}
-                <div className="flex gap-2 p-2 bg-zinc-900/80 border-b border-zinc-800/50 justify-center">
-                    {['line', 'bar', 'scatter', 'area'].map(m => (
+                <div className="flex gap-2 p-2 bg-zinc-900/80 border-b border-zinc-800/50 justify-between items-center">
+                    <div className="flex gap-1 border border-zinc-700/50 rounded overflow-hidden">
+                        {['line', 'bar', 'scatter', 'area'].map(m => (
+                            <button
+                                key={m}
+                                onClick={() => {
+                                    const brain = require('../../engine/Brain').Brain.getInstance();
+                                    brain.applyTransaction({
+                                        type: 'UPDATE_NODE_DATA',
+                                        payload: { id: props.id, data: { viewMode: m } }
+                                    });
+                                }}
+                                className={`px-2 py-0.5 text-[9px] uppercase font-bold transition-colors ${viewMode === m ? 'bg-purple-600/50 text-purple-200' : 'bg-transparent text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
+                                    }`}
+                            >
+                                {m}
+                            </button>
+                        ))}
+                    </div>
+
+                    {payloads.length > 1 && (
                         <button
-                            key={m}
                             onClick={() => {
                                 const brain = require('../../engine/Brain').Brain.getInstance();
                                 brain.applyTransaction({
                                     type: 'UPDATE_NODE_DATA',
-                                    payload: { id: props.id, data: { viewMode: m } }
+                                    payload: { id: props.id, data: { dualAxis: !data.dualAxis } }
                                 });
                             }}
-                            className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold transition-colors ${viewMode === m ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                            className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold transition-colors border ${data.dualAxis
+                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                                : 'bg-zinc-800/50 text-zinc-500 border-zinc-700/50 hover:bg-zinc-700'
                                 }`}
+                            title="Dual Y-Axis (Compare ranges)"
                         >
-                            {m}
+                            Dual Axis
                         </button>
-                    ))}
+                    )}
                 </div>
 
                 <div
@@ -262,60 +491,10 @@ export const PlotNode = memo((props: NodeProps) => {
                 >
                     {plotData.table.length > 0 ? (
                         <VegaEmbed
-                            spec={{
-                                ...spec,
-                                data: { values: plotData.table },
-                                params: [
-                                    {
-                                        name: 'grid',
-                                        select: 'interval',
-                                        bind: 'scales',
-                                    }
-                                ],
-                                encoding: {
-                                    ...spec.encoding,
-                                    x: {
-                                        ...spec.encoding.x,
-                                        scale: { domain: [data.minX ?? -10, data.maxX ?? 10] }
-                                    },
-                                    y: {
-                                        ...spec.encoding.y,
-                                        // Only bind Y scale if the user wants it, or default to auto
-                                        scale: (data.minY !== undefined && data.maxY !== undefined)
-                                            ? { domain: [data.minY, data.maxY] }
-                                            : undefined
-                                    }
-                                }
-                            }}
-                            onNewView={(view: any) => {
-                                // Listen to zoom/pan changes
-                                view.addSignalListener('grid', (name: string, value: any) => {
-                                    if (value && value.x) {
-                                        const [newMinX, newMaxX] = value.x;
+                            spec={spec}
+                            // @ts-ignore - Typings for signalListeners might mismatch in some react-vega versions
+                            signalListeners={signalListeners}
 
-                                        // Avoid infinite loops by checking if significant change occurred relative to LAST SYNCED range
-                                        const last = lastSyncedRange.current || [data.minX ?? -10, data.maxX ?? 10];
-                                        const dx = Math.abs(Number(newMinX) - last[0]) + Math.abs(Number(newMaxX) - last[1]);
-
-                                        if (dx > 0.001) {
-                                            // Update ref BEFORE transaction to block feedback re-renders from triggering another update
-                                            lastSyncedRange.current = [Number(newMinX), Number(newMaxX)];
-
-                                            const brain = require('../../engine/Brain').Brain.getInstance();
-                                            brain.applyTransaction({
-                                                type: 'UPDATE_NODE_DATA',
-                                                payload: {
-                                                    id: props.id,
-                                                    data: {
-                                                        minX: Number(Number(newMinX).toFixed(4)),
-                                                        maxX: Number(Number(newMaxX).toFixed(4))
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    }
-                                });
-                            }}
                             options={{ actions: false, renderer: 'svg' }}
                             style={{ width: '100%', height: '100%' }}
                         />
