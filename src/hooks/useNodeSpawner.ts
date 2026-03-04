@@ -80,7 +80,7 @@ export function useNodeSpawner({
             },
         };
 
-        setNodes((nds) => nds.concat(newNode));
+        setNodes((nds) => [...nds.map(n => ({ ...n, selected: false })), newNode]);
 
         // ... existing auto-link logic ...
         if (pendingConnection) {

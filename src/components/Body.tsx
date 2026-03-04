@@ -131,9 +131,20 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         clearSelection,
         selectNode,
         handleTypeNum,
+        isResolvingTransform,
         transformBuffer,
         transformValue
     } = useHand();
+
+    // Intercept React Flow node changes to prevent native deselection during operation
+    const onNodesChangeSafe = useCallback((changes: any[]) => {
+        if (isResolvingTransform() || ['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
+            const filtered = changes.filter(c => c.type !== 'select');
+            if (filtered.length > 0) onNodesChange(filtered);
+            return;
+        }
+        onNodesChange(changes);
+    }, [mode, isResolvingTransform, onNodesChange]);
 
     // --- Canvas Reset ---
     const clearMemory = useCallback(() => {
@@ -478,6 +489,11 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                 onMouseDown={onMouseDown}
                 onMouseUp={onMouseUp}
                 onClick={onClick}
+                onClickCapture={(e) => {
+                    if (isResolvingTransform() || ['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
+                        e.stopPropagation();
+                    }
+                }}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 {/* Loading Overlay — blocks flash while project data loads */}
@@ -493,7 +509,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     connectionLineComponent={RelinkLine}
                     nodes={nodes}
                     edges={edges}
-                    onNodesChange={onNodesChange}
+                    onNodesChange={onNodesChangeSafe}
 
                     onEdgesChange={onEdgesChange}
                     onConnect={onRelinkConnect}

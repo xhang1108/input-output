@@ -4,9 +4,28 @@ import { AdvancedSymbolizers } from './Symbolizers/Advanced/AdvancedSymbolizers'
 
 export function registerAdvancedNodes() {
     const nodes = [
-        'AD-01', 'AD-02', 'AD-03', 'AD-04', 'AD-05',
-        'AD-06', 'AD-07', 'AD-08', 'AD-09', 'AD-10',
-        'AD-11', 'SY-05'
+        // ─── 4. Calculus ────────────────────────────────────────
+        'AD-04', // Derivative
+        'AD-05', // Integral
+        'AD-11', // Limit
+        'AD-06', // Solver
+        'SY-04', // ODE Solver
+
+        // ─── 5. Data & Structures ───────────────────────────────
+        'DA-07', // Array Builder
+        'DA-06', // Array Extract
+        'DA-03', // List Utility
+        'DA-04', // Set Ops
+        'AD-01', // Matrix Tools
+        'AD-02', // Vector Utils
+        'AD-09', // Vector Split
+
+        // ─── 6. Transform ───────────────────────────────────────
+        'AD-10', // Geometry
+        'AD-08', // Vector Field
+
+        // ─── 1. Input (Expert) ──────────────────────────────────
+        'SY-05'  // Node Expression
     ];
 
     nodes.forEach(id => {

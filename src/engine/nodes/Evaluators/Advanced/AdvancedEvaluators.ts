@@ -207,41 +207,6 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         } catch (e: any) { return PayloadUtils.createError(`Solve Failed: ${e.message}`); }
     },
 
-    // AD-07: Complex Math
-    'AD-07': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as Record<string, unknown>;
-        const mode = data.mode as string || 'separate';
-        try {
-            if (mode === 'separate') {
-                const valPayload = inputs['in'];
-                if (!valPayload) return PayloadUtils.createError('No Input');
-                const val = PayloadUtils.hydrate(valPayload.value, math);
-                const re = math.re(val), im = math.im(val), abs = math.abs(val);
-                const arg = typeof math.arg === 'function' ? math.arg(val) : 0;
-                return {
-                    type: DataType.Object,
-                    value: {
-                        're': PayloadUtils.createScalar(PayloadUtils.dehydrate(re)),
-                        'im': PayloadUtils.createScalar(PayloadUtils.dehydrate(im)),
-                        'abs': PayloadUtils.createScalar(PayloadUtils.dehydrate(abs)),
-                        'arg': PayloadUtils.createScalar(PayloadUtils.dehydrate(arg))
-                    },
-                    symbol: null,
-                    meta: { unit: valPayload.meta?.unit }
-                };
-            } else if (mode === 'combine_cartesian') {
-                const re = PayloadUtils.hydrate(inputs['in_re']?.value || 0, math);
-                const im = PayloadUtils.hydrate(inputs['in_im']?.value || 0, math);
-                return PayloadUtils.createScalar(PayloadUtils.dehydrate(math.complex(Number(re), Number(im))));
-            } else if (mode === 'combine_polar') {
-                const r = PayloadUtils.hydrate(inputs['in_abs']?.value || 0, math);
-                const phi = PayloadUtils.hydrate(inputs['in_arg']?.value || 0, math);
-                return PayloadUtils.createScalar(PayloadUtils.dehydrate(math.complex({ r: Number(r), phi: Number(phi) })));
-            }
-            return PayloadUtils.createError('Invalid Mode');
-        } catch (e: any) { return PayloadUtils.createError(`Complex Failed: ${e.message}`); }
-    },
 
     // AD-08: Vector Field
     'AD-08': (node, inputs) => {

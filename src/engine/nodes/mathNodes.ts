@@ -4,9 +4,23 @@ import { MathSymbolizers } from './Symbolizers/Math/MathSymbolizers';
 
 export function registerMathNodes() {
     const ids = [
-        'MA-01', 'MA-03', 'MA-14', 'MA-12', 'MA-02', 'MA-15', 'MA-16',
-        'DA-01', 'DA-02', 'DA-03', 'DA-04', 'DA-05', 'DA-06', 'DA-07',
-        'SY-04'
+        // ─── 2. Generators ──────────────────────────────────────
+        'IO-06', // Random
+        'DA-05', // Distributions
+
+        // ─── 3. Math ────────────────────────────────────────────
+        'MA-01', // Math Node
+        'MA-16', // Log
+        'MA-17', // Trig
+        'MA-14', // Round
+        'MA-12', // Fraction
+        'MA-02', // Number Theory
+
+        // ─── 6. Transform ───────────────────────────────────────
+        'IO-05', // Unit
+        'MA-15', // Base Converter
+        'DA-01', // Statistics
+        'DA-02'  // Smoothing
     ];
 
     ids.forEach(id => {

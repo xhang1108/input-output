@@ -82,14 +82,102 @@ export function CategorizedMenu({
     }, [isOpen]);
 
 
-    // group items by category for rendering
-    const groupedItems = useMemo(() => {
-        return filteredItems.reduce((acc, item) => {
-            if (!acc[item.category]) acc[item.category] = [];
-            acc[item.category].push(item);
-            return acc;
-        }, {} as Record<string, CategorizedMenuItem[]>);
+    // Type for hierarchical grouping
+    interface CategoryGroup {
+        name: string;
+        fullName: string;
+        items: CategorizedMenuItem[];
+        subCategories: Record<string, CategoryGroup>;
+    }
+
+    // group items by category for rendering (Hierarchical)
+    const hierarchicalGroups = useMemo(() => {
+        const root: Record<string, CategoryGroup> = {};
+
+        filteredItems.forEach(item => {
+            const parts = item.category.split('.');
+            let current = root;
+            let path = '';
+
+            parts.forEach((part, index) => {
+                path = path ? `${path}.${part}` : part;
+                if (!current[part]) {
+                    current[part] = {
+                        name: part,
+                        fullName: path,
+                        items: [],
+                        subCategories: {}
+                    };
+                }
+
+                if (index === parts.length - 1) {
+                    current[part].items.push(item);
+                }
+                current = current[part].subCategories;
+            });
+        });
+
+        return root;
     }, [filteredItems]);
+
+    // Flatten hierarchical groups for the horizontal layout, grouped by ROOT category
+    const sortedCategories = useMemo(() => {
+        const rootGroups: { rootName: string; subgroups: { displayName: string; items: CategorizedMenuItem[]; depth: number; fullName: string }[] }[] = [];
+
+        // Manual order for root categories to ensure 'Input' is first
+        const rootPriority = ['Input', 'Generators', 'Math', 'Calculus', 'Data & Structures', 'Transform', 'Logic & Flow', 'Output', 'Utility'];
+
+        const traverse = (groups: Record<string, CategoryGroup>, depth: number, rootTarget: { displayName: string; items: CategorizedMenuItem[]; depth: number; fullName: string }[]) => {
+            const sortedKeys = Object.keys(groups).sort();
+
+            sortedKeys.forEach(key => {
+                const group = groups[key];
+                if (group.items.length > 0) {
+                    rootTarget.push({
+                        fullName: group.fullName,
+                        displayName: group.name,
+                        items: group.items,
+                        depth
+                    });
+                }
+                traverse(group.subCategories, depth + 1, rootTarget);
+            });
+        };
+
+        // 1. Process root categories
+        const rootKeys = Object.keys(hierarchicalGroups);
+        const orderedRootKeys = [
+            ...rootPriority.filter(k => rootKeys.includes(k)),
+            ...rootKeys.filter(k => !rootPriority.includes(k)).sort()
+        ];
+
+        orderedRootKeys.forEach(rootKey => {
+            const subgroups: { displayName: string; items: CategorizedMenuItem[]; depth: number; fullName: string }[] = [];
+            const group = hierarchicalGroups[rootKey];
+
+            // Add root items first if any
+            if (group.items.length > 0) {
+                subgroups.push({
+                    fullName: group.fullName,
+                    displayName: group.name,
+                    items: group.items,
+                    depth: 0
+                });
+            }
+
+            // Traverse children and collect into the SAME root group
+            traverse(group.subCategories, 1, subgroups);
+
+            if (subgroups.length > 0) {
+                rootGroups.push({
+                    rootName: rootKey,
+                    subgroups
+                });
+            }
+        });
+
+        return rootGroups;
+    }, [hierarchicalGroups]);
 
     // Handle viewport boundaries for smart positioning
     const menuRef = useRef<HTMLDivElement>(null);
@@ -255,51 +343,65 @@ export function CategorizedMenu({
                             No results found
                         </div>
                     ) : (
-                        Object.entries(groupedItems).map(([category, categoryItems]) => (
-                            <div key={category} className="flex flex-col flex-wrap gap-x-0.5 content-start border-r border-white/5 last:border-r-0 pr-2 last:pr-0">
-                                {/* Category Header */}
-                                <div className="px-1 py-1 text-[8px] uppercase tracking-widest font-black text-zinc-500/60 flex items-center gap-1 mb-0.5 sticky left-0 bg-(--node-bg)">
-                                    {category}
-                                </div>
-
-                                {/* Items Wrap horizontally within the category if height exceeded */}
-                                <div className="flex flex-col flex-wrap content-start gap-0.5" style={{ maxHeight: `calc(${maxHeight} - 80px)` }}>
-                                    {categoryItems.map((item) => {
-                                        const globalIndex = filteredItems.indexOf(item);
-                                        const isSelected = globalIndex === selectedIndex;
-
-                                        return (
-                                            <button
-                                                key={`${item.category}-${item.id}-${item.label}`}
-                                                data-selected={isSelected}
-                                                className={`min-w-[100px] text-left px-1.5 py-0.5 text-[10px] flex items-center justify-between group transition-all duration-75 relative rounded-(--radius-sm) ${isSelected
-                                                    ? 'bg-blue-600 text-white z-10 scale-[1.02]'
-                                                    : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
-                                                    }`}
-                                                onClick={(e) => {
-                                                    const isContinuous = e.ctrlKey || e.metaKey;
-                                                    onSelect(item, isContinuous);
-                                                    if (isContinuous) {
-                                                        setSearch('');
-                                                        setTimeout(() => inputRef.current?.focus(), 0);
-                                                    } else {
-                                                        onClose();
-                                                    }
-                                                }}
-                                                onMouseEnter={() => setSelectedIndex(globalIndex)}
-                                            >
-                                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                    {item.icon && <span className="opacity-70">{item.icon}</span>}
-                                                    <span className="truncate font-medium">{item.label}</span>
-                                                </div>
-                                                <span className={`text-[8px] opacity-40 font-mono tracking-tighter ${isSelected ? 'text-blue-100' : 'text-zinc-600'
-                                                    }`}>
-                                                    {item.id}
+                        sortedCategories.map((root) => (
+                            <div key={root.rootName} className="flex flex-col flex-wrap gap-x-0.5 content-start border-r border-white/5 last:border-r-0 pr-2 last:pr-0">
+                                {root.subgroups.map((category) => (
+                                    <div key={category.fullName} className="flex flex-col">
+                                        {/* Category Header */}
+                                        <div className={`px-1 py-1.5 text-[8px] uppercase tracking-wider font-extrabold flex items-center gap-1.5 mb-1 sticky left-0 bg-(--node-bg) ${category.depth > 0
+                                                ? 'text-zinc-500/80 border-t border-white/5 mt-2 pt-2'
+                                                : 'text-zinc-400'
+                                            }`}>
+                                            {category.depth > 0 ? (
+                                                <span className="flex items-center gap-1 dark:text-blue-500/70">
+                                                    <span className="w-1 h-2.5 bg-blue-600/50 rounded-[1px]" />
+                                                    {category.displayName}
                                                 </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                            ) : (
+                                                category.displayName
+                                            )}
+                                        </div>
+
+                                        {/* Items */}
+                                        <div className="flex flex-col gap-0.5 mb-2 last:mb-0">
+                                            {category.items.map((item) => {
+                                                const globalIndex = filteredItems.indexOf(item);
+                                                const isSelected = globalIndex === selectedIndex;
+
+                                                return (
+                                                    <button
+                                                        key={`${item.category}-${item.id}-${item.label}`}
+                                                        data-selected={isSelected}
+                                                        className={`min-w-[120px] text-left px-1.5 py-0.5 text-[10px] flex items-center justify-between group transition-all duration-75 relative rounded-(--radius-sm) ${isSelected
+                                                            ? 'bg-blue-600 text-white z-10 scale-[1.02]'
+                                                            : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
+                                                            } ${category.depth > 0 ? 'ml-1.5' : ''}`}
+                                                        onClick={(e) => {
+                                                            const isContinuous = e.ctrlKey || e.metaKey;
+                                                            onSelect(item, isContinuous);
+                                                            if (isContinuous) {
+                                                                setSearch('');
+                                                                setTimeout(() => inputRef.current?.focus(), 0);
+                                                            } else {
+                                                                onClose();
+                                                            }
+                                                        }}
+                                                        onMouseEnter={() => setSelectedIndex(globalIndex)}
+                                                    >
+                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                            {item.icon && <span className="opacity-70">{item.icon}</span>}
+                                                            <span className="truncate font-medium">{item.label}</span>
+                                                        </div>
+                                                        <span className={`text-[8px] opacity-40 font-mono tracking-tighter ${isSelected ? 'text-blue-100' : 'text-zinc-600'
+                                                            }`}>
+                                                            {item.id}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ))
                     )}

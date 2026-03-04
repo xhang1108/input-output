@@ -17,7 +17,7 @@ import { NodeDefinition } from '../types/NodeDefinition';
  * Multiple definitions can share the same `nodeType` (e.g. Add/Sub/Mul/Div all use 'MA-01').
  */
 export const NODE_DEFINITIONS: NodeDefinition[] = [
-    // ─── Input Family ───────────────────────────────────────────
+    // ─── 1. Input Family ───────────────────────────────────────────
     {
         id: 'IO-01',
         label: 'Number',
@@ -56,44 +56,23 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'string', value: 'Hello' }
     },
-
-    // ─── Output Family ──────────────────────────────────────────
     {
-        id: 'IO-05',
-        label: 'Unit',
+        id: 'MA-09', // Button (Moved from Logic)
+        label: 'Button',
         category: 'Input',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'scalar' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'boolean' }
         ],
-        defaultData: { type: 'unit', unit: 'm' }
+        defaultData: { type: 'button', value: false, mode: 'sticky' }
     },
     {
-        id: 'IO-11',
-        label: 'Result',
-        category: 'Output',
+        id: 'MA-03',
+        label: 'Constant',
+        category: 'Input', // Was Math
         handles: [
-            { id: 'in', type: 'target', variant: 'single' }
+            { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', y: '72%' }
         ],
-        defaultData: { type: 'result', viewMode: 'auto' }
-    },
-    {
-        id: 'IO-06',
-        label: 'Random',
-        category: 'Input',
-        handles: [
-            { id: 'val', type: 'source', variant: 'single', dataType: 'scalar' }
-        ],
-        defaultData: {
-            type: 'random',
-            mode: 'float', // float, int, matrix
-            itemMode: 'float', // float, int (used for matrix items)
-            min: 0,
-            max: 1,
-            rows: 3,
-            cols: 3,
-            seed: Date.now()
-        }
+        defaultData: { val: 'pi', label: 'Constant' }
     },
     {
         id: 'IO-08',
@@ -114,111 +93,96 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] }
     },
     {
-        id: 'IO-22',
-        label: 'Status',
-        category: 'Output',
+        id: 'SY-05',
+        label: 'Node Expression',
+        category: 'Input', // Was Expert
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'any' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { state: 'void' }
-    },
-    {
-        id: 'IO-14',
-        label: 'Plot',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any' }
-        ],
-        defaultData: {}
+        defaultData: { type: 'expression', code: '1 + 2' }
     },
 
-    // ─── Utility Family ─────────────────────────────────────────
+    // ─── 2. Generators ──────────────────────────────────────────
     {
-        id: 'UI-01',
-        label: 'Annotation',
-        category: 'Utility',
-        handles: [],
+        id: 'IO-06',
+        label: 'Random',
+        category: 'Input.Generators',
+        aliases: ['rand', 'noise', 'white'],
+        handles: [
+            { id: 'val', type: 'source', variant: 'single', dataType: 'scalar' }
+        ],
         defaultData: {
-            markdown: '# New Note\nDouble click to edit.',
-            width: 200,
-            height: 150
+            type: 'random',
+            mode: 'float',
+            itemMode: 'float',
+            min: 0,
+            max: 1,
+            rows: 3,
+            cols: 3,
+            seed: Date.now()
         }
     },
     {
-        id: 'UI-03',
-        label: 'Reroute',
-        category: 'Utility',
+        id: 'DA-05',
+        label: 'Distributions',
+        category: 'Input.Generators',
+        aliases: ['gaussian', 'normal', 'uniform', 'probability'],
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any', label: '' }
+            { id: 'param_n', type: 'target', variant: 'single', dataType: 'scalar', label: 'N' },
+            { id: 'param_1', type: 'target', variant: 'single', dataType: 'scalar', label: 'P1' },
+            { id: 'param_2', type: 'target', variant: 'single', dataType: 'scalar', label: 'P2' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
         ],
-        defaultData: { type: 'reroute' }
+        defaultData: { mode: 'Normal', n: 100, p1: 0, p2: 1 },
+        opTokens: ['NORMAL', 'UNIFORM', 'POISSON']
     },
 
-    {
-        id: 'UI-99',
-        label: 'Debug',
-        category: 'Utility',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' }
-        ],
-        defaultData: { type: 'debug' }
-    },
-
-    // ─── Math Family ────────────────────────────────────────────
-    // All share nodeType 'MA-01' but differ by `op` in defaultData
+    // ─── 3. Math ───────────────────────────────────────────
     {
         id: 'MA-01',
-        label: 'Add',
+        label: 'Basic Math',
         category: 'Math',
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'A' },
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'B' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'ADD', label: 'Add' }
+        defaultData: { op: 'ADD', label: 'Add' },
+        aliases: ['add', 'sub', 'mul', 'div', '+', '-', '*', '/']
     },
     {
-        id: 'MA-01',
-        label: 'Subtract',
+        id: 'MA-18',
+        label: 'Advanced Math',
         category: 'Math',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'A' },
-            { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'B' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'Input' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'SUB', label: 'Sub' }
+        defaultData: { op: 'POW', label: 'Power' },
+        aliases: ['pow', 'sqrt', 'abs', '^', 'root']
     },
     {
-        id: 'MA-01',
-        label: 'Multiply',
+        id: 'MA-16',
+        label: 'Logarithm',
         category: 'Math',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'A' },
-            { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'B' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'x' },
+            { id: 'base', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Base' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'MUL', label: 'Mul' }
+        defaultData: { op: 'LN' },
+        aliases: ['ln', 'log10', 'log2', 'log']
     },
     {
-        id: 'MA-01',
-        label: 'Divide',
-        category: 'Math',
+        id: 'MA-17',
+        label: 'Trigonometry',
+        category: 'Math', // Moved from Convert/Utility
         handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'A' },
-            { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'B' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Angle' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'DIV', label: 'Div' }
-    },
-    {
-        id: 'MA-03',
-        label: 'Constant',
-        category: 'Math',
-        handles: [
-            { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', y: '72%' }
-        ],
-        defaultData: { val: 'pi', label: 'Constant' }
+        defaultData: { op: 'SIN' },
+        aliases: ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'trig']
     },
     {
         id: 'MA-14',
@@ -245,20 +209,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { mixed: false }
     },
     {
-        id: 'MA-16',
-        label: 'Logarithm',
-        category: 'Math',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'x' },
-            { id: 'base', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Base' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
-        ],
-        defaultData: { op: 'LN' },
-        aliases: ['ln', 'log10', 'log2', 'log']
-    },
-
-    // ─── Number Theory ──────────────────────────────────────────
-    {
         id: 'MA-02',
         label: 'Number Theory',
         category: 'Math',
@@ -271,46 +221,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['gcd', 'lcm', 'mod', 'prime', 'modulo']
     },
     {
-        id: 'MA-15',
-        label: 'Base Converter',
-        category: 'Math',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
-        ],
-        defaultData: { base: 'HEX' }
-    },
-
-    // ─── Linear Algebra & Vector (AD Family) ────────────────────
-    {
-        id: 'AD-01',
-        label: 'Matrix Tools',
-        category: 'LinearAlgebra',
-        handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'matrix' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
-        ],
-        defaultData: { op: 'INV' },
-        opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN'],
-        aliases: ['inv', 'det', 'transpose', 'trace', 'qr', 'lu', 'lup', 'eigen', 'svd']
-    },
-    {
-        id: 'AD-02',
-        label: 'Vector Utils',
-        category: 'LinearAlgebra',
-        handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'vector', label: 'A' },
-            { id: 'in_b', type: 'target', variant: 'single', dataType: 'vector', label: 'B' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
-        ],
-        defaultData: { op: 'DOT' },
-        opTokens: ['DOT', 'CROSS'],
-        aliases: ['dot', 'cross', 'norm', 'distance', 'dist']
-    },
-    {
         id: 'AD-03',
         label: 'Combinatorics',
-        category: 'LinearAlgebra',
+        category: 'Math', // Was LinearAlgebra
         handles: [
             { id: 'n', type: 'target', variant: 'single', dataType: 'scalar', label: 'n' },
             { id: 'r', type: 'target', variant: 'single', dataType: 'scalar', label: 'r' },
@@ -319,61 +232,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { op: 'nCr' },
         opTokens: ['NCR', 'NPR']
     },
-    {
-        id: 'AD-08',
-        label: 'Vector Field',
-        category: 'LinearAlgebra',
-        handles: [
-            { id: 'in_f', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f' },
-            { id: 'out_field', type: 'source', variant: 'single', dataType: 'matrix', label: 'Arrows' },
-            { id: 'out_grad', type: 'source', variant: 'single', dataType: 'vector', label: 'Grad' }
-        ],
-        defaultData: { mode: 'gradient', var1: 'x', var2: 'y', min: -5, max: 5, density: 10 },
-        aliases: ['grad', 'gradient', 'vector field']
-    },
-    {
-        id: 'AD-07',
-        label: 'Complex',
-        category: 'LinearAlgebra',
-        handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'any', label: 'In' },
-            { id: 're', type: 'source', variant: 'single', dataType: 'scalar', label: 'Re' },
-            { id: 'im', type: 'source', variant: 'single', dataType: 'scalar', label: 'Im' },
-            { id: 'abs', type: 'source', variant: 'single', dataType: 'scalar', label: 'Abs(r)' },
-            { id: 'arg', type: 'source', variant: 'single', dataType: 'scalar', label: 'Arg(φ)' }
-        ],
-        defaultData: { mode: 'separate' },
-        aliases: ['real', 'imaginary', 're', 'im', 'phase', 'abs', 'arg']
-    },
-    {
-        id: 'AD-09',
-        label: 'Vector Split',
-        category: 'LinearAlgebra',
-        handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'vector' },
-            { id: 'x', type: 'source', variant: 'single', dataType: 'scalar', label: 'X' },
-            { id: 'y', type: 'source', variant: 'single', dataType: 'scalar', label: 'Y' },
-            { id: 'z', type: 'source', variant: 'single', dataType: 'scalar', label: 'Z' }
-        ],
-        defaultData: { mode: 'separate' },
-        opTokens: ['SEPARATE', 'COMBINE'],
-        aliases: ['separate', 'combine', 'split']
-    },
-    {
-        id: 'AD-10',
-        label: 'Geometry',
-        category: 'LinearAlgebra',
-        handles: [
-            // Dummy handles array for parser compatibility; dynamic handles will override this in GeometryNode
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'Radius' },
-            { id: 'area', type: 'source', variant: 'single', dataType: 'scalar', label: 'Area' },
-            { id: 'perimeter', type: 'source', variant: 'single', dataType: 'scalar', label: 'Perim' }
-        ],
-        defaultData: { shape: 'Circle' },
-        opTokens: ['CIRCLE', 'QUAD', 'TRIANGLE']
-    },
 
-    // ─── Calculus Engine (Phase 5.1) ────────────────────────────
+    // ─── 4. Calculus ───────────────────────────────────────────
     {
         id: 'AD-04',
         label: 'Derivative',
@@ -397,17 +257,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['int', 'integrate', 'integral']
     },
     {
-        id: 'AD-06',
-        label: 'Solver',
-        category: 'LinearAlgebra',
-        handles: [
-            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'Eq' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic' }
-        ],
-        defaultData: { op: 'SOLVE' },
-        aliases: ['eqn', 'solve', 'equation', 'nerdamer']
-    },
-    {
         id: 'AD-11',
         label: 'Limit',
         category: 'Calculus',
@@ -417,6 +266,17 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { variable: 'x', approach: '0', direction: 'both' },
         aliases: ['lim', 'limit']
+    },
+    {
+        id: 'AD-06',
+        label: 'Solver',
+        category: 'Calculus', // Was LinearAlgebra
+        handles: [
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'Eq' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic' }
+        ],
+        defaultData: { op: 'SOLVE' },
+        aliases: ['eqn', 'solve', 'equation', 'nerdamer']
     },
     {
         id: 'SY-04',
@@ -430,11 +290,22 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['rk4', 'diffeq', 'differential equation']
     },
 
-    // ─── Data & Array (DA Family) ───────────────────────────────
+    // ─── 5. Data & Structures ──────────────────────────────────────────
+    {
+        id: 'DA-07',
+        label: 'Array Builder',
+        category: 'Data & Structures', // Was DataStructure
+        handles: [
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'In' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { axis: 0 },
+        opTokens: ['BUILD', 'CONCAT']
+    },
     {
         id: 'DA-06',
         label: 'Array Extract',
-        category: 'DataStructure',
+        category: 'Data & Structures', // Was DataStructure
         handles: [
             { id: 'in', type: 'target', variant: 'single', dataType: 'matrix' },
             { id: 'index', type: 'target', variant: 'single', dataType: 'scalar', label: 'Idx' },
@@ -444,44 +315,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['EXTRACT', 'GET']
     },
     {
-        id: 'DA-07',
-        label: 'Array Builder',
-        category: 'DataStructure',
-        handles: [
-            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'In' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
-        ],
-        defaultData: { axis: 0 },
-        opTokens: ['BUILD', 'CONCAT']
-    },
-
-    // ─── Data Analysis (DA Family) ─────────────────────────────
-    {
-        id: 'DA-01',
-        label: 'Statistics',
-        category: 'DataAnalysis',
-        handles: [
-            { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
-        ],
-        defaultData: { op: 'Mean' },
-        opTokens: ['MEAN', 'MAX', 'MIN', 'STDDEV', 'MEDIAN', 'VARIANCE', 'SUM']
-    },
-    {
-        id: 'DA-02',
-        label: 'Smoothing',
-        category: 'DataAnalysis',
-        handles: [
-            { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
-            { id: 'window', type: 'target', variant: 'single', dataType: 'scalar', label: 'Win' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
-        ],
-        defaultData: { windowMode: 3 }
-    },
-    {
         id: 'DA-03',
         label: 'List Utility',
-        category: 'DataAnalysis',
+        category: 'Data & Structures', // Was DataAnalysis
         handles: [
             { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
@@ -492,7 +328,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     {
         id: 'DA-04',
         label: 'Set Operations',
-        category: 'DataAnalysis',
+        category: 'Data & Structures', // Was DataAnalysis
         handles: [
             { id: 'a', type: 'target', variant: 'single', dataType: 'matrix', label: 'A' },
             { id: 'b', type: 'target', variant: 'single', dataType: 'matrix', label: 'B' },
@@ -502,24 +338,118 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['UNION', 'INTERSECTION', 'DIFFERENCE']
     },
     {
-        id: 'DA-05',
-        label: 'Distributions',
-        category: 'DataAnalysis',
+        id: 'AD-02',
+        label: 'Vector Utils',
+        category: 'Data & Structures', // Was LinearAlgebra
         handles: [
-            { id: 'param_n', type: 'target', variant: 'single', dataType: 'scalar', label: 'N' },
-            { id: 'param_1', type: 'target', variant: 'single', dataType: 'scalar', label: 'P1' },
-            { id: 'param_2', type: 'target', variant: 'single', dataType: 'scalar', label: 'P2' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'vector', label: 'A' },
+            { id: 'in_b', type: 'target', variant: 'single', dataType: 'vector', label: 'B' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { op: 'DOT' },
+        opTokens: ['DOT', 'CROSS'],
+        aliases: ['dot', 'cross', 'norm', 'distance', 'dist']
+    },
+    {
+        id: 'AD-09',
+        label: 'Vector Split',
+        category: 'Data & Structures', // Was LinearAlgebra
+        handles: [
+            { id: 'in', type: 'target', variant: 'single', dataType: 'vector' },
+            { id: 'x', type: 'source', variant: 'single', dataType: 'scalar', label: 'X' },
+            { id: 'y', type: 'source', variant: 'single', dataType: 'scalar', label: 'Y' },
+            { id: 'z', type: 'source', variant: 'single', dataType: 'scalar', label: 'Z' }
+        ],
+        defaultData: { mode: 'separate' },
+        opTokens: ['SEPARATE', 'COMBINE'],
+        aliases: ['separate', 'combine', 'split']
+    },
+    {
+        id: 'AD-01',
+        label: 'Matrix Tools',
+        category: 'Data & Structures', // Was LinearAlgebra
+        handles: [
+            { id: 'in', type: 'target', variant: 'single', dataType: 'matrix' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
         ],
-        defaultData: { mode: 'Normal', n: 100, p1: 0, p2: 1 },
-        opTokens: ['NORMAL', 'UNIFORM', 'POISSON']
+        defaultData: { op: 'INV' },
+        opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN'],
+        aliases: ['inv', 'det', 'transpose', 'trace', 'qr', 'lu', 'lup', 'eigen', 'svd']
     },
 
-    // ─── Logic Family ───────────────────────────────────────────
+    // ─── 6. Transform ──────────────────────────────────────────
+    {
+        id: 'IO-05',
+        label: 'Unit',
+        category: 'Transform', // Was Input
+        handles: [
+            { id: 'in', type: 'target', variant: 'single', dataType: 'scalar' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { type: 'unit', unit: 'm' }
+    },
+    {
+        id: 'MA-15',
+        label: 'Base Converter',
+        category: 'Transform', // Was Math
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
+        ],
+        defaultData: { base: 'HEX' }
+    },
+    {
+        id: 'AD-10',
+        label: 'Geometry',
+        category: 'Transform', // Was LinearAlgebra
+        handles: [
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'Radius' },
+            { id: 'area', type: 'source', variant: 'single', dataType: 'scalar', label: 'Area' },
+            { id: 'perimeter', type: 'source', variant: 'single', dataType: 'scalar', label: 'Perim' }
+        ],
+        defaultData: { shape: 'Circle' },
+        opTokens: ['CIRCLE', 'QUAD', 'TRIANGLE']
+    },
+    {
+        id: 'AD-08',
+        label: 'Vector Field',
+        category: 'Transform', // Was LinearAlgebra
+        handles: [
+            { id: 'in_f', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f' },
+            { id: 'out_field', type: 'source', variant: 'single', dataType: 'matrix', label: 'Arrows' },
+            { id: 'out_grad', type: 'source', variant: 'single', dataType: 'vector', label: 'Grad' }
+        ],
+        defaultData: { mode: 'gradient', var1: 'x', var2: 'y', min: -5, max: 5, density: 10 },
+        aliases: ['grad', 'gradient', 'vector field']
+    },
+    {
+        id: 'DA-02',
+        label: 'Smoothing',
+        category: 'Transform', // Was DataAnalysis
+        handles: [
+            { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
+            { id: 'window', type: 'target', variant: 'single', dataType: 'scalar', label: 'Win' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+        ],
+        defaultData: { windowMode: 3 }
+    },
+    {
+        id: 'DA-01',
+        label: 'Statistics',
+        category: 'Transform', // Was DataAnalysis (Statistics can be seen as data transformation)
+        handles: [
+            { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: { op: 'Mean' },
+        opTokens: ['MEAN', 'MAX', 'MIN', 'STDDEV', 'MEDIAN', 'VARIANCE', 'SUM']
+    },
+
+    // ─── 7. Logic & Flow ───────────────────────────────────────────
     {
         id: 'MA-05',
         label: 'Logic Gate',
-        category: 'Logic',
+        category: 'Logic & Flow', // Was Logic
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'any', label: 'A' },
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'any', label: 'B' },
@@ -527,23 +457,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { op: 'AND', label: 'AND' }
     },
-
-    {
-        id: 'MA-13',
-        label: 'Logic Split',
-        category: 'Logic',
-        handles: [
-            { id: 'condition', type: 'target', variant: 'single', dataType: 'boolean', label: 'If' },
-            { id: 'data', type: 'target', variant: 'single', dataType: 'any', label: 'Data' },
-            { id: 'out_true', type: 'source', variant: 'single', dataType: 'any', label: 'True' },
-            { id: 'out_false', type: 'source', variant: 'single', dataType: 'any', label: 'False' }
-        ],
-        defaultData: { type: 'logicSplit' }
-    },
     {
         id: 'MA-04',
-        label: 'Switch',
-        category: 'Logic',
+        label: 'Logic Switch', // Was Switch
+        category: 'Logic & Flow', // Was Logic
         handles: [
             { id: 'condition', type: 'target', variant: 'single', dataType: 'boolean', label: 'Select' },
             { id: 'in_true', type: 'target', variant: 'single', dataType: 'any', label: 'True' },
@@ -552,24 +469,78 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'switch' }
     },
-
     {
-        id: 'MA-08',
-        label: 'Button',
-        category: 'Logic',
+        id: 'MA-13',
+        label: 'Logic Split',
+        category: 'Logic & Flow', // Was Logic
         handles: [
-            { id: 'out', type: 'source', variant: 'single', dataType: 'boolean' }
+            { id: 'condition', type: 'target', variant: 'single', dataType: 'boolean', label: 'If' },
+            { id: 'data', type: 'target', variant: 'single', dataType: 'any', label: 'Data' },
+            { id: 'out_true', type: 'source', variant: 'single', dataType: 'any', label: 'True' },
+            { id: 'out_false', type: 'source', variant: 'single', dataType: 'any', label: 'False' }
         ],
-        defaultData: { type: 'button', value: false, mode: 'sticky' }
+        defaultData: { type: 'logicSplit' }
+    },
+
+    // ─── 8. Output Family ──────────────────────────────────────────
+    {
+        id: 'IO-11',
+        label: 'Result',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', variant: 'single' }
+        ],
+        defaultData: { type: 'result', viewMode: 'auto' }
     },
     {
-        id: 'SY-05',
-        label: 'NodeExpression',
-        category: 'Expert',
+        id: 'IO-22',
+        label: 'Status',
+        category: 'Output',
         handles: [
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+            { id: 'in', type: 'target', variant: 'single', dataType: 'any' }
         ],
-        defaultData: { type: 'expression', code: '1 + 2' }
+        defaultData: { state: 'void' }
+    },
+    {
+        id: 'IO-14',
+        label: 'Plot',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any' }
+        ],
+        defaultData: {}
+    },
+    {
+        id: 'UI-99',
+        label: 'Debug',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' }
+        ],
+        defaultData: { type: 'debug' }
+    },
+
+    // ─── 9. Utility Family ─────────────────────────────────────────
+    {
+        id: 'UI-01',
+        label: 'Annotation',
+        category: 'Utility',
+        handles: [],
+        defaultData: {
+            markdown: '# New Note\nDouble click to edit.',
+            width: 200,
+            height: 150
+        }
+    },
+    {
+        id: 'UI-03',
+        label: 'Reroute',
+        category: 'Utility',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any', label: '' }
+        ],
+        defaultData: { type: 'reroute' }
     }
 ];
 

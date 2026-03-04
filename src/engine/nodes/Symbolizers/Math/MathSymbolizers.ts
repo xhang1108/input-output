@@ -44,6 +44,11 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
         if (op === 'LOG_N') return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 }), inputs['base'] || PayloadUtils.createSymbol('Literal', { value: 10 })] });
         return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
+    'MA-17': (node, inputs) => {
+        const data = (node.data || {}) as any;
+        const op = data.op || 'SIN';
+        return PayloadUtils.createSymbol('FunctionCall', { name: op.toLowerCase(), args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
+    },
     // DA-01: Statistics
     'DA-01': (node, inputs) => {
         const op = ((node.data || {}) as any).op || 'Mean';

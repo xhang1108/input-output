@@ -59,21 +59,6 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         });
     },
 
-    // AD-07: Complex Math
-    'AD-07': (node, inputs) => {
-        const data = (node.data || {}) as any, mode = data.mode || 'separate';
-        if (mode === 'separate') {
-            return PayloadUtils.createSymbol('FunctionCall', { name: 'complex_parts', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'z' })] });
-        } else if (mode === 'combine_cartesian') {
-            const re = inputs['in_re'] || PayloadUtils.createSymbol('Literal', { value: 0 });
-            const im = inputs['in_im'] || PayloadUtils.createSymbol('Literal', { value: 0 });
-            return PayloadUtils.createSymbol('BinaryExpression', { operator: '+', left: re, right: PayloadUtils.createSymbol('BinaryExpression', { operator: '*', left: im, right: PayloadUtils.createSymbol('Identifier', { name: 'i' }) }) });
-        } else {
-            const r = inputs['in_abs'] || PayloadUtils.createSymbol('Literal', { value: 0 });
-            const phi = inputs['in_arg'] || PayloadUtils.createSymbol('Literal', { value: 0 });
-            return PayloadUtils.createSymbol('BinaryExpression', { operator: '*', left: r, right: PayloadUtils.createSymbol('BinaryExpression', { operator: '^', left: PayloadUtils.createSymbol('Identifier', { name: 'e' }), right: PayloadUtils.createSymbol('BinaryExpression', { operator: '*', left: PayloadUtils.createSymbol('Identifier', { name: 'i' }), right: phi }) }) });
-        }
-    },
 
     // AD-08: Vector Field
     'AD-08': (node, inputs) => {

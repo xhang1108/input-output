@@ -97,9 +97,6 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 case 'POW': result = m.pow(procA, procB); break;
                 case 'SQRT': result = m.sqrt(procA); break;
                 case 'ABS': result = m.abs(procA); break;
-                case 'SIN': result = m.sin(procA); break;
-                case 'COS': result = m.cos(procA); break;
-                case 'TAN': result = m.tan(procA); break;
                 default: result = m.add(procA, procB);
             }
 
@@ -129,6 +126,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return PayloadUtils.createError(e.message);
         }
     },
+    'MA-18': (node, inputs) => MathEvaluators['MA-01'](node, inputs),
     'MA-03': (node) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
@@ -250,6 +248,37 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             else result = math.log(val);
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
         } catch (e) { return PayloadUtils.createError('Log Failed'); }
+    },
+    'MA-17': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
+        const data = (node.data || {}) as any;
+        const op = data.op || 'SIN';
+        const angleMode = data.angleMode || 'RAD';
+        let val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+
+        if (angleMode === 'DEG' && ['SIN', 'COS', 'TAN'].includes(op)) {
+            try { val = math.multiply(val, math.divide(math.pi, 180)); } catch (e) { }
+        }
+
+        try {
+            let result;
+            switch (op) {
+                case 'SIN': result = math.sin(val); break;
+                case 'COS': result = math.cos(val); break;
+                case 'TAN': result = math.tan(val); break;
+                case 'ASIN': result = math.asin(val); break;
+                case 'ACOS': result = math.acos(val); break;
+                case 'ATAN': result = math.atan(val); break;
+                default: result = math.sin(val);
+            }
+
+            if (angleMode === 'DEG' && ['ASIN', 'ACOS', 'ATAN'].includes(op)) {
+                try { result = math.multiply(result, math.divide(180, math.pi)); } catch (e) { }
+            }
+
+            return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
+        } catch (e) { return PayloadUtils.createError('Trig Failed'); }
     },
 
     // DA-06: Array Extract

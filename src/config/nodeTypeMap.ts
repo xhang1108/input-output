@@ -28,6 +28,7 @@ import { TextAnnotationNode } from '../components/nodes/TextAnnotationNode';
 import { RerouteNode } from '../components/nodes/RerouteNode';
 import { BaseConverterNode } from '../components/nodes/BaseConverterNode';
 import { LogNode } from '../components/nodes/LogNode';
+import { TrigNode } from '../components/nodes/TrigNode';
 import { NodeExpression } from '../components/nodes/NodeExpression';
 import { DebugNode } from '../components/nodes/DebugNode';
 import { MatrixToolsNode } from '../components/nodes/MatrixToolsNode';
@@ -38,7 +39,7 @@ import { GeometryNode } from '../components/nodes/GeometryNode';
 import { ArrayExtractNode } from '../components/nodes/ArrayExtractNode';
 import { ArrayBuilderNode } from '../components/nodes/ArrayBuilderNode';
 import { VectorFieldNode } from '../components/nodes/VectorFieldNode';
-import { ComplexNode } from '../components/nodes/ComplexNode';
+
 // Removed legacy calculus nodes
 import { DifferentialNode } from '../components/nodes/DifferentialNode';
 import { IntegralNode } from '../components/nodes/IntegralNode';
@@ -52,61 +53,76 @@ import { DistributionsNode } from '../components/nodes/DistributionsNode';
 import { StatusNode } from '../components/nodes/StatusNode';
 
 export const nodeTypes = {
-    baseNode: BaseNode,
-    frame: FrameNode,
-    // Calculus Engine (Phase 5.1)
-    'AD-04': DifferentialNode,
-    'AD-05': IntegralNode,
-    'AD-06': SolverNode,
-    'AD-11': LimitNode,
-    'SY-04': ODESolverNode,
-    'MA-01': MathNode,
-    'MA-02': NumberTheoryNode,
-    'MA-03': ConstantNode,
-    'MA-04': BaseNode,       // Switch
-    'MA-05': LogicNode,      // Consolidated Logic Gate
-    'MA-08': ToggleNode,
-    'MA-09': ButtonNode,
-
-
-    'MA-12': FractionNode,   // Fraction
-    'MA-13': BaseNode,       // Logic Split (Placeholder/Generic)
-    'MA-14': RoundingNode,   // Rounding (Moved from MA-12)
-    'MA-15': BaseConverterNode, // Base Converter
-    'IO-01': InputNode,
+    // ─── 1. Input ──────────────────────────────────────────
+    'IO-01': InputNode,      // Number
     'IO-02': SliderNode,
     'IO-04': InputNode,      // String
-    'IO-05': UnitNode,       // Unit
-    'IO-06': RandomNode,     // Random
-    'IO-08': MatrixInputNode, // Matrix Provider
-    'IO-11': ResultNode,     // Universal Result (Scalar, Matrix, Color, Formula)
-    'IO-14': PlotNode,       // Plot Graph Output Node
-    'IO-16': ResultNode,     // Fallback mapping to prevent crashes from old graphs
-    'IO-17': ResultNode,     // Fallback mapping
-    'IO-18': ColorNode,      // Color Provider
-    'IO-19': ResultNode,     // Fallback mapping for latex
-    'IO-21': AbacusNode,     // Abacus
-    'IO-22': StatusNode,     // Status Indicator
-    'SY-05': NodeExpression, // AST Formula Evaluator
-    'UI-01': TextAnnotationNode, // Markdown
-    'UI-03': RerouteNode,    // Flow alignment
-    'UI-99': DebugNode,
+    'MA-09': ButtonNode,
+    'MA-03': ConstantNode,
+    'IO-08': MatrixInputNode,
+    'IO-21': AbacusNode,
+    'SY-05': NodeExpression,
 
-    // Linear Algebra & Array Processing
-    'AD-01': MatrixToolsNode,
-    'AD-02': VectorUtilsNode,
+    // ─── 2. Generators ──────────────────────────────────────
+    'IO-06': RandomNode,
+    'DA-05': DistributionsNode,
+
+    // ─── 3. Math ────────────────────────────────────────────
+    'MA-01': MathNode,
+    'MA-16': LogNode,
+    'MA-17': TrigNode,
+    'MA-14': RoundingNode,
+    'MA-12': FractionNode,
+    'MA-02': NumberTheoryNode,
     'AD-03': CombinatoricsNode,
-    'AD-07': ComplexNode,
-    'AD-08': VectorFieldNode,
-    'AD-09': VectorSplitNode,
-    'AD-10': GeometryNode,
-    'DA-06': ArrayExtractNode,
+
+    // ─── 4. Calculus ────────────────────────────────────────
+    'AD-04': DifferentialNode,
+    'AD-05': IntegralNode,
+    'AD-11': LimitNode,
+    'AD-06': SolverNode,
+    'SY-04': ODESolverNode,
+
+    // ─── 5. Data & Structures ───────────────────────────────
     'DA-07': ArrayBuilderNode,
-    'DA-01': StatisticsNode,
-    'DA-02': SmoothingNode,
+    'DA-06': ArrayExtractNode,
     'DA-03': ListUtilityNode,
     'DA-04': SetOpsNode,
-    'DA-05': DistributionsNode,
+    'AD-02': VectorUtilsNode,
+    'AD-09': VectorSplitNode,
+    'AD-01': MatrixToolsNode,
+
+    // ─── 6. Transform ───────────────────────────────────────
+    'IO-05': UnitNode,
+    'MA-15': BaseConverterNode,
+    'AD-10': GeometryNode,
+    'AD-08': VectorFieldNode,
+    'DA-02': SmoothingNode,
+    'DA-01': StatisticsNode,
+
+    // ─── 7. Logic & Flow ────────────────────────────────────
+    'MA-05': LogicNode,      // Logic Gate
+    'MA-04': BaseNode,       // Switch (Using BaseNode or appropriate component)
+    'MA-13': BaseNode,       // Logic Split (Using BaseNode)
+    'MA-08': ToggleNode,
+
+    // ─── 8. Output ──────────────────────────────────────────
+    'IO-11': ResultNode,
+    'IO-22': StatusNode,
+    'IO-14': PlotNode,
+    'UI-99': DebugNode,
+
+    // ─── 9. Utility ─────────────────────────────────────────
+    'UI-01': TextAnnotationNode,
+    'UI-03': RerouteNode,
+
+    // ─── Fallback & Special ─────────────────────────────────
+    'baseNode': BaseNode,
+    'frame': FrameNode,
+    'IO-16': ResultNode,
+    'IO-17': ResultNode,
+    'IO-19': ResultNode,
+    'IO-18': ColorNode,
 };
 
 export const edgeTypes = {

@@ -48,6 +48,7 @@ export function useHand() {
 
     // Drag Initiation
     const pendingGrabStart = useRef<{ x: number, y: number, altKey: boolean } | null>(null);
+    const isResolvingRef = useRef(false);
 
     // Autopan
     const mousePosRef = useRef<XYPosition | null>(null);
@@ -662,6 +663,9 @@ export function useHand() {
         });
 
         if (movedNodeIds.size === 0) {
+            isResolvingRef.current = true;
+            setTimeout(() => { isResolvingRef.current = false; }, 100);
+
             setMode('IDLE');
             initialPositions.current.clear();
             initialDimensions.current.clear();
@@ -831,6 +835,9 @@ export function useHand() {
             Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
         }
 
+        isResolvingRef.current = true;
+        setTimeout(() => { isResolvingRef.current = false; }, 100);
+
         setMode('IDLE');
         initialPositions.current.clear();
         initialDimensions.current.clear();
@@ -841,16 +848,18 @@ export function useHand() {
         setAxisLock(null);
         setTransformBuffer('');
         setTransformValue('');
-    }, [getNodes, getAbsolutePosition]);
+    }, [getNodes, getAbsolutePosition, setNodes]);
 
     const cancelGrab = useCallback(() => {
         const positionsToRestore = new Map(initialPositions.current);
         const framesToRestore = new Map(initialFrameStates.current);
 
+        const idsToSelect = new Set<string>([...positionsToRestore.keys(), ...framesToRestore.keys()]);
+
         setNodes(nodes => nodes.map(n => {
             // Restore Frames
             if (framesToRestore.has(n.id)) {
-                return framesToRestore.get(n.id)!;
+                return { ...framesToRestore.get(n.id)! };
             }
             // Restore Nodes
             const init = positionsToRestore.get(n.id);
@@ -859,6 +868,10 @@ export function useHand() {
             }
             return n;
         }));
+
+        isResolvingRef.current = true;
+        setTimeout(() => { isResolvingRef.current = false; }, 100);
+
         setMode('IDLE');
         initialPositions.current.clear();
         initialDimensions.current.clear();
@@ -1024,6 +1037,7 @@ export function useHand() {
         handleTypeNum,
         handleMouseMove,
         handleMouseDown,
-        handleMouseUp
+        handleMouseUp,
+        isResolvingTransform: () => isResolvingRef.current
     };
 }
