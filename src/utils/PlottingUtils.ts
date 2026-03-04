@@ -1,6 +1,6 @@
 import { NerdamerService } from '../engine/calculus/NerdamerService';
 
-export type PlotPoint = { x: number; y: number | null; size?: number };
+export type PlotPoint = { x: number; y: number | null; size?: number; u?: number; v?: number; z?: number };
 
 export class PlottingUtils {
     static generateSymbolicPoints(
@@ -104,7 +104,11 @@ export class PlottingUtils {
         else if (data.mathjs === 'Matrix' && Array.isArray(data.data)) {
             arr = data.data;
         }
-        // 3. Handle Plain Array
+        // 3. Handle data directly (some payloads wrap it differently)
+        else if (data.data && Array.isArray(data.data)) {
+            arr = data.data;
+        }
+        // 4. Handle Plain Array
         else if (Array.isArray(data)) {
             arr = data;
         }
@@ -150,7 +154,7 @@ export class PlottingUtils {
                 return { x: idx, y };
             }
 
-            // Nx2 / Nx3 handling
+            // Nx2 / Nx3 / Nx4 / Nx5 handling
             const xVal = toNum(row[0]);
             const yVal = toNum(row[1]);
 
@@ -159,9 +163,22 @@ export class PlottingUtils {
 
             const point: PlotPoint = { x, y };
 
-            if (row.length >= 3) {
+            // Z is scalar, fallback size
+            if (row.length === 3) {
                 const sizeVal = toNum(row[2]);
                 point.size = sizeVal !== null ? sizeVal : 0;
+            }
+
+            if (row.length >= 4) {
+                const uVal = toNum(row[2]);
+                const vVal = toNum(row[3]);
+                point.u = uVal !== null ? uVal : 0;
+                point.v = vVal !== null ? vVal : 0;
+            }
+
+            if (row.length >= 5) {
+                const zVal = toNum(row[4]);
+                point.z = zVal !== null ? zVal : 0;
             }
 
             return point;

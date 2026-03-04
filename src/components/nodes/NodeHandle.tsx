@@ -1,7 +1,8 @@
 'use client';
 
-import { Handle, HandleProps } from '@xyflow/react';
+import { Handle, HandleProps, useUpdateNodeInternals } from '@xyflow/react';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 
 interface CustomHandleProps extends HandleProps {
     color?: string; // CSS variable or hex
@@ -21,6 +22,13 @@ interface CustomHandleProps extends HandleProps {
  */
 export function NodeHandle({ className, color, id, nodeId, ...props }: CustomHandleProps) {
     const isPending = id.endsWith('_pending');
+    const updateNodeInternals = useUpdateNodeInternals();
+
+    // Notify React Flow to recalculate handle positions when this handle mounts/unmounts
+    useEffect(() => {
+        updateNodeInternals(nodeId);
+        return () => updateNodeInternals(nodeId);
+    }, [nodeId, updateNodeInternals]);
 
     return (
         <Handle

@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Position } from '@xyflow/react';
+import { memo, useEffect } from 'react';
+import { Position, useUpdateNodeInternals } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
 import { HandleConfig, getHandleColor, resolveHandlePosition } from '../../types/NodeDefinition';
@@ -13,6 +13,13 @@ interface SingleHandleProps {
 export const SingleHandle = memo(({ h, id, isConnectable }: SingleHandleProps) => {
     const isManual = h.y !== undefined;
     const dynamicHeight = 12;
+    const updateNodeInternals = useUpdateNodeInternals();
+
+    // Standardize source-level layout update for all handle variants
+    useEffect(() => {
+        updateNodeInternals(id);
+        return () => updateNodeInternals(id);
+    }, [id, updateNodeInternals]);
 
     return (
         <div

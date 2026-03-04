@@ -254,29 +254,75 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         try {
             const exprVal = PayloadUtils.unwrap(inPayload);
             let uExpr: any, vExpr: any, outGrad: any = null;
+            let scalarCode: any = null;
             if (mode === 'gradient') {
                 const nodeExpr = typeof exprVal === 'string' ? math.parse(exprVal) : exprVal;
+                // Double check if nodeExpr is actually differentiable (not a matrix)
+                if (nodeExpr && (nodeExpr.isMatrixNode || nodeExpr.type === 'ArrayNode')) {
+                    return PayloadUtils.createError('Gradient mode requires a scalar function (e.g. x^2+y^2). Use "direct" mode for vectors (e.g. [-y, x]).');
+                }
+                scalarCode = nodeExpr ? nodeExpr.compile() : null;
                 uExpr = math.derivative(nodeExpr, var1);
                 vExpr = math.derivative(nodeExpr, var2);
                 outGrad = { type: DataType.Vector, value: [uExpr.toString(), vExpr.toString()], symbol: null, meta: {} };
             } else {
-                const hydrated = PayloadUtils.hydrate(exprVal, math);
+                // Phase 5.2: Support string vectors like "[-y, x]" from IOGL/FormulaNode
+                let hydrated: any;
+                if (typeof exprVal === 'string') {
+                    const parsed = math.parse(exprVal);
+                    // If it's an ArrayNode (mathjs internal), convert its items to strings
+                    if (parsed && parsed.type === 'ArrayNode' && parsed.items) {
+                        hydrated = parsed.items.map((item: any) => item.toString());
+                    } else {
+                        hydrated = PayloadUtils.hydrate(exprVal, math);
+                    }
+                } else {
+                    hydrated = PayloadUtils.hydrate(exprVal, math);
+                }
+
                 const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : []).flat(Infinity);
-                if (arr.length < 2) return PayloadUtils.createError('Requires 2D vector [u, v]');
+                if (arr.length < 2) return PayloadUtils.createError('Requires 2D vector [u, v] (e.g. [-y, x])');
                 uExpr = typeof arr[0] === 'string' ? MathCompileCache.getCompiled(arr[0], math) : MathCompileCache.getCompiled(String(arr[0]), math);
                 vExpr = typeof arr[1] === 'string' ? MathCompileCache.getCompiled(arr[1], math) : MathCompileCache.getCompiled(String(arr[1]), math);
             }
-            const uCode = mode === 'gradient' ? uExpr.compile() : uExpr, vCode = mode === 'gradient' ? vExpr.compile() : vExpr, step = (max - min) / Math.max(1, density - 1), fieldData: number[][] = [];
-            for (let i = 0; i < density; i++) {
-                const y = min + i * step;
-                for (let j = 0; j < density; j++) {
-                    const x = min + j * step;
+
+            const uCode = mode === 'gradient' ? uExpr.compile() : uExpr;
+            const vCode = mode === 'gradient' ? vExpr.compile() : vExpr;
+            const safeDensity = Math.max(1, Math.min(density, 100)); // Limit density
+            const step = safeDensity > 1 ? (max - min) / (safeDensity - 1) : 0;
+            const fieldData: number[][] = [];
+
+
+            for (let i = 0; i < safeDensity; i++) {
+                const yRaw = min + i * step;
+                const y = Math.round(yRaw * 10000) / 10000;
+                for (let j = 0; j < safeDensity; j++) {
+                    const xRaw = min + j * step;
+                    const x = Math.round(xRaw * 10000) / 10000;
                     const scope = { [var1]: x, [var2]: y };
-                    try { fieldData.push([x, y, Number(uCode.evaluate(scope)) || 0, Number(vCode.evaluate(scope)) || 0]); }
-                    catch { fieldData.push([x, y, 0, 0]); }
+                    try {
+                        const u = Number(uCode.evaluate(scope));
+                        const v = Number(vCode.evaluate(scope));
+
+                        // Z value mapping: For gradient mode, the scalar field z. For direct vectors, their magnitude.
+                        const zUnsafe = scalarCode ? scalarCode.evaluate(scope) : Math.hypot(u, v);
+                        const z = Number(zUnsafe);
+
+                        const validU = Number.isFinite(u) ? u : 0;
+                        const validV = Number.isFinite(v) ? v : 0;
+                        const validZ = Number.isFinite(z) ? z : 0;
+
+                        // Pack [x, y, u, v, z] into a single Nx5 matrix
+                        fieldData.push([x, y, validU, validV, validZ]);
+                    }
+                    catch {
+                        fieldData.push([x, y, 0, 0, 0]);
+                    }
                 }
             }
-            const result: any = { 'out_field': { type: DataType.Matrix, value: fieldData, symbol: null, meta: { unit: inPayload.meta?.unit } } };
+            const result: any = {
+                'out_field': { type: DataType.Matrix, value: fieldData, symbol: null, meta: { unit: inPayload.meta?.unit } }
+            };
             if (outGrad) result['out_grad'] = outGrad;
             return { type: DataType.Object, value: result, symbol: null, meta: {} };
         } catch (e: any) { return PayloadUtils.createError(`VectorField Failed: ${e.message}`); }

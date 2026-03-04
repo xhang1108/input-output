@@ -14,7 +14,7 @@ export const PlotNode = memo((props: NodeProps) => {
     // The spec defined an input for formula matching to values.
 
     // 3.1 Mode Switching Logic
-    const viewMode = data.viewMode || 'line'; // line | bar | scatter | area
+    const viewMode = (data.viewMode as 'line' | 'bar' | 'scatter' | 'area' | 'vector' | 'heatmap' | 'hist') || 'line';
 
     // 3.1 Data Aggregation Logic
     const payloads = useMemo(() => {
@@ -89,8 +89,8 @@ export const PlotNode = memo((props: NodeProps) => {
                     }
                 } else {
                     // Detect dimension issues for matrix
-                    if (Array.isArray(parsed) && Array.isArray(parsed[0]) && parsed[0].length > 3) {
-                        errors.push(`${seriesName}: Dimension mismatch (Matrix columns ${parsed[0].length} > 3). Only X, Y, Size are mapped.`);
+                    if (Array.isArray(parsed) && Array.isArray(parsed[0]) && parsed[0].length > 5) {
+                        errors.push(`${seriesName}: Dimension mismatch (Matrix columns ${parsed[0].length} > 4). Only X, Y, U, V, Z are mapped.`);
                     }
                     pts = PlottingUtils.mapDataPayload(parsed);
                 }
@@ -134,14 +134,103 @@ export const PlotNode = memo((props: NodeProps) => {
             console.log('[PlotNode] unique series:', Array.from(new Set(plotData.table.map(p => p.series))));
         }
 
-        // Dual Axis Support Variables moved outside
+        const xDomain = [data.minX ?? -10, data.maxX ?? 10];
+        const seriesNames = Array.from(new Set(plotData.table.map(p => p.series)));
+
+        let mark: any;
         let encoding: any;
         let layer: any[] | undefined;
         let resolve: any;
 
-        const xDomain = [data.minX ?? -10, data.maxX ?? 10];
+        if (viewMode === 'heatmap') {
+            const heatValues = plotData.table.filter(p => p.z !== undefined);
+            // Derive exact step from sorted distinct x coords to match grid spacing
+            const sortedX = Array.from(new Set(heatValues.map(p => p.x))).sort((a, b) => a - b);
+            const binStep = sortedX.length > 1 ? Math.round((sortedX[1] - sortedX[0]) * 10000) / 10000 : 1;
 
-        const mark = {
+            return {
+                $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+                width: 'container',
+                height: 'container',
+                autosize: { type: 'fit', contains: 'padding' },
+                background: 'transparent',
+                data: { values: heatValues },
+                mark: { type: 'rect', tooltip: true },
+                encoding: {
+                    x: {
+                        field: 'x', type: 'quantitative',
+                        bin: { step: binStep },
+                        axis: { title: 'X', titleColor: '#71717a', labelColor: '#52525b', gridColor: '#27272a' }
+                    },
+                    y: {
+                        field: 'y', type: 'quantitative',
+                        bin: { step: binStep },
+                        axis: { title: 'Y', titleColor: '#71717a', labelColor: '#52525b', gridColor: '#27272a' }
+                    },
+                    color: {
+                        field: 'z', type: 'quantitative', aggregate: 'mean',
+                        scale: { scheme: 'viridis' },
+                        legend: { title: 'Z', labelColor: '#a1a1aa', titleColor: '#a1a1aa' }
+                    }
+                },
+                config: { view: { stroke: 'transparent' } }
+            };
+        }
+
+        if (viewMode === 'hist') {
+            return {
+                $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+                width: 'container',
+                height: 'container',
+                autosize: { type: 'fit', contains: 'padding' },
+                background: 'transparent',
+                data: { values: plotData.table },
+                mark: { type: 'bar', opacity: 0.8 },
+                encoding: {
+                    x: { field: 'y', type: 'quantitative', bin: { maxbins: 40 }, axis: { title: 'Value', titleColor: '#71717a', labelColor: '#52525b', grid: false } },
+                    y: { aggregate: 'count', type: 'quantitative', axis: { title: 'Count', titleColor: '#71717a', labelColor: '#52525b', gridColor: '#27272a' } },
+                    color: seriesNames.length > 1 ? { field: 'series', type: 'nominal', scale: { range: ['#b084e9', '#34d399', '#38bdf8', '#fbbf24', '#f87171'] }, legend: { title: null, labelColor: '#a1a1aa', orient: 'top', direction: 'horizontal' } } : { value: '#b084e9' }
+                },
+                config: { view: { stroke: 'transparent' } }
+            };
+        }
+
+        if (viewMode === 'vector') {
+            mark = {
+                type: 'point',
+                shape: 'wedge',
+                stroke: true,
+                filled: true
+            };
+            encoding = {
+                x: { field: 'x', type: 'quantitative', scale: { domain: xDomain } },
+                y: { field: 'y', type: 'quantitative', scale: (data.minY !== undefined && data.maxY !== undefined) ? { domain: [data.minY, data.maxY] } : undefined },
+                angle: { field: 'angle', type: 'quantitative', scale: { domain: [0, 360], range: [0, 360] } },
+                size: { field: 'magnitude', type: 'quantitative', scale: { range: [50, 500] } },
+                color: { field: 'magnitude', type: 'quantitative', scale: { scheme: 'viridis' } }
+            };
+
+            // Transform u,v to angle and magnitude for Vega-Lite wedge
+            const vectorTable = plotData.table.map(p => {
+                const angle = (Math.atan2(p.v || 0, p.u || 0) * 180) / Math.PI;
+                const magnitude = Math.sqrt((p.u || 0) ** 2 + (p.v || 0) ** 2);
+                return { ...p, angle: 90 - angle, magnitude }; // 90-angle because wedge 0 is up
+            });
+
+            return {
+                $schema: 'https://vega.github.io/schema/vega-lite/v6.json',
+                width: 'container',
+                height: 'container',
+                autosize: { type: 'fit', contains: 'padding' },
+                background: 'transparent',
+                data: { values: vectorTable },
+                mark,
+                encoding,
+                config: { view: { stroke: 'transparent' } }
+            };
+        }
+
+        mark = {
             type: viewMode === 'scatter' ? (hasSize ? 'circle' : 'point') : viewMode === 'bar' ? 'bar' : viewMode === 'area' ? 'area' : 'line',
             color: '#b084e9',
             interpolate: 'monotone',
@@ -150,7 +239,7 @@ export const PlotNode = memo((props: NodeProps) => {
             point: (viewMode === 'line' && hasSize) ? { filled: true } : false
         };
 
-        if (data.dualAxis && new Set(plotData.table.map(p => p.series)).size > 1) {
+        if (data.dualAxis && viewMode === 'line' && seriesNames.length >= 2) {
             const uniqueSeries = Array.from(new Set(plotData.table.map(p => p.series)));
             const series1 = uniqueSeries[0];
             const series2 = uniqueSeries[1];
@@ -444,8 +533,8 @@ export const PlotNode = memo((props: NodeProps) => {
             <div className="w-[320px] bg-zinc-950/50 rounded-b-md relative flex flex-col" style={{ height: 240 }}>
                 {/* 3.1 Mode Toggle UI */}
                 <div className="flex gap-2 p-2 bg-zinc-900/80 border-b border-zinc-800/50 justify-between items-center">
-                    <div className="flex gap-1 border border-zinc-700/50 rounded overflow-hidden">
-                        {['line', 'bar', 'scatter', 'area'].map(m => (
+                    <div className="flex flex-wrap gap-1 border border-zinc-700/50 rounded p-0.5 overflow-hidden w-full max-w-[220px]">
+                        {['line', 'bar', 'scatter', 'area', 'vector', 'heatmap', 'hist'].map(m => (
                             <button
                                 key={m}
                                 onClick={() => {
@@ -492,9 +581,6 @@ export const PlotNode = memo((props: NodeProps) => {
                     {plotData.table.length > 0 ? (
                         <VegaEmbed
                             spec={spec}
-                            // @ts-ignore - Typings for signalListeners might mismatch in some react-vega versions
-                            signalListeners={signalListeners}
-
                             options={{ actions: false, renderer: 'svg' }}
                             style={{ width: '100%', height: '100%' }}
                         />

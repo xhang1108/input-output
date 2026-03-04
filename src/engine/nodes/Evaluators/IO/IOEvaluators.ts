@@ -276,5 +276,24 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         }
 
         return input || PayloadUtils.createMatrix([]);
+    },
+    'IO-22': (node, inputs) => {
+        const input = inputs['in'] || Object.values(inputs)[0];
+        const val = PayloadUtils.unwrap(input);
+
+        // Strict logic: true/1 = ok, false/0 = fail, others = void
+        let state: 'ok' | 'fail' | 'void' = 'void';
+        if (val === true || val === 1) {
+            state = 'ok';
+        } else if (val === false || val === 0) {
+            state = 'fail';
+        }
+
+        return {
+            type: DataType.Object,
+            value: { state, raw: val },
+            symbol: null,
+            meta: {}
+        };
     }
 };

@@ -49,6 +49,7 @@ import { SmoothingNode } from '../components/nodes/SmoothingNode';
 import { ListUtilityNode } from '../components/nodes/ListUtilityNode';
 import { SetOpsNode } from '../components/nodes/SetOpsNode';
 import { DistributionsNode } from '../components/nodes/DistributionsNode';
+import { StatusNode } from '../components/nodes/StatusNode';
 
 export const nodeTypes = {
     baseNode: BaseNode,
@@ -64,7 +65,7 @@ export const nodeTypes = {
     'MA-03': ConstantNode,
     'MA-04': BaseNode,       // Switch
     'MA-05': LogicNode,      // Consolidated Logic Gate
-    'MA-08': ButtonNode,
+    'MA-08': ToggleNode,
     'MA-09': ButtonNode,
 
 
@@ -72,7 +73,6 @@ export const nodeTypes = {
     'MA-13': BaseNode,       // Logic Split (Placeholder/Generic)
     'MA-14': RoundingNode,   // Rounding (Moved from MA-12)
     'MA-15': BaseConverterNode, // Base Converter
-    'MA-16': LogNode,           // Logarithm
     'IO-01': InputNode,
     'IO-02': SliderNode,
     'IO-04': InputNode,      // String
@@ -86,6 +86,7 @@ export const nodeTypes = {
     'IO-18': ColorNode,      // Color Provider
     'IO-19': ResultNode,     // Fallback mapping for latex
     'IO-21': AbacusNode,     // Abacus
+    'IO-22': StatusNode,     // Status Indicator
     'SY-05': NodeExpression, // AST Formula Evaluator
     'UI-01': TextAnnotationNode, // Markdown
     'UI-03': RerouteNode,    // Flow alignment

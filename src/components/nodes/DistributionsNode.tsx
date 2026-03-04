@@ -40,7 +40,7 @@ export const DistributionsNode = memo((props: NodeProps) => {
         if (newMode !== 'Poisson') {
             newHandles.push({ id: 'param_2', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' });
         }
-        newHandles.push({ id: 'samples', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' });
+        newHandles.push({ id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' });
 
         updateData({ mode: newMode, handles: newHandles });
         closeMenu();
@@ -59,7 +59,7 @@ export const DistributionsNode = memo((props: NodeProps) => {
             { id: 'param_n', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
             { id: 'param_1', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
             ...(mode !== 'Poisson' ? [{ id: 'param_2', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }] : []),
-            { id: 'samples', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
         ]
     };
 

@@ -784,10 +784,9 @@ export class Brain {
         const diagnostics: string[] = [];
         const nodeTxs: Transaction[] = [];
 
+        // Phase 5.3: Atomic Clear BEFORE validation
         if (clear) {
-            this.state.nodes.forEach(n => {
-                nodeTxs.push({ type: 'REMOVE_NODE', payload: n.id });
-            });
+            this.silentReset();
         }
 
         // 1. Add Nodes
@@ -842,8 +841,8 @@ export class Brain {
         if (allTxs.length > 0) {
             // Pre-validation: Check for cycles across all intended connections
             // This prevents "Double-Link" or "Infinite Loop" traps during high-authority IOGL import
-            const virtualEdges = [...this.state.edges];
-            const virtualNodes = new Map(this.state.nodes);
+            const virtualEdges = clear ? [] : [...this.state.edges];
+            const virtualNodes = clear ? new Map<string, NodeLogic>() : new Map(this.state.nodes);
 
             // Populate virtual nodes
             graph.nodes.forEach(n => {

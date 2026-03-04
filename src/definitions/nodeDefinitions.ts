@@ -114,6 +114,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] }
     },
     {
+        id: 'IO-22',
+        label: 'Status',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', variant: 'single', dataType: 'any' }
+        ],
+        defaultData: { state: 'void' }
+    },
+    {
         id: 'IO-14',
         label: 'Plot',
         category: 'Output',

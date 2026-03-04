@@ -117,12 +117,10 @@ export class GraphCodec {
             return valStr.slice(1, -1);
         }
 
-        // Try Array/Matrix (e.g. [1, 2, 2])
-        if (valStr.trim().startsWith('[') && valStr.trim().endsWith(']')) {
+        // Try JSON Array or Object
+        if ((valStr.trim().startsWith('[') && valStr.trim().endsWith(']')) ||
+            (valStr.trim().startsWith('{') && valStr.trim().endsWith('}'))) {
             try {
-                // We use JSON.parse for basic array support, but need to ensure it's valid JSON
-                // replacing single quotes with double quotes if any, and handling missing quotes for numbers
-                // For now, simpler: if it looks like a matrix but JSON.parse fails, return as string
                 return JSON.parse(valStr);
             } catch (e) {
                 return valStr;
@@ -188,6 +186,11 @@ export class GraphCodec {
                     data.rawExpression = typeof matrixVal === 'string' ? matrixVal : JSON.stringify(matrixVal);
                 }
                 else if (typeInfo.id.startsWith('IO')) data.value = validValue;
+
+                // SPECIAL: If value is a JSON object, merge it directly into data fields
+                if (typeof validValue === 'object' && validValue !== null && !Array.isArray(validValue)) {
+                    Object.assign(data, validValue);
+                }
             }
 
             // Override OpCode if specified (e.g. math:SUB)
