@@ -24,8 +24,15 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const engine = InputOutputEngine.getInstance();
         const mathInstance = engine.getMathInstance();
 
-        const getHydrated = (key: string) => {
-            const p = inputs[key];
+        const payloadA = inputs['in_a'];
+        const payloadB = inputs['in_b'];
+
+        // Strict Check: Math nodes (MA-01) do NOT support equations/symbolic models.
+        if (payloadA?.type === DataType.Symbolic || payloadB?.type === DataType.Symbolic) {
+            return PayloadUtils.createError("Type Mismatch: Math nodes cannot process Equations (Symbolic). Use a Solver Node.");
+        }
+
+        const getHydrated = (p: NodePayload | undefined) => {
             if (!p) return 0;
             const hydrated = PayloadUtils.unwrap(p);
             const mathHydrated = PayloadUtils.hydrate(hydrated, mathInstance);
@@ -37,8 +44,8 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return mathHydrated;
         };
 
-        const valA = getHydrated('in_a');
-        const valB = getHydrated('in_b');
+        const valA = getHydrated(payloadA);
+        const valB = getHydrated(payloadB);
         const data = (node.data || {}) as Record<string, unknown>;
         const op = data.op as string || 'ADD';
 

@@ -375,12 +375,76 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as Record<string, unknown>;
         const code = (data.code as string) || '';
         if (!code) return PayloadUtils.createScalar(0);
-        const math = InputOutputEngine.getInstance().getMathInstance();
+        const engine = InputOutputEngine.getInstance();
+        const math = engine.getMathInstance();
         try {
             const scope: Record<string, any> = {};
-            for (const [key, val] of Object.entries(inputs)) scope[key] = PayloadUtils.hydrate(PayloadUtils.unwrap(val), math);
-            const result = MathCompileCache.evaluate(code, scope, math);
-            return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
-        } catch (error) { return PayloadUtils.createError(String(error)); }
+            for (const [key, val] of Object.entries(inputs)) {
+                scope[key] = PayloadUtils.hydrate(PayloadUtils.unwrap(val), math);
+            }
+
+            // 1. Parse the entire block to inspect its structure
+            let parsed;
+            try {
+                parsed = math.parse(code);
+            } catch (e) {
+                // If parsing fails but it looks like a one-line equation (x+y=z)
+                // Treat it directly as a Symbolic Model
+                if (code.includes('=') && !code.includes('\n')) {
+                    return PayloadUtils.createSymbolic(code);
+                }
+                throw e;
+            }
+
+            // 2. Identify the "last action"
+            let lastNode = parsed;
+            if (parsed.type === 'BlockNode' && parsed.blocks) {
+                // Get the last non-empty statement in the block
+                const nonComments = parsed.blocks.filter((b: any) => b.node && b.node.type !== 'CommentNode');
+                if (nonComments.length > 0) {
+                    lastNode = nonComments[nonComments.length - 1].node;
+                }
+            }
+
+            // 3. Apply the "Last-Line Rule"
+            // If the last thing is an assignment (x=2, f(x)=x^2), it's a model
+            const isAssignment = lastNode.type === 'AssignmentNode' || lastNode.type === 'FunctionAssignmentNode';
+
+            // Evaluate the whole code to update the internal scope and get the final value
+            const finalResult = MathCompileCache.evaluate(code, scope, math);
+
+            if (isAssignment) {
+                // If it's an assignment, we return the SYMBOLIC representation of the assignment
+                // We use the evaluated result to show current state (e.g. y = 5 if x was 2)
+                let symbolicVal = '';
+                try {
+                    // Re-parse just the last node to get its "evaluated string" if possible, 
+                    // but for x=2 we want to see the result.
+                    // Heuristic: If it's a simple x=2, returning the string is best for PlotNode.
+                    const lastNodeStr = lastNode.toString();
+                    if (lastNode.type === 'AssignmentNode') {
+                        // For AssignmentNode, finalResult is the value.
+                        // We construct a string "name = value"
+                        symbolicVal = `${lastNode.name} = ${math.format(finalResult, { precision: 14 })}`;
+                    } else {
+                        symbolicVal = lastNodeStr;
+                    }
+                } catch {
+                    symbolicVal = code.split('\n').pop() || code;
+                }
+                return PayloadUtils.createSymbolic(symbolicVal);
+            }
+
+            // 4. Fallback to Scalar/Matrix
+            const isHeavy = Array.isArray(finalResult) || (finalResult as any)?.isMatrix;
+            return {
+                type: isHeavy ? DataType.Matrix : DataType.Scalar,
+                value: PayloadUtils.dehydrate(finalResult),
+                symbol: null,
+                meta: {}
+            };
+        } catch (error) {
+            return PayloadUtils.createError(String(error));
+        }
     }
 };
