@@ -335,7 +335,7 @@ export const PayloadUtils = {
 
     /**
      * 🧠 Truthiness Logic
-     * Determines if a payload or raw value is "true" in the Calctopus world.
+     * Determines if a payload or raw value is "true" in the Input-Output world.
      * Handles: Booleans, Numbers (0=false), Strings (""=false), and MathJS Types (BigNumber, Unit).
      */
     toBoolean(value: unknown, math?: unknown): boolean {
@@ -461,3 +461,4 @@ export const PayloadUtils = {
         };
     },
 };
+

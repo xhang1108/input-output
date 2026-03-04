@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useReactFlow, Node, Edge } from '@xyflow/react';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 
-const CLIPBOARD_KEY = 'calctopus_clipboard';
+const CLIPBOARD_KEY = 'Input-Output_clipboard';
 
 /**
  * useClipboard
@@ -136,3 +136,4 @@ export function useClipboard() {
         pasteFromClipboard,
     };
 }
+

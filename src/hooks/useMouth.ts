@@ -11,9 +11,9 @@ export function useMouth() {
     const getBrain = useCallback(() => Brain.getInstance(), []);
 
     /**
-     * Generates a CGL representation of the current graph.
+     * Generates a IOGL representation of the current graph.
      */
-    const generateCGL = useCallback(() => {
+    const generateIOGL = useCallback(() => {
         const graph = getBrain().toInjectable();
         return GraphCodec.encode(graph);
     }, [getBrain]);
@@ -42,13 +42,13 @@ export function useMouth() {
     }, []);
 
     /**
-     * Helper to download the current graph as CGL.
+     * Helper to download the current graph as IOGL.
      */
-    const downloadCGL = useCallback(() => {
-        const cgl = generateCGL();
+    const downloadIOGL = useCallback(() => {
+        const iogl = generateIOGL();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        downloadFile(cgl, `calctopus-graph-${timestamp}.cgl`);
-    }, [generateCGL, downloadFile]);
+        downloadFile(iogl, `input-output-graph-${timestamp}.iogl`);
+    }, [generateIOGL, downloadFile]);
 
     /**
      * Helper to copy text to clipboard.
@@ -64,12 +64,12 @@ export function useMouth() {
     }, []);
 
     /**
-     * Consumes Graph data (CGL or LaTeX) and injects it into the Brain.
+     * Consumes Graph data (IOGL or LaTeX) and injects it into the Brain.
      * Returns diagnostics from the parsing and injection steps.
      */
     const consumeGraph = useCallback(async (
         input: string,
-        mode: 'CGL' | 'LaTeX',
+        mode: 'IOGL' | 'LaTeX',
         shouldClear: boolean = false,
         onProgress?: (processed: number, total: number) => void
     ): Promise<{ success: boolean; diagnostics: string[]; error?: string }> => {
@@ -82,7 +82,7 @@ export function useMouth() {
             let injectDiagnostics: string[] = [];
             let parseDiagnostics: string[] = [];
 
-            if (mode === 'CGL') {
+            if (mode === 'IOGL') {
                 const result = GraphCodec.parse(input);
                 const graphData = result.graph;
                 parseDiagnostics = result.diagnostics;
@@ -134,11 +134,12 @@ export function useMouth() {
     }, [getBrain]);
 
     return {
-        generateCGL,
+        generateIOGL,
         generateJSON,
         downloadFile,
-        downloadCGL,
+        downloadIOGL,
         copyToClipboard,
         consumeGraph
     };
 }
+

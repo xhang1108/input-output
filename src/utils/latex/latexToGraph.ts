@@ -18,7 +18,7 @@ interface MathNode {
 }
 
 /**
- * Maps MathJS operators/functions and symbols to Calctopus Operator Strings
+ * Maps MathJS operators/functions and symbols to Input-Output Operator Strings
  */
 const OP_MAP: Record<string, string> = {
     // Functions
@@ -44,7 +44,7 @@ const OP_MAP: Record<string, string> = {
 };
 
 /**
- * Parses LaTeX string and generates Calctopus Transactions to build the graph.
+ * Parses LaTeX string and generates Input-Output Transactions to build the graph.
  * 
  * @param latex The LaTeX string to parse.
  * @param startPos The position to start placing nodes (approximate).
@@ -116,28 +116,28 @@ export function parseLatexToGraph(latex: string, startPos: { x: number, y: numbe
                     opName = node.op;
                 }
 
-                let calctopusOp = 'ADD';
+                let ioOp = 'ADD';
                 switch (opName) {
-                    case 'add': calctopusOp = 'ADD'; break;
-                    case 'subtract': calctopusOp = 'SUB'; break;
-                    case 'multiply': calctopusOp = 'MUL'; break;
-                    case 'divide': calctopusOp = 'DIV'; break;
-                    case 'pow': calctopusOp = 'POW'; break;
-                    case 'sin': calctopusOp = 'SIN'; break;
-                    case 'cos': calctopusOp = 'COS'; break;
-                    case 'tan': calctopusOp = 'TAN'; break;
-                    case 'sqrt': calctopusOp = 'SQRT'; break;
-                    case 'abs': calctopusOp = 'ABS'; break;
-                    case 'log': calctopusOp = 'LOG'; break; // Added log to switch
-                    case 'ln': calctopusOp = 'LN'; break; // Added ln to switch
-                    default: calctopusOp = OP_MAP[opName] || 'ADD'; break; // Fallback to OP_MAP for other cases
+                    case 'add': ioOp = 'ADD'; break;
+                    case 'subtract': ioOp = 'SUB'; break;
+                    case 'multiply': ioOp = 'MUL'; break;
+                    case 'divide': ioOp = 'DIV'; break;
+                    case 'pow': ioOp = 'POW'; break;
+                    case 'sin': ioOp = 'SIN'; break;
+                    case 'cos': ioOp = 'COS'; break;
+                    case 'tan': ioOp = 'TAN'; break;
+                    case 'sqrt': ioOp = 'SQRT'; break;
+                    case 'abs': ioOp = 'ABS'; break;
+                    case 'log': ioOp = 'LOG'; break; // Added log to switch
+                    case 'ln': ioOp = 'LN'; break; // Added ln to switch
+                    default: ioOp = OP_MAP[opName] || 'ADD'; break; // Fallback to OP_MAP for other cases
                 }
 
                 let nodeType = 'MA-01'; // Default Math
-                if (calctopusOp === 'LOG' || calctopusOp === 'LN') nodeType = 'MA-16';
+                if (ioOp === 'LOG' || ioOp === 'LN') nodeType = 'MA-16';
 
                 const id = generateNodeId(nodeType);
-                addNodeTransaction(id, nodeType, currentPos, { op: calctopusOp, label: calctopusOp });
+                addNodeTransaction(id, nodeType, currentPos, { op: ioOp, label: ioOp });
 
                 // Process Children
                 if (node.args) {
@@ -147,7 +147,7 @@ export function parseLatexToGraph(latex: string, startPos: { x: number, y: numbe
                         let targetHandle = 'in_a';
                         if (nodeType === 'MA-16') { // LOG, LN
                             targetHandle = i === 0 ? 'in' : 'base';
-                        } else if (['ADD', 'SUB', 'MUL', 'DIV', 'POW'].includes(calctopusOp)) {
+                        } else if (['ADD', 'SUB', 'MUL', 'DIV', 'POW'].includes(ioOp)) {
                             targetHandle = i === 0 ? 'in_a' : 'in_b';
                         } else {
                             // Unary fallback (SIN, COS, SQRT, ABS etc. using MA-01)
@@ -181,3 +181,4 @@ export function parseLatexToGraph(latex: string, startPos: { x: number, y: numbe
         return [];
     }
 }
+

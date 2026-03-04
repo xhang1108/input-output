@@ -3,7 +3,7 @@ import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { InjectableGraph } from './types';
 import { Edge } from '@xyflow/react';
 
-interface CGLNode {
+interface IOGLNode {
     id: string;
     category: string;
     opCode?: string;
@@ -12,7 +12,7 @@ interface CGLNode {
     value?: unknown;
 }
 
-interface CGLConnection {
+interface IOGLConnection {
     sourceId: string;
     sourceHandle?: string;
     targetId: string;
@@ -22,11 +22,11 @@ interface CGLConnection {
 export class GraphCodec {
     // ─── Parsing ─────────────────────────────────────────────────────────────
 
-    public static parse(cgl: string): { graph: InjectableGraph, diagnostics: string[] } {
-        const lines = cgl.split('\n');
+    public static parse(IOGL: string): { graph: InjectableGraph, diagnostics: string[] } {
+        const lines = IOGL.split('\n');
         const diagnostics: string[] = [];
-        const nodes = new Map<string, CGLNode>();
-        const connections: CGLConnection[] = [];
+        const nodes = new Map<string, IOGLNode>();
+        const connections: IOGLConnection[] = [];
 
         // Regex Patterns: ID:Category:OpCode @ X, Y = Value (Allows spaces around @ and ,)
         const nodeRegex = /^([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)(?::([a-zA-Z0-9_-]+))?(?:\s*@\s*(-?\d+)\s*,\s*(-?\d+))?(?:\s*=\s*(.*))?$/;
@@ -69,7 +69,7 @@ export class GraphCodec {
         return { graph, diagnostics };
     }
 
-    private static parseChain(line: string, connections: CGLConnection[], diagnostics: string[], lineNum: number) {
+    private static parseChain(line: string, connections: IOGLConnection[], diagnostics: string[], lineNum: number) {
         const cleanLine = line.split('#')[0].trim();
         // Support both -- and -> as separators
         const parts = cleanLine.split(/--|->/).map(p => p.trim());
@@ -134,11 +134,11 @@ export class GraphCodec {
 
     // ─── Conversion ──────────────────────────────────────────────────────────
 
-    private static convertToInjectable(cglNodes: Map<string, CGLNode>, cglConns: CGLConnection[], diagnostics: string[]): InjectableGraph {
+    private static convertToInjectable(IOGLNodes: Map<string, IOGLNode>, IOGLConns: IOGLConnection[], diagnostics: string[]): InjectableGraph {
         const graph: InjectableGraph = { nodes: [], edges: [] };
 
         // 1. Convert Nodes
-        cglNodes.forEach(cNode => {
+        IOGLNodes.forEach(cNode => {
             const typeInfo = this.resolveType(cNode.category, cNode.opCode);
 
             if (!typeInfo) {
@@ -252,14 +252,14 @@ export class GraphCodec {
         });
 
         // 2. Convert Edges
-        cglConns.forEach((conn, idx) => {
+        IOGLConns.forEach((conn, idx) => {
             // Determine correct source handle based on Source Node Type
             // Most are 'out', but MA-03 (Constant) uses 'val'.
             let sourceHandle = conn.sourceHandle || 'out';
 
             // If no explicit sourceHandle, try to intelligently infer it from the definition.
             if (!conn.sourceHandle) {
-                const sourceCNode = cglNodes.get(conn.sourceId);
+                const sourceCNode = IOGLNodes.get(conn.sourceId);
                 if (sourceCNode) {
                     const def = this.resolveType(sourceCNode.category, sourceCNode.opCode);
                     if (def && def.handles) {
@@ -277,17 +277,17 @@ export class GraphCodec {
                 }
             } else {
                 // Phase 2.17: Support Source Handle Aliases
-                const sourceCNode = cglNodes.get(conn.sourceId);
+                const sourceCNode = IOGLNodes.get(conn.sourceId);
                 const sourceDef = sourceCNode ? this.resolveType(sourceCNode.category, sourceCNode.opCode) : undefined;
                 sourceHandle = this.resolveHandleAlias(conn.sourceHandle, sourceDef?.id, true);
             }
 
-            const targetCNode = cglNodes.get(conn.targetId);
+            const targetCNode = IOGLNodes.get(conn.targetId);
             const targetDef = targetCNode ? this.resolveType(targetCNode.category, targetCNode.opCode) : undefined;
             const resolvedTarget = this.resolveHandleAlias(conn.targetHandle, targetDef?.id, false);
 
             graph.edges.push({
-                id: `e-cgl-${Math.random().toString(36).substr(2, 9)}`,
+                id: `e-iogl-${Math.random().toString(36).substr(2, 9)}`,
                 source: conn.sourceId,
                 sourceHandle: sourceHandle,
                 target: conn.targetId,
@@ -459,10 +459,10 @@ export class GraphCodec {
     // ─── Encoding ────────────────────────────────────────────────────────────
 
     public static encode(graph: InjectableGraph): string {
-        let cgl = `# input-output Graph Language (Auto-Generated)\n# ${new Date().toISOString()}\n\n`;
+        let iogl = `# Input-Output Graph Language (Auto-Generated)\n# ${new Date().toISOString()}\n\n`;
 
         // 1. Nodes
-        cgl += '# Nodes\n';
+        iogl += '# Nodes\n';
         for (const node of graph.nodes) {
             let cat = 'unknown';
             let op = node.type;
@@ -532,11 +532,11 @@ export class GraphCodec {
             const safeId = node.id.replace(/\s+/g, '_');
             const safeOp = op.toString();
 
-            cgl += `${safeId}:${cat}:${safeOp} @${Math.round(node.position.x)},${Math.round(node.position.y)}${val}\n`;
+            iogl += `${safeId}:${cat}:${safeOp} @${Math.round(node.position.x)},${Math.round(node.position.y)}${val}\n`;
         }
 
         // 2. Connections
-        cgl += '\n# Connections\n';
+        iogl += '\n# Connections\n';
         for (const edge of graph.edges) {
             const sourceId = edge.source.replace(/\s+/g, '_');
             const targetId = edge.target.replace(/\s+/g, '_');
@@ -569,9 +569,10 @@ export class GraphCodec {
                 }
             }
 
-            cgl += `${sourceId}${sourceHandleStr} -- ${targetId}:${targetHandle}\n`;
+            iogl += `${sourceId}${sourceHandleStr} -- ${targetId}:${targetHandle}\n`;
         }
 
-        return cgl;
+        return iogl;
     }
 }
+

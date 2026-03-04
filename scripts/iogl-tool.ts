@@ -7,7 +7,7 @@ const command = process.argv[2];
 const filePath = process.argv[3];
 
 if (!command || !filePath) {
-    console.error('Usage: npx tsx cgl-tool.ts <command> <file>');
+    console.error('Usage: npx tsx iogl-tool.ts <command> <file>');
     console.error('Commands: validate, compile');
     process.exit(1);
 }
@@ -29,7 +29,7 @@ if (command === 'validate') {
         diagnostics.forEach(d => console.error(`- ${d}`));
         process.exit(1);
     } else {
-        console.log('✅ CGL is valid.');
+        console.log('✅ IOGL is valid.');
     }
 } else if (command === 'compile') {
     const { graph, diagnostics } = GraphCodec.parse(content);

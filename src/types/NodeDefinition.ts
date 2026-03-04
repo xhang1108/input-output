@@ -55,6 +55,7 @@ export interface NodeDefinition {
     handles: HandleConfig[]; // All handles (inputs AND outputs)
     defaultData?: Record<string, unknown>; // Default data payload
     params?: NodeParameter[];
-    opTokens?: string[];     // Used for implicit CGL operation mapping
+    opTokens?: string[];     // Used for implicit IOGL operation mapping
     aliases?: string[];      // Quick search terms for NodePicker (e.g. 'd/dx')
 }
+

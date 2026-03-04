@@ -233,7 +233,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                             <span className="text-white font-bold text-lg">🐙</span>
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold text-zinc-100 tracking-tight">Calctopus</h1>
+                            <h1 className="text-xl font-bold text-zinc-100 tracking-tight">Input-Output</h1>
                             <p className="text-xs text-zinc-500">Select a project to open</p>
                         </div>
                     </div>
@@ -275,3 +275,4 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
         </div>
     );
 }
+

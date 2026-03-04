@@ -84,7 +84,7 @@ export function useAutoLayout(
     useEffect(() => {
         const brain = Brain.getInstance();
 
-        // Listener for automatic layout requests (e.g. after CGL import)
+        // Listener for automatic layout requests (e.g. after IOGL import)
         const cleanupLayout = brain.on('RE-LAYOUT', async () => {
             const brainNodes = Array.from(brain.getNodesMap().values());
             const brainEdges = brain.getEdges();
@@ -116,3 +116,4 @@ export function useAutoLayout(
 
     return { handleAutoLayout };
 }
+

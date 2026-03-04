@@ -3,8 +3,8 @@ import { GraphCodec } from '../GraphCodec';
 
 describe('GraphCodec', () => {
     describe('decode', () => {
-        it('should parse a basic CGL string with nodes and connections', () => {
-            const cgl = `
+        it('should parse a basic IOGL string with nodes and connections', () => {
+            const IOGL = `
 # Test Graph
 N1:io:num @100,200 = 42
 N2:io:res @500,200
@@ -12,7 +12,7 @@ N2:io:res @500,200
 # Connection
 N1 -- N2:in
 `;
-            const { graph, diagnostics } = GraphCodec.parse(cgl);
+            const { graph, diagnostics } = GraphCodec.parse(IOGL);
 
             expect(diagnostics).toHaveLength(0);
             expect(graph.nodes).toHaveLength(2);
@@ -30,12 +30,12 @@ N1 -- N2:in
         });
 
         it('should handle optional coordinates (defaulting to 0,0)', () => {
-            const cgl = `
+            const IOGL = `
 FloatingNode:io:num = 123
 LinkedNode:io:res
 FloatingNode -- LinkedNode:in
 `;
-            const { graph, diagnostics } = GraphCodec.parse(cgl);
+            const { graph, diagnostics } = GraphCodec.parse(IOGL);
 
             expect(diagnostics).toHaveLength(0);
             expect(graph.nodes).toHaveLength(2);
@@ -45,7 +45,7 @@ FloatingNode -- LinkedNode:in
         });
 
         it('should ignore empty lines and full-line comments', () => {
-            const cgl = `
+            const IOGL = `
 # Comment 1
 
 N1:io:num @0,0
@@ -55,20 +55,20 @@ N2:io:res @10,10
 
 N1 -- N2:in
 `;
-            const { graph, diagnostics } = GraphCodec.parse(cgl);
+            const { graph, diagnostics } = GraphCodec.parse(IOGL);
             expect(diagnostics).toHaveLength(0);
             expect(graph.nodes).toHaveLength(2);
             expect(graph.edges).toHaveLength(1);
         });
 
         it('should capture diagnostics for invalid lines', () => {
-            const cgl = `
+            const IOGL = `
 Valid:io:num @0,0
 Invalid Junk Line
 Another:io:res @10,10
 Valid -- Another:wrong_handle
 `;
-            const { graph, diagnostics } = GraphCodec.parse(cgl);
+            const { graph, diagnostics } = GraphCodec.parse(IOGL);
 
             // "Invalid Junk Line" should be a diagnostic
             // "Valid -- Another:wrong_handle" is actually valid syntax for the parser, 
@@ -79,10 +79,10 @@ Valid -- Another:wrong_handle
         });
 
         it('should handle complex opCodes with underscores and hyphens', () => {
-            const cgl = `
+            const IOGL = `
 Complex_Node:math:ADD-VALUES @0,0
 `;
-            const { graph, diagnostics } = GraphCodec.parse(cgl);
+            const { graph, diagnostics } = GraphCodec.parse(IOGL);
             expect(diagnostics).toHaveLength(0);
             expect(graph.nodes).toHaveLength(1);
             expect(graph.nodes[0].id).toBe('Complex_Node');
@@ -90,7 +90,7 @@ Complex_Node:math:ADD-VALUES @0,0
     });
 
     describe('encode', () => {
-        it('should encode a graph back to strictly formatted CGL', () => {
+        it('should encode a graph back to strictly formatted IOGL', () => {
             const injectable = {
                 nodes: [
                     { id: 'N1', type: 'IO-01', position: { x: 10, y: 20 }, data: { label: 'Input', value: 3.14 } }
@@ -104,3 +104,4 @@ Complex_Node:math:ADD-VALUES @0,0
         });
     });
 });
+

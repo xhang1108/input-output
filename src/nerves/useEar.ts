@@ -18,7 +18,7 @@ type EarProps = {
 };
 
 /**
- * useEar - The primary keyboard nerve of Calctopus.
+ * useEar - The primary keyboard nerve of Input-Output.
  * 
  * Functions:
  * 1. Key Tracking: Use isPressed('key') to check current state.
@@ -123,3 +123,4 @@ export function useEar(props: EarProps = {}) {
         isPressed: (key: string) => keys.has(key.toLowerCase()),
     };
 }
+

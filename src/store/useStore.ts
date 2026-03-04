@@ -97,7 +97,7 @@ export const useAppStore = create<AppState>()(
                 setLastAddedNodeType: (type) => set({ lastAddedNodeType: type }),
             }),
             {
-                name: 'calctopus-settings-v2',
+                name: 'Input-Output-settings-v2',
                 partialize: (state) => ({
                     manualSnap: state.manualSnap,
                     showGrid: state.showGrid,
@@ -114,3 +114,4 @@ export const useAppStore = create<AppState>()(
         )
     )
 );
+

@@ -12,10 +12,10 @@ interface GraphImportModalProps {
     onClose: () => void;
 }
 
-type ImportMode = 'CGL' | 'LaTeX';
+type ImportMode = 'IOGL' | 'LaTeX';
 
 export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
-    const [mode, setMode] = useState<ImportMode>('CGL');
+    const [mode, setMode] = useState<ImportMode>('IOGL');
     const [input, setInput] = useState('');
     const [shouldClear, setShouldClear] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -109,7 +109,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
 
                 {/* Mode Selector Tabs */}
                 <div className="flex p-1 bg-zinc-950 border-b border-zinc-800">
-                    {(['CGL', 'LaTeX'] as ImportMode[]).map(m => (
+                    {(['IOGL', 'LaTeX'] as ImportMode[]).map(m => (
                         <button
                             key={m}
                             onClick={() => {
@@ -125,7 +125,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'}
                             `}
                         >
-                            {m === 'CGL' ? <FileText className="w-3.5 h-3.5" /> : <CalcIcon className="w-3.5 h-3.5" />}
+                            {m === 'IOGL' ? <FileText className="w-3.5 h-3.5" /> : <CalcIcon className="w-3.5 h-3.5" />}
                             {m}
                         </button>
                     ))}
@@ -135,12 +135,12 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                 <div className="p-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
                         <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                            {mode === 'CGL' ? 'CGL Script' : 'LaTeX Equation'}
+                            {mode === 'IOGL' ? 'IOGL Script' : 'LaTeX Equation'}
                         </label>
                         <textarea
                             ref={textareaRef}
                             className="w-full h-64 bg-zinc-950 border border-zinc-800 rounded-(--radius-lg) p-3 text-xs font-mono text-zinc-300 outline-none focus:border-zinc-600 resize-none placeholder-zinc-700"
-                            placeholder={mode === 'CGL' ? '# Node definitions...' : 'e.g. x^2 + 2x + 1'}
+                            placeholder={mode === 'IOGL' ? '# Node definitions...' : 'e.g. x^2 + 2x + 1'}
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             spellCheck={false}
@@ -248,3 +248,4 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
         </div>
     );
 }
+

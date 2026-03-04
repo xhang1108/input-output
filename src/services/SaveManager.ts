@@ -21,8 +21,8 @@ export interface SaveSlot {
 
 // ─── Constants ────────────────────────────────────────
 
-const INDEX_KEY = 'calctopus-saves-index';
-const SLOT_PREFIX = 'calctopus-save-';
+const INDEX_KEY = 'Input-Output-saves-index';
+const SLOT_PREFIX = 'Input-Output-save-';
 const MAX_SLOTS = 20;
 
 // ─── SaveManager (Static Service) ─────────────────────
@@ -139,7 +139,7 @@ export class SaveManager {
      * Called once on first app load.
      */
     static migrateLegacy(): string | null {
-        const legacy = localStorage.getItem('calctopus-autocsave');
+        const legacy = localStorage.getItem('Input-Output-autocsave');
         if (!legacy) return null;
 
         const data = Serializer.deserialize(legacy);
@@ -165,9 +165,10 @@ export class SaveManager {
         localStorage.setItem(INDEX_KEY, JSON.stringify(index));
 
         // Remove legacy keys
-        localStorage.removeItem('calctopus-autocsave');
-        localStorage.removeItem('calctopus-flow-storage-v1');
+        localStorage.removeItem('Input-Output-autocsave');
+        localStorage.removeItem('Input-Output-flow-storage-v1');
 
         return id;
     }
 }
+

@@ -640,7 +640,7 @@ export class Brain {
         const targetIsInput = isInput(targetHandle!, targetHandleType);
 
         if (sourceIsInput === targetIsInput) {
-            // IF we still don't know for sure (both null handleType), and it's CGL injection,
+            // IF we still don't know for sure (both null handleType), and it's IOGL injection,
             // maybe we should be more lenient? No, let's fix the handle discovery.
             return { isValid: false, reason: `Invalid connectivity: ${source}:${sourceHandle}(${sourceHandleType}) -> ${target}:${targetHandle}(${targetHandleType})` };
         }
@@ -841,7 +841,7 @@ export class Brain {
         const allTxs = [...nodeTxs, ...edgeTxs];
         if (allTxs.length > 0) {
             // Pre-validation: Check for cycles across all intended connections
-            // This prevents "Double-Link" or "Infinite Loop" traps during high-authority CGL import
+            // This prevents "Double-Link" or "Infinite Loop" traps during high-authority IOGL import
             const virtualEdges = [...this.state.edges];
             const virtualNodes = new Map(this.state.nodes);
 
@@ -971,4 +971,5 @@ export class Brain {
         return this.injectNodes(graph, clear, false, onProgress);
     }
 }
+
 

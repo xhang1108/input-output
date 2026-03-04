@@ -1,5 +1,5 @@
 /**
- * 📦 Calctopus Data Payload System
+ * 📦 Input-Output Data Payload System
  * 
  * Defines the structure of data passed between nodes in the graph.
  * Transitions from simple `number` to a rich object capable of carrying
@@ -72,3 +72,4 @@ export interface NodePayload {
     /** Metadata: Dimensions, Units, etc. */
     meta: PayloadMetadata;
 }
+

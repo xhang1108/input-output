@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useReactFlow, Node } from '@xyflow/react';
 
 /**
- * useEye - The visual nerve of Calctopus.
+ * useEye - The visual nerve of Input-Output.
  * 
  * Responsibilities:
  * 1. Focus Control: Deciding what to look at (Selection vs Global).
@@ -41,3 +41,4 @@ export function useEye() {
         setViewport
     };
 }
+

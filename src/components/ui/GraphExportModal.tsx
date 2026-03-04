@@ -10,7 +10,7 @@ interface GraphExportModalProps {
 }
 
 export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
-    const { generateCGL, downloadCGL, copyToClipboard } = useMouth();
+    const { generateIOGL, downloadIOGL, copyToClipboard } = useMouth();
     const [exportData, setExportData] = useState('');
     const [copied, setCopied] = useState(false);
 
@@ -18,7 +18,7 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
     if (isOpen !== prevIsOpen) {
         setPrevIsOpen(isOpen);
         if (isOpen) {
-            setExportData(generateCGL());
+            setExportData(generateIOGL());
         }
     }
 
@@ -31,7 +31,7 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
     };
 
     const handleDownload = () => {
-        downloadCGL();
+        downloadIOGL();
     };
 
     if (!isOpen) return null;
@@ -63,7 +63,7 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
                 <div className="p-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">CGL Script (Human-Readable)</label>
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">IOGL Script (Human-Readable)</label>
                             <button
                                 onClick={handleCopy}
                                 className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 hover:text-zinc-200 transition-colors group"
@@ -80,7 +80,7 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
                     </div>
 
                     <div className="text-[10px] text-zinc-500 leading-relaxed px-1">
-                        Exporting to <span className="text-zinc-200 font-bold">Calctopus Graph Language</span>. This format is optimized for version control and sharing.
+                        Exporting to <span className="text-zinc-200 font-bold">Input-Output Graph Language</span>. This format is optimized for version control and sharing.
                     </div>
                 </div>
 
@@ -97,7 +97,7 @@ export function GraphExportModal({ isOpen, onClose }: GraphExportModalProps) {
                         className="px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center gap-2"
                     >
                         <Download className="w-3.5 h-3.5" />
-                        Download .cgl File
+                        Download .iogl File
                     </button>
                 </div>
             </div>
