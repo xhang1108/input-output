@@ -84,6 +84,15 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
+                                ol: ({ children }) => (
+                                    <ol style={{ listStyleType: 'decimal', paddingLeft: '1.25rem', marginBottom: '0.25rem' }}>{children}</ol>
+                                ),
+                                ul: ({ children }) => (
+                                    <ul style={{ listStyleType: 'disc', paddingLeft: '1.25rem', marginBottom: '0.25rem' }}>{children}</ul>
+                                ),
+                                li: ({ children }) => (
+                                    <li style={{ marginBottom: '0.1rem' }}>{children}</li>
+                                ),
                                 blockquote: ({ children }) => {
                                     const childrenArray = Children.toArray(children);
                                     const firstChild = childrenArray[0];
