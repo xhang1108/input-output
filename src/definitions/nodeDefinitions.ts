@@ -19,7 +19,7 @@ import { NodeDefinition } from '../types/NodeDefinition';
 export const NODE_DEFINITIONS: NodeDefinition[] = [
     // ─── 1. Input Family ───────────────────────────────────────────
     {
-        id: 'IO-01',
+        id: 'IN-01',
         label: 'Number',
         category: 'Input',
         handles: [
@@ -28,7 +28,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'scalar', value: 0 }
     },
     {
-        id: 'IO-02',
+        id: 'IN-02',
         label: 'Slider',
         category: 'Input',
         handles: [
@@ -37,7 +37,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'slider', value: 50, min: 0, max: 100, step: 1 }
     },
     {
-        id: 'IO-18',
+        id: 'IN-03',
         label: 'Color',
         category: 'Input',
         handles: [
@@ -48,7 +48,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'color', value: '#3b82f6' }
     },
     {
-        id: 'IO-04',
+        id: 'IN-04',
         label: 'String',
         category: 'Input',
         handles: [
@@ -57,7 +57,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'string', value: 'Hello' }
     },
     {
-        id: 'MA-09', // Button (Moved from Logic)
+        id: 'IN-05', // Button
         label: 'Button',
         category: 'Input',
         handles: [
@@ -66,16 +66,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'button', value: false, mode: 'sticky' }
     },
     {
-        id: 'MA-03',
+        id: 'IN-06',
         label: 'Constant',
-        category: 'Input', // Was Math
+        category: 'Input',
         handles: [
             { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', y: '72%' }
         ],
         defaultData: { val: 'pi', label: 'Constant' }
     },
     {
-        id: 'IO-08',
+        id: 'IN-07',
         label: 'Matrix Input',
         category: 'Input',
         handles: [
@@ -84,7 +84,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]' }
     },
     {
-        id: 'IO-21',
+        id: 'IN-08',
         label: 'Abacus',
         category: 'Input',
         handles: [
@@ -93,20 +93,20 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] }
     },
     {
-        id: 'SY-05',
-        label: 'Node Expression',
-        category: 'Input', // Was Expert
+        id: 'IN-09',
+        label: 'Expression',
+        category: 'Input',
         handles: [
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { type: 'expression', code: '1 + 2' }
     },
 
-    // ─── 2. Generators ──────────────────────────────────────────
+    // ─── 2. Input ──────────────────────────────────────────────
     {
-        id: 'IO-06',
+        id: 'IN-10',
         label: 'Random',
-        category: 'Input.Generators',
+        category: 'Input',
         aliases: ['rand', 'noise', 'white'],
         handles: [
             { id: 'val', type: 'source', variant: 'single', dataType: 'scalar' }
@@ -123,9 +123,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         }
     },
     {
-        id: 'DA-05',
+        id: 'IN-11',
         label: 'Distributions',
-        category: 'Input.Generators',
+        category: 'Input',
         aliases: ['gaussian', 'normal', 'uniform', 'probability'],
         handles: [
             { id: 'param_n', type: 'target', variant: 'single', dataType: 'scalar', label: 'N' },
@@ -151,7 +151,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['add', 'sub', 'mul', 'div', '+', '-', '*', '/']
     },
     {
-        id: 'MA-18',
+        id: 'MA-02',
         label: 'Advanced Math',
         category: 'Math',
         handles: [
@@ -162,7 +162,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['pow', 'sqrt', 'abs', '^', 'root']
     },
     {
-        id: 'MA-16',
+        id: 'MA-03',
         label: 'Logarithm',
         category: 'Math',
         handles: [
@@ -174,9 +174,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['ln', 'log10', 'log2', 'log']
     },
     {
-        id: 'MA-17',
+        id: 'MA-04',
         label: 'Trigonometry',
-        category: 'Math', // Moved from Convert/Utility
+        category: 'Math',
         handles: [
             { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Angle' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
@@ -185,18 +185,18 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'trig']
     },
     {
-        id: 'MA-14',
-        label: 'Round',
+        id: 'MA-05',
+        label: 'Round / Precision',
         category: 'Math',
         handles: [
             { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Input' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { precision: 0 },
-        aliases: ['ceil', 'floor', 'trunc']
+        aliases: ['round', 'ceil', 'floor', 'trunc']
     },
     {
-        id: 'MA-12',
+        id: 'MA-06',
         label: 'Fraction',
         category: 'Math',
         handles: [
@@ -209,8 +209,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { mixed: false }
     },
     {
-        id: 'MA-02',
-        label: 'Number Theory',
+        id: 'MA-07',
+        label: 'Divisibility & Primes',
         category: 'Math',
         handles: [
             { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'A' },
@@ -218,12 +218,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'GCD' },
-        aliases: ['gcd', 'lcm', 'mod', 'prime', 'modulo']
+        aliases: ['gcd', 'lcm', 'mod', 'prime', 'modulo', 'number theory', 'divisibility']
     },
     {
-        id: 'AD-03',
+        id: 'MA-08',
         label: 'Combinatorics',
-        category: 'Math', // Was LinearAlgebra
+        category: 'Math',
         handles: [
             { id: 'n', type: 'target', variant: 'single', dataType: 'scalar', label: 'n' },
             { id: 'r', type: 'target', variant: 'single', dataType: 'scalar', label: 'r' },
@@ -235,7 +235,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
 
     // ─── 4. Calculus ───────────────────────────────────────────
     {
-        id: 'AD-04',
+        id: 'CL-01',
         label: 'Derivative',
         category: 'Calculus',
         handles: [
@@ -246,7 +246,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['d/dx', 'grad', 'nabla', 'curl', 'div', 'diff', 'derivative']
     },
     {
-        id: 'AD-05',
+        id: 'CL-02',
         label: 'Integral',
         category: 'Calculus',
         handles: [
@@ -257,7 +257,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['int', 'integrate', 'integral']
     },
     {
-        id: 'AD-11',
+        id: 'CL-03',
         label: 'Limit',
         category: 'Calculus',
         handles: [
@@ -268,18 +268,18 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['lim', 'limit']
     },
     {
-        id: 'AD-06',
-        label: 'Solver',
-        category: 'Calculus', // Was LinearAlgebra
+        id: 'CL-04',
+        label: 'Equation Solver',
+        category: 'Calculus',
         handles: [
             { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'Eq' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic' }
         ],
         defaultData: { op: 'SOLVE' },
-        aliases: ['eqn', 'solve', 'equation', 'nerdamer']
+        aliases: ['eqn', 'solve', 'equation', 'nerdamer', 'solver']
     },
     {
-        id: 'SY-04',
+        id: 'CL-05',
         label: 'ODE Solver',
         category: 'Calculus',
         handles: [
@@ -292,9 +292,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
 
     // ─── 5. Data & Structures ──────────────────────────────────────────
     {
-        id: 'DA-07',
+        id: 'DT-01',
         label: 'Array Builder',
-        category: 'Data & Structures', // Was DataStructure
+        category: 'Data & Structures',
         handles: [
             { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'In' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
@@ -303,9 +303,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['BUILD', 'CONCAT']
     },
     {
-        id: 'DA-06',
+        id: 'DT-02',
         label: 'Array Extract',
-        category: 'Data & Structures', // Was DataStructure
+        category: 'Data & Structures',
         handles: [
             { id: 'in', type: 'target', variant: 'single', dataType: 'matrix' },
             { id: 'index', type: 'target', variant: 'single', dataType: 'scalar', label: 'Idx' },
@@ -315,9 +315,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['EXTRACT', 'GET']
     },
     {
-        id: 'DA-03',
+        id: 'DT-03',
         label: 'List Utility',
-        category: 'Data & Structures', // Was DataAnalysis
+        category: 'Data & Structures',
         handles: [
             { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
@@ -326,21 +326,22 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['SORT', 'REVERSE', 'UNIQUE', 'CLEAN']
     },
     {
-        id: 'DA-04',
+        id: 'DT-04',
         label: 'Set Operations',
-        category: 'Data & Structures', // Was DataAnalysis
+        category: 'Data & Structures',
         handles: [
             { id: 'a', type: 'target', variant: 'single', dataType: 'matrix', label: 'A' },
             { id: 'b', type: 'target', variant: 'single', dataType: 'matrix', label: 'B' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
         ],
         defaultData: { mode: 'Union' },
-        opTokens: ['UNION', 'INTERSECTION', 'DIFFERENCE']
+        opTokens: ['UNION', 'INTERSECTION', 'DIFFERENCE'],
+        aliases: ['set utils', 'union', 'intersection', 'difference']
     },
     {
-        id: 'AD-02',
+        id: 'DT-05',
         label: 'Vector Utils',
-        category: 'Data & Structures', // Was LinearAlgebra
+        category: 'Data & Structures',
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'vector', label: 'A' },
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'vector', label: 'B' },
@@ -351,9 +352,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['dot', 'cross', 'norm', 'distance', 'dist']
     },
     {
-        id: 'AD-09',
+        id: 'DT-06',
         label: 'Vector Split',
-        category: 'Data & Structures', // Was LinearAlgebra
+        category: 'Data & Structures',
         handles: [
             { id: 'in', type: 'target', variant: 'single', dataType: 'vector' },
             { id: 'x', type: 'source', variant: 'single', dataType: 'scalar', label: 'X' },
@@ -365,23 +366,23 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['separate', 'combine', 'split']
     },
     {
-        id: 'AD-01',
-        label: 'Matrix Tools',
-        category: 'Data & Structures', // Was LinearAlgebra
+        id: 'DT-07',
+        label: 'Matrix Utils',
+        category: 'Data & Structures',
         handles: [
             { id: 'in', type: 'target', variant: 'single', dataType: 'matrix' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
         ],
         defaultData: { op: 'INV' },
         opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN'],
-        aliases: ['inv', 'det', 'transpose', 'trace', 'qr', 'lu', 'lup', 'eigen', 'svd']
+        aliases: ['matrix tools', 'inv', 'det', 'transpose', 'trace', 'qr', 'lu', 'lup', 'eigen', 'svd']
     },
 
     // ─── 6. Transform ──────────────────────────────────────────
     {
-        id: 'IO-05',
+        id: 'TR-01',
         label: 'Unit',
-        category: 'Transform', // Was Input
+        category: 'Transform',
         handles: [
             { id: 'in', type: 'target', variant: 'single', dataType: 'scalar' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
@@ -389,9 +390,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'unit', unit: 'm' }
     },
     {
-        id: 'MA-15',
+        id: 'TR-02',
         label: 'Base Converter',
-        category: 'Transform', // Was Math
+        category: 'Transform',
         handles: [
             { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
@@ -399,9 +400,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { base: 'HEX' }
     },
     {
-        id: 'AD-10',
+        id: 'TR-03',
         label: 'Geometry',
-        category: 'Transform', // Was LinearAlgebra
+        category: 'Transform',
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'Radius' },
             { id: 'area', type: 'source', variant: 'single', dataType: 'scalar', label: 'Area' },
@@ -411,9 +412,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         opTokens: ['CIRCLE', 'QUAD', 'TRIANGLE']
     },
     {
-        id: 'AD-08',
+        id: 'TR-04',
         label: 'Vector Field',
-        category: 'Transform', // Was LinearAlgebra
+        category: 'Transform',
         handles: [
             { id: 'in_f', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f' },
             { id: 'out_field', type: 'source', variant: 'single', dataType: 'matrix', label: 'Arrows' },
@@ -423,9 +424,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['grad', 'gradient', 'vector field']
     },
     {
-        id: 'DA-02',
+        id: 'TR-05',
         label: 'Smoothing',
-        category: 'Transform', // Was DataAnalysis
+        category: 'Transform',
         handles: [
             { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
             { id: 'window', type: 'target', variant: 'single', dataType: 'scalar', label: 'Win' },
@@ -434,9 +435,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { windowMode: 3 }
     },
     {
-        id: 'DA-01',
+        id: 'TR-06',
         label: 'Statistics',
-        category: 'Transform', // Was DataAnalysis (Statistics can be seen as data transformation)
+        category: 'Transform',
         handles: [
             { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
@@ -447,9 +448,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
 
     // ─── 7. Logic & Flow ───────────────────────────────────────────
     {
-        id: 'MA-05',
+        id: 'LG-01',
         label: 'Logic Gate',
-        category: 'Logic & Flow', // Was Logic
+        category: 'Logic & Flow',
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'any', label: 'A' },
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'any', label: 'B' },
@@ -458,9 +459,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { op: 'AND', label: 'AND' }
     },
     {
-        id: 'MA-04',
-        label: 'Logic Switch', // Was Switch
-        category: 'Logic & Flow', // Was Logic
+        id: 'LG-02',
+        label: 'Logic Switch',
+        category: 'Logic & Flow',
         handles: [
             { id: 'condition', type: 'target', variant: 'single', dataType: 'boolean', label: 'Select' },
             { id: 'in_true', type: 'target', variant: 'single', dataType: 'any', label: 'True' },
@@ -470,9 +471,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'switch' }
     },
     {
-        id: 'MA-13',
+        id: 'LG-03',
         label: 'Logic Split',
-        category: 'Logic & Flow', // Was Logic
+        category: 'Logic & Flow',
         handles: [
             { id: 'condition', type: 'target', variant: 'single', dataType: 'boolean', label: 'If' },
             { id: 'data', type: 'target', variant: 'single', dataType: 'any', label: 'Data' },
@@ -484,7 +485,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
 
     // ─── 8. Output Family ──────────────────────────────────────────
     {
-        id: 'IO-11',
+        id: 'OT-01',
         label: 'Result',
         category: 'Output',
         handles: [
@@ -493,7 +494,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { type: 'result', viewMode: 'auto' }
     },
     {
-        id: 'IO-22',
+        id: 'OT-02',
         label: 'Status',
         category: 'Output',
         handles: [
@@ -502,16 +503,17 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { state: 'void' }
     },
     {
-        id: 'IO-14',
-        label: 'Plot',
+        id: 'OT-03',
+        label: 'Graph Plot',
         category: 'Output',
         handles: [
             { id: 'in', type: 'target', variant: 'capsule', dataType: 'any' }
         ],
-        defaultData: {}
+        defaultData: {},
+        aliases: ['plot', 'graph', 'chart', 'visualization']
     },
     {
-        id: 'UI-99',
+        id: 'OT-04',
         label: 'Debug',
         category: 'Output',
         handles: [
@@ -522,25 +524,27 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
 
     // ─── 9. Utility Family ─────────────────────────────────────────
     {
-        id: 'UI-01',
-        label: 'Annotation',
+        id: 'UT-01',
+        label: 'Sticky Note',
         category: 'Utility',
         handles: [],
         defaultData: {
             markdown: '# New Note\nDouble click to edit.',
             width: 200,
             height: 150
-        }
+        },
+        aliases: ['annotation', 'note', 'text', 'markdown']
     },
     {
-        id: 'UI-03',
+        id: 'UT-02',
         label: 'Reroute',
         category: 'Utility',
         handles: [
             { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any', label: '' }
         ],
-        defaultData: { type: 'reroute' }
+        defaultData: { type: 'reroute' },
+        draggable: false
     }
 ];
 

@@ -618,7 +618,13 @@ export class Brain {
                 if (handleFromData) return handleFromData.type;
             }
 
-            // 3. Check Static Definition
+            // 3. SPECIAL: Expert Nodes (SY-05) dynamically bind any unknown name as target
+            if (node.type === 'SY-05') {
+                if (handleId === 'out') return 'source';
+                return 'target';
+            }
+
+            // 4. Check Static Definition
             const def = NODE_DEFINITIONS.find(d => d.id === node.type);
             if (!def) return null;
 

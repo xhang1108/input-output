@@ -27,7 +27,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const payloadA = inputs['in_a'];
         const payloadB = inputs['in_b'];
 
-        // Strict Check: Math nodes (MA-01) do NOT support equations/symbolic models.
+        // Strict Check: Math nodes (MA-01/MA-02) do NOT support equations/symbolic models.
         if (payloadA?.type === DataType.Symbolic || payloadB?.type === DataType.Symbolic) {
             return PayloadUtils.createError("Type Mismatch: Math nodes cannot process Equations (Symbolic). Use a Solver Node.");
         }
@@ -126,6 +126,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return PayloadUtils.createError(e.message);
         }
     },
+    'MA-02': (node, inputs) => MathEvaluators['MA-01'](node, inputs),
     'MA-18': (node, inputs) => MathEvaluators['MA-01'](node, inputs),
     'MA-03': (node) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
@@ -143,7 +144,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             meta: {}
         };
     },
-    'MA-14': (node, inputs) => {
+    'MA-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
@@ -159,7 +160,8 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             };
         } catch (e) { return PayloadUtils.createError('Op Failed'); }
     },
-    'MA-12': (node, inputs) => {
+    'MA-14': (node, inputs) => MathEvaluators['MA-05'](node, inputs),
+    'MA-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const raw = PayloadUtils.unwrap(inputs['in']);
         const data = (node.data || {}) as any;
@@ -187,7 +189,8 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             };
         } catch (e) { return PayloadUtils.createError('Invalid Fraction'); }
     },
-    'MA-02': (node, inputs) => {
+    'MA-12': (node, inputs) => MathEvaluators['MA-06'](node, inputs),
+    'MA-07': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'GCD';
@@ -235,21 +238,8 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         }
         return { type: DataType.Scalar, value: finalValue, symbol: inputPayload?.symbol || null, meta: { unit: targetBase } };
     },
-    'MA-16': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
-        const data = (node.data || {}) as any;
-        const op = data.op || 'LN';
-        const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-        try {
-            let result;
-            if (op === 'LOG10') result = math.log10(val);
-            else if (op === 'LOG_N') result = math.log(val, inputs['base'] ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['base']), math) : 10);
-            else result = math.log(val);
-            return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
-        } catch (e) { return PayloadUtils.createError('Log Failed'); }
-    },
-    'MA-17': (node, inputs) => {
+    'MA-03_OLD': (node, inputs) => MathEvaluators['MA-03'](node, inputs), // Alias if needed
+    'MA-04': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
@@ -280,6 +270,21 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
         } catch (e) { return PayloadUtils.createError('Trig Failed'); }
     },
+    'MA-16': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
+        const data = (node.data || {}) as any;
+        const op = data.op || 'LN';
+        const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+        try {
+            let result;
+            if (op === 'LOG10') result = math.log10(val);
+            else if (op === 'LOG_N') result = math.log(val, inputs['base'] ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['base']), math) : 10);
+            else result = math.log(val);
+            return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
+        } catch (e) { return PayloadUtils.createError('Log Failed'); }
+    },
+    'MA-17': (node, inputs) => MathEvaluators['MA-04'](node, inputs),
 
     // DA-06: Array Extract
     'DA-06': (node, inputs) => {

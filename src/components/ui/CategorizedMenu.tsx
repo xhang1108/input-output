@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Search } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
+import { useAppStore } from '../../store/useStore';
 
 export interface CategorizedMenuItem {
     id: string;
@@ -53,6 +54,7 @@ export function CategorizedMenu({
 
     const { getViewport } = useReactFlow();
     const { zoom } = getViewport();
+    const { menuLayout } = useAppStore();
 
     // Ensure we are on the client
     useEffect(() => {
@@ -307,23 +309,23 @@ export function CategorizedMenu({
             />
             <div
                 ref={menuRef}
-                className={`fixed z-10000 w-auto min-w-[${width}] bg-(--node-bg) border border-(--node-border) rounded-(--radius-lg) overflow-visible animate-in fade-in zoom-in-95 duration-100 flex flex-col [transition-property:opacity,transform]`}
+                className="fixed z-10000 bg-[#141416]/95 border border-[#27272a] shadow-2xl rounded-lg overflow-visible flex flex-col animate-in fade-in duration-150"
                 style={{
-                    backdropFilter: 'blur(12px)',
                     visibility: 'hidden',
                     maxHeight: maxHeight,
                     maxWidth: '95vw',
+                    width: menuLayout === 'horizontal' ? 'auto' : '11rem',
                 }}
                 onClick={e => e.stopPropagation()}
                 onContextMenu={e => e.preventDefault()}
             >
                 {/* Search Input */}
-                <div className="p-1 border-b border-(--node-border) bg-zinc-900/30">
-                    <div className="flex items-center px-1 py-0.5 bg-zinc-950 rounded-(--radius-sm) border border-(--node-border) ring-1 ring-white/5">
-                        <Search className="w-2.5 h-2.5 text-zinc-500 mr-1" />
+                <div className="p-1 px-1.5 border-b border-white/5">
+                    <div className="flex items-center px-2 py-1 bg-black/40 rounded border border-white/5 focus-within:border-white/20 transition-colors">
+                        <Search className="w-3 h-3 text-zinc-500 mr-2" />
                         <input
                             ref={inputRef}
-                            className="bg-transparent text-[10px] text-zinc-200 outline-none w-full placeholder-zinc-600 font-medium"
+                            className="bg-transparent text-[10px] text-zinc-200 outline-none w-full placeholder-zinc-700 font-medium"
                             placeholder={placeholder}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -332,72 +334,69 @@ export function CategorizedMenu({
                     </div>
                 </div>
 
-                {/* Items Container: Horizontal Categorical Flow */}
+                {/* Items Container */}
                 <div
                     ref={scrollContainerRef}
-                    className="flex flex-row p-1 gap-2 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-                    style={{ maxHeight: `calc(${maxHeight} - 50px)` }}
+                    className={`px-1 pb-1 gap-1 overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${menuLayout === 'horizontal'
+                        ? 'flex flex-row overflow-y-hidden pt-1'
+                        : 'flex flex-col overflow-x-hidden pt-0'
+                        }`}
+                    style={{ maxHeight: `calc(${maxHeight} - 60px)` }}
                 >
                     {filteredItems.length === 0 ? (
                         <div className="px-4 py-8 text-zinc-500 text-[10px] text-center italic w-full">
                             No results found
                         </div>
-                    ) : (
+                    ) : menuLayout === 'horizontal' ? (
                         sortedCategories.map((root) => (
-                            <div key={root.rootName} className="flex flex-col flex-wrap gap-x-0.5 content-start border-r border-white/5 last:border-r-0 pr-2 last:pr-0">
+                            <div key={root.rootName} className="flex flex-col flex-nowrap gap-x-0.5 content-start pr-2 last:pr-0 whitespace-nowrap">
+                                <div className="sticky top-0 z-10 w-full bg-[#141416]">
+                                    <div className="px-2 py-1.5 text-[8px] uppercase tracking-[0.15em] font-black text-blue-500/80 border-b border-white/5">
+                                        {root.rootName}
+                                    </div>
+                                </div>
                                 {root.subgroups.map((category) => (
                                     <div key={category.fullName} className="flex flex-col">
-                                        {/* Category Header */}
-                                        <div className={`px-1 py-1.5 text-[8px] uppercase tracking-wider font-extrabold flex items-center gap-1.5 mb-1 sticky left-0 bg-(--node-bg) ${category.depth > 0
-                                                ? 'text-zinc-500/80 border-t border-white/5 mt-2 pt-2'
-                                                : 'text-zinc-400'
-                                            }`}>
-                                            {category.depth > 0 ? (
-                                                <span className="flex items-center gap-1 dark:text-blue-500/70">
-                                                    <span className="w-1 h-2.5 bg-blue-600/50 rounded-[1px]" />
+                                        {category.depth > 0 && (
+                                            <div className={`sticky left-0 z-10 bg-[#141416] ${category.depth > 0 ? 'pt-2 border-t border-white/5' : ''}`}>
+                                                <div className="px-2 py-1 text-[7px] uppercase tracking-widest font-bold text-zinc-500 flex items-center gap-2 mb-0.5 border-b border-white/5">
+                                                    <div className="w-1 h-1 bg-zinc-700 rounded-full" />
                                                     {category.displayName}
-                                                </span>
-                                            ) : (
-                                                category.displayName
-                                            )}
-                                        </div>
-
-                                        {/* Items */}
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="flex flex-col gap-0.5 mb-2 last:mb-0">
                                             {category.items.map((item) => {
                                                 const globalIndex = filteredItems.indexOf(item);
                                                 const isSelected = globalIndex === selectedIndex;
-
-                                                return (
-                                                    <button
-                                                        key={`${item.category}-${item.id}-${item.label}`}
-                                                        data-selected={isSelected}
-                                                        className={`min-w-[120px] text-left px-1.5 py-0.5 text-[10px] flex items-center justify-between group transition-all duration-75 relative rounded-(--radius-sm) ${isSelected
-                                                            ? 'bg-blue-600 text-white z-10 scale-[1.02]'
-                                                            : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
-                                                            } ${category.depth > 0 ? 'ml-1.5' : ''}`}
-                                                        onClick={(e) => {
-                                                            const isContinuous = e.ctrlKey || e.metaKey;
-                                                            onSelect(item, isContinuous);
-                                                            if (isContinuous) {
-                                                                setSearch('');
-                                                                setTimeout(() => inputRef.current?.focus(), 0);
-                                                            } else {
-                                                                onClose();
-                                                            }
-                                                        }}
-                                                        onMouseEnter={() => setSelectedIndex(globalIndex)}
-                                                    >
-                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                            {item.icon && <span className="opacity-70">{item.icon}</span>}
-                                                            <span className="truncate font-medium">{item.label}</span>
-                                                        </div>
-                                                        <span className={`text-[8px] opacity-40 font-mono tracking-tighter ${isSelected ? 'text-blue-100' : 'text-zinc-600'
-                                                            }`}>
-                                                            {item.id}
-                                                        </span>
-                                                    </button>
-                                                );
+                                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} inputRef={inputRef} />;
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ))
+                    ) : (
+                        sortedCategories.map((root) => (
+                            <div key={root.rootName} className="flex flex-col pb-2 mb-2 last:pb-0 last:mb-0">
+                                <div className="sticky top-0 z-10 w-full bg-[#141416]">
+                                    <div className="px-2 py-1.5 text-[8px] uppercase tracking-[0.15em] font-black text-blue-500/80 border-b border-white/5">
+                                        {root.rootName}
+                                    </div>
+                                </div>
+                                {root.subgroups.map((category) => (
+                                    <div key={category.fullName} className="flex flex-col mb-1 last:mb-0">
+                                        {category.depth > 0 && (
+                                            <div className="px-2 py-1 text-[7px] uppercase tracking-widest font-bold text-zinc-500 flex items-center gap-2 mb-0.5">
+                                                <div className="w-1 h-1 bg-zinc-700 rounded-full" />
+                                                {category.displayName}
+                                            </div>
+                                        )}
+                                        <div className="flex flex-col gap-0.5 ml-1">
+                                            {category.items.map((item) => {
+                                                const globalIndex = filteredItems.indexOf(item);
+                                                const isSelected = globalIndex === selectedIndex;
+                                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} inputRef={inputRef} />;
                                             })}
                                         </div>
                                     </div>
@@ -415,5 +414,49 @@ export function CategorizedMenu({
             </div>
         </>,
         document.body
+    );
+}
+
+interface MenuItemProps {
+    item: CategorizedMenuItem;
+    isSelected: boolean;
+    globalIndex: number;
+    onSelect: (item: CategorizedMenuItem, isContinuous: boolean) => void;
+    onClose: () => void;
+    setSelectedIndex: (index: number) => void;
+    setSearch: (search: string) => void;
+    inputRef: React.RefObject<HTMLInputElement | null>;
+}
+
+function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelectedIndex, setSearch, inputRef }: MenuItemProps) {
+    return (
+        <button
+            key={`${item.category}-${item.id}-${item.label}`}
+            data-selected={isSelected}
+            className={`min-w-[120px] text-left px-2 py-1 text-[10px] flex items-center justify-between group transition-colors relative rounded ${isSelected
+                ? 'bg-blue-600 text-white'
+                : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
+                }`}
+            onClick={(e) => {
+                const isContinuous = e.ctrlKey || e.metaKey;
+                onSelect(item, isContinuous);
+                if (isContinuous) {
+                    setSearch('');
+                    setTimeout(() => inputRef.current?.focus(), 0);
+                } else {
+                    onClose();
+                }
+            }}
+            onMouseEnter={() => setSelectedIndex(globalIndex)}
+        >
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+                {item.icon && <span className={isSelected ? 'opacity-100' : 'opacity-40'}>{item.icon}</span>}
+                <span className="truncate">{item.label}</span>
+            </div>
+            <span className={`text-[7px] uppercase px-1 rounded-[1px] font-mono tracking-tighter ${isSelected ? 'bg-white/20 text-white' : 'text-zinc-600 group-hover:text-zinc-500'
+                }`}>
+                {item.id}
+            </span>
+        </button>
     );
 }

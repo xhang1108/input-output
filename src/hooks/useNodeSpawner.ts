@@ -68,15 +68,18 @@ export function useNodeSpawner({
         });
 
         const newId = generateNodeId(type);
+        const nodeDef = NODE_DEFINITIONS.find(d => d.id === type);
         const newNode: Node = {
             id: newId,
             type: type || 'baseNode',
             position: flowPos,
             selected: true, // Default to selected so it can be grabbed immediately
+            draggable: nodeDef?.draggable,
             data: {
                 label,
                 type: type === 'baseNode' ? undefined : type,
-                ...(extraData as Record<string, unknown>)
+                ...(extraData as Record<string, unknown>),
+                definitionId: type
             },
         };
 

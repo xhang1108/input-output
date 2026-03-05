@@ -29,10 +29,10 @@ export const MathNode = memo((props: NodeProps) => {
     const definitionId = (data as any)?.definitionId || (props as any).type;
 
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
-    const [op, setOp] = useState<string>((data.op as string) || (definitionId === 'MA-18' ? 'POW' : 'ADD'));
+    const [op, setOp] = useState<string>((data.op as string) || (definitionId === 'MA-02' ? 'POW' : 'ADD'));
 
     const filteredOperations = useMemo(() => {
-        if (definitionId === 'MA-18') {
+        if (definitionId === 'MA-02' || definitionId === 'MA-18') {
             return MATH_OPERATIONS.filter(o => o.category === 'Advanced');
         }
         return MATH_OPERATIONS.filter(o => o.category === 'Arithmetic');
@@ -59,7 +59,7 @@ export const MathNode = memo((props: NodeProps) => {
         <BaseNode {...props}>
             <div className="flex flex-col gap-1.5 p-1">
                 <label className="text-[9px] text-zinc-500 uppercase tracking-widest font-black px-1">
-                    {definitionId === 'MA-18' ? 'Advanced Operation' : 'Basic Operation'}
+                    {(definitionId === 'MA-02' || definitionId === 'MA-02') ? 'Advanced Operation' : 'Basic Operation'}
                 </label>
 
                 <button

@@ -57,5 +57,6 @@ export interface NodeDefinition {
     params?: NodeParameter[];
     opTokens?: string[];     // Used for implicit IOGL operation mapping
     aliases?: string[];      // Quick search terms for NodePicker (e.g. 'd/dx')
+    draggable?: boolean;    // Optional. If false, node cannot be dragged directly. Default: true
 }
 

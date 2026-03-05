@@ -17,8 +17,9 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
             right: inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 })
         });
     },
+    'MA-02': (node, inputs) => MathSymbolizers['MA-01'](node, inputs),
     'MA-03': (node) => PayloadUtils.createSymbol('Identifier', { name: ((node.data || {}) as any).val || 'pi' }),
-    'MA-14': (node, inputs) => {
+    'MA-05': (node, inputs) => {
         const data = (node.data || {}) as any;
         return PayloadUtils.createSymbol('FunctionCall', {
             name: 'round',
@@ -28,8 +29,10 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
             ]
         });
     },
-    'MA-12': (node, inputs) => PayloadUtils.createSymbol('FunctionCall', { name: 'fraction', args: [inputs['in']] }),
-    'MA-02': (node, inputs) => {
+    'MA-14': (node, inputs) => MathSymbolizers['MA-05'](node, inputs),
+    'MA-06': (node, inputs) => PayloadUtils.createSymbol('FunctionCall', { name: 'fraction', args: [inputs['in']] }),
+    'MA-12': (node, inputs) => MathSymbolizers['MA-06'](node, inputs),
+    'MA-07': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'GCD';
         const funcMap: any = { GCD: 'gcd', LCM: 'lcm', MOD: 'mod', IS_PRIME: 'isPrime' };
@@ -44,11 +47,12 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
         if (op === 'LOG_N') return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 }), inputs['base'] || PayloadUtils.createSymbol('Literal', { value: 10 })] });
         return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
-    'MA-17': (node, inputs) => {
+    'MA-04': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'SIN';
         return PayloadUtils.createSymbol('FunctionCall', { name: op.toLowerCase(), args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
+    'MA-17': (node, inputs) => MathSymbolizers['MA-04'](node, inputs),
     // DA-01: Statistics
     'DA-01': (node, inputs) => {
         const op = ((node.data || {}) as any).op || 'Mean';

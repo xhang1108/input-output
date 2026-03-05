@@ -4,8 +4,8 @@ import { PayloadUtils } from '../../utils/PayloadUtils';
 import { NodeRegistry } from '../NodeRegistry';
 
 export function registerLogicNodes() {
-    // MA-05: Logic Gate (AND, OR, NOT, XOR, NAND, NOR, XNOR)
-    NodeRegistry.register('MA-05', (node, inputs) => {
+    // LG-01: Logic Gate (AND, OR, NOT, XOR, NAND, NOR, XNOR)
+    NodeRegistry.register('LG-01', (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'AND';
@@ -47,8 +47,8 @@ export function registerLogicNodes() {
         return PayloadUtils.createSymbol('Literal', { value: 'Logic' });
     });
 
-    // MA-13: Logic Split
-    NodeRegistry.register('MA-13', (node, inputs) => {
+    // LG-03: Logic Split
+    NodeRegistry.register('LG-03', (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance();
         const condition = PayloadUtils.toBoolean(inputs['condition'], math);
         const data = inputs['data'] || PayloadUtils.createScalar(0);
@@ -60,8 +60,8 @@ export function registerLogicNodes() {
         };
     });
 
-    // MA-04: Switch
-    NodeRegistry.register('MA-04', (node, inputs) => {
+    // LG-02: Switch
+    NodeRegistry.register('LG-02', (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance();
         const condition = PayloadUtils.toBoolean(inputs['condition'], math);
         return (condition ? inputs['in_true'] : inputs['in_false']) || PayloadUtils.createError('No Input');
@@ -73,14 +73,14 @@ export function registerLogicNodes() {
         });
     });
 
-    // MA-08: Toggle
-    NodeRegistry.register('MA-08', (node) => {
+    // LG-04: Toggle
+    NodeRegistry.register('LG-04', (node) => {
         const data = (node.data || {}) as any;
         return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(data.value));
     }, (node) => PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap((node.data || {}).value) }));
 
-    // MA-09: Button
-    NodeRegistry.register('MA-09', (node) => {
+    // IN-05: Button
+    NodeRegistry.register('IN-05', (node) => {
         const data = (node.data || {}) as any;
         return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(data.value));
     }, (node) => PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap((node.data || {}).value) }));

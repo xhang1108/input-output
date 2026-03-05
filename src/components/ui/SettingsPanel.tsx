@@ -1,4 +1,4 @@
-import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, Upload, Download, FolderOpen } from 'lucide-react';
+import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, Upload, Download, FolderOpen, Layout } from 'lucide-react';
 import { useState } from 'react';
 import { Panel } from '@xyflow/react';
 import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
@@ -42,7 +42,7 @@ export function SettingsPanel({
     onReset,
     onBackToProjects
 }: SettingsPanelProps) {
-    const { mathPrecision, setMathPrecision } = useAppStore();
+    const { mathPrecision, setMathPrecision, menuLayout, setMenuLayout } = useAppStore();
     const [isOpen, setIsOpen] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
@@ -53,7 +53,7 @@ export function SettingsPanel({
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
-                    p-2 rounded-(--radius-lg) border shadow-lg transition-all duration-200
+                    p-2 rounded-lg border shadow-lg transition-all duration-200
                     ${isOpen ? 'bg-zinc-800 border-zinc-600 text-zinc-100' : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}
                 `}
                 title="Settings"
@@ -63,7 +63,7 @@ export function SettingsPanel({
 
             {/* Menu Panel */}
             {isOpen && (
-                <div className="bg-zinc-900 border border-zinc-700 rounded-(--radius-xl) shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2 fade-in duration-200">
 
                     {/* Snapping */}
                     <ToggleRow
@@ -136,7 +136,7 @@ export function SettingsPanel({
                                     onClick={() => { setLayoutDirection(dir); setIsOpen(false); }}
                                     disabled={layoutAlgorithm === 'force' || layoutAlgorithm === 'radial'}
                                     className={`
-                                        flex-1 text-[10px] py-1 px-2 rounded-(--radius-sm) border text-center uppercase transition-colors
+                                        flex-1 text-[10px] py-1 px-2 rounded-sm border text-center uppercase transition-colors
                                         ${(layoutAlgorithm === 'force' || layoutAlgorithm === 'radial')
                                             ? 'opacity-30 cursor-not-allowed bg-zinc-900 border-zinc-900 text-zinc-600'
                                             : layoutDirection === dir
@@ -163,7 +163,7 @@ export function SettingsPanel({
                     {/* Precision Selector */}
                     <div className="px-3 py-2">
                         <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Scientific Precision</div>
-                        <div className="flex gap-1.5 overflow-hidden rounded-(--radius-sm) border border-zinc-800">
+                        <div className="flex gap-1.5 overflow-hidden rounded-sm border border-zinc-800">
                             {SUPPORTED_PRECISIONS.map(p => (
                                 <button
                                     key={p}
@@ -176,6 +176,29 @@ export function SettingsPanel({
                                     `}
                                 >
                                     {p}B
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-zinc-800 my-1" />
+
+                    {/* Menu Layout */}
+                    <div className="px-3 py-2">
+                        <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Menu Layout</div>
+                        <div className="flex gap-1.5 overflow-hidden rounded-sm border border-zinc-800 p-0.5 bg-zinc-950">
+                            {(['expanded', 'horizontal'] as const).map(layout => (
+                                <button
+                                    key={layout}
+                                    onClick={() => { setMenuLayout(layout); setIsOpen(false); }}
+                                    className={`
+                                        flex-1 text-[10px] py-1.5 px-2 rounded-xs transition-colors capitalize
+                                        ${menuLayout === layout
+                                            ? 'bg-zinc-800 text-(--color-unit) font-bold shadow-sm'
+                                            : 'text-zinc-500 hover:text-zinc-400 hover:bg-zinc-900'}
+                                    `}
+                                >
+                                    {layout}
                                 </button>
                             ))}
                         </div>
@@ -267,7 +290,7 @@ function ToggleRow({ label, icon, active, onClick }: { label: string, icon: Reac
         <button
             onClick={onClick}
             className={`
-                flex items-center justify-between px-3 py-2 rounded-(--radius-lg) text-sm font-medium transition-colors w-full
+                flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full
                 ${active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'}
             `}
         >

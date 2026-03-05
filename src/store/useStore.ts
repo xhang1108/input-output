@@ -24,6 +24,7 @@ interface AppState {
     uiRenderMs: number | null;
     isFastMode: boolean;
     lastAddedNodeType: string;
+    menuLayout: 'expanded' | 'horizontal';
 
     // State
     actionLog: string[];
@@ -48,6 +49,7 @@ interface AppState {
     setUiRenderMs: (ms: number | null) => void;
     setFastMode: (enabled: boolean | ((prev: boolean) => boolean)) => void;
     setLastAddedNodeType: (type: string) => void;
+    setMenuLayout: (layout: 'expanded' | 'horizontal') => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -73,6 +75,7 @@ export const useAppStore = create<AppState>()(
                 uiRenderMs: null,
                 isFastMode: false,
                 lastAddedNodeType: 'add',
+                menuLayout: 'expanded',
                 actionLog: [],
 
                 // Setters
@@ -95,6 +98,7 @@ export const useAppStore = create<AppState>()(
                 setUiRenderMs: (uiRenderMs) => set({ uiRenderMs }),
                 setFastMode: (enabled) => set((s) => ({ isFastMode: typeof enabled === 'function' ? enabled(s.isFastMode) : enabled })),
                 setLastAddedNodeType: (type) => set({ lastAddedNodeType: type }),
+                setMenuLayout: (menuLayout) => set({ menuLayout }),
             }),
             {
                 name: 'Input-Output-settings-v2',
@@ -109,6 +113,7 @@ export const useAppStore = create<AppState>()(
                     showNPanel: state.showNPanel,
                     mathPrecision: state.mathPrecision,
                     lastAddedNodeType: state.lastAddedNodeType,
+                    menuLayout: state.menuLayout,
                 }),
             }
         )

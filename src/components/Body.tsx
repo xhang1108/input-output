@@ -333,14 +333,14 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             },
 
             // Transform Commands
-            'g': autoConfirm((e) => { startGrab(mousePosRef.current, e.altKey); logAction('Start Grab (G)'); }),
+            'g': autoConfirm((e) => { startGrab(mousePosRef.current, e.altKey, undefined, true); logAction('Start Grab (G)'); }),
             's': autoConfirm((e) => { startScale(mousePosRef.current); logAction('Start Scale (S)'); }),
             'r': autoConfirm((e) => { startRotate(mousePosRef.current); logAction('Start Rotate (R)'); }),
             'shift+d': autoConfirm((e) => {
                 e.preventDefault();
                 const duplicated = duplicateSelected();
                 if (duplicated) {
-                    startGrab(mousePosRef.current, false, duplicated.nodes);
+                    startGrab(mousePosRef.current, false, duplicated.nodes, true);
                     logAction('Duplicate Selected (Shift+D)');
                 }
             }),

@@ -525,7 +525,7 @@ export function useHand() {
 
 
     // --- Interaction Triggers ---
-    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[]) => {
+    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[], isExplicit: boolean = false) => {
         modifiedFrameIds.current.clear();
         initialParentPositions.current.clear();
         initialFrameStates.current.clear();
@@ -537,6 +537,11 @@ export function useHand() {
             selected = overrideNodes.filter(n => n.type !== 'frame');
         } else {
             selected = nodes.filter(n => n.selected && n.type !== 'frame');
+        }
+
+        // Filter out Reroute nodes if not an explicit G move or override nodes
+        if (!isExplicit && !overrideNodes) {
+            selected = selected.filter(n => n.type !== 'UT-02');
         }
 
         if (selected.length === 0) return;
@@ -927,7 +932,7 @@ export function useHand() {
                 currentMousePos.y - pendingGrabStart.current.y
             );
             if (dist > 5) {
-                startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey);
+                startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey, undefined, false);
                 pendingGrabStart.current = null;
                 return;
             }

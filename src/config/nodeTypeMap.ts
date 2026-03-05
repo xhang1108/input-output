@@ -54,67 +54,67 @@ import { StatusNode } from '../components/nodes/StatusNode';
 
 export const nodeTypes = {
     // ─── 1. Input ──────────────────────────────────────────
-    'IO-01': InputNode,      // Number
-    'IO-02': SliderNode,
-    'IO-04': InputNode,      // String
-    'MA-09': ButtonNode,
-    'MA-03': ConstantNode,
-    'IO-08': MatrixInputNode,
-    'IO-21': AbacusNode,
-    'SY-05': NodeExpression,
+    'IN-01': InputNode,      // Number
+    'IN-02': SliderNode,
+    'IN-04': InputNode,      // String
+    'IN-05': ButtonNode,
+    'IN-06': ConstantNode,
+    'IN-07': MatrixInputNode,
+    'IN-08': AbacusNode,
+    'IN-09': NodeExpression,
 
     // ─── 2. Generators ──────────────────────────────────────
-    'IO-06': RandomNode,
-    'DA-05': DistributionsNode,
+    'IN-10': RandomNode,
+    'IN-11': DistributionsNode,
 
     // ─── 3. Math ────────────────────────────────────────────
     'MA-01': MathNode,
-    'MA-16': LogNode,
-    'MA-17': TrigNode,
-    'MA-14': RoundingNode,
-    'MA-12': FractionNode,
-    'MA-02': NumberTheoryNode,
-    'AD-03': CombinatoricsNode,
+    'MA-02': MathNode,
+    'MA-03': LogNode,
+    'MA-04': TrigNode,
+    'MA-05': RoundingNode,
+    'MA-06': FractionNode,
+    'MA-07': NumberTheoryNode,
+    'MA-08': CombinatoricsNode,
 
     // ─── 4. Calculus ────────────────────────────────────────
-    'AD-04': DifferentialNode,
-    'AD-05': IntegralNode,
-    'AD-11': LimitNode,
-    'AD-06': SolverNode,
-    'SY-04': ODESolverNode,
+    'CL-01': DifferentialNode,
+    'CL-02': IntegralNode,
+    'CL-03': LimitNode,
+    'CL-04': SolverNode,
+    'CL-05': ODESolverNode,
 
     // ─── 5. Data & Structures ───────────────────────────────
-    'DA-07': ArrayBuilderNode,
-    'DA-06': ArrayExtractNode,
-    'DA-03': ListUtilityNode,
-    'DA-04': SetOpsNode,
-    'AD-02': VectorUtilsNode,
-    'AD-09': VectorSplitNode,
-    'AD-01': MatrixToolsNode,
+    'DT-01': ArrayBuilderNode,
+    'DT-02': ArrayExtractNode,
+    'DT-03': ListUtilityNode,
+    'DT-04': SetOpsNode,
+    'DT-05': VectorUtilsNode,
+    'DT-06': VectorSplitNode,
+    'DT-07': MatrixToolsNode,
 
     // ─── 6. Transform ───────────────────────────────────────
-    'IO-05': UnitNode,
-    'MA-15': BaseConverterNode,
-    'AD-10': GeometryNode,
-    'AD-08': VectorFieldNode,
-    'DA-02': SmoothingNode,
-    'DA-01': StatisticsNode,
+    'TR-01': UnitNode,
+    'TR-02': BaseConverterNode,
+    'TR-03': GeometryNode,
+    'TR-04': VectorFieldNode,
+    'TR-05': SmoothingNode,
+    'TR-06': StatisticsNode,
 
     // ─── 7. Logic & Flow ────────────────────────────────────
-    'MA-05': LogicNode,      // Logic Gate
-    'MA-04': BaseNode,       // Switch (Using BaseNode or appropriate component)
-    'MA-13': BaseNode,       // Logic Split (Using BaseNode)
-    'MA-08': ToggleNode,
+    'LG-01': LogicNode,      // Logic Gate
+    'LG-02': BaseNode,       // Switch (Using BaseNode or appropriate component)
+    'LG-03': BaseNode,       // Logic Split (Using BaseNode)
 
     // ─── 8. Output ──────────────────────────────────────────
-    'IO-11': ResultNode,
-    'IO-22': StatusNode,
-    'IO-14': PlotNode,
-    'UI-99': DebugNode,
+    'OT-01': ResultNode,
+    'OT-02': StatusNode,
+    'OT-03': PlotNode,
+    'OT-04': DebugNode,
 
     // ─── 9. Utility ─────────────────────────────────────────
-    'UI-01': TextAnnotationNode,
-    'UI-03': RerouteNode,
+    'UT-01': TextAnnotationNode,
+    'UT-02': RerouteNode,
 
     // ─── Fallback & Special ─────────────────────────────────
     'baseNode': BaseNode,
@@ -122,7 +122,7 @@ export const nodeTypes = {
     'IO-16': ResultNode,
     'IO-17': ResultNode,
     'IO-19': ResultNode,
-    'IO-18': ColorNode,
+    'IN-03': ColorNode,     // New Color ID
 };
 
 export const edgeTypes = {
