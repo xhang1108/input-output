@@ -7,16 +7,44 @@ import remarkGfm from 'remark-gfm';
 const MIN_WIDTH = 150;
 const MIN_HEIGHT = 100;
 
+// Background color presets mapped from bgColor param value
+const BG_MAP: Record<string, string> = {
+    default: 'rgba(30, 30, 35, 0.7)',
+    amber: 'rgba(50, 38, 10, 0.85)',
+    blue: 'rgba(10, 30, 55, 0.85)',
+    green: 'rgba(10, 40, 25, 0.85)',
+    red: 'rgba(50, 15, 15, 0.85)',
+    purple: 'rgba(35, 15, 55, 0.85)',
+};
+
+const BORDER_MAP: Record<string, string> = {
+    default: 'rgba(63,63,70,0)',           // transparent, shown on hover/select
+    amber: 'rgba(251,191,36,0.25)',
+    blue: 'rgba(59,130,246,0.25)',
+    green: 'rgba(34,197,94,0.25)',
+    red: 'rgba(239,68,68,0.25)',
+    purple: 'rgba(168,85,247,0.25)',
+};
+
+const TEXT_SIZE_MAP: Record<string, { text: string; prose: string }> = {
+    sm: { text: 'text-xs', prose: 'prose-xs' },
+    md: { text: 'text-sm', prose: 'prose-sm' },
+    lg: { text: 'text-base', prose: 'prose-base' },
+};
+
 export const TextAnnotationNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
     const { updateNodeData } = useReactFlow();
 
-    // Local state
+    const bgColor = (data.bgColor as string) || 'default';
+    const textSize = (data.textSize as string) || 'md';
+
+    // Local edit state
     const [isEditing, setIsEditing] = useState(false);
     const [text, setText] = useState((data.markdown as string) || '# Note\nDouble click to edit');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Sync from data if it changes externally (during render)
+    // Sync from external data changes (e.g., NPanel edits)
     const [prevMarkdown, setPrevMarkdown] = useState(data.markdown);
     useEffect(() => {
         if (data.markdown !== prevMarkdown && typeof data.markdown === 'string') {
@@ -25,11 +53,8 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         }
     }, [data.markdown, prevMarkdown]);
 
-    // Focus textarea on edit
     useEffect(() => {
-        if (isEditing && textareaRef.current) {
-            textareaRef.current.focus();
-        }
+        if (isEditing && textareaRef.current) textareaRef.current.focus();
     }, [isEditing]);
 
     const handleBlur = () => {
@@ -41,16 +66,21 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         });
     };
 
-    const processedText = text;
+    const bg = BG_MAP[bgColor] ?? BG_MAP.default;
+    const border = BORDER_MAP[bgColor] ?? BORDER_MAP.default;
+    const tsz = TEXT_SIZE_MAP[textSize] ?? TEXT_SIZE_MAP.md;
 
     return (
         <div
             className={`
                 relative h-full w-full rounded-md border transition-all duration-200 group
-                ${selected ? 'border-amber-400/50 shadow-[0_0_15px_-3px_rgba(251,191,36,0.2)]' : 'border-transparent hover:border-zinc-700'}
+                ${selected
+                    ? 'border-amber-400/50 shadow-[0_0_15px_-3px_rgba(251,191,36,0.2)]'
+                    : `hover:border-zinc-700`}
             `}
             style={{
-                background: 'rgba(30, 30, 35, 0.6)',
+                background: bg,
+                borderColor: selected ? undefined : border,
                 backdropFilter: 'blur(4px)',
                 minWidth: MIN_WIDTH,
                 minHeight: MIN_HEIGHT
@@ -65,7 +95,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                 handleStyle={{ width: 8, height: 8, borderRadius: 2 }}
             />
 
-            <div className="p-4 h-full w-full overflow-hidden text-zinc-300 text-sm font-sans leading-relaxed">
+            <div className={`p-4 h-full w-full overflow-hidden text-zinc-300 ${tsz.text} font-sans leading-relaxed`}>
                 {isEditing ? (
                     <textarea
                         ref={textareaRef}
@@ -80,7 +110,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                         onMouseDown={(e) => e.stopPropagation()}
                     />
                 ) : (
-                    <div className="w-full h-full select-none cursor-text prose prose-invert prose-xs max-w-none prose-headings:mb-2 prose-p:mb-1">
+                    <div className={`w-full h-full select-none cursor-text prose prose-invert ${tsz.prose} max-w-none prose-headings:mb-2 prose-p:mb-1`}>
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
@@ -97,7 +127,6 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                                     const childrenArray = Children.toArray(children);
                                     const firstChild = childrenArray[0];
 
-                                    // Check if the first child is a paragraph that contains the alert tag
                                     if (isValidElement(firstChild)) {
                                         const pProps: any = firstChild.props;
                                         if (pProps.children) {
@@ -109,15 +138,12 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                                                 if (match) {
                                                     const type = match[1].toLowerCase();
                                                     const cleanText = firstGrandkid.replace(/^\[!(TIP|NOTE|IMPORTANT|WARNING|CAUTION)\]\n?/, '').trim();
-
-                                                    // Reconstruct the first paragraph without the alert tag
                                                     const newFirstChild = (
                                                         <p {...pProps}>
                                                             {cleanText}
                                                             {grandkids.slice(1)}
                                                         </p>
                                                     );
-
                                                     return (
                                                         <div className={`markdown-alert markdown-alert-${type}`}>
                                                             <div className="markdown-alert-title">{type}</div>
@@ -135,7 +161,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                                 }
                             }}
                         >
-                            {processedText}
+                            {text}
                         </ReactMarkdown>
                     </div>
                 )}

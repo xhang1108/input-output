@@ -1,5 +1,5 @@
 
-import { memo, useCallback, useState, useEffect, useMemo } from 'react';
+import { memo, useCallback, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
@@ -47,49 +47,64 @@ const PREDEFINED_UNIT_IDS = UNIT_ITEMS.map(u => u.id);
 export const UnitNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
-    const initialUnit = data.unit as string || 'm';
 
-    const [mode, setMode] = useState<'select' | 'custom'>(
-        PREDEFINED_UNIT_IDS.includes(initialUnit) ? 'select' : 'custom'
-    );
-    const [localUnit, setLocalUnit] = useState(initialUnit);
+    // Remote states
+    const remoteUnit = data.unit as string || 'm';
+    const remoteCustom = data.customUnit as string || '';
+
+    // Local UI states
+    const [mode, setMode] = useState<'select' | 'custom'>(remoteUnit === 'CUSTOM' ? 'custom' : 'select');
+    const [localUnit, setLocalUnit] = useState(remoteUnit === 'CUSTOM' ? remoteCustom : remoteUnit);
     const [isValid, setIsValid] = useState(true);
 
-
-
-
-    // Sync local state with remote data
+    // Sync local state with remote data (bidirectional sync with NPanel)
     useEffect(() => {
-        if (data.unit && data.unit !== localUnit) {
-            setLocalUnit(data.unit as string);
-            setIsValid(true);
-            if (!PREDEFINED_UNIT_IDS.includes(data.unit as string)) {
-                setMode('custom');
-            } else {
-                setMode('select');
+        if (remoteUnit === 'CUSTOM') {
+            setMode('custom');
+            if (remoteCustom !== localUnit) {
+                setLocalUnit(remoteCustom);
+                setIsValid(true);
             }
+        } else if (remoteUnit && remoteUnit !== localUnit) {
+            setLocalUnit(remoteUnit);
+            setIsValid(true);
+            setMode('select');
         }
-    }, [data.unit]);
+    }, [remoteUnit, remoteCustom]);
 
-    const validateAndApply = (unit: string) => {
+    const validateAndApply = useCallback((unit: string, forceCustom: boolean = false) => {
         const math = InputOutputEngine.getInstance().getMathInstance();
         try {
             math.unit(unit);
             setIsValid(true);
+
+            const updates: any = {};
+            if (forceCustom || mode === 'custom') {
+                updates.unit = 'CUSTOM';
+                updates.customUnit = unit;
+            } else {
+                updates.unit = unit;
+            }
+
             Brain.getInstance().applyTransaction({
                 type: 'UPDATE_NODE_DATA',
-                payload: { id, data: { unit } }
+                payload: { id, data: updates }
             });
         } catch (e) {
             setIsValid(false);
         }
-    };
+    }, [id, mode]);
 
     const handleMenuSelect = (item: CategorizedMenuItem) => {
         if (item.id === 'CUSTOM_ENTRY') {
             setMode('custom');
+            Brain.getInstance().applyTransaction({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id, data: { unit: 'CUSTOM' } }
+            });
         } else {
             setLocalUnit(item.id);
+            setMode('select');
             validateAndApply(item.id);
         }
         closeMenu();
@@ -98,17 +113,28 @@ export const UnitNode = memo((props: NodeProps) => {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setLocalUnit(value);
-        validateAndApply(value);
+        validateAndApply(value, true);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') validateAndApply(localUnit);
     };
 
-
-    const toggleMode = () => setMode(mode === 'select' ? 'custom' : 'select');
-
-    const currentUnitLabel = UNIT_ITEMS.find(u => u.id === localUnit)?.label || localUnit;
+    const toggleMode = () => {
+        const newMode = mode === 'select' ? 'custom' : 'select';
+        setMode(newMode);
+        if (newMode === 'select') {
+            // Default back to meter if switching back
+            const fallback = 'm';
+            setLocalUnit(fallback);
+            validateAndApply(fallback);
+        } else {
+            Brain.getInstance().applyTransaction({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id, data: { unit: 'CUSTOM' } }
+            });
+        }
+    };
 
     return (
         <BaseNode {...props}>
@@ -156,7 +182,6 @@ export const UnitNode = memo((props: NodeProps) => {
                             </div>
                         )}
 
-                        {/* Floating Identification */}
                         {!isValid ? (
                             <div className="absolute -top-3.5 left-0 right-0 text-[8px] text-red-500 text-center font-bold animate-pulse uppercase">
                                 Invalid

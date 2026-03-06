@@ -6,6 +6,7 @@ import { NodePayload } from '../types/payload';
 export type NodeLogic = Node & {
     data: Record<string, unknown>;
     value?: NodePayload; // Phase 2.1: Switched to Payload System
+    selected: boolean;
     isInDirtyChain: boolean;
     position: { x: number; y: number };
 };

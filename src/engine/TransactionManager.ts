@@ -177,8 +177,7 @@ export class TransactionManager {
                     data: p.data || {},
                     position: p.position as { x: number; y: number },
                     isInDirtyChain: true,
-                    // Preserve subGraph for Macro Nodes
-                    // subGraph: (p as any).subGraph // Removed as per instruction
+                    selected: (p as any).selected || false,
                 };
                 state.nodes.set(p.id, newNode);
                 hooks.onNodeAdded?.(newNode);
@@ -258,7 +257,11 @@ export class TransactionManager {
                 const p = tx.payload as { id: string, data: Record<string, unknown> };
                 const tNode = state.nodes.get(p.id);
                 if (tNode) {
-                    tNode.data = { ...tNode.data, ...p.data };
+                    const { selected, ...remainingData } = p.data;
+                    if (selected !== undefined) {
+                        tNode.selected = !!selected;
+                    }
+                    tNode.data = { ...tNode.data, ...remainingData };
                     tNode.isInDirtyChain = true;
                     hooks.onNodeDataUpdated?.(p.id);
                     return { success: true };

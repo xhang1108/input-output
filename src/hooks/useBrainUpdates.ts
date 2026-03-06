@@ -111,11 +111,18 @@ export function useBrainUpdates(
                     // 2. Add/Update nodes from Brain
                     for (const [id, logicNode] of brainNodes) {
                         const lifted = liftStructuralProps(logicNode);
-                        // FIX: Pass full payload object
-                        const unwrappedValue = logicNode.value; // Was: PayloadUtils.unwrap(logicNode.value);
-                        const targetData = { ...lifted.displayData, value: unwrappedValue };
-
                         const existingIndex = nextNodes.findIndex(n => n.id === id);
+                        const existingNode = existingIndex !== -1 ? nextNodes[existingIndex] : null;
+
+                        // DIRTY GUARD: If the node is currently in the dirty chain, the Brain's 
+                        // cached value is stale (awaiting re-computation). We keep the UI's 
+                        // existing value to prevent "flickering" or "reverting" during sync.
+                        let unwrappedValue = logicNode.value;
+                        if (logicNode.isInDirtyChain && existingNode) {
+                            unwrappedValue = existingNode.data.value as any;
+                        }
+
+                        const targetData = { ...lifted.displayData, value: unwrappedValue };
 
                         if (existingIndex === -1) {
                             // New node (from Brain transaction, undo, or load)
@@ -129,6 +136,7 @@ export function useBrainUpdates(
                                 height: lifted.height,
                                 origin: lifted.origin,
                                 style: lifted.style,
+                                selected: logicNode.selected || false
                             } as Node);
                             changed = true;
                         } else {
@@ -155,6 +163,19 @@ export function useBrainUpdates(
                                 needsUpdate = true;
                             }
 
+                            // Check selection changes from Brain
+                            // GUARD: If the node is selected in the UI, don't let a "false" from Brain overwrite it.
+                            // This prevents flickering during rapid selections or when menus are active.
+                            if (uiNode.selected !== logicNode.selected) {
+                                if (uiNode.selected && !logicNode.selected) {
+                                    // Brain thinks it's unselected, but UI says it's selected.
+                                    // We TRUST the UI here to prevent flickering.
+                                    needsUpdate = false;
+                                } else {
+                                    needsUpdate = true;
+                                }
+                            }
+
                             if (needsUpdate) {
                                 nextNodes[existingIndex] = {
                                     ...uiNode,
@@ -165,6 +186,7 @@ export function useBrainUpdates(
                                     height: lifted.height,
                                     origin: lifted.origin,
                                     style: { ...uiNode.style, ...lifted.style },
+                                    selected: (uiNode.selected || (logicNode.selected ?? false)) // UI selection wins
                                 };
                                 changed = true;
                             }

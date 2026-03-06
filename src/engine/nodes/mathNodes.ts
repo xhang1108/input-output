@@ -5,6 +5,7 @@ import { MathSymbolizers } from './Symbolizers/Math/MathSymbolizers';
 export function registerMathNodes() {
     const ids = [
         // ─── 2. Generators ──────────────────────────────────────
+        'IN-06', // Constant
         'IN-10', // Random
         'IN-11', // Distributions
 

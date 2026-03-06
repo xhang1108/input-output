@@ -1,117 +1,301 @@
 'use client';
 
 import { useStore, useReactFlow } from '@xyflow/react';
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { X, Cpu } from 'lucide-react';
+import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { NodeParameter } from '../../types/NodeDefinition';
+import { Brain } from '../../engine/Brain';
+import { PayloadUtils } from '../../utils/PayloadUtils';
+
+// ─── Atomic Field Components ──────────────────────────────────────────────────
+
+function FieldWrapper({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+    return (
+        <div className="space-y-1">
+            <label className="text-[10px] text-zinc-400 font-medium uppercase tracking-wide">{label}</label>
+            {children}
+            {hint && <p className="text-[9px] text-zinc-600 italic">{hint}</p>}
+        </div>
+    );
+}
+
+const inputCls = "w-full bg-zinc-900 border border-zinc-700/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-blue-500/80 outline-none transition-colors font-mono";
+const selectCls = "w-full bg-zinc-900 border border-zinc-700/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-blue-500/80 outline-none transition-colors cursor-pointer";
+
+type FieldProps = { param: NodeParameter; value: unknown; nodeId: string; onChange: (id: string, v: unknown) => void };
+
+function NumberField({ param, value, nodeId, onChange }: FieldProps) {
+    const toNum = (v: unknown) => {
+        const unwrapped = PayloadUtils.unwrap(v);
+        return typeof unwrapped === 'number' ? unwrapped : (parseFloat(String(unwrapped)) || 0);
+    };
+    const [local, setLocal] = useState(() => String(toNum(value)));
+    const isFocused = useRef(false);
+
+    // Sync when node switches (always) or external value changes (only if not focused)
+    useEffect(() => {
+        if (!isFocused.current) {
+            setLocal(String(toNum(value)));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodeId, value]);
+
+    return (
+        <FieldWrapper label={param.label} hint={param.hint}>
+            <input
+                type="number"
+                min={param.min}
+                max={param.max}
+                step={param.step ?? 'any'}
+                value={local}
+                onChange={e => {
+                    setLocal(e.target.value);
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v)) onChange(param.id, v);
+                }}
+                onFocus={() => { isFocused.current = true; }}
+                onBlur={() => {
+                    isFocused.current = false;
+                    // Re-sync to stored value on blur to correct any invalid input
+                    setLocal(String(toNum(value)));
+                }}
+                onMouseDown={e => e.stopPropagation()}
+                className={inputCls}
+            />
+        </FieldWrapper>
+    );
+}
+
+function StringField({ param, value, nodeId, onChange }: FieldProps) {
+    const toStr = (v: unknown) => {
+        const unwrapped = PayloadUtils.unwrap(v);
+        return typeof unwrapped === 'string' ? unwrapped : String(unwrapped ?? '');
+    };
+    const [local, setLocal] = useState(() => toStr(value));
+    const isFocused = useRef(false);
+
+    useEffect(() => {
+        if (!isFocused.current) {
+            setLocal(toStr(value));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodeId, value]);
+
+    return (
+        <FieldWrapper label={param.label} hint={param.hint}>
+            <input
+                type="text"
+                value={local}
+                onChange={e => {
+                    setLocal(e.target.value);
+                    onChange(param.id, e.target.value);
+                }}
+                onFocus={() => { isFocused.current = true; }}
+                onBlur={() => { isFocused.current = false; }}
+                onMouseDown={e => e.stopPropagation()}
+                className={inputCls}
+            />
+        </FieldWrapper>
+    );
+}
+
+function BooleanField({ param, value, onChange }: FieldProps) {
+    const bool = Boolean(PayloadUtils.unwrap(value));
+    return (
+        <FieldWrapper label={param.label} hint={param.hint}>
+            <button
+                onClick={() => onChange(param.id, !bool)}
+                className={`w-full py-1.5 rounded text-xs font-medium transition-colors border ${bool
+                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                    : 'bg-zinc-900 border-zinc-700 text-zinc-500'
+                    }`}
+            >
+                {bool ? '✓ ON' : 'OFF'}
+            </button>
+        </FieldWrapper>
+    );
+}
+
+function SelectField({ param, value, onChange }: FieldProps) {
+    const strVal = String(PayloadUtils.unwrap(value) ?? '');
+    return (
+        <FieldWrapper label={param.label} hint={param.hint}>
+            <select
+                value={strVal}
+                onChange={e => onChange(param.id, e.target.value)}
+                onMouseDown={e => e.stopPropagation()}
+                className={selectCls}
+            >
+                {param.options?.map(opt => (
+                    <option key={String(opt.value)} value={String(opt.value)}>
+                        {opt.label}
+                    </option>
+                ))}
+            </select>
+        </FieldWrapper>
+    );
+}
+
+function ColorField({ param, value, nodeId, onChange }: FieldProps) {
+    const toColor = (v: unknown) => {
+        const unwrapped = PayloadUtils.unwrap(v);
+        return typeof unwrapped === 'string' && unwrapped.startsWith('#') ? unwrapped : '#3b82f6';
+    };
+    const [local, setLocal] = useState(() => toColor(value));
+    const isFocused = useRef(false);
+
+    useEffect(() => {
+        if (!isFocused.current) setLocal(toColor(value));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodeId, value]);
+
+    return (
+        <FieldWrapper label={param.label} hint={param.hint}>
+            <div className="flex items-center gap-2">
+                <input
+                    type="color"
+                    value={local}
+                    onChange={e => {
+                        setLocal(e.target.value);
+                        onChange(param.id, e.target.value);
+                    }}
+                    onFocus={() => { isFocused.current = true; }}
+                    onBlur={() => { isFocused.current = false; }}
+                    onMouseDown={e => e.stopPropagation()}
+                    className="w-8 h-7 rounded border border-zinc-700 cursor-pointer bg-zinc-900 p-0.5"
+                />
+                <span className="text-xs font-mono text-zinc-400 uppercase">{local}</span>
+            </div>
+        </FieldWrapper>
+    );
+}
+
+function TextareaField({ param, value, nodeId, onChange }: FieldProps) {
+    const toStr = (v: unknown) =>
+        typeof v === 'string' ? v : String(v ?? '');
+    const [local, setLocal] = useState(() => toStr(value));
+    const isFocused = useRef(false);
+
+    useEffect(() => {
+        if (!isFocused.current) setLocal(toStr(value));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodeId, value]);
+
+    return (
+        <FieldWrapper label={param.label} hint={param.hint}>
+            <textarea
+                value={local}
+                rows={8}
+                onChange={e => {
+                    setLocal(e.target.value);
+                    onChange(param.id, e.target.value);
+                }}
+                onFocus={() => { isFocused.current = true; }}
+                onBlur={() => { isFocused.current = false; }}
+                onMouseDown={e => e.stopPropagation()}
+                className={`${inputCls} resize-y font-mono leading-relaxed`}
+            />
+        </FieldWrapper>
+    );
+}
+
+// ─── Schema-Driven Settings Section ──────────────────────────────────────────
+
+function SettingsSection({
+    params,
+    nodeData,
+    nodeId,
+    onDataChange,
+}: {
+    params: NodeParameter[];
+    nodeData: Record<string, unknown>;
+    nodeId: string;
+    onDataChange: (key: string, value: unknown) => void;
+}) {
+    return (
+        <div className="space-y-3 p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+            <h3 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Node Settings</h3>
+            <div className="space-y-3">
+                {params.map(param => {
+                    if (param.hidden?.(nodeData)) return null;
+
+                    const value = nodeData[param.id];
+                    const fieldProps = { param, value, nodeId, onChange: onDataChange };
+
+                    switch (param.type) {
+                        case 'number': return <NumberField key={param.id} {...fieldProps} />;
+                        case 'string': return <StringField key={param.id} {...fieldProps} />;
+                        case 'boolean': return <BooleanField key={param.id} {...fieldProps} />;
+                        case 'select': return <SelectField key={param.id} {...fieldProps} />;
+                        case 'color': return <ColorField key={param.id} {...fieldProps} />;
+                        case 'textarea': return <TextareaField key={param.id} {...fieldProps} />;
+                        default: return null;
+                    }
+                })}
+            </div>
+        </div>
+    );
+}
+
+
+// ─── Main N Panel ─────────────────────────────────────────────────────────────
 
 export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-    const { setNodes } = useReactFlow();
+    const { setNodes, updateNodeData } = useReactFlow();
 
-    // Get single selected node
+    // Single selected node (reactive to React Flow store)
     const selectedNode = useStore(s => {
         const selected = s.nodes.filter(n => n.selected);
         return selected.length === 1 ? selected[0] : null;
     });
 
-    // Local state for editing fields to avoid stutter
-    const [label, setLabel] = useState('');
-    const [posX, setPosX] = useState('0');
-    const [posY, setPosY] = useState('0');
+    // Look up the node definition to get params schema
+    const nodeDef = selectedNode
+        ? NODE_DEFINITIONS.find(d => d.id === selectedNode.type)
+        : null;
 
-    // Sync state when selection changes (during render)
-    const [prevSyncData, setPrevSyncData] = useState({
-        id: selectedNode?.id,
-        label: selectedNode?.data.label,
-        x: selectedNode?.position.x,
-        y: selectedNode?.position.y,
-        minX: selectedNode?.data.minX,
-        maxX: selectedNode?.data.maxX,
-        points: selectedNode?.data.points
-    });
-
-    // Local state for Plot precision
-    const [plotMin, setPlotMin] = useState('-10');
-    const [plotMax, setPlotMax] = useState('10');
-    const [plotPoints, setPlotPoints] = useState('100');
-
-    if (selectedNode && (
-        selectedNode.id !== prevSyncData.id ||
-        selectedNode.data.label !== prevSyncData.label ||
-        selectedNode.position.x !== prevSyncData.x ||
-        selectedNode.position.y !== prevSyncData.y ||
-        selectedNode.data.minX !== prevSyncData.minX ||
-        selectedNode.data.maxX !== prevSyncData.maxX ||
-        selectedNode.data.points !== prevSyncData.points
-    )) {
-        setPrevSyncData({
-            id: selectedNode.id,
-            label: selectedNode.data.label,
-            x: selectedNode.position.x,
-            y: selectedNode.position.y,
-            minX: selectedNode.data.minX,
-            maxX: selectedNode.data.maxX,
-            points: selectedNode.data.points
-        });
-        setLabel((selectedNode.data.label as string) || '');
-        setPosX(selectedNode.position.x.toFixed(1));
-        setPosY(selectedNode.position.y.toFixed(1));
-        setPlotMin(String(selectedNode.data.minX ?? -10));
-        setPlotMax(String(selectedNode.data.maxX ?? 10));
-        setPlotPoints(String(selectedNode.data.points ?? 100));
-    }
-
-    const handleUpdate = (updates: Partial<import('@xyflow/react').Node<Record<string, unknown>>>) => {
+    // Unified data change handler — updates React Flow state AND Brain
+    const handleDataChange = useCallback((key: string, value: unknown) => {
         if (!selectedNode) return;
 
-        setNodes(nds => nds.map(n => {
-            if (n.id === selectedNode.id) {
-                return {
-                    ...n,
-                    ...updates,
-                    data: { ...n.data, ...updates.data }
-                };
-            }
-            return n;
-        }));
-    };
+        // 1. Update React Flow state immediately
+        // SPECIAL CASE: 'value' is managed strictly by the Brain as a rich Payload object.
+        // We skip updateNodeData for 'value' to match the behavior of on-canvas nodes (e.g. InputNode).
+        // This ensures the structure doesn't flicker between primitive and object.
+        // For other metadata (min, max, label), we update immediately for UI responsiveness.
+        if (key !== 'value') {
+            updateNodeData(selectedNode.id, { [key]: value });
+        }
 
-    const handlePosChange = (axis: 'x' | 'y', value: string) => {
-        if (axis === 'x') setPosX(value);
-        else setPosY(value);
-
-        const num = parseFloat(value);
-        if (!isNaN(num) && selectedNode) {
-            handleUpdate({
-                position: {
-                    ...selectedNode.position,
-                    [axis]: num
-                }
+        // 2. Specialized Brain Sync
+        if (key === 'value') {
+            Brain.getInstance().applyTransaction({
+                type: 'UPDATE_VALUE',
+                payload: { id: selectedNode.id, value }
             });
         }
-    };
+    }, [selectedNode, updateNodeData]);
 
-    const handleLabelChange = (val: string) => {
-        setLabel(val);
-        handleUpdate({ data: { label: val } });
-    };
+    // Position / Label updates (use setNodes for position which isn't part of data)
+    const handlePositionChange = useCallback((axis: 'x' | 'y', rawValue: string) => {
+        if (!selectedNode) return;
+        const num = parseFloat(rawValue);
+        if (isNaN(num)) return;
 
-    const handlePlotParamChange = (field: 'minX' | 'maxX' | 'points', value: string) => {
-        if (field === 'minX') setPlotMin(value);
-        if (field === 'maxX') setPlotMax(value);
-        if (field === 'points') setPlotPoints(value);
-
-        const num = parseFloat(value);
-        if (!isNaN(num) && selectedNode) {
-            handleUpdate({
-                data: {
-                    ...selectedNode.data,
-                    [field]: num
-                }
-            });
-        }
-    };
+        setNodes(nds => nds.map(n =>
+            n.id === selectedNode.id
+                ? { ...n, position: { ...n.position, [axis]: num } }
+                : n
+        ));
+    }, [selectedNode, setNodes]);
 
     if (!isOpen) return null;
+
+    const nodeData = (selectedNode?.data ?? {}) as Record<string, unknown>;
+    const posX = selectedNode ? selectedNode.position.x.toFixed(1) : '0';
+    const posY = selectedNode ? selectedNode.position.y.toFixed(1) : '0';
+    const labelVal = typeof nodeData.label === 'string' ? nodeData.label : '';
 
     return (
         <div className="absolute top-0 right-0 h-full w-80 bg-zinc-950 border-l border-zinc-800 z-40 animate-in slide-in-from-right duration-200">
@@ -121,114 +305,103 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                     <Cpu className="w-4 h-4" />
                     N PANEL
                 </div>
-                <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded-sm text-zinc-400 hover:text-white transition-colors">
+                <button
+                    onClick={onClose}
+                    className="p-1 hover:bg-zinc-800 rounded-sm text-zinc-400 hover:text-white transition-colors"
+                >
                     <X className="w-4 h-4" />
                 </button>
             </div>
 
             {/* Content */}
-            <div className="p-4 space-y-6 overflow-y-auto h-[calc(100vh-50px)]">
+            <div className="p-4 space-y-5 overflow-y-auto h-[calc(100vh-50px)]">
                 {!selectedNode ? (
                     <div className="text-zinc-500 text-sm text-center py-10 italic">
                         Select a node to inspect
                     </div>
                 ) : (
                     <>
-                        {/* Identity */}
+                        {/* ── Identity ── */}
                         <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Identity</h3>
+                            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Identity</h3>
 
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-zinc-400">Label</label>
+                            <FieldWrapper label="Label">
                                 <input
-                                    value={label}
-                                    onChange={e => handleLabelChange(e.target.value)}
-                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-sm px-2 py-1.5 text-sm text-zinc-200 focus:border-blue-500 outline-none transition-colors"
+                                    type="text"
+                                    defaultValue={labelVal}
+                                    key={`label-${selectedNode.id}-${labelVal}`}
+                                    onBlur={e => handleDataChange('label', e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') handleDataChange('label', (e.target as HTMLInputElement).value);
+                                    }}
+                                    onMouseDown={e => e.stopPropagation()}
+                                    className={inputCls}
                                 />
-                            </div>
+                            </FieldWrapper>
 
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-zinc-400">ID</label>
-                                <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded-sm px-2 py-1.5 text-xs text-zinc-500 font-mono select-all">
-                                    {selectedNode.id}
+                            <FieldWrapper label="Type / ID">
+                                <div className="flex items-center gap-2">
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-zinc-800 text-zinc-400 border border-zinc-700 shrink-0">
+                                        {selectedNode.type}
+                                    </span>
+                                    <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded px-2 py-1.5 text-[10px] text-zinc-500 font-mono truncate select-all">
+                                        {selectedNode.id}
+                                    </div>
                                 </div>
-                            </div>
+                            </FieldWrapper>
                         </div>
 
-                        {/* Transform */}
+                        {/* ── Transform ── */}
                         <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Transform</h3>
-
+                            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Transform</h3>
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] text-zinc-400">X Position</label>
+                                <FieldWrapper label="X Position">
                                     <input
                                         type="number"
-                                        value={posX}
-                                        onChange={e => handlePosChange('x', e.target.value)}
-                                        className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200 focus:border-blue-500 outline-none font-mono"
+                                        defaultValue={posX}
+                                        key={`pos-x-${selectedNode.id}-${posX}`}
+                                        onBlur={e => handlePositionChange('x', e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') handlePositionChange('x', (e.target as HTMLInputElement).value);
+                                        }}
+                                        onMouseDown={e => e.stopPropagation()}
+                                        className={inputCls}
                                     />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] text-zinc-400">Y Position</label>
+                                </FieldWrapper>
+                                <FieldWrapper label="Y Position">
                                     <input
                                         type="number"
-                                        value={posY}
-                                        onChange={e => handlePosChange('y', e.target.value)}
-                                        className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200 focus:border-blue-500 outline-none font-mono"
+                                        defaultValue={posY}
+                                        key={`pos-y-${selectedNode.id}-${posY}`}
+                                        onBlur={e => handlePositionChange('y', e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') handlePositionChange('y', (e.target as HTMLInputElement).value);
+                                        }}
+                                        onMouseDown={e => e.stopPropagation()}
+                                        className={inputCls}
                                     />
-                                </div>
+                                </FieldWrapper>
                             </div>
                         </div>
 
-                        {/* Plot Settings (Phase 4.3 Support) */}
-                        {selectedNode.type === 'IO-14' && (
-                            <div className="space-y-3 p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg">
-                                <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider">Plot Precision</h3>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-zinc-400 font-mono">Min X</label>
-                                        <input
-                                            type="number"
-                                            value={plotMin}
-                                            onChange={e => handlePlotParamChange('minX', e.target.value)}
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-purple-500 outline-none font-mono transition-colors"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-zinc-400 font-mono">Max X</label>
-                                        <input
-                                            type="number"
-                                            value={plotMax}
-                                            onChange={e => handlePlotParamChange('maxX', e.target.value)}
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-purple-500 outline-none font-mono transition-colors"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] text-zinc-400 font-mono uppercase">Sampling Points</label>
-                                    <input
-                                        type="number"
-                                        step="10"
-                                        value={plotPoints}
-                                        onChange={e => handlePlotParamChange('points', e.target.value)}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-purple-500 outline-none font-mono transition-colors"
-                                    />
-                                    <p className="text-[8px] text-zinc-500 italic mt-1">Higher points = smoother curves, more CPU</p>
-                                </div>
-                            </div>
+                        {/* ── Schema-Driven Node Settings ── */}
+                        {nodeDef?.params && nodeDef.params.length > 0 && (
+                            <SettingsSection
+                                params={nodeDef.params}
+                                nodeData={nodeData}
+                                nodeId={selectedNode.id}
+                                onDataChange={handleDataChange}
+                            />
                         )}
 
-                        {/* Data (Debug) */}
-                        <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
+                        {/* ── Raw Data (Debug) ── */}
+                        <div className="space-y-2">
+                            <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest flex items-center justify-between">
                                 Raw Data
-                                <span className="text-[9px] bg-zinc-800 px-1 py-0.5 rounded text-zinc-400">READ ONLY</span>
+                                <span className="text-[9px] bg-zinc-800 px-1 py-0.5 rounded text-zinc-500">READ ONLY</span>
                             </h3>
-                            <div className="w-full bg-zinc-950 border border-zinc-800 rounded-sm p-2 text-[10px] text-zinc-400 font-mono overflow-auto max-h-40">
-                                <pre>{JSON.stringify(selectedNode.data, null, 2)}</pre>
+                            <div className="w-full bg-zinc-950 border border-zinc-800/50 rounded p-2 text-[10px] text-zinc-500 font-mono overflow-auto max-h-32">
+                                <pre>{JSON.stringify(nodeData, null, 2)}</pre>
                             </div>
                         </div>
                     </>

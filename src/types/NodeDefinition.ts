@@ -39,12 +39,21 @@ export function getHandleColor(config: HandleConfig): string {
     return HANDLE_COLOR_MAP[config.dataType || 'scalar'];
 }
 
-// Node parameter configuration
+/**
+ * Describes a single editable field for the N Panel.
+ * The N Panel reads this schema to auto-generate UI controls.
+ * `id` maps directly to a key in node.data.
+ */
 export interface NodeParameter {
-    id: string;
-    label: string;
-    type: 'string' | 'number' | 'boolean' | 'select';
-    options?: { label: string; value: string | number }[];
+    id: string;           // Key in node.data, e.g. 'min', 'op', 'value'
+    label: string;        // Display label in N Panel
+    type: 'number' | 'string' | 'boolean' | 'select' | 'color' | 'textarea';
+    min?: number;         // For type='number': minimum allowed value
+    max?: number;         // For type='number': maximum allowed value
+    step?: number;        // For type='number': step increment
+    options?: { label: string; value: string | number; category?: string; aliases?: string[] }[];  // For type='select'
+    hint?: string;        // Small italic help text shown below the field
+    hidden?: (data: Record<string, unknown>) => boolean; // Optional callback to hide the field based on node data
 }
 
 // Node definition - central registry entry for a node type

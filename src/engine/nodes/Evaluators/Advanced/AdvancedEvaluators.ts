@@ -1,10 +1,9 @@
+import { InputOutputEngine } from '../../../InputOutputEngine';
 import { DataType, NodePayload } from '../../../../types/payload';
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeEvaluator } from '../../../NodeRegistry';
-import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NerdamerService } from '../../../calculus/NerdamerService';
 import { RuntimeGuard } from '../../../calculus/RuntimeGuard';
-import { MathCompileCache } from '../../../calculus/MathCompileCache';
 
 /**
  * Helper: Extract expression string from an input payload.
@@ -21,340 +20,287 @@ function extractExprStr(payload: NodePayload | undefined): string | null {
 }
 
 export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
-    // AD-01: Matrix Tools
-    'AD-01': (node, inputs) => {
+    // DT-01: Array Builder
+    'DT-01': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in'];
-        if (!valPayload) return PayloadUtils.createError('No Input');
-        const data = (node.data || {}) as any;
-        const op = data.op || 'INV';
-        const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-        try {
-            let result: any;
-            if (op === 'INV') result = math.inv(val);
-            else if (op === 'DET') result = math.det(val);
-            else if (op === 'TRANSPOSE') result = math.transpose(val);
-            else if (op === 'TRACE') result = math.trace(val);
-            else if (op === 'EIGEN') result = math.eigs(val);
-            else if (op === 'LUP') result = math.lup(val);
-            else if (op === 'QR') result = math.qr(val);
-            else result = val;
+        let items: any[] = [];
 
-            if (['QR', 'LUP', 'EIGEN'].includes(op)) {
-                const outMap: any = { QR: ['Q', 'R'], LUP: ['L', 'U', 'p'], EIGEN: ['values', 'eigenvectors'] };
-                const multiValue: any = {};
-                const handleMeta: any = {};
-                for (const key of outMap[op]) {
-                    const handleKey = key === 'p' ? 'P' : (key === 'eigenvectors' ? 'vectors' : key);
-                    let subValue = result[key];
-                    if (key === 'eigenvectors' && Array.isArray(subValue)) {
-                        subValue = math.transpose(subValue.map((item: any) => (item.vector as any)?.toArray ? (item.vector as any).toArray() : item.vector));
-                    }
-                    const matPayload = PayloadUtils.createMatrix(PayloadUtils.dehydrate(subValue) as any);
-                    matPayload.meta.unit = valPayload.meta?.unit;
-                    multiValue[handleKey] = matPayload;
-                    handleMeta[handleKey] = { unit: valPayload.meta?.unit };
-                }
-                return { type: DataType.Object, value: multiValue, symbol: null, meta: { handleMeta } };
+        // Support IOGL 2.0 Capsule handle 'in'
+        const capsuleInput = inputs['in'];
+        if (capsuleInput) {
+            if (Array.isArray(capsuleInput)) {
+                items = capsuleInput.map(p => PayloadUtils.hydrate(PayloadUtils.unwrap(p), math));
+            } else {
+                items = [PayloadUtils.hydrate(PayloadUtils.unwrap(capsuleInput), math)];
             }
-            return { type: (Array.isArray(result) || (result as any)?.isMatrix) ? DataType.Matrix : DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: { unit: valPayload.meta?.unit } };
-        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
+        } else {
+            // Fallback to in_0, in_1... for legacy
+            Object.keys(inputs).sort().forEach(key => {
+                if (key.startsWith('in_')) items.push(PayloadUtils.hydrate(PayloadUtils.unwrap(inputs[key]), math));
+            });
+        }
+
+        return PayloadUtils.createMatrix(PayloadUtils.dehydrate(items));
     },
 
-    // AD-02: Vector Utils
-    'AD-02': (node, inputs) => {
+    // DT-02: Array Extract
+    'DT-02': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'DOT';
-        const getVal = (key: string) => {
-            const p = inputs[key];
-            if (!p) return null;
-            const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math) as any;
-            return (hydrated?.isMatrix || Array.isArray(hydrated)) ? math.flatten(hydrated) : hydrated;
-        };
-        const valA = getVal('in_a'), valB = getVal('in_b');
+        const index = Number(data.index || 0);
+        const inPayload = inputs['in'];
+        if (!inPayload) return PayloadUtils.createError('No Input');
+        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
+        const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : [hydrated]).flat(Infinity);
+        return PayloadUtils.createScalar(PayloadUtils.dehydrate(arr[index] ?? 0));
+    },
+
+    // DT-03: List Utility
+    'DT-03': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const op = data.op || 'SIZE';
+        const inPayload = inputs['in'];
+        if (!inPayload) return PayloadUtils.createError('No Input');
+        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
+        const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : [hydrated]).flat(Infinity);
         try {
-            let result;
-            if (op === 'DOT') result = math.dot(valA, valB);
-            else if (op === 'CROSS') result = math.cross(valA, valB);
-            else if (op === 'NORM') result = math.norm(valA);
-            else if (op === 'DISTANCE') result = math.distance(valA, valB);
-            else result = 0;
-            return { type: (Array.isArray(result) || result?.isMatrix) ? DataType.Matrix : DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: { unit: inputs['in_a']?.meta?.unit } };
+            let result: any;
+            if (op === 'SIZE') result = arr.length;
+            else if (op === 'SUM') result = math.sum(arr);
+            else if (op === 'MEAN') result = math.mean(arr);
+            else if (op === 'MAX') result = math.max(arr);
+            else if (op === 'MIN') result = math.min(arr);
+            else if (op === 'SORT') result = math.sort(arr);
+            else result = arr.length;
+            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createMatrix(PayloadUtils.dehydrate(result)) : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+        } catch (e: any) { return PayloadUtils.createError(`${op} Failed`); }
+    },
+
+    // DT-04: Set Operations
+    'DT-04': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const op = data.op || 'UNION';
+        const getArr = (key: string) => {
+            const p = inputs[key];
+            if (!p) return [];
+            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math);
+            return (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
+        };
+        const arrA = getArr('in_a'), arrB = getArr('in_b');
+        try {
+            let result: any[];
+            if (op === 'UNION') result = Array.from(new Set([...arrA, ...arrB]));
+            else if (op === 'INTERSECT') result = arrA.filter((x: any) => arrB.includes(x));
+            else if (op === 'SUBTRACT') result = arrA.filter((x: any) => !arrB.includes(x));
+            else result = [];
+            return PayloadUtils.createMatrix(PayloadUtils.dehydrate(result));
         } catch (e) { return PayloadUtils.createError(`${op} Failed`); }
     },
 
-    // AD-03: Combinatorics
+    // DT-07: Matrix Tools
+    'DT-07': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const valPayload = inputs['in'];
+        if (!valPayload) return PayloadUtils.createError('No Input');
+        const data = (node.data || {}) as any, op = data.op || 'INV';
+        try {
+            const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+            let result: any;
+            if (op === 'INV') result = math.inv(hydrated);
+            else if (op === 'DET') result = math.det(hydrated);
+            else if (op === 'TRANSPOSE') result = math.transpose(hydrated);
+            else if (op === 'TRACE') result = math.trace(hydrated);
+            else if (op === 'EIGEN') result = math.eigs(hydrated).values;
+            else if (op === 'LUP') result = math.lup(hydrated).P;
+            else if (op === 'QR') result = math.qr(hydrated).Q;
+            else result = hydrated;
+            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createMatrix(PayloadUtils.dehydrate(result)) : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
+    },
+
+    // DT-05: Vector Utils
+    'DT-05': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const op = data.op || 'DOT';
+        const valA = inputs['in_a'], valB = inputs['in_b'];
+        if (!valA || !valB) return PayloadUtils.createError('Missing Inputs');
+        try {
+            const hA = PayloadUtils.hydrate(PayloadUtils.unwrap(valA), math), hB = PayloadUtils.hydrate(PayloadUtils.unwrap(valB), math);
+            let result: any;
+            if (op === 'DOT') result = math.dot(hA, hB);
+            else if (op === 'CROSS') result = math.cross(hA, hB);
+            else if (op === 'NORM') result = math.norm(hA);
+            else if (op === 'DISTANCE') result = math.distance(hA, hB);
+            else result = math.dot(hA, hB);
+            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createMatrix(PayloadUtils.dehydrate(result)) : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+        } catch (e) { return PayloadUtils.createError(`${op} Failed`); }
+    },
+
+    // MA-15: Combinatorics (Mapping from registration if needed, or keeping for internal)
     'AD-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'nCr';
-        const getVal = (key: string) => {
-            const p = inputs[key];
-            if (!p) return 0;
-            let v = PayloadUtils.unwrap(p);
-            if (Array.isArray(v) && v.length > 0) v = v[0];
-            const hydrated = PayloadUtils.hydrate(v, math) as any;
-            return typeof hydrated === 'number' ? hydrated : (hydrated?.toNumber ? hydrated.toNumber() : Number(hydrated) || 0);
-        };
-        const n = getVal('n'), r = getVal('r');
+        const valN = inputs['in_n'], valR = inputs['in_r'];
+        if (!valN || !valR) return PayloadUtils.createError('Missing Inputs');
         try {
-            let result;
+            const n = PayloadUtils.unwrap(valN), r = PayloadUtils.unwrap(valR);
+            let result: any;
             if (op === 'nCr') result = math.combinations(n, r);
             else if (op === 'nPr') result = math.permutations(n, r);
-            else if (op === 'n!') result = math.factorial(n);
-            else result = 0;
+            else if (op === 'STIRLING2') result = math.stirlingS2(n, r);
+            else if (op === 'BELL') result = math.bellNumbers(n);
+            else if (op === 'CATALAN') result = math.catalan(n);
+            else result = math.combinations(n, r);
             return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
 
-    // AD-04: Derivative
-    'AD-04': (node, inputs) => {
+    // CL-01: Derivative
+    'CL-01': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', order = Number(data.order) || 1;
         const exprStr = extractExprStr(inputs['expr']);
-        if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createSymbolic('0');
+        if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
-            const result = RuntimeGuard.safeEvaluate(() => NerdamerService.getInstance().differentiate(exprStr, variable, order));
-            if (!result.ok) return PayloadUtils.createError(result.error || 'Differentiation Failed');
-            return PayloadUtils.createSymbolic(result.value.text());
+            const svc = NerdamerService.getInstance();
+            return PayloadUtils.createSymbolic(svc.differentiate(exprStr, variable, order).text());
         } catch (e: any) { return PayloadUtils.createError(`Diff Failed: ${e.message}`); }
     },
 
-    // AD-05: Integral
-    'AD-05': (node, inputs) => {
+    // CL-02: Integral
+    'CL-02': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', mode = data.mode || 'indefinite', lower = data.lower || '', upper = data.upper || '';
         const exprStr = extractExprStr(inputs['expr']);
-        if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createSymbolic('0');
+        if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
-            if (mode === 'definite' && lower && upper) {
-                const result = RuntimeGuard.safeEvaluate(() => {
-                    try { return svc.definiteIntegral(exprStr, variable, lower, upper); }
-                    catch {
-                        const a = Number(lower), b = Number(upper);
-                        if (isNaN(a) || isNaN(b)) throw new Error('Bounds must be numeric');
-                        const compiled = svc.compileToFunction(exprStr, [variable]);
-                        const n = 100, h = (b - a) / n;
-                        let sum = Number(compiled({ [variable]: a })) + Number(compiled({ [variable]: b }));
-                        for (let i = 1; i < n; i++) sum += (i % 2 === 0 ? 2 : 4) * Number(compiled({ [variable]: a + i * h }));
-                        return { text: () => String(sum * h / 3) };
-                    }
-                });
-                if (!result.ok) return PayloadUtils.createError(result.error || 'Integration Failed');
-                const text = result.value.text('decimals'), num = Number(text);
-                return !isNaN(num) ? PayloadUtils.createScalar(num) : PayloadUtils.createSymbolic(text);
-            } else {
-                const result = RuntimeGuard.safeEvaluate(() => svc.integrate(exprStr, variable));
-                if (!result.ok) return PayloadUtils.createError(result.error || 'Integration Failed');
-                return PayloadUtils.createSymbolic(result.value.text());
+            if (mode === 'definite') {
+                const res = RuntimeGuard.safeEvaluate(() => svc.definiteIntegral(exprStr, variable, lower, upper));
+                if (res.ok) {
+                    const text = (res.value as any).text('decimals');
+                    const num = Number(text);
+                    return (!isNaN(num) && isFinite(num)) ? PayloadUtils.createScalar(num) : PayloadUtils.createSymbolic(text);
+                }
+                return PayloadUtils.createError(res.error || 'Integral Failed');
             }
+            return PayloadUtils.createSymbolic(svc.integrate(exprStr, variable).text());
         } catch (e: any) { return PayloadUtils.createError(`Integral Failed: ${e.message}`); }
     },
 
-    // AD-06: Solver
-    'AD-06': (node, inputs) => {
+    // CL-04: Solver
+    'CL-04': (node, inputs) => {
         const equations: string[] = [];
         const inPayload = inputs['in'];
         if (inPayload) {
-            const processPayload = (p: any) => {
-                const val = PayloadUtils.unwrap(p);
-                if (val && typeof val === 'object' && 'toArray' in (val as any)) {
-                    (val as any).toArray().flat(Infinity).forEach((v: any) => equations.push(String(v)));
-                } else if (Array.isArray(val)) {
-                    val.flat(Infinity).forEach(v => {
-                        if (typeof v === 'object' && v !== null && 'value' in v) equations.push(String((v as any).value));
-                        else equations.push(String(v));
-                    });
-                } else if (typeof val === 'string') equations.push(val);
-                else {
-                    const s = String(val);
-                    if (s !== 'null' && s !== 'undefined') equations.push(s);
-                }
-            };
-            if (Array.isArray(inPayload)) inPayload.forEach(processPayload);
-            else processPayload(inPayload);
+            const raw = PayloadUtils.unwrap(inPayload);
+            if (Array.isArray(raw)) equations.push(...raw.map(String));
+            else if (typeof raw === 'string') equations.push(...raw.split(',').map((s: string) => s.trim()));
+            else equations.push(String(raw));
         }
-
-        if (equations.length === 0) return PayloadUtils.createError('No Equation Input');
+        if (equations.length === 0) return PayloadUtils.createError('No Equations');
         try {
-            const nerdamer = require('nerdamer/all');
-            const solveFor = (node.data?.solveFor as string) || '';
-            let solutions;
-            if (equations.length === 1) {
-                solutions = solveFor.trim() ? nerdamer(equations[0]).solveFor(solveFor.trim()) : nerdamer.solveEquations(equations[0]);
-            } else {
-                solutions = nerdamer.solveEquations(equations);
-                if (solveFor.trim() && Array.isArray(solutions)) {
-                    const targetSol = (solutions as any).find((s: any) => Array.isArray(s) && s[0] === solveFor.trim());
-                    if (targetSol && targetSol.length > 1) solutions = [targetSol[1]];
+            const svc = NerdamerService.getInstance();
+            const textResult = svc.evaluate(`solve(${equations.join(',')}, x)`);
+
+            // Handle array results [1, 2, 3] or single value
+            if (textResult.startsWith('[') && textResult.endsWith(']')) {
+                try {
+                    // Try parsing as simple numeric array
+                    const parsed = JSON.parse(textResult.replace(/Math\./g, ''));
+                    return PayloadUtils.createMatrix(parsed);
+                } catch (e) {
+                    // Fallback: split by comma if JSON parse fails (nerdamer specific format)
+                    const elements = textResult.slice(1, -1).split(',').map((s: string) => s.trim());
+                    return PayloadUtils.createMatrix(elements);
                 }
             }
-
-            let outStr = '';
-            if (Array.isArray(solutions)) {
-                const mappedValues = (solutions as any).map((s: any) => {
-                    try {
-                        if (Array.isArray(s)) return `[${s.map(ss => nerdamer(ss).text('decimals')).join(', ')}]`;
-                        return nerdamer(s).text('decimals');
-                    } catch { return String(s); }
-                });
-                outStr = `[${mappedValues.join(', ')}]`;
-            } else outStr = String(solutions);
-
-            return PayloadUtils.createSymbolic(outStr);
+            return PayloadUtils.createMatrix([textResult]);
         } catch (e: any) { return PayloadUtils.createError(`Solve Failed: ${e.message}`); }
     },
 
 
-    // AD-08: Vector Field
-    'AD-08': (node, inputs) => {
+    // TR-04: Vector Field
+    'TR-04': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const mode = data.mode || 'gradient', var1 = data.var1 || 'x', var2 = data.var2 || 'y';
-        const min = Number(data.min ?? -5), max = Number(data.max ?? 5), density = Number(data.density ?? 10);
-        const inPayload = inputs['in_f'];
-        if (!inPayload) return PayloadUtils.createError('No input');
+        const exprStr = extractExprStr(inputs['in_f']);
+        if (!exprStr) return PayloadUtils.createError('No Function Input');
         try {
-            const exprVal = PayloadUtils.unwrap(inPayload);
-            let uExpr: any, vExpr: any, outGrad: any = null;
-            let scalarCode: any = null;
+            const svc = NerdamerService.getInstance();
             if (mode === 'gradient') {
-                const nodeExpr = typeof exprVal === 'string' ? math.parse(exprVal) : exprVal;
-                // Double check if nodeExpr is actually differentiable (not a matrix)
-                if (nodeExpr && (nodeExpr.isMatrixNode || nodeExpr.type === 'ArrayNode')) {
-                    return PayloadUtils.createError('Gradient mode requires a scalar function (e.g. x^2+y^2). Use "direct" mode for vectors (e.g. [-y, x]).');
-                }
-                scalarCode = nodeExpr ? nodeExpr.compile() : null;
-                uExpr = math.derivative(nodeExpr, var1);
-                vExpr = math.derivative(nodeExpr, var2);
-                outGrad = { type: DataType.Vector, value: [uExpr.toString(), vExpr.toString()], symbol: null, meta: {} };
-            } else {
-                // Phase 5.2: Support string vectors like "[-y, x]" from IOGL/FormulaNode
-                let hydrated: any;
-                if (typeof exprVal === 'string') {
-                    const parsed = math.parse(exprVal);
-                    // If it's an ArrayNode (mathjs internal), convert its items to strings
-                    if (parsed && parsed.type === 'ArrayNode' && parsed.items) {
-                        hydrated = parsed.items.map((item: any) => item.toString());
-                    } else {
-                        hydrated = PayloadUtils.hydrate(exprVal, math);
-                    }
-                } else {
-                    hydrated = PayloadUtils.hydrate(exprVal, math);
-                }
-
-                const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : []).flat(Infinity);
-                if (arr.length < 2) return PayloadUtils.createError('Requires 2D vector [u, v] (e.g. [-y, x])');
-                uExpr = typeof arr[0] === 'string' ? MathCompileCache.getCompiled(arr[0], math) : MathCompileCache.getCompiled(String(arr[0]), math);
-                vExpr = typeof arr[1] === 'string' ? MathCompileCache.getCompiled(arr[1], math) : MathCompileCache.getCompiled(String(arr[1]), math);
+                const dx = svc.differentiate(exprStr, var1).text(), dy = svc.differentiate(exprStr, var2).text();
+                return PayloadUtils.createMatrix([dx, dy]);
             }
-
-            const uCode = mode === 'gradient' ? uExpr.compile() : uExpr;
-            const vCode = mode === 'gradient' ? vExpr.compile() : vExpr;
-            const safeDensity = Math.max(1, Math.min(density, 100)); // Limit density
-            const step = safeDensity > 1 ? (max - min) / (safeDensity - 1) : 0;
-            const fieldData: number[][] = [];
-
-
-            for (let i = 0; i < safeDensity; i++) {
-                const yRaw = min + i * step;
-                const y = Math.round(yRaw * 10000) / 10000;
-                for (let j = 0; j < safeDensity; j++) {
-                    const xRaw = min + j * step;
-                    const x = Math.round(xRaw * 10000) / 10000;
-                    const scope = { [var1]: x, [var2]: y };
-                    try {
-                        const u = Number(uCode.evaluate(scope));
-                        const v = Number(vCode.evaluate(scope));
-
-                        // Z value mapping: For gradient mode, the scalar field z. For direct vectors, their magnitude.
-                        const zUnsafe = scalarCode ? scalarCode.evaluate(scope) : Math.hypot(u, v);
-                        const z = Number(zUnsafe);
-
-                        const validU = Number.isFinite(u) ? u : 0;
-                        const validV = Number.isFinite(v) ? v : 0;
-                        const validZ = Number.isFinite(z) ? z : 0;
-
-                        // Pack [x, y, u, v, z] into a single Nx5 matrix
-                        fieldData.push([x, y, validU, validV, validZ]);
-                    }
-                    catch {
-                        fieldData.push([x, y, 0, 0, 0]);
-                    }
-                }
+            if (mode === 'divergence') {
+                const p = extractExprStr(inputs['in_p']), q = extractExprStr(inputs['in_q']);
+                if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
+                const dp = svc.differentiate(p, var1).text(), dq = svc.differentiate(q, var2).text();
+                return PayloadUtils.createSymbolic(`(${dp})+(${dq})`);
             }
-            const result: any = {
-                'out_field': { type: DataType.Matrix, value: fieldData, symbol: null, meta: { unit: inPayload.meta?.unit } }
-            };
-            if (outGrad) result['out_grad'] = outGrad;
-            return { type: DataType.Object, value: result, symbol: null, meta: {} };
+            if (mode === 'curl') {
+                const p = extractExprStr(inputs['in_p']), q = extractExprStr(inputs['in_q']);
+                if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
+                const dq_dx = svc.differentiate(q, var1).text(), dp_dy = svc.differentiate(p, var2).text();
+                return PayloadUtils.createSymbolic(`(${dq_dx})-(${dp_dy})`);
+            }
+            return PayloadUtils.createError('Unsupported Mode');
         } catch (e: any) { return PayloadUtils.createError(`VectorField Failed: ${e.message}`); }
     },
 
-    // AD-09: Vector Split
-    'AD-09': (node, inputs) => {
+    // DT-06: Vector Split
+    'DT-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any, mode = data.mode || 'separate';
         if (mode === 'separate') {
-            const valPayload = inputs['in'] || Object.values(inputs)[0];
-            if (!valPayload) return PayloadUtils.createError('No Input');
-            const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-            const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : [hydrated]).flat(Infinity);
+            const inPayload = inputs['in'];
+            if (!inPayload) return PayloadUtils.createError('No Input');
+            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
+            const arr = (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
             return {
                 type: DataType.Object,
-                value: { x: PayloadUtils.wrap(arr[0] ?? 0), y: PayloadUtils.wrap(arr[1] ?? 0), z: PayloadUtils.wrap(arr[2] ?? 0) },
+                value: {
+                    out_x: PayloadUtils.dehydrate(arr[0] ?? 0),
+                    out_y: PayloadUtils.dehydrate(arr[1] ?? 0),
+                    out_z: PayloadUtils.dehydrate(arr[2] ?? 0),
+                    out_w: PayloadUtils.dehydrate(arr[3] ?? 0)
+                },
                 symbol: null,
-                meta: { handleMeta: { x: { unit: valPayload.meta?.unit }, y: { unit: valPayload.meta?.unit }, z: { unit: valPayload.meta?.unit } } }
+                meta: {}
             };
         } else {
-            let items: any[] = [];
-            const inPayload = inputs['in'];
-            if (inPayload) {
-                const process = (p: any) => {
-                    const h = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math);
-                    if (h && typeof h === 'object' && 'toArray' in h) items.push(...(h as any).toArray().flat(Infinity));
-                    else if (Array.isArray(h)) items.push(...h.flat(Infinity));
-                    else items.push(h);
-                };
-                if (Array.isArray(inPayload)) inPayload.forEach(process); else process(inPayload);
-            } else {
-                items = [PayloadUtils.unwrap(inputs['x']) || 0, PayloadUtils.unwrap(inputs['y']) || 0, PayloadUtils.unwrap(inputs['z']) || 0];
-            }
-            const mat = math.matrix(items.length ? items : [0, 0, 0]);
-            return { type: DataType.Matrix, value: PayloadUtils.dehydrate(mat), symbol: null, meta: { unit: (inputs['in'] as any)?.meta?.unit } };
+            const x = PayloadUtils.unwrap(inputs['in_x'] || PayloadUtils.createScalar(0));
+            const y = PayloadUtils.unwrap(inputs['in_y'] || PayloadUtils.createScalar(0));
+            const z = PayloadUtils.unwrap(inputs['in_z'] || PayloadUtils.createScalar(0));
+            const w = PayloadUtils.unwrap(inputs['in_w'] || PayloadUtils.createScalar(0));
+            return PayloadUtils.createMatrix([x, y, z, w]);
         }
     },
 
-    // AD-10: Geometry
-    'AD-10': (node, inputs) => {
+    // TR-03: Geometry
+    'TR-03': (node, inputs) => {
         const data = (node.data || {}) as any, shape = data.shape || 'Circle';
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const getNum = (key: string) => {
-            const val = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs[key]), math);
-            return typeof val === 'number' ? val : (val && typeof val === 'object' && 'toNumber' in val ? (val as any).toNumber() : Number(val) || 0);
-        };
+        const getNum = (key: string) => Number(PayloadUtils.unwrap(inputs[key] || PayloadUtils.createScalar(0)));
+        const a = getNum('in_a'), b = getNum('in_b');
         let area = 0, perimeter = 0;
-        if (shape === 'Circle') {
-            const r = getNum('in_a');
-            area = Math.PI * r * r; perimeter = 2 * Math.PI * r;
-        } else if (shape === 'Quad') {
-            const w = getNum('in_a'), h = getNum('in_b');
-            area = w * h; perimeter = 2 * (w + h);
-        } else if (shape === 'Triangle') {
-            const b = getNum('in_a'), h = getNum('in_b');
-            area = 0.5 * b * h; perimeter = b + h + Math.sqrt(b * b + h * h);
-        }
+        if (shape === 'Circle') { area = Math.PI * a * a; perimeter = 2 * Math.PI * a; }
+        else if (shape === 'Rectangle') { area = a * b; perimeter = 2 * (a + b); }
+        else if (shape === 'Triangle') { area = 0.5 * a * b; perimeter = a + b + Math.sqrt(a * a + b * b); }
         return {
             type: DataType.Object,
-            value: { area: PayloadUtils.wrap(area), perimeter: PayloadUtils.wrap(perimeter), volume: PayloadUtils.wrap(0) },
-            symbol: null, meta: {}
+            value: { area: PayloadUtils.dehydrate(area), perimeter: PayloadUtils.dehydrate(perimeter) },
+            symbol: null,
+            meta: {}
         };
     },
 
-    // AD-11: Limit
-    'AD-11': (node, inputs) => {
+    'CL-03': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', approach = data.approach || '0', direction = data.direction || 'both';
         const exprStr = extractExprStr(inputs['expr']);
@@ -377,85 +323,51 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             return RuntimeGuard.evaluateToPayload(() => {
                 const compiled = svc.compileToFunction(exprStr, [variable]), a = Number(approach);
                 return direction === 'left' ? compiled({ [variable]: a - 1e-10 }) : compiled({ [variable]: a + 1e-10 });
-            }, (v) => PayloadUtils.wrap(v));
+            }, (v: any) => PayloadUtils.wrap(v));
         } catch (e: any) { return PayloadUtils.createError(`Limit Failed: ${e.message}`); }
     },
 
-    // SY-05: Expert Node
-    'SY-05': (node, inputs) => {
-        const data = (node.data || {}) as Record<string, unknown>;
-        const code = (data.code as string) || '';
-        if (!code) return PayloadUtils.createScalar(0);
-        const engine = InputOutputEngine.getInstance();
-        const math = engine.getMathInstance();
+    // CL-05: ODE Solver
+    'CL-05': (node, inputs) => {
+        const data = (node.data || {}) as any;
+        const t0 = Number(data.t0) || 0;
+        const tEnd = Number(data.tEnd) || 1;
+        const y0 = Number(data.y0) || 1;
+        const stepSize = Number(data.stepSize) || 0.01;
+        const exprStr = extractExprStr(inputs['expr']);
+        if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
-            const scope: Record<string, any> = {};
-            for (const [key, val] of Object.entries(inputs)) {
-                scope[key] = PayloadUtils.hydrate(PayloadUtils.unwrap(val), math);
+            const svc = NerdamerService.getInstance();
+            const compiled = svc.compileToFunction(exprStr, ['t', 'y']);
+            const results: number[][] = [[t0, y0]];
+            let t = t0, y = y0, steps = 0, maxSteps = 10000;
+            while (t < tEnd && steps < maxSteps) {
+                const h = Math.min(stepSize, tEnd - t);
+                const k1 = Number(compiled({ t, y }));
+                const k2 = Number(compiled({ t: t + h / 2, y: y + h * k1 / 2 }));
+                const k3 = Number(compiled({ t: t + h / 2, y: y + h * k2 / 2 }));
+                const k4 = Number(compiled({ t: t + h, y: y + h * k3 }));
+                y = y + (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
+                t = t + h; steps++;
+                if (!isFinite(y) || Math.abs(y) > 1e15) return PayloadUtils.createError(`ODE diverged at t=${t.toFixed(4)}`);
+                results.push([parseFloat(t.toFixed(10)), y]);
             }
+            return PayloadUtils.createMatrix(results as any);
+        } catch (e: any) { return PayloadUtils.createError(`ODE Failed: ${e.message}`); }
+    },
 
-            // 1. Parse the entire block to inspect its structure
-            let parsed;
-            try {
-                parsed = math.parse(code);
-            } catch (e) {
-                // If parsing fails but it looks like a one-line equation (x+y=z)
-                // Treat it directly as a Symbolic Model
-                if (code.includes('=') && !code.includes('\n')) {
-                    return PayloadUtils.createSymbolic(code);
-                }
-                throw e;
-            }
-
-            // 2. Identify the "last action"
-            let lastNode = parsed;
-            if (parsed.type === 'BlockNode' && parsed.blocks) {
-                // Get the last non-empty statement in the block
-                const nonComments = parsed.blocks.filter((b: any) => b.node && b.node.type !== 'CommentNode');
-                if (nonComments.length > 0) {
-                    lastNode = nonComments[nonComments.length - 1].node;
-                }
-            }
-
-            // 3. Apply the "Last-Line Rule"
-            // If the last thing is an assignment (x=2, f(x)=x^2), it's a model
-            const isAssignment = lastNode.type === 'AssignmentNode' || lastNode.type === 'FunctionAssignmentNode';
-
-            // Evaluate the whole code to update the internal scope and get the final value
-            const finalResult = MathCompileCache.evaluate(code, scope, math);
-
-            if (isAssignment) {
-                // If it's an assignment, we return the SYMBOLIC representation of the assignment
-                // We use the evaluated result to show current state (e.g. y = 5 if x was 2)
-                let symbolicVal = '';
-                try {
-                    // Re-parse just the last node to get its "evaluated string" if possible, 
-                    // but for x=2 we want to see the result.
-                    // Heuristic: If it's a simple x=2, returning the string is best for PlotNode.
-                    const lastNodeStr = lastNode.toString();
-                    if (lastNode.type === 'AssignmentNode') {
-                        // For AssignmentNode, finalResult is the value.
-                        // We construct a string "name = value"
-                        symbolicVal = `${lastNode.name} = ${math.format(finalResult, { precision: 14 })}`;
-                    } else {
-                        symbolicVal = lastNodeStr;
-                    }
-                } catch {
-                    symbolicVal = code.split('\n').pop() || code;
-                }
-                return PayloadUtils.createSymbolic(symbolicVal);
-            }
-
-            // 4. Fallback to Scalar/Matrix
-            const isHeavy = Array.isArray(finalResult) || (finalResult as any)?.isMatrix;
-            return {
-                type: isHeavy ? DataType.Matrix : DataType.Scalar,
-                value: PayloadUtils.dehydrate(finalResult),
-                symbol: null,
-                meta: {}
-            };
-        } catch (error) {
-            return PayloadUtils.createError(String(error));
+    // IN-09: Expert Node (Expression)
+    'IN-09': (node) => {
+        const data = (node.data || {}) as Record<string, unknown>;
+        const code = String(data.code || '');
+        if (!code) return PayloadUtils.createError('No Expression');
+        try {
+            const svc = NerdamerService.getInstance();
+            const result = svc.evaluate(code);
+            // result is already a string from svc.evaluate
+            return PayloadUtils.createSymbolic(result);
+        } catch (e: any) {
+            return PayloadUtils.createError(`Eval Failed: ${e.message}`);
         }
     }
 };

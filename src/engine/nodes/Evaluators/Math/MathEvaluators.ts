@@ -128,6 +128,21 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     },
     'MA-02': (node, inputs) => MathEvaluators['MA-01'](node, inputs),
     'MA-18': (node, inputs) => MathEvaluators['MA-01'](node, inputs),
+    'MA-08': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const op = data.op || 'nCr';
+        const valN = inputs['in_n'], valR = inputs['in_r'];
+        if (!valN || !valR) return PayloadUtils.createError('Missing Inputs');
+        try {
+            const n = PayloadUtils.unwrap(valN), r = PayloadUtils.unwrap(valR);
+            let result: any;
+            if (op === 'nCr') result = math.combinations(n, r);
+            else if (op === 'nPr') result = math.permutations(n, r);
+            else result = math.combinations(n, r);
+            return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+        } catch (e: any) { return PayloadUtils.createError(`${op} Failed`); }
+    },
     'MA-03': (node) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
@@ -148,10 +163,16 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
+        const op = data.op || 'ROUND';
         const prec = data.precision ?? 0;
         const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         try {
-            const result = math.round(val, prec);
+            let result;
+            if (op === 'FLOOR') result = math.floor(val);
+            else if (op === 'CEIL') result = math.ceil(val);
+            else if (op === 'TRUNC') result = math.fix(val);
+            else result = math.round(val, prec);
+
             return {
                 type: DataType.Scalar,
                 value: PayloadUtils.dehydrate(result),
@@ -433,8 +454,9 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         return PayloadUtils.createMatrix(PayloadUtils.dehydrate(final));
     },
 
-    // DA-05: Distributions
-    'DA-05': (node, inputs) => {
+    'DA-05': (node, inputs) => MathEvaluators['IN-11'](node, inputs),
+
+    'IN-11': (node, inputs) => {
         const data = (node.data || {}) as any, mode = data.mode || 'Normal';
         const n = Math.max(1, Math.min(100000, Math.floor(Number(PayloadUtils.unwrap(inputs['param_n']) ?? data.n ?? 100))));
         const p1 = Number(PayloadUtils.unwrap(inputs['param_1']) ?? data.p1 ?? (mode === 'Normal' ? 0 : 1));
@@ -455,38 +477,123 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                     let p = 1.0, k = 0; do { k++; p *= Math.random(); } while (p > L);
                     samples[i] = k - 1;
                 }
+            } else if (mode === 'Exponential') {
+                for (let i = 0; i < n; i++) {
+                    samples[i] = -Math.log(Math.random()) / p1;
+                }
             }
             return PayloadUtils.createMatrix(PayloadUtils.dehydrate(samples));
         } catch { return PayloadUtils.createError('Distribution Failed'); }
     },
 
-    // SY-04: ODE Solver
-    'SY-04': (node, inputs) => {
+    // IN-10: Random generator (Moving logic here for easier registration)
+    'IN-10': (node) => {
+        const engine = InputOutputEngine.getInstance();
+        const math = engine.getMathInstance() as any;
+        const data = (node.data || {}) as Record<string, unknown>;
+        const mode = data.mode as string || 'scalar';
+        const isFloat = data.isFloat !== false;
+        const min = Number(data.min ?? 0);
+        const max = Number(data.max ?? 1);
+        const rows = Math.max(1, Math.floor(Number(data.rows ?? 3)));
+        const cols = Math.max(1, Math.floor(Number(data.cols ?? 3)));
+        const length = Math.max(1, Math.floor(Number(data.length ?? 3)));
+
+        const getRand = () => {
+            const r = Math.random() * (max - min) + min;
+            return isFloat ? r : Math.floor(r);
+        };
+
+        if (mode === 'matrix') {
+            const mat = Array.from({ length: rows }, () => Array.from({ length: cols }, getRand));
+            return PayloadUtils.createMatrix(PayloadUtils.dehydrate(mat));
+        } else if (mode === 'vector') {
+            const vec = Array.from({ length: length }, getRand);
+            return PayloadUtils.createMatrix(PayloadUtils.dehydrate(vec));
+        } else {
+            return PayloadUtils.createScalar(getRand());
+        }
+    },
+
+    // IN-06: Constant
+    'IN-06': (node) => {
         const data = (node.data || {}) as any;
-        const t0 = Number(data.t0) || 0;
-        const tEnd = Number(data.tEnd) || 1;
-        const y0 = Number(data.y0) || 1;
-        const stepSize = Number(data.stepSize) || 0.01;
-        const exprStr = extractExprStr(inputs['expr']);
-        if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
-        try {
-            const svc = NerdamerService.getInstance();
-            const compiled = svc.compileToFunction(exprStr, ['t', 'y']);
-            const results: number[][] = [[t0, y0]];
-            let t = t0; let y = y0;
-            const maxSteps = 10000; let steps = 0;
-            while (t < tEnd && steps < maxSteps) {
-                const h = Math.min(stepSize, tEnd - t);
-                const k1 = Number(compiled({ t, y }));
-                const k2 = Number(compiled({ t: t + h / 2, y: y + h * k1 / 2 }));
-                const k3 = Number(compiled({ t: t + h / 2, y: y + h * k2 / 2 }));
-                const k4 = Number(compiled({ t: t + h, y: y + h * k3 }));
-                y = y + (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
-                t = t + h; steps++;
-                if (!isFinite(y) || Math.abs(y) > 1e15) return PayloadUtils.createError(`ODE diverged at t=${t.toFixed(4)}`);
-                results.push([parseFloat(t.toFixed(10)), y]);
+        const valId = data.val || 'pi';
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const precision = data.precision || 5;
+
+        let result: any;
+        if (valId === 'pi') result = math.pi;
+        else if (valId === 'e') result = math.e;
+        else if (valId === 'phi') result = math.phi;
+        else if (valId === 'tau') result = math.tau;
+        else result = math.pi;
+
+        if (math.bignumber) {
+            result = math.bignumber(result);
+            if (precision !== undefined) {
+                result = math.format(result, { precision });
+                result = math.evaluate(result);
             }
-            return PayloadUtils.createMatrix(results as any);
-        } catch (e: any) { return PayloadUtils.createError(`ODE Failed: ${e.message}`); }
+        }
+
+        return PayloadUtils.createScalar(result);
+    },
+
+    // TR-01: Unit
+    'TR-01': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const targetUnit = data.unit || 'm';
+        const valPayload = inputs['in'];
+        if (!valPayload) return PayloadUtils.createScalar(0);
+        try {
+            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+            const result = math.unit(h, targetUnit);
+            return {
+                ...PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit),
+                meta: { unit: targetUnit }
+            };
+        } catch (e) { return PayloadUtils.createError('Conversion Failed'); }
+    },
+    // TR-02: Base Converter
+    'TR-02': (node, inputs) => {
+        const data = (node.data || {}) as any;
+        const fromBase = Number(data.fromBase || 10), toBase = Number(data.toBase || 16);
+        const val = String(PayloadUtils.unwrap(inputs['in'] || PayloadUtils.createScalar(0)));
+        try {
+            const num = parseInt(val, fromBase);
+            return PayloadUtils.createScalar(num.toString(toBase).toUpperCase());
+        } catch (e) { return PayloadUtils.createError('Base Conversion Failed'); }
+    },
+    // TR-06: Statistics
+    'TR-06': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const op = data.op || 'MEAN';
+        const valPayload = inputs['in'];
+        if (!valPayload) return PayloadUtils.createError('No Input');
+        try {
+            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+            const arr = (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
+            let result: any;
+            if (op === 'MEAN') result = math.mean(arr);
+            else if (op === 'MEDIAN') result = math.median(arr);
+            else if (op === 'STD') result = math.std(arr);
+            else if (op === 'VARIANCE') result = math.variance(arr);
+            else result = math.mean(arr);
+            return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+        } catch (e) { return PayloadUtils.createError('Stats Failed'); }
+    },
+    // TR-05: Smoothing
+    'TR-05': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const factor = Number(data.factor || 0.5);
+        const currentVal = Number(PayloadUtils.unwrap(inputs['in'] || PayloadUtils.createScalar(0)));
+        const prevVal = Number(PayloadUtils.unwrap((node.data as any)?.prevValue || PayloadUtils.createScalar(currentVal)));
+        const result = prevVal + factor * (currentVal - prevVal);
+        // Note: For side effects like saving prevValue, we'd need to emit a brain update, but for stateless evaluator we just return.
+        return PayloadUtils.createScalar(result);
     }
 };

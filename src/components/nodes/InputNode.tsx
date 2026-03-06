@@ -29,7 +29,7 @@ export const InputNode = memo((props: NodeProps) => {
                         className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-blue-500 outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="Text..."
-                        defaultValue={String(PayloadUtils.unwrap(data.value) || '')}
+                        value={String(PayloadUtils.unwrap(data.value) || '')}
                         onChange={(e) => {
                             Brain.getInstance().applyTransaction({
                                 type: 'UPDATE_VALUE',
@@ -45,7 +45,7 @@ export const InputNode = memo((props: NodeProps) => {
                         className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-blue-500 outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="0.0"
-                        defaultValue={displayValue}
+                        value={displayValue}
                         onChange={handleChange}
                         onKeyDown={(e) => {
                             e.stopPropagation(); // Prevent React Flow hotkeys

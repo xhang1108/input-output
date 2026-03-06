@@ -5,6 +5,7 @@ import { NodeEvaluator } from '../../../NodeRegistry';
 
 export const IOEvaluators: Record<string, NodeEvaluator> = {
     'IO-01': (node) => node.value || PayloadUtils.createScalar(0),
+    'IO-02': (node) => node.value || PayloadUtils.createScalar(0),
     'IO-04': (node) => {
         if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
             return node.value as any;
@@ -197,55 +198,6 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         }
 
         return PayloadUtils.createScalar(finalVal, unit);
-    },
-    'IO-02': (node) => node.value || PayloadUtils.createScalar(0),
-    'IO-06': (node) => {
-        const engine = InputOutputEngine.getInstance();
-        const math = engine.getMathInstance();
-        const data = (node.data || {}) as Record<string, unknown>;
-        const mode = data.mode as string || 'scalar';
-        const isFloat = data.isFloat !== false;
-        const rows = (data.rows as number) || 3;
-        const cols = (data.cols as number) || 3;
-        const length = (data.length as number) || 3;
-        let result: unknown;
-
-        try {
-            const mathAny = math as unknown as Record<string, (v: unknown) => number>;
-            const nMin = (data.min !== undefined && data.min !== null) ? Number(mathAny.number(data.min)) : 0;
-            const nMax = (data.max !== undefined && data.max !== null) ? Number(mathAny.number(data.max)) : 1;
-            const [realMin, realMax] = nMin <= nMax ? [nMin, nMax] : [nMax, nMin];
-
-            if (mode === 'matrix') {
-                const size = [Math.max(1, rows), Math.max(1, cols)];
-                const mathM = math as unknown as Record<string, (s: number[], mi: number, ma: number) => unknown>;
-                result = isFloat
-                    ? mathM.random(size, realMin, realMax)
-                    : mathM.randomInt(size, realMin, realMax + 1);
-            } else if (mode === 'vector') {
-                const size = [Math.max(1, length)];
-                const mathM = math as unknown as Record<string, (s: number[], mi: number, ma: number) => unknown>;
-                result = isFloat
-                    ? mathM.random(size, realMin, realMax)
-                    : mathM.randomInt(size, realMin, realMax + 1);
-            } else {
-                const mathS = math as unknown as Record<string, (mi: number, ma: number) => unknown>;
-                result = isFloat
-                    ? mathS.random(realMin, realMax)
-                    : mathS.randomInt(realMin, realMax + 1);
-            }
-
-            if (typeof result === 'number') result = (math as any).bignumber(result);
-        } catch (e: unknown) {
-            return PayloadUtils.createError('Random Failed');
-        }
-
-        return {
-            type: mode === 'scalar' ? DataType.Scalar : DataType.Matrix,
-            value: PayloadUtils.dehydrate(result),
-            symbol: null,
-            meta: {}
-        };
     },
     'IO-21': (node) => {
         let total = 0;

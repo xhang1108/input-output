@@ -21,7 +21,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
         // The relink system removes edges from UI for visual feedback,
         // but the actual DISCONNECT+CONNECT should be atomic via useRelink's BATCH
         if (brain.isReconnecting) {
-            prevNodesRef.current = new Map(nodes.map(n => [n.id, n]));
+            prevNodesRef.current = new Map(nodes.map(n => [n.id, { ...n }]));
             prevEdgesRef.current = new Set(edges.map(e => e.id));
             return;
         }
@@ -51,11 +51,23 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                             initialValue: node.data?.value,
                             type: node.type,
                             data: node.data || {},
-                            position: node.position
+                            position: node.position,
+                            selected: node.selected || false
                         }
                     });
                 }
             } else {
+                // Check for Selection Changes
+                if (node.selected !== prevNode.selected) {
+                    syncTxs.push({
+                        type: 'UPDATE_NODE_DATA',
+                        payload: {
+                            id: node.id,
+                            data: { ...node.data, selected: node.selected }
+                        }
+                    });
+                }
+
                 // Check for Data Updates (Excluding internally managed 'value')
                 const { value: _v, ...currentData } = node.data || {};
                 const { value: _pv, ...prevData } = prevNode.data || {};

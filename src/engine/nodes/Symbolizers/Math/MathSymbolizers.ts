@@ -21,12 +21,22 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     'MA-03': (node) => PayloadUtils.createSymbol('Identifier', { name: ((node.data || {}) as any).val || 'pi' }),
     'MA-05': (node, inputs) => {
         const data = (node.data || {}) as any;
+        const op = data.op || 'ROUND';
+
+        let funcName = 'round';
+        if (op === 'FLOOR') funcName = 'floor';
+        else if (op === 'CEIL') funcName = 'ceil';
+        else if (op === 'TRUNC') funcName = 'fix';
+
+        const args = [inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 })];
+
+        if (op === 'ROUND') {
+            args.push(PayloadUtils.createSymbol('Literal', { value: data.precision ?? 0 }));
+        }
+
         return PayloadUtils.createSymbol('FunctionCall', {
-            name: 'round',
-            args: [
-                inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
-                PayloadUtils.createSymbol('Literal', { value: data.precision ?? 0 })
-            ]
+            name: funcName,
+            args
         });
     },
     'MA-14': (node, inputs) => MathSymbolizers['MA-05'](node, inputs),
@@ -53,69 +63,46 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
         return PayloadUtils.createSymbol('FunctionCall', { name: op.toLowerCase(), args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
     'MA-17': (node, inputs) => MathSymbolizers['MA-04'](node, inputs),
-    // DA-01: Statistics
-    'DA-01': (node, inputs) => {
+    // TR-06: Statistics
+    'TR-06': (node, inputs) => {
         const op = ((node.data || {}) as any).op || 'Mean';
         return PayloadUtils.createSymbol('FunctionCall', {
             name: op.toLowerCase(),
-            args: [inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
         });
     },
-    // DA-02: Smoothing
-    'DA-02': (node, inputs) => {
+    // TR-05: Smoothing
+    'TR-05': (node, inputs) => {
         return PayloadUtils.createSymbol('FunctionCall', {
             name: 'smooth',
-            args: [inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
         });
     },
-    // DA-03: List Utility
-    'DA-03': (node, inputs) => {
-        const mode = ((node.data || {}) as any).mode || 'Sort (Asc)';
+    // MA-08: Combinatorics
+    'MA-08': (node, inputs) => {
+        const data = (node.data || {}) as any;
+        const op = data.op || 'nCr';
+        const funcMap: any = { nCr: 'nCr', nPr: 'nPr' };
         return PayloadUtils.createSymbol('FunctionCall', {
-            name: mode.toLowerCase().replace(' ', '_'),
-            args: [inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
-        });
-    },
-    // DA-04: Set Operations
-    'DA-04': (node, inputs) => {
-        const mode = ((node.data || {}) as any).mode || 'Union';
-        return PayloadUtils.createSymbol('FunctionCall', {
-            name: mode.toLowerCase(),
+            name: funcMap[op] || 'nCr',
             args: [
-                inputs['a'] || PayloadUtils.createSymbol('Literal', { value: 'A' }),
-                inputs['b'] || PayloadUtils.createSymbol('Literal', { value: 'B' })
+                inputs['in_n'] || PayloadUtils.createSymbol('Literal', { value: 'n' }),
+                inputs['in_r'] || PayloadUtils.createSymbol('Literal', { value: 'r' })
             ]
         });
     },
-    // DA-05: Distributions
-    'DA-05': (node, inputs) => {
-        const mode = ((node.data || {}) as any).mode || 'Normal';
+    // TR-01: Unit
+    'TR-01': (node, inputs) => {
         return PayloadUtils.createSymbol('FunctionCall', {
-            name: `rand_${mode.toLowerCase()}`,
-            args: [inputs['param_n'] || PayloadUtils.createSymbol('Literal', { value: 100 })]
+            name: 'unit',
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
         });
     },
-    // DA-06: Array Extract
-    'DA-06': (node, inputs) => {
-        return PayloadUtils.createSymbol('BinaryExpression', {
-            operator: 'INDEX',
-            left: inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'arr' }),
-            right: inputs['index'] || PayloadUtils.createSymbol('Literal', { value: 0 })
-        });
-    },
-    // DA-07: Array Builder
-    'DA-07': (node, inputs) => {
-        const args = Object.keys(inputs).sort().map(k => inputs[k]);
+    // TR-02: Base Converter
+    'TR-02': (node, inputs) => {
         return PayloadUtils.createSymbol('FunctionCall', {
-            name: 'concat',
-            args: args.length > 0 ? args : [PayloadUtils.createSymbol('Literal', { value: '...' })]
-        });
-    },
-    // SY-04: ODE Solver
-    'SY-04': (node, inputs) => {
-        return PayloadUtils.createSymbol('FunctionCall', {
-            name: 'odeSolve',
-            args: [inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: 'y\'' })]
+            name: 'base',
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
         });
     }
 };

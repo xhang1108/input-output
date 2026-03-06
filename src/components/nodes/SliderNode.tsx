@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useState, useEffect, useRef } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
@@ -14,6 +14,15 @@ export const SliderNode = memo((props: NodeProps) => {
     const [localValue, setLocalValue] = useState(initialValue);
 
     const [showSettings, setShowSettings] = useState(false);
+    const isInteracting = useRef(false);
+
+    // Sync internal state with external value changes (e.g. from N Panel)
+    useEffect(() => {
+        if (!isInteracting.current) {
+            setLocalValue(initialValue);
+        }
+    }, [initialValue]);
+
     const { updateNodeData } = useReactFlow();
 
     const min = typeof data.min === 'number' ? data.min : 0;
@@ -107,7 +116,13 @@ export const SliderNode = memo((props: NodeProps) => {
                         step={step}
                         value={localValue}
                         onChange={handleChange}
-                        onMouseDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => {
+                            isInteracting.current = true;
+                            e.stopPropagation();
+                        }}
+                        onMouseUp={() => {
+                            isInteracting.current = false;
+                        }}
                         className="nodrag w-full h-1.5 bg-zinc-800 rounded-(--radius-lg) appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400 transition-all"
                     />
                 </div>

@@ -2,8 +2,8 @@ import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeSymbolizer } from '../../../NodeRegistry';
 
 export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
-    // AD-01: Matrix Tools
-    'AD-01': (node, inputs) => {
+    // DT-07: Matrix Tools
+    'DT-07': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'INV';
         const funcMap: any = { INV: 'inv', DET: 'det', TRANSPOSE: 'transpose', TRACE: 'trace', EIGEN: 'eigs', LUP: 'lup', QR: 'qr' };
@@ -13,8 +13,8 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         });
     },
 
-    // AD-02: Vector Utils
-    'AD-02': (node, inputs) => {
+    // DT-05: Vector Utils
+    'DT-05': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'DOT';
         const funcMap: any = { DOT: 'dot', CROSS: 'cross', NORM: 'norm', DISTANCE: 'distance' };
@@ -23,7 +23,7 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         return PayloadUtils.createSymbol('FunctionCall', { name: funcMap[op] || 'dot', args });
     },
 
-    // AD-03: Combinatorics
+    // MA-15: Combinatorics
     'AD-03': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'nCr';
@@ -33,8 +33,8 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         return PayloadUtils.createSymbol('FunctionCall', { name: funcMap[op] || 'combinations', args });
     },
 
-    // AD-04: Derivative
-    'AD-04': (node, inputs) => {
+    // CL-01: Derivative
+    'CL-01': (node, inputs) => {
         const variable = ((node.data || {}) as any).variable || 'x';
         return PayloadUtils.createSymbol('FunctionCall', {
             name: `\\frac{d}{d${variable}}`,
@@ -42,8 +42,8 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         });
     },
 
-    // AD-05: Integral
-    'AD-05': (node, inputs) => {
+    // CL-02: Integral
+    'CL-02': (node, inputs) => {
         const variable = ((node.data || {}) as any).variable || 'x';
         return PayloadUtils.createSymbol('FunctionCall', {
             name: `\\int d${variable}`,
@@ -51,8 +51,8 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         });
     },
 
-    // AD-06: Solver
-    'AD-06': (node, inputs) => {
+    // CL-04: Solver
+    'CL-04': (node, inputs) => {
         return PayloadUtils.createSymbol('FunctionCall', {
             name: 'solve',
             args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '0' })]
@@ -60,37 +60,44 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
     },
 
 
-    // AD-08: Vector Field
-    'AD-08': (node, inputs) => {
+    // TR-04: Vector Field
+    'TR-04': (node, inputs) => {
         const data = (node.data || {}) as any, mode = data.mode || 'gradient';
         const inSym = inputs['in_f'] || PayloadUtils.createSymbol('Literal', { value: 'f' });
         if (mode === 'gradient') return PayloadUtils.createSymbol('FunctionCall', { name: '', args: [PayloadUtils.createSymbol('Identifier', { name: '\\nabla' }), inSym] });
         return PayloadUtils.createSymbol('FunctionCall', { name: 'VectorField', args: [inSym] });
     },
 
-    // AD-09: Vector Split
-    'AD-09': (node, inputs) => {
+    // DT-06: Vector Split
+    'DT-06': (node, inputs) => {
         const mode = ((node.data || {}) as any).mode || 'separate';
         if (mode === 'separate') return PayloadUtils.createSymbol('Identifier', { name: 'SplitVector' });
         return PayloadUtils.createSymbol('FunctionCall', { name: 'matrix', args: Array.isArray(inputs['in']) ? inputs['in'] : [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
 
-    // AD-10: Geometry
-    'AD-10': (node, inputs) => {
+    // TR-03: Geometry
+    'TR-03': (node, inputs) => {
         const shape = ((node.data || {}) as any).shape || 'Circle';
         const args = [inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 })];
         if (shape !== 'Circle') args.push(inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 }));
         return PayloadUtils.createSymbol('FunctionCall', { name: shape.toLowerCase(), args });
     },
 
-    // AD-11: Limit
-    'AD-11': (node, inputs) => {
+    // CL-03: Limit
+    'CL-03': (node, inputs) => {
         const data = (node.data || {}) as any, variable = data.variable || 'x', approach = data.approach || '0';
         return PayloadUtils.createSymbol('FunctionCall', { name: `\\lim_{${variable}\\to ${approach}}`, args: [inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: '?' })] });
     },
 
-    // SY-05: Expert Node
-    'SY-05': (node, inputs) => {
+    // CL-05: ODE Solver
+    'CL-05': (node, inputs) => {
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: 'rk4',
+            args: [inputs['expr'] || PayloadUtils.createSymbol('Literal', { value: 'f(t,y)' })]
+        });
+    },
+    // IN-09: Expert Node (Expression)
+    'IN-09': (node, inputs) => {
         const code = ((node.data || {}) as any).code || '';
         return PayloadUtils.createSymbol('Literal', { value: code || 'Expert' });
     }
