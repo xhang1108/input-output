@@ -213,21 +213,84 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         };
     },
     'IO-14': (node, inputs) => {
-        // PlotNode (Graph UI terminal node)
-        // We just pass through the input so the Engine pushes it to node.data.value
-        const input = inputs['in'] || Object.values(inputs)[0];
+        // OT-03: Graph Plot — Pure engine sampling.
+        // Receives capsule inputs, runs sampling, returns computed plotPoints in meta.
+        import('../../../../utils/PlottingUtils').then(() => { }); // Ensure bundled
+        const { PlottingUtils } = require('../../../../utils/PlottingUtils');
+        const data = (node.data || {}) as Record<string, unknown>;
+        const minX = typeof data.minX === 'number' ? data.minX : -10;
+        const maxX = typeof data.maxX === 'number' ? data.maxX : 10;
+        const pointsCount = typeof data.points === 'number' ? data.points : 100;
 
-        // If the input is an array of payloads (multiple incoming edges to the capsule handle)
-        if (Array.isArray(input)) {
-            return {
-                type: DataType.Object,
-                value: input,
-                symbol: null,
-                meta: {}
-            };
+        const rawInput = inputs['in'] || Object.values(inputs)[0];
+
+        // Normalize to array of payloads (capsule may give array or single)
+        let payloadList: any[] = [];
+        if (Array.isArray(rawInput)) {
+            payloadList = rawInput;
+        } else if (rawInput) {
+            // Check if it's an object with handle-keyed values (multi-input map)
+            const rv = rawInput as any;
+            if (rv.type === 'object' && rv.value && typeof rv.value === 'object' && !Array.isArray(rv.value) && !('type' in rv.value)) {
+                payloadList = Object.values(rv.value).flat() as any[];
+            } else {
+                payloadList = [rawInput];
+            }
         }
 
-        return input || PayloadUtils.createMatrix([]);
+        const allPoints: any[] = [];
+        const errors: string[] = [];
+
+        payloadList.forEach((p: any, idx: number) => {
+            if (!p) return;
+            if (p.type === 'error') {
+                errors.push(`Input ${idx + 1}: ${p.meta?.error || 'Unknown error'}`);
+                return;
+            }
+
+            const parsed = PayloadUtils.unwrap(p);
+            if (parsed === null || parsed === undefined) return;
+
+            const seriesName = p.meta?.label || `Series ${idx + 1}`;
+            let pts: any[] = [];
+
+            try {
+                if (typeof parsed === 'string') {
+                    pts = PlottingUtils.generateSymbolicPoints(parsed, minX, maxX, pointsCount);
+                    const validY = pts.filter((pt: any) => pt.y !== null);
+                    if (pts.length > 0 && validY.length === 0) {
+                        errors.push(`${seriesName}: All values are undefined/infinite.`);
+                    }
+                } else {
+                    if (Array.isArray(parsed) && Array.isArray(parsed[0]) && parsed[0].length > 5) {
+                        errors.push(`${seriesName}: Dimension mismatch (${parsed[0].length} cols > 4).`);
+                    }
+                    pts = PlottingUtils.mapDataPayload(parsed);
+                }
+            } catch (err: any) {
+                errors.push(`${seriesName}: ${err.message || 'Evaluation Error'}`);
+            }
+
+            const validPts = pts
+                .filter((pt: any) => pt.x !== null && pt.y !== null && Number.isFinite(pt.x) && Number.isFinite(pt.y))
+                .map((pt: any) => ({ ...pt, series: seriesName }));
+
+            if (validPts.length > 0) {
+                allPoints.push(...validPts);
+            } else if (!errors.some(e => e.startsWith(seriesName)) && parsed && (Array.isArray(parsed) || typeof parsed === 'object')) {
+                errors.push(`${seriesName}: Input data is empty.`);
+            }
+        });
+
+        return {
+            type: DataType.Object,
+            value: allPoints,
+            symbol: null,
+            meta: {
+                plotPoints: allPoints,
+                plotErrors: errors,
+            }
+        };
     },
     'IO-22': (node, inputs) => {
         const input = inputs['in'] || Object.values(inputs)[0];

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Body } from '@/components/Body';
 import { ProjectLoadScreen } from '@/components/ui/ProjectLoadScreen';
+import { VisualClock } from '@/components/VisualClock';
 import { Brain } from '@/engine/Brain';
 
 export default function Dashboard() {
@@ -24,6 +25,7 @@ export default function Dashboard() {
 
     return (
         <div className="w-screen h-screen bg-black relative">
+            <VisualClock />
             {!activeProject ? (
                 <ProjectLoadScreen onOpen={handleOpenProject} onNewProject={handleNewProject} />
             ) : (

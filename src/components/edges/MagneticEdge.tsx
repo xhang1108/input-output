@@ -101,7 +101,6 @@ export function MagneticEdge({
                 className={`react-flow__edge-path opacity-80 ${data?.isHighlighted ? 'drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]' : ''}`}
             />
 
-
             {/* Drag-to-Disconnect Hit Area (Invisible/Secret) */}
             {startEdgeDragDisconnect && (
                 <circle

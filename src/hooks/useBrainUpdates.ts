@@ -218,7 +218,16 @@ export function useBrainUpdates(
                     for (const brainEdge of brainEdges) {
                         const existing = uiEdgeMap.get(brainEdge.id);
                         if (existing) {
-                            nextEdges.push(existing); // Keep UI edge (has extra props like data.pathType)
+                            // Merge Brain's data (active flag, etc.) into existing UI edge
+                            // UI edge keeps pathType, isHighlighted, etc.
+                            const mergedData = { ...existing.data, ...brainEdge.data };
+                            const dataChanged = existing.data?.active !== mergedData.active;
+                            if (dataChanged) {
+                                nextEdges.push({ ...existing, data: mergedData });
+                                edgesChanged = true;
+                            } else {
+                                nextEdges.push(existing);
+                            }
                         } else {
                             nextEdges.push(brainEdge); // Add new edge from Brain
                             edgesChanged = true;
@@ -250,6 +259,24 @@ export function useBrainUpdates(
 
         const cleanup = brain.on('graphChanged', (payload: unknown) => handleGraphChange(payload));
 
+        // Listen for edge active state changes (signal flow)
+        const cleanupEdges = brain.on('edgesChanged', () => {
+            const brainEdges = brain.getEdges();
+            setEdges(currentEdges => {
+                const uiEdgeMap = new Map(currentEdges.map(e => [e.id, e]));
+                let changed = false;
+                const nextEdges = brainEdges.map(brainEdge => {
+                    const existing = uiEdgeMap.get(brainEdge.id);
+                    if (!existing) return brainEdge;
+                    const active = brainEdge.data?.active;
+                    if (existing.data?.active === active) return existing;
+                    changed = true;
+                    return { ...existing, data: { ...existing.data, active } };
+                });
+                return changed ? nextEdges : currentEdges;
+            });
+        });
+
         // Listen for import performance metrics
         const { setLastImportMs } = useAppStore.getState();
         const cleanupImport = brain.on('importFinished', (ms: unknown) => {
@@ -258,6 +285,7 @@ export function useBrainUpdates(
 
         return () => {
             cleanup();
+            cleanupEdges();
             cleanupImport();
         };
     }, [setNodes, setEdges]);

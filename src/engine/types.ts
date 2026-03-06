@@ -3,12 +3,18 @@ import { NodePayload } from '../types/payload';
 
 
 
+export interface VisualState {
+    muted: boolean;
+    visualTick: number; // For time-based animations scaled by engine
+}
+
 export type NodeLogic = Node & {
     data: Record<string, unknown>;
     value?: NodePayload; // Phase 2.1: Switched to Payload System
     selected: boolean;
     isInDirtyChain: boolean;
     position: { x: number; y: number };
+    visualState?: VisualState;
 };
 
 export interface GraphState {

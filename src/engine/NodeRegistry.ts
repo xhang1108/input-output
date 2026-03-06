@@ -41,12 +41,14 @@ export class NodeRegistry {
 
     public static async evaluate(node: NodeLogic, inputs: Record<string, NodePayload>): Promise<NodePayload> {
 
-        // Mute Bypass Logic: If muted, pass through the primary input
+        // Mute Bypass Logic: If muted, pass through the primary input ONLY
         const data = (node.data || {}) as Record<string, unknown>;
         if (data.muted) {
-            const primaryInput = inputs['in'] || inputs['in_a'] || Object.values(inputs)[0];
+            const primaryInput = inputs['in_a'] || inputs['in'] || inputs['a'] || inputs['expr'];
             if (primaryInput) return primaryInput;
-            return node.value || PayloadUtils.createScalar(0);
+
+            // If primary input is missing, return a clean zero (don't leak old state)
+            return PayloadUtils.createScalar(0);
         }
 
         const type = node.type || 'baseNode';

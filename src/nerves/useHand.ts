@@ -96,7 +96,8 @@ export function useHand() {
                 maxAbsX = Math.max(maxAbsX, absCX + w / 2); maxAbsY = Math.max(maxAbsY, absCY + h / 2);
             });
 
-            const PAD = 40, TOP_PAD = 40;
+            const config = Brain.getInstance().getPhysicsConfig();
+            const PAD = config.layout.nodePadding, TOP_PAD = config.layout.frameTopPadding;
             const newAbsTL_X = minAbsX - PAD, newAbsTL_Y = minAbsY - TOP_PAD;
             const newW = (maxAbsX + PAD) - newAbsTL_X, newH = (maxAbsY + PAD) - newAbsTL_Y;
             const newAbsCX = newAbsTL_X + newW / 2, newAbsCY = newAbsTL_Y + newH / 2;
@@ -427,9 +428,10 @@ export function useHand() {
 
             if (axisLock === 'X') dy = 0;
             if (axisLock === 'Y') dx = 0;
+            const config = Brain.getInstance().getPhysicsConfig();
 
             if (ctrlKey) {
-                const GRID_SIZE = 20;
+                const GRID_SIZE = config.interaction.snapGridSize;
                 dx = Math.round(dx / GRID_SIZE) * GRID_SIZE;
                 dy = Math.round(dy / GRID_SIZE) * GRID_SIZE;
             }
@@ -484,7 +486,8 @@ export function useHand() {
         }
 
         const { x, y } = mousePosRef.current;
-        const pad = 100;
+        const config = Brain.getInstance().getPhysicsConfig();
+        const pad = config.interaction.autoPanPadding;
         const w = window.innerWidth;
         const h = window.innerHeight;
 
@@ -493,7 +496,7 @@ export function useHand() {
 
         const getSpeed = (dist: number) => {
             const normalized = Math.max(0, dist / pad);
-            return Math.pow(normalized, 1.5) * 20;
+            return Math.pow(normalized, 1.5) * config.interaction.autoPanBaseSpeed;
         };
 
         if (x < pad) panX = getSpeed(pad - x);
@@ -774,7 +777,8 @@ export function useHand() {
                 maxX = Math.max(maxX, cAbs.x + w / 2); maxY = Math.max(maxY, cAbs.y + h / 2);
             });
 
-            const PAD = 40;
+            const config = Brain.getInstance().getPhysicsConfig();
+            const PAD = config.layout.nodePadding;
             const newAbsTL_X = minX - PAD, newAbsTL_Y = minY - PAD;
             const newWidth = (maxX + PAD) - newAbsTL_X, newHeight = (maxY + PAD) - newAbsTL_Y;
             // const shiftX = newAbsTL_X - oldTL_X, shiftY = newAbsTL_Y - oldTL_Y; // Not used
@@ -931,7 +935,8 @@ export function useHand() {
                 currentMousePos.x - pendingGrabStart.current.x,
                 currentMousePos.y - pendingGrabStart.current.y
             );
-            if (dist > 5) {
+            const config = Brain.getInstance().getPhysicsConfig();
+            if (dist > config.interaction.dragThreshold) {
                 startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey, undefined, false);
                 pendingGrabStart.current = null;
                 return;

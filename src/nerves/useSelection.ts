@@ -12,6 +12,7 @@ import { HandleConfig } from '../types/NodeDefinition';
  */
 export function useSelection() {
     const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
+    const config = Brain.getInstance().getPhysicsConfig();
 
     // --- Command: Delete Selected ---
     const deleteSelected = useCallback(() => {
@@ -106,8 +107,8 @@ export function useSelection() {
                         maxY = Math.max(maxY, child.position.y + h / 2);
                     });
 
-                    const PAD = 40;
-                    const TOP_PAD = 40;
+                    const PAD = config.layout.nodePadding;
+                    const TOP_PAD = config.layout.frameTopPadding;
 
                     const targetLeft = minX - PAD;
                     const targetTop = minY - TOP_PAD;
@@ -188,8 +189,9 @@ export function useSelection() {
         });
 
         // 2. Add padding (extra top for label)
-        const PAD = 40;
-        const TOP_PAD = 40;
+        const config = Brain.getInstance().getPhysicsConfig();
+        const PAD = config.layout.nodePadding;
+        const TOP_PAD = config.layout.frameTopPadding;
 
         const targetLeft = minX - PAD;
         const targetTop = minY - TOP_PAD;

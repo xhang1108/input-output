@@ -12,6 +12,7 @@ import { useAppStore } from '../store/useStore';
 import { TopologyManager } from './TopologyManager';
 import { WorkerOrchestrator } from './WorkerOrchestrator';
 import { TransactionManager } from './TransactionManager';
+import { PHYSICS_CONFIG } from './physicsConfig';
 import deepEqual from 'fast-deep-equal';
 
 export class Brain {
@@ -22,7 +23,9 @@ export class Brain {
     private worker: WorkerOrchestrator;
     private transactionManager: TransactionManager;
 
-    /** Tracks pending topology changes for incremental patches */
+    private heartbeatInterval: NodeJS.Timeout | null = null;
+    private visualTick: number = 0;
+    private readonly HEARTBEAT_MS = 16.67;
     private pendingPatch: IncrementalPatch = { dirtyChainNodeIds: [] };
 
     private constructor() {
@@ -54,8 +57,6 @@ export class Brain {
     private listeners: Map<string, Set<(payload: unknown) => void>> = new Map();
 
     private isRecalculating = false;
-    private heartbeatInterval: NodeJS.Timeout | null = null;
-    private readonly HEARTBEAT_MS = 16; // ~60fps
 
 
     /** Apply Worker-computed results back into main-thread state */
@@ -68,6 +69,34 @@ export class Brain {
             }
         }
         this.isRecalculating = false;
+
+        // ── Edge Signal Flow: Mark edges as active if their source node has valid data ──
+        if (patches.size > 0) {
+            let edgesUpdated = false;
+            const updatedEdges = this.state.edges.map(edge => {
+                const sourceNode = this.state.nodes.get(edge.source);
+                if (!sourceNode) return edge;
+
+                // Active = source node has a non-error result AND is not muted
+                const isMuted = !!sourceNode.data?.muted;
+                const hasValue = sourceNode.value && sourceNode.value.type !== 'error';
+                const active = !isMuted && !!hasValue;
+
+                // Only create new object if active state changed (avoid unnecessary re-renders)
+                const currentActive = edge.data?.active;
+                if (currentActive === active) return edge;
+
+                edgesUpdated = true;
+                return {
+                    ...edge,
+                    data: { ...edge.data, active },
+                };
+            });
+            if (edgesUpdated) {
+                this.state.edges = updatedEdges;
+                this.emit('edgesChanged', null);
+            }
+        }
 
         const freshlyUpdated = this.worker.getFreshlyUpdated();
         if (freshlyUpdated.size > 0) {
@@ -137,6 +166,32 @@ export class Brain {
         if (this.heartbeatInterval) return;
 
         this.heartbeatInterval = setInterval(async () => {
+            // 1. Global Visual Tick (Real-time derivative)
+            // performance.now() provides sub-millisecond precision for smooth animations
+            const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+            this.visualTick = Math.floor(now / 16.67) % 10000;
+
+            let hasVisualChange = true;
+
+            for (const node of this.state.nodes.values()) {
+                if (!node.visualState) {
+                    node.visualState = { muted: !!node.data?.muted, visualTick: this.visualTick };
+                }
+
+                // Sync tick
+                node.visualState.visualTick = this.visualTick;
+
+                // Muted sync
+                const isMuted = !!node.data?.muted;
+                if (node.visualState.muted !== isMuted) {
+                    node.visualState.muted = isMuted;
+                }
+            }
+
+            if (hasVisualChange && !this.isRecalculating) {
+                this.emit('visualUpdate', null);
+            }
+
             if (this.isRecalculating) return;
 
             const hasDirty = Array.from(this.state.nodes.values()).some(n => n.isInDirtyChain)
@@ -159,6 +214,24 @@ export class Brain {
                 }
             }
         }, this.HEARTBEAT_MS);
+    }
+
+    /** Force reset the heartbeat (Testing only) */
+    public resetHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+        this.visualTick = 0;
+        this.startHeartbeat();
+    }
+
+    public getVisualTick() {
+        return this.visualTick;
+    }
+
+    public getPhysicsConfig() {
+        return PHYSICS_CONFIG;
     }
 
     public static getInstance(): Brain {

@@ -315,6 +315,11 @@ input[type="number"] {
 .animate-mute-bypass {
   animation: mute-bypass-flow 1s linear infinite;
 }
+
+.animate-visual-tick-flow {
+  stroke-dashoffset: calc(var(--visual-tick) * -0.2);
+}
+
 /* ───────────────────────────────────────
     § Markdown & Prose Styles (Manual fallback for v4)
     ─────────────────────────────────────── */

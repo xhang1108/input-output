@@ -1,5 +1,6 @@
-import { memo, useState, useRef, useEffect } from 'react';
+import { memo, useState, useRef, useEffect, useMemo } from 'react';
 import { NodeProps, Position, useReactFlow, useUpdateNodeInternals, useNodeConnections, useEdges, useStore, ReactFlowState, Edge } from '@xyflow/react';
+import { Brain } from '../../engine/Brain';
 import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
@@ -39,6 +40,19 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     useEffect(() => {
         updateNodeInternals(id);
     }, [id, data.handles, data.width, updateNodeInternals]);
+
+    // Visual State Subscription (Strict DOM Isolation)
+    const [visualTick, setVisualTick] = useState(0);
+    const brain = Brain.getInstance();
+    const nodeLogic = brain.getNode(id);
+    const visualState = nodeLogic?.visualState;
+
+    useEffect(() => {
+        const unsubscribe = brain.on('visualUpdate', () => {
+            setVisualTick(t => t + 1);
+        });
+        return unsubscribe;
+    }, [id, brain]);
 
     useEffect(() => {
         if (isRenaming && inputRef.current) {
@@ -113,45 +127,53 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     );
 
     /**
-     * Calculate Y position for a handle or bypass line anchor relative to body section.
+     * Calculate Y position for a specific handle or fallback to first.
      */
-    const getFirstHandleY = (handles: HandleConfig[]) => {
+    const getHandleY = (handles: HandleConfig[], preferredIds: string[]) => {
         if (handles.length === 0) return `calc(${NODE_LAYOUT.headerH}px + (100% - ${NODE_LAYOUT.headerH}px) / 2)`;
 
-        const first = handles[0];
-        if (first.y !== undefined) {
-            return typeof first.y === 'number' ? `${first.y}px` : first.y;
+        const target = handles.find(h => preferredIds.includes(h.id)) || handles[0];
+
+        // Calculate cumulative offset
+        let yOffset = 0;
+        for (const h of handles) {
+            if (h === target) break;
+            yOffset += getHandleHeight(h) + NODE_LAYOUT.socketGap;
         }
 
-        const firstHandleHeight = getHandleHeight(first);
-        return `calc(${NODE_LAYOUT.headerH}px + 12px + ${firstHandleHeight / 2}px)`;
+        const handleHeight = getHandleHeight(target);
+        return `calc(${NODE_LAYOUT.headerH}px + 12px + ${yOffset}px + ${handleHeight / 2}px)`;
     };
 
     return (
         <div
-            className={`
-                relative min-w-(--node-width-min) rounded-xl border transition duration-200 group
-                ${selected
-                    ? 'border-zinc-400 animate-ring-pulse'
-                    : 'border-zinc-700 hover:border-zinc-500'}
-                ${data.muted ? 'opacity-40 grayscale-40 shadow-none!' : ''}
-            `}
-            style={{ minHeight: `${minHeight}px`, background: 'var(--node-bg)', ...style }}
+            className={cn(
+                "relative min-w-(--node-width-min) rounded-xl border transition duration-200 group",
+                selected ? "border-zinc-400" : "border-zinc-700 hover:border-zinc-500"
+            )}
+            style={{
+                minHeight: `${minHeight}px`,
+                background: 'var(--node-bg)',
+                opacity: visualState?.muted ? 0.4 : 1,
+                filter: visualState?.muted ? 'grayscale(0.4)' : 'none',
+                ...style
+            }}
             onDoubleClick={onDoubleClick}
         >
+
             {/* Muted Bypass Visual */}
-            {!!data.muted && (
+            {!!visualState?.muted && (
                 <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-xl">
                     <svg className="w-full h-full">
                         <line
                             x1="0"
-                            y1={getFirstHandleY(leftHandles)}
+                            y1={getHandleY(leftHandles, ['in_a', 'in', 'a', 'expr', 'val'])}
                             x2="100%"
-                            y2={getFirstHandleY(rightHandles)}
+                            y2={getHandleY(rightHandles, ['out', 'val'])}
                             stroke="var(--color-scalar)"
                             strokeWidth="2"
                             strokeDasharray="4 4"
-                            className="animate-mute-bypass opacity-60"
+                            className="animate-visual-tick-flow opacity-60"
                         />
                     </svg>
                 </div>
@@ -176,7 +198,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
                     ) : (
                         <span className="text-xs font-bold text-zinc-300 select-none truncate">{title}</span>
                     )}
-                    {!!data.muted && (
+                    {!!visualState?.muted && (
                         <span className="text-[8px] bg-zinc-800 text-zinc-500 px-1 rounded uppercase tracking-tighter font-black border border-zinc-700/50 leading-tight">Muted</span>
                     )}
                 </div>

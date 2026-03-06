@@ -2,126 +2,31 @@ import { memo, useMemo, useRef, useCallback } from 'react';
 import { NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { PlottingUtils } from '../../utils/PlottingUtils';
 import { VegaEmbed } from 'react-vega';
 
 export const PlotNode = memo((props: NodeProps) => {
     const { data } = props;
 
-    // React-Flow extracts all inputs as data.[handle_id] inside the engine
-    // Assuming the node formula arrives at 'expr' or 'val'. Let's parse default handle or mapped expression.
-    // BaseNode usually maps unhandled data sources natively to `data.in` or similar if single target.
-    // The spec defined an input for formula matching to values.
-
     // 3.1 Mode Switching Logic
     const viewMode = (data.viewMode as 'line' | 'bar' | 'scatter' | 'area' | 'vector' | 'heatmap' | 'hist') || 'line';
 
-    // 3.1 Data Aggregation Logic
-    const payloads = useMemo(() => {
-        // Helper to check if something is a valid payload or non-empty data
-        const isValid = (v: any) => {
-            if (v === null || v === undefined) return false;
-            if (Array.isArray(v)) return v.length > 0;
-            if (typeof v === 'object') {
-                if ('type' in v) return true; // It's a payload
-                return Object.keys(v).length > 0;
-            }
-            return true; // Scalars
-        };
+    // Read pre-computed plot data from the engine (IO-14 evaluator)
+    // Engine stores results in data.value.meta.plotPoints and meta.plotErrors
+    const engineValue = data.value as any;
+    const plotPoints: any[] = engineValue?.meta?.plotPoints || [];
+    const plotErrors: string[] = engineValue?.meta?.plotErrors || [];
 
-        // Engine computed result is primarily in data.value
-        let base = isValid(data.value) ? data.value : (data.val || data.expr);
+    const plotData = useMemo(() => ({
+        table: plotPoints,
+        errors: plotErrors,
+    }), [plotPoints, plotErrors]);
 
-        // Extract if nested in handle map { in: [...], other: [...] }
-        if (base && typeof base === 'object' && !Array.isArray(base) && !('type' in (base as any))) {
-            const vals = Object.values(base).filter(v => v !== undefined);
-            // Flatten if any of the values are arrays (capsule input)
-            base = vals.flat(1);
-        }
+    // Infer payload count for UI features (e.g., Dual Axis button)
+    const seriesCount = useMemo(() =>
+        new Set(plotPoints.map((p: any) => p.series)).size,
+        [plotPoints]
+    );
 
-        let list: any[] = Array.isArray(base) ? base : [base];
-        list = list.filter(isValid);
-
-        // Deep unpack matrix or object wrappers if they contain payloads
-        if (list.length === 1 && (list[0]?.type === 'matrix' || list[0]?.type === 'object') && Array.isArray(list[0].value)) {
-            const inner = list[0].value;
-            if (inner.length > 0 && typeof inner[0] === 'object' && 'type' in inner[0]) {
-                list = inner;
-            }
-        }
-
-        return list;
-    }, [data.value, data.val, data.expr]);
-
-    const plotData = useMemo(() => {
-        if (payloads.length === 0) return { table: [], errors: [] };
-        const allPoints: any[] = [];
-        const errors: string[] = [];
-        let seriesCount = 0;
-
-        payloads.forEach((p, idx) => {
-            if (!p) return;
-
-            // 1. Check for engine-level errors
-            if (typeof p === 'object' && 'type' in p && p.type === 'error') {
-                errors.push(`Input ${idx + 1}: ${p.meta?.error || 'Unknown error'}`);
-                return;
-            }
-
-            const parsed = PayloadUtils.unwrap(p);
-            // Allow falsy but valid math values like 0 or empty string (which is handled later)
-            if (parsed === null || parsed === undefined) return;
-
-            let pts: any[] = [];
-            const seriesName = (p as any).meta?.label || `Series ${idx + 1}`;
-
-            try {
-                if (typeof parsed === 'string') {
-                    const minX = typeof data.minX === 'number' ? data.minX : -10;
-                    const maxX = typeof data.maxX === 'number' ? data.maxX : 10;
-                    const pointsCount = typeof data.points === 'number' ? data.points : 100;
-                    pts = PlottingUtils.generateSymbolicPoints(parsed, minX, maxX, pointsCount);
-
-                    // Logic: If symbolic points are all null/infinite, report as math error
-                    const validY = pts.filter(pt => pt.y !== null);
-                    if (pts.length > 0 && validY.length === 0) {
-                        errors.push(`${seriesName}: All values are undefined/infinite (e.g. division by zero).`);
-                    }
-                } else {
-                    // Detect dimension issues for matrix
-                    if (Array.isArray(parsed) && Array.isArray(parsed[0]) && parsed[0].length > 5) {
-                        errors.push(`${seriesName}: Dimension mismatch (Matrix columns ${parsed[0].length} > 4). Only X, Y, U, V, Z are mapped.`);
-                    }
-                    pts = PlottingUtils.mapDataPayload(parsed);
-                }
-            } catch (err: any) {
-                errors.push(`${seriesName}: ${err.message || 'Evaluation Error'}`);
-            }
-
-            if (pts.length === 0 && !errors.some(e => e.startsWith(seriesName))) {
-                // If it's a matrix/array but actually empty
-                if (parsed && (Array.isArray(parsed) || typeof parsed === 'object')) {
-                    errors.push(`${seriesName}: Input data is empty.`);
-                }
-            }
-
-            // Add series label for multi-line support
-            const validPts = pts.filter(pt =>
-                pt.x !== null && pt.y !== null &&
-                Number.isFinite(pt.x) && Number.isFinite(pt.y)
-            ).map(pt => ({
-                ...pt,
-                series: seriesName
-            }));
-
-            if (validPts.length > 0) {
-                allPoints.push(...validPts);
-                seriesCount++;
-            }
-        });
-
-        return { table: allPoints, errors };
-    }, [payloads, data.minX, data.maxX, data.points]);
 
     // Vega-Lite Specification (Phase 2.2)
     const hasSize = useMemo(() => plotData.table.length > 0 && plotData.table.some(pt => pt.size !== undefined), [plotData.table]);
@@ -552,7 +457,7 @@ export const PlotNode = memo((props: NodeProps) => {
                         ))}
                     </div>
 
-                    {payloads.length > 1 && (
+                    {seriesCount > 1 && (
                         <button
                             onClick={() => {
                                 const brain = require('../../engine/Brain').Brain.getInstance();
@@ -601,7 +506,7 @@ export const PlotNode = memo((props: NodeProps) => {
                     )}
 
                     {/* Empty State Overlay - Only show if something is connected but no points */}
-                    {payloads.length > 0 && plotData.table.length === 0 && plotData.errors.length === 0 && (
+                    {engineValue && plotData.table.length === 0 && plotData.errors.length === 0 && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-20">
                             <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">No Data Points</div>
                         </div>
