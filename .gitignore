@@ -52,3 +52,6 @@ study/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# specs
+/specs/
