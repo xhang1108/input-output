@@ -56,6 +56,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     // UI Helpers
     const { fitView, getViewport, setViewport } = useReactFlow();
     const mousePosRef = useRef({ x: 0, y: 0 });
+    const [isModifierActive, setIsModifierActive] = useState(false);
     const [isSnapping, setIsSnapping] = useState(false);
 
     const {
@@ -143,8 +144,29 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             if (filtered.length > 0) onNodesChange(filtered);
             return;
         }
+
+        // Additive Selection Strategy: 
+        // If any modifier (Shift/Ctrl/Cmd) is active, we treat selection as "Union".
+        if (isModifierActive) {
+            // Get a snapshot of currently selected IDs BEFORE applying the new changes
+            const currentlySelected = new Set(nodes.filter(n => n.selected).map(n => n.id));
+
+            const enforcedChanges = changes.map(c => {
+                // If it's a selection change trying to UNSELECT a node that was ALREADY selected,
+                // we FORCE it back to true instead of just filtering it out.
+                // This manually bridges any state sync gaps in xyflow.
+                if (c.type === 'select' && !c.selected && currentlySelected.has(c.id)) {
+                    return { ...c, selected: true };
+                }
+                return c;
+            });
+
+            onNodesChange(enforcedChanges);
+            return;
+        }
+
         onNodesChange(changes);
-    }, [mode, isResolvingTransform, onNodesChange]);
+    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, nodes]);
 
     // --- Canvas Reset ---
     const clearMemory = useCallback(() => {
@@ -223,25 +245,29 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         logAction(`Mode: ${mode}`);
     }, [mode, logAction]);
 
-    // Track Modifiers for Snapping (Standard Drag)
+    // Track Modifiers for Snapping and Additive Selection
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Control') setIsSnapping(true);
+            if (e.shiftKey || e.ctrlKey || e.metaKey) setIsModifierActive(true);
         };
         const handleKeyUp = (e: KeyboardEvent) => {
             if (e.key === 'Control') setIsSnapping(false);
+            const anyActive = e.shiftKey || e.ctrlKey || e.metaKey;
+            if (!anyActive) setIsModifierActive(false);
         };
         const handleBlur = () => {
-            setIsSnapping(false); // Reset on focus loss
+            setIsSnapping(false);
+            setIsModifierActive(false);
         };
 
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('keydown', handleKeyDown, { capture: true });
+        window.addEventListener('keyup', handleKeyUp, { capture: true });
         window.addEventListener('blur', handleBlur);
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('keydown', handleKeyDown, { capture: true });
+            window.removeEventListener('keyup', handleKeyUp, { capture: true });
             window.removeEventListener('blur', handleBlur);
         }
     }, []);
@@ -455,20 +481,28 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
     // Auto Insert logic managed by useAutoInsert hook
 
+    const updateModifier = useCallback((e: React.MouseEvent) => {
+        const active = e.shiftKey || e.ctrlKey || e.metaKey;
+        if (active !== isModifierActive) setIsModifierActive(active);
+    }, [isModifierActive]);
+
     const onMouseMove = useCallback((e: React.MouseEvent) => {
         mousePosRef.current = { x: e.clientX, y: e.clientY };
+        updateModifier(e);
         handleMouseMove(e.nativeEvent);
-        detectAutoInsert(); // Check for insert opportunities
-    }, [handleMouseMove, detectAutoInsert]);
+        detectAutoInsert();
+    }, [handleMouseMove, detectAutoInsert, updateModifier]);
 
     const onMouseDown = useCallback((e: React.MouseEvent) => {
+        updateModifier(e);
         handleMouseDown(e.nativeEvent);
-    }, [handleMouseDown]);
+    }, [handleMouseDown, updateModifier]);
 
     const onMouseUp = useCallback((e: React.MouseEvent) => {
+        updateModifier(e);
         handleMouseUp(e.nativeEvent);
-        performAutoInsert(); // Execute insert if valid
-    }, [handleMouseUp, performAutoInsert]);
+        performAutoInsert();
+    }, [handleMouseUp, performAutoInsert, updateModifier]);
 
     const onClick = useCallback((e: React.MouseEvent) => {
         if (paletteGuardRef.current) {
@@ -698,6 +732,14 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                         }}
                         pendingConnection={pendingConnection}
                     />
+                )}
+
+                {/* Additive Selection Active Indicator */}
+                {isModifierActive && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-unit/20 border border-unit/30 rounded-full flex items-center gap-2 backdrop-blur-md z-1000 pointer-events-none animate-in fade-in zoom-in duration-300">
+                        <div className="w-1.5 h-1.5 rounded-full bg-unit animate-pulse" />
+                        <span className="text-[10px] font-medium text-unit uppercase tracking-widest">Additive Selection Active</span>
+                    </div>
                 )}
             </div>
         </RelinkContext.Provider >

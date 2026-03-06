@@ -35,6 +35,9 @@ export function registerLogicNodes() {
                 case 'AND': result = toBool(valA) && toBool(valB); break;
                 case 'OR': result = toBool(valA) || toBool(valB); break;
                 case 'XOR': result = (toBool(valA) !== toBool(valB)); break;
+                case 'NAND': result = !(toBool(valA) && toBool(valB)); break;
+                case 'NOR': result = !(toBool(valA) || toBool(valB)); break;
+                case 'XNOR': result = (toBool(valA) === toBool(valB)); break;
                 default: result = false;
             }
             return PayloadUtils.createBoolean(result);

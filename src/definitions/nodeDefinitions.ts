@@ -197,32 +197,75 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'length', label: 'Length', type: 'number', min: 1, step: 1, hint: 'Vector mode only', hidden: (d) => d.mode !== 'vector' }
         ]
     },
+
+    // ─── 2. Output Family ──────────────────────────────────────────
     {
-        id: 'IN-11',
-        label: 'Distributions',
-        category: 'Input',
-        aliases: ['gaussian', 'normal', 'uniform', 'probability'],
+        id: 'OT-01',
+        label: 'Result',
+        category: 'Output',
         handles: [
-            { id: 'param_n', type: 'target', variant: 'single', dataType: 'scalar', label: 'N' },
-            { id: 'param_1', type: 'target', variant: 'single', dataType: 'scalar', label: 'P1' },
-            { id: 'param_2', type: 'target', variant: 'single', dataType: 'scalar', label: 'P2' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'in', type: 'target', variant: 'single' }
         ],
-        defaultData: { mode: 'Normal', n: 100, p1: 0, p2: 1 },
-        opTokens: ['NORMAL', 'UNIFORM', 'POISSON'],
+        defaultData: { type: 'result', viewMode: 'auto' },
         params: [
             {
-                id: 'mode', label: 'Distribution', type: 'select', options: [
-                    { label: 'Normal (Gaussian)', value: 'Normal' },
-                    { label: 'Uniform', value: 'Uniform' },
-                    { label: 'Poisson', value: 'Poisson' },
-                    { label: 'Exponential', value: 'Exponential' }
+                id: 'viewMode', label: 'Display Mode', type: 'select', options: [
+                    { label: 'Auto', value: 'auto' },
+                    { label: 'Text', value: 'text' },
+                    { label: 'Grid / Matrix', value: 'grid' },
+                    { label: 'Color', value: 'color' },
+                    { label: 'Formula', value: 'formula' },
+                    { label: 'LaTeX', value: 'latex' }
                 ]
             },
-            { id: 'n', label: 'N', type: 'number', min: 1, step: 1, hint: 'Sample Count' },
-            { id: 'p1', label: 'P1', type: 'number', hint: 'Mean / Min / Lambda' },
-            { id: 'p2', label: 'P2', type: 'number', hint: 'StdDev / Max' }
+            {
+                id: 'precision', label: 'Precision', type: 'select', options: [
+                    { label: 'Auto', value: -1 },
+                    { label: '0 d.p.', value: 0 },
+                    { label: '1 d.p.', value: 1 },
+                    { label: '2 d.p.', value: 2 },
+                    { label: '3 d.p.', value: 3 },
+                    { label: '4 d.p.', value: 4 },
+                    { label: '5 d.p.', value: 5 },
+                    { label: '6 d.p.', value: 6 },
+                    { label: '8 d.p.', value: 8 },
+                    { label: '10 d.p.', value: 10 }
+                ]
+            }
         ]
+    },
+    {
+        id: 'OT-02',
+        label: 'Status',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', variant: 'single', dataType: 'any' }
+        ],
+        defaultData: { state: 'void' }
+    },
+    {
+        id: 'OT-03',
+        label: 'Graph Plot',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any' }
+        ],
+        defaultData: { minX: -10, maxX: 10, points: 100 },
+        aliases: ['plot', 'graph', 'chart', 'visualization'],
+        params: [
+            { id: 'minX', label: 'Min X', type: 'number' },
+            { id: 'maxX', label: 'Max X', type: 'number' },
+            { id: 'points', label: 'Sampling Points', type: 'number', min: 10, max: 2000, step: 10, hint: 'Higher = smoother, more CPU' }
+        ]
+    },
+    {
+        id: 'OT-04',
+        label: 'Debug',
+        category: 'Output',
+        handles: [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' }
+        ],
+        defaultData: { type: 'debug' }
     },
 
     // ─── 3. Math ───────────────────────────────────────────
@@ -816,7 +859,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                     { label: 'AND (&&)', value: 'AND', category: 'Boolean Gates', aliases: ['and', 'gate'] },
                     { label: 'OR (||)', value: 'OR', category: 'Boolean Gates', aliases: ['or', 'gate'] },
                     { label: 'NOT (!)', value: 'NOT', category: 'Boolean Gates', aliases: ['not', 'gate', 'inv'] },
+                    { label: 'NAND', value: 'NAND', category: 'Boolean Gates', aliases: ['nand', 'not and'] },
+                    { label: 'NOR', value: 'NOR', category: 'Boolean Gates', aliases: ['nor', 'not or'] },
                     { label: 'XOR (⊕)', value: 'XOR', category: 'Boolean Gates', aliases: ['xor', 'gate'] },
+                    { label: 'XNOR', value: 'XNOR', category: 'Boolean Gates', aliases: ['xnor'] },
                     { label: 'Equal (==)', value: 'EQ', category: 'Comparisons', aliases: ['eq', 'equal'] },
                     { label: 'Not Equal (!=)', value: 'NEQ', category: 'Comparisons', aliases: ['neq', 'not equal'] },
                     { label: 'Greater Than (>)', value: 'GT', category: 'Comparisons', aliases: ['gt', 'greater'] },
@@ -850,76 +896,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out_false', type: 'source', variant: 'single', dataType: 'any', label: 'False' }
         ],
         defaultData: { type: 'logicSplit' }
-    },
-
-    // ─── 8. Output Family ──────────────────────────────────────────
-    {
-        id: 'OT-01',
-        label: 'Result',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', variant: 'single' }
-        ],
-        defaultData: { type: 'result', viewMode: 'auto' },
-        params: [
-            {
-                id: 'viewMode', label: 'Display Mode', type: 'select', options: [
-                    { label: 'Auto', value: 'auto' },
-                    { label: 'Text', value: 'text' },
-                    { label: 'Grid / Matrix', value: 'grid' },
-                    { label: 'Color', value: 'color' },
-                    { label: 'Formula', value: 'formula' },
-                    { label: 'LaTeX', value: 'latex' }
-                ]
-            },
-            {
-                id: 'precision', label: 'Precision', type: 'select', options: [
-                    { label: 'Auto', value: -1 },
-                    { label: '0 d.p.', value: 0 },
-                    { label: '1 d.p.', value: 1 },
-                    { label: '2 d.p.', value: 2 },
-                    { label: '3 d.p.', value: 3 },
-                    { label: '4 d.p.', value: 4 },
-                    { label: '5 d.p.', value: 5 },
-                    { label: '6 d.p.', value: 6 },
-                    { label: '8 d.p.', value: 8 },
-                    { label: '10 d.p.', value: 10 }
-                ]
-            }
-        ]
-    },
-    {
-        id: 'OT-02',
-        label: 'Status',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'any' }
-        ],
-        defaultData: { state: 'void' }
-    },
-    {
-        id: 'OT-03',
-        label: 'Graph Plot',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any' }
-        ],
-        defaultData: { minX: -10, maxX: 10, points: 100 },
-        aliases: ['plot', 'graph', 'chart', 'visualization'],
-        params: [
-            { id: 'minX', label: 'Min X', type: 'number' },
-            { id: 'maxX', label: 'Max X', type: 'number' },
-            { id: 'points', label: 'Sampling Points', type: 'number', min: 10, max: 2000, step: 10, hint: 'Higher = smoother, more CPU' }
-        ]
-    },
-    {
-        id: 'OT-04',
-        label: 'Debug',
-        category: 'Output',
-        handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' }
-        ],
-        defaultData: { type: 'debug' }
     },
 
     // ─── 9. Utility Family ─────────────────────────────────────────

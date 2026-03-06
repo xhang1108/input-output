@@ -2,29 +2,29 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { NodeRegistry, initializeNodes } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { InputOutputEngine } from '../InputOutputEngine';
-import { DataType } from '../../types/payload';
+import { DataType, NodePayload } from '../../types/payload';
 
-describe('Logic Gate (MA-05)', () => {
+describe('Logic Gate (LG-01)', () => {
     beforeAll(() => {
         // Ensure InputOutputEngine is initialized
         InputOutputEngine.getInstance();
         initializeNodes();
     });
 
-    const evaluate = async (op: string, a: string | number | boolean, b: string | number | boolean, aUnit?: string, bUnit?: string) => {
+    const evaluate = async (op: string, a: any, b?: any, aUnit?: string, bUnit?: string) => {
         const node = {
             id: 'test-logic',
-            type: 'MA-05',
+            type: 'LG-01',
             data: { op },
             position: { x: 0, y: 0 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
             isInDirtyChain: false
         } as unknown as import('../types').NodeLogic;
 
-        const inputs = {
-            in_a: PayloadUtils.createScalar(a, aUnit),
-            in_b: PayloadUtils.createScalar(b, bUnit)
-        };
+        const inputs: Record<string, NodePayload> = {};
+        if (a !== undefined) inputs.in_a = PayloadUtils.createScalar(a, aUnit);
+        if (b !== undefined) inputs.in_b = PayloadUtils.createScalar(b, bUnit);
 
         return await NodeRegistry.evaluate(node, inputs);
     };
@@ -38,6 +38,38 @@ describe('Logic Gate (MA-05)', () => {
 
         const resEQ = await evaluate('EQ', 5, 5);
         expect(resEQ.value).toBe(true);
+    });
+
+    it('should correctly evaluate standard logic gates', async () => {
+        // AND
+        expect((await evaluate('AND', true, true)).value).toBe(true);
+        expect((await evaluate('AND', true, false)).value).toBe(false);
+
+        // OR
+        expect((await evaluate('OR', true, false)).value).toBe(true);
+        expect((await evaluate('OR', false, false)).value).toBe(false);
+
+        // NOT
+        expect((await evaluate('NOT', true)).value).toBe(false);
+        expect((await evaluate('NOT', false)).value).toBe(true);
+
+        // XOR
+        expect((await evaluate('XOR', true, false)).value).toBe(true);
+        expect((await evaluate('XOR', true, true)).value).toBe(false);
+    });
+
+    it('should correctly evaluate NEW logic gates (NAND, NOR, XNOR)', async () => {
+        // NAND
+        expect((await evaluate('NAND', true, true)).value).toBe(false);
+        expect((await evaluate('NAND', true, false)).value).toBe(true);
+
+        // NOR
+        expect((await evaluate('NOR', true, false)).value).toBe(false);
+        expect((await evaluate('NOR', false, false)).value).toBe(true);
+
+        // XNOR
+        expect((await evaluate('XNOR', true, true)).value).toBe(true);
+        expect((await evaluate('XNOR', true, false)).value).toBe(false);
     });
 
     it('should correctly compare Units', async () => {
@@ -59,11 +91,5 @@ describe('Logic Gate (MA-05)', () => {
         const res = await evaluate('GT', 1, 1, 'm', 'kg');
         expect(res.type).toBe(DataType.Error);
         expect(res.meta.error).toContain('Failed');
-    });
-
-    it('should handle BigNumbers if configured (simulation)', async () => {
-        // We can't easily switch engine mode here without mocking, 
-        // but we can test if the evaluator handles object wrappers by manually creating one if needed.
-        // For now, standard hydration test covers the logic path.
     });
 });

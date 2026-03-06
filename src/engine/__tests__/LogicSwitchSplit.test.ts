@@ -4,7 +4,7 @@ import { PayloadUtils } from '../../utils/PayloadUtils';
 import { InputOutputEngine } from '../InputOutputEngine';
 import { DataType, NodePayload } from '../../types/payload';
 
-describe('Logic Switch & Split (MA-04/13)', () => {
+describe('Logic Switch & Split (LG-02/03)', () => {
     beforeAll(() => {
         InputOutputEngine.getInstance();
         initializeNodes();
@@ -17,19 +17,20 @@ describe('Logic Switch & Split (MA-04/13)', () => {
             data: {},
             position: { x: 0, y: 0 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
             isInDirtyChain: false
         };
         return await NodeRegistry.evaluate(node, inputs);
     };
 
-    describe('MA-04 Switch', () => {
+    describe('LG-02 Switch', () => {
         it('should switch based on scalar boolean', async () => {
             const inputs = {
                 condition: PayloadUtils.createBoolean(true),
                 in_true: PayloadUtils.createScalar(1),
                 in_false: PayloadUtils.createScalar(0)
             };
-            const res = await evaluate('MA-04', inputs);
+            const res = await evaluate('LG-02', inputs);
             expect(res.value).toBe(1);
         });
 
@@ -48,7 +49,7 @@ describe('Logic Switch & Split (MA-04/13)', () => {
                 in_true: PayloadUtils.createString('TruePath'),
                 in_false: PayloadUtils.createString('FalsePath')
             };
-            let res = await evaluate('MA-04', inputs);
+            let res = await evaluate('LG-02', inputs);
             expect(res.value).toBe('FalsePath');
 
             // Case 2: 5m (Should be True -> return in_true)
@@ -59,18 +60,18 @@ describe('Logic Switch & Split (MA-04/13)', () => {
                 meta: { unit: 'm' }
             } as NodePayload;
             inputs = { ...inputs, condition: fiveUnitPayload };
-            res = await evaluate('MA-04', inputs);
+            res = await evaluate('LG-02', inputs);
             expect(res.value).toBe('TruePath');
         });
     });
 
-    describe('MA-13 Logic Split', () => {
+    describe('LG-03 Logic Split', () => {
         it('should split based on scalar boolean', async () => {
             const inputs = {
                 condition: PayloadUtils.createBoolean(true),
                 data: PayloadUtils.createScalar(42)
             };
-            const res = await evaluate('MA-13', inputs);
+            const res = await evaluate('LG-03', inputs);
             const val = res.value as Record<string, NodePayload>;
             expect(val.out_true).not.toBeNull();
             expect(val.out_false).toBeNull();
@@ -83,14 +84,14 @@ describe('Logic Switch & Split (MA-04/13)', () => {
                 condition: PayloadUtils.createScalar(0, 'm'),
                 data: PayloadUtils.createString('Data')
             };
-            let res = await evaluate('MA-13', inputs);
+            let res = await evaluate('LG-03', inputs);
             let val = res.value as Record<string, NodePayload>;
             expect(val.out_true).toBeNull();
             expect(val.out_false).not.toBeNull();
 
             // Case 2: 5m (Should be True -> out_true=data, out_false=null)
             inputs.condition = PayloadUtils.createScalar(5, 'm');
-            res = await evaluate('MA-13', inputs);
+            res = await evaluate('LG-03', inputs);
             val = res.value as Record<string, NodePayload>;
             expect(val.out_true).not.toBeNull();
             expect(val.out_false).toBeNull();

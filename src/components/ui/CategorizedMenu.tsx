@@ -127,7 +127,7 @@ export function CategorizedMenu({
         const rootGroups: { rootName: string; subgroups: { displayName: string; items: CategorizedMenuItem[]; depth: number; fullName: string }[] }[] = [];
 
         // Manual order for root categories to ensure 'Input' is first
-        const rootPriority = ['Input', 'Generators', 'Math', 'Calculus', 'Data & Structures', 'Transform', 'Logic & Flow', 'Output', 'Utility'];
+        const rootPriority = ['Input', 'Output', 'Generators', 'Math', 'Calculus', 'Data & Structures', 'Transform', 'Logic & Flow', 'Utility'];
 
         const traverse = (groups: Record<string, CategoryGroup>, depth: number, rootTarget: { displayName: string; items: CategorizedMenuItem[]; depth: number; fullName: string }[]) => {
             const sortedKeys = Object.keys(groups).sort();
