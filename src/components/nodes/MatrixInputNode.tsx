@@ -1,50 +1,31 @@
-import { memo, useCallback, useRef, useState } from 'react';
-import { BaseNode } from './BaseNode';
-import { NodeProps, Position, useReactFlow } from '@xyflow/react';
+import { memo, useState, useCallback, useRef } from 'react';
+import { NodeProps, useReactFlow } from '@xyflow/react';
 import * as math from 'mathjs';
-import { useNodeDebounce } from './hooks/useNodeDebounce';
+import { BaseNode } from './BaseNode';
 import { ResizeHandle } from './ResizeHandle';
-import { cn } from '@/lib/utils';
-import { NodeHandle } from './NodeHandle';
+import { useNodeDimensions } from './hooks/useNodeDimensions';
+import { useNodeDebounce } from './hooks/useNodeDebounce';
+import { Brain } from '../../engine/Brain';
 
 /**
  * 🧱 MatrixInputNode (IO-08)
- * 
- * Matrix input node with resizable grid.
+ * Standard matrix entry node with dynamic resizing.
+ * Snaps to grid steps (44px horizontal, 36px vertical).
  */
 export const MatrixInputNode = memo((props: NodeProps) => {
-    const { id, data, selected } = props;
-    const { updateNode } = useReactFlow();
+    const { id, data } = props;
+    const { updateNodeData } = useReactFlow();
 
-    // ... (keep initialGrid calculation)
-    // We initialize from data if available, otherwise default to 3x3
+    // --- Grid State Management ---
     const initialGrid = (() => {
         try {
-            // Helper to recursively find a 2D array in the NodePayload or raw data
-            const extract2DArray = (obj: any): any => {
-                // If it's a MathJS Matrix object
-                if (obj && typeof obj === 'object' && typeof obj.toArray === 'function') {
-                    const arr = obj.toArray();
-                    if (Array.isArray(arr)) {
-                        if (Array.isArray(arr[0])) return arr;
-                        if (typeof arr[0] === 'number') return arr.map((v: any) => [v]);
-                    }
-                }
-
-                if (Array.isArray(obj)) {
-                    if (Array.isArray(obj[0])) return obj;
-                    // Fallback to column matrix if it's a 1D vector
-                    if (typeof obj[0] === 'number') return obj.map((v: any) => [v]);
-                }
-
-                if (obj && typeof obj === 'object') {
-                    if (obj.value !== undefined) return extract2DArray(obj.value);
-                    if (obj.data !== undefined) return extract2DArray(obj.data);
-                }
+            const extract2DArray = (val: any): number[][] | null => {
+                if (Array.isArray(val) && Array.isArray(val[0])) return val;
+                if (val && typeof val === 'object' && val.data && Array.isArray(val.data)) return val.data;
                 return null;
             };
 
-            if (typeof data.rawExpression === 'string') {
+            if (data.rawExpression) {
                 try {
                     const parsed = JSON.parse(data.rawExpression);
                     const extracted = extract2DArray(parsed);
@@ -57,10 +38,10 @@ export const MatrixInputNode = memo((props: NodeProps) => {
         } catch (e) { }
         return [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
     })() as number[][];
+
     const [rows, setRows] = useState(initialGrid.length);
     const [cols, setCols] = useState(initialGrid[0]?.length || 1);
-
-    const gridRef = useRef<HTMLDivElement>(null);
+    const nodeRef = useRef<HTMLDivElement>(null);
 
     // Debounced Grid State & Sync
     const [grid, setGrid] = useNodeDebounce<number[][]>(
@@ -68,18 +49,12 @@ export const MatrixInputNode = memo((props: NodeProps) => {
         initialGrid,
         useCallback((newGrid) => {
             try {
-                // Create MathJS Matrix
                 const mat = math.matrix(newGrid);
-
                 return {
-                    // Update the 'value' field which the engine observes
                     value: mat,
-                    // Store raw expression for persistence
                     rawExpression: JSON.stringify(newGrid),
-                    // Metadata
                     label: 'Matrix',
                     isMatrix: true,
-                    // Helper for size
                     rows: newGrid.length,
                     cols: newGrid[0]?.length || 1
                 };
@@ -90,108 +65,83 @@ export const MatrixInputNode = memo((props: NodeProps) => {
         }, [])
     );
 
-    // Cell Edit Handler
-    const handleCellChange = (r: number, c: number, val: string) => {
-        const num = parseFloat(val);
-        const newGrid = grid.map(row => [...row]); // Deep copy rows
-        newGrid[r][c] = isNaN(num) ? 0 : num;
-        setGrid(newGrid);
-    };
+    // Dimension management via unified hook
+    const { width, height, onResize, onResizeEnd } = useNodeDimensions({
+        id,
+        type: 'IN-07',
+        data,
+        onProject: (screenW, screenH) => ({
+            w: Math.max(1, Math.round((screenW - 20) / 44)) * 44 + 20,
+            h: Math.max(1, Math.round((screenH - 52) / 36)) * 36 + 52
+        }),
+        onResize: useCallback(({ width: newWidth, height: newHeight }: { width: number; height: number }) => {
+            const newCols = Math.max(1, Math.round((newWidth - 20) / 44));
+            const newRows = Math.max(1, Math.round((newHeight - 52) / 36));
 
+            if (newRows === rows && newCols === cols) return;
+
+            setRows(newRows);
+            setCols(newCols);
+
+            const newGrid = Array(newRows).fill(0).map((_, r) =>
+                Array(newCols).fill(0).map((_, c) => grid[r]?.[c] ?? 0)
+            );
+            setGrid(newGrid);
+        }, [rows, cols, grid, setGrid])
+    });
+
+    const updateCell = useCallback((r: number, c: number, val: string) => {
+        const num = parseFloat(val) || 0;
+        const newGrid = grid.map((row, ri) =>
+            ri === r ? row.map((col, ci) => ci === c ? num : col) : row
+        );
+        setGrid(newGrid);
+    }, [grid, setGrid]);
 
     // Define Output Handle
     const handles = [
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        { id: 'out', type: 'source', position: 'right' as any, variant: 'single' as any, dataType: 'matrix' as any }
     ];
 
     const nodeData = {
         ...data,
         handles,
-        // Override label with matrix size for the header
+        width,
+        height,
         label: `Matrix ${rows}×${cols}`
     };
 
     return (
-        <BaseNode {...props} data={nodeData}>
-            <div className="p-1 relative group overflow-visible">
-                {/* Grid Container - Anchored Top-Left */}
-                <div className="flex flex-col gap-1 w-fit relative" ref={gridRef}>
+        <BaseNode {...props} ref={nodeRef} data={nodeData} style={{ width, height }}>
+            <div className="p-0 relative group overflow-visible">
+                {/* Grid Container */}
+                <div className="flex flex-col gap-1 w-fit relative">
                     {grid.map((row, r) => (
                         <div key={r} className="flex gap-1">
-                            {row.map((cell, c) => (
-                                <input
-                                    key={`${r}-${c}`}
-                                    type="text"
-                                    className="nodrag w-10 h-8 text-center text-xs font-mono 
-                                             bg-zinc-800/50 border border-zinc-700/50 rounded 
-                                             text-zinc-200 focus:border-blue-500 focus:bg-zinc-800 
-                                             outline-none transition-all placeholder-zinc-600"
-                                    value={cell === 0 && !data.value ? '' : cell}
-                                    placeholder="0"
-                                    onChange={(e) => handleCellChange(r, c, e.target.value)}
-                                    onKeyDown={(e) => {
-                                        e.stopPropagation();
-                                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                                            e.preventDefault();
-                                            let step = 1;
-                                            if (e.shiftKey) step = 0.1;
-                                            if (e.altKey) step = 10;
-                                            const delta = e.key === 'ArrowUp' ? step : -step;
-                                            const currentVal = parseFloat(e.currentTarget.value) || 0;
-                                            const newVal = parseFloat((currentVal + delta).toFixed(2));
-                                            handleCellChange(r, c, String(newVal));
-                                        }
-                                    }}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                />
+                            {row.map((val, c) => (
+                                <div
+                                    key={c}
+                                    className="w-10 h-8 bg-zinc-900/50 border border-zinc-800 rounded flex items-center justify-center"
+                                >
+                                    <input
+                                        type="text"
+                                        defaultValue={val}
+                                        onBlur={(e) => updateCell(r, c, e.target.value)}
+                                        className="w-full h-full bg-transparent text-center text-[10px] text-zinc-300 outline-none font-mono"
+                                    />
+                                </div>
                             ))}
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* Resize Handle (Anchored to Node Bottom Right) */}
             <ResizeHandle
-                targetRef={gridRef}
+                id={id}
+                targetRef={nodeRef}
                 position="bottom-right"
-                onResize={({ screenW, screenH }) => {
-                    if (!gridRef.current) return;
-                    const rect = gridRef.current.getBoundingClientRect();
-                    const cellW = rect.width / cols;
-                    const cellH = rect.height / rows;
-                    const targetW = Math.max(60, screenW);
-                    const targetH = Math.max(40, screenH);
-                    const newCols = Math.max(1, Math.round(targetW / cellW));
-                    const newRows = Math.max(1, Math.round(targetH / cellH));
-
-                    if (newRows === rows && newCols === cols) return;
-
-                    setGrid(currentGrid => {
-                        const currentRows = currentGrid.length;
-                        const currentCols = currentGrid[0]?.length || 1;
-                        let nextGrid = [...currentGrid];
-                        if (newRows > currentRows) {
-                            const rowsToAdd = newRows - currentRows;
-                            const newRowsArr = Array(rowsToAdd).fill(0).map(() => Array(currentCols).fill(0));
-                            nextGrid = [...nextGrid, ...newRowsArr];
-                        } else if (newRows < currentRows) {
-                            nextGrid = nextGrid.slice(0, newRows);
-                        }
-                        if (newCols !== currentCols) {
-                            nextGrid = nextGrid.map(row => {
-                                if (newCols > row.length) {
-                                    return [...row, ...Array(newCols - row.length).fill(0)];
-                                } else if (newCols < row.length) {
-                                    return row.slice(0, newCols);
-                                }
-                                return row;
-                            });
-                        }
-                        setRows(nextGrid.length);
-                        setCols(nextGrid[0]?.length || 1);
-                        return nextGrid;
-                    });
-                }}
+                onResize={onResize}
+                onResizeEnd={onResizeEnd}
             />
         </BaseNode>
     );

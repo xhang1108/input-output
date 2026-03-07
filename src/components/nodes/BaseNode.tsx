@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, useMemo } from 'react';
+import { memo, useState, useRef, useEffect, useMemo, forwardRef } from 'react';
 import { NodeProps, Position, useReactFlow, useUpdateNodeInternals, useNodeConnections, useEdges, useStore, ReactFlowState, Edge } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
 import { Pencil } from 'lucide-react';
@@ -22,7 +22,7 @@ const DynamicNodeHandle = memo(({ h, id, isConnectable }: { h: HandleConfig, id:
 });
 DynamicNodeHandle.displayName = 'DynamicNodeHandle';
 
-export const BaseNode = memo(({ id, data, selected, isConnectable, children, type, style, hideDefaultHandles, onDoubleClick, handleVariants }: NodeProps & { children?: React.ReactNode, style?: React.CSSProperties, hideDefaultHandles?: boolean, onDoubleClick?: (e: React.MouseEvent) => void, handleVariants?: Record<string, 'single' | 'capsule'> }) => {
+export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?: React.ReactNode, style?: React.CSSProperties, hideDefaultHandles?: boolean, onDoubleClick?: (e: React.MouseEvent) => void, handleVariants?: Record<string, 'single' | 'capsule'> }>(({ id, data, selected, isConnectable, children, type, style, hideDefaultHandles, onDoubleClick, handleVariants }, ref) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [title, setTitle] = useState((data.label as string) || 'Node');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -36,10 +36,11 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
     // Find definition for fallback handles
     const definition = NODE_DEFINITIONS.find((d) => d.id === type);
 
-    // Sync edges when handles or dimensions change (Dynamic Layout)
+    // Sync edges and internal state when data changes
     useEffect(() => {
         updateNodeInternals(id);
-    }, [id, data.handles, data.width, updateNodeInternals]);
+        if (data.label) setTitle(data.label as string);
+    }, [id, data.handles, data.width, data.height, data.label, updateNodeInternals]);
 
     // Visual State Subscription (Strict DOM Isolation)
     const [visualTick, setVisualTick] = useState(0);
@@ -147,8 +148,9 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
 
     return (
         <div
+            ref={ref}
             className={cn(
-                "relative min-w-(--node-width-min) rounded-xl border transition duration-200 group",
+                "relative rounded-xl border transition duration-200 group flex flex-col overflow-hidden",
                 selected ? "border-zinc-400" : "border-zinc-700 hover:border-zinc-500"
             )}
             style={{
@@ -181,7 +183,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
 
             {/* Header */}
             <div
-                className="px-3 py-2 border-b border-zinc-800/60 rounded-t-xl flex items-center justify-between"
+                className="px-3 py-2 border-b border-zinc-800/60 flex items-center justify-between shrink-0"
                 style={{ background: 'var(--node-bg-header)' }}
                 onDoubleClick={handleRename}
             >
@@ -210,7 +212,7 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
             </div>
 
             {/* Content Body */}
-            <div className="p-3">
+            <div className="p-3 flex-1 flex flex-col min-h-0 min-w-0">
                 {children ? children : (
                     <div className="text-[10px] text-zinc-500 font-mono">ID: {id}</div>
                 )}
@@ -235,6 +237,6 @@ export const BaseNode = memo(({ id, data, selected, isConnectable, children, typ
             )}
         </div>
     );
-});
+}));
 
 BaseNode.displayName = 'BaseNode';

@@ -5,53 +5,16 @@ import { NodeLogic } from '../engine/types';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { useAppStore } from '../store/useStore';
 import deepEqual from 'fast-deep-equal';
+import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+
+import { DEFAULT_UI_ORIGIN } from '../types/NodeDefinition';
 
 /**
- * liftStructuralProps
+ * useBrainUpdates
  * 
- * Extracts Frame-related properties from Brain's NodeLogic.data
- * and returns them as top-level React Flow Node properties.
- * 
- * Brain stores everything in `data`. React Flow expects structural
- * properties (parentId, extent, expandParent) at the Node root level,
- * and dimensions in `style`. This function bridges that gap.
+ * Listens to Brain 'graphChanged' events and syncs state
+ * back to React Flow nodes and edges.
  */
-function liftStructuralProps(logicNode: NodeLogic) {
-    const d = logicNode.data || {};
-
-    // Destructure structural props from data, leaving the rest as display data
-    const { parentId, extent, expandParent, width, height, ...displayData } = d;
-    // NOTE: We intentionally do NOT lift `extent` or `expandParent` to Node root.
-    // Setting extent='parent' causes React Flow to call clampPositionToParent,
-    // which crashes if the parent hasn't been measured yet.
-
-    // Build style object for dimensions and z-index
-    const style: Record<string, unknown> = {};
-    if (width != null) style.width = width;
-    if (height != null) style.height = height;
-
-    // Z-index: Frames sit behind everything, children sit above
-    if (logicNode.type === 'frame') {
-        style.zIndex = -100;
-    } else if (parentId) {
-        style.zIndex = 100;
-    }
-
-    return {
-        // Top-level structural props (React Flow reads these)
-        parentId: parentId as string | undefined,
-        // Center Origin for Spatial Geometric Law (Exempt Matrix Input for stable resizing)
-        origin: ((logicNode.type === 'matrixInput' || logicNode.type === 'IO-08')
-            ? [0, 0]
-            : [0.5, 0.5]) as [number, number],
-        // extent and expandParent intentionally omitted (see note above)
-        width: width as number | undefined,
-        height: height as number | undefined,
-        style,
-        // Clean display data (still includes parentId etc. for data consumers)
-        displayData: { ...d, value: undefined }, // value set separately
-    };
-}
 
 /**
  * useBrainUpdates
@@ -110,7 +73,6 @@ export function useBrainUpdates(
 
                     // 2. Add/Update nodes from Brain
                     for (const [id, logicNode] of brainNodes) {
-                        const lifted = liftStructuralProps(logicNode);
                         const existingIndex = nextNodes.findIndex(n => n.id === id);
                         const existingNode = existingIndex !== -1 ? nextNodes[existingIndex] : null;
 
@@ -122,7 +84,35 @@ export function useBrainUpdates(
                             unwrappedValue = existingNode.data.value as any;
                         }
 
-                        const targetData = { ...lifted.displayData, value: unwrappedValue };
+                        // 1. Determine structural props (parentId and Origin)
+                        const d = logicNode.data || {};
+                        const { width: _dataWidth, height: _dataHeight, parentId: _dataParentId, ...displayData } = d;
+
+                        // Prioritize top-level width/height (updated by RESIZE_NODE)
+                        const width = logicNode.width ?? _dataWidth;
+                        const height = logicNode.height ?? _dataHeight;
+
+                        // Re-insert into targetData for components relying on data.width/height
+                        const targetData = {
+                            ...displayData,
+                            width,
+                            height,
+                            value: unwrappedValue
+                        };
+
+                        const style: Record<string, any> = {};
+                        if (width != null) style.width = width;
+                        if (height != null) style.height = height;
+                        if (logicNode.type === 'frame') style.zIndex = -100;
+                        else if (logicNode.parentId) style.zIndex = 100;
+
+                        let uiOrigin = existingNode?.origin || DEFAULT_UI_ORIGIN;
+                        const def = NODE_DEFINITIONS.find(def => def.id === logicNode.type);
+                        if (def && def.layoutMetadata) {
+                            uiOrigin = def.layoutMetadata.uiOrigin;
+                        } else if (logicNode.type === 'frame') {
+                            uiOrigin = [0, 0];
+                        }
 
                         if (existingIndex === -1) {
                             // New node (from Brain transaction, undo, or load)
@@ -131,11 +121,11 @@ export function useBrainUpdates(
                                 position: logicNode.position || { x: 0, y: 0 },
                                 data: targetData,
                                 type: logicNode.type || 'mathNode',
-                                parentId: lifted.parentId,
-                                width: lifted.width,
-                                height: lifted.height,
-                                origin: lifted.origin,
-                                style: lifted.style,
+                                parentId: logicNode.parentId,
+                                width: width as number,
+                                height: height as number,
+                                origin: uiOrigin,
+                                style: style,
                                 selected: logicNode.selected || false
                             } as Node);
                             changed = true;
@@ -159,34 +149,24 @@ export function useBrainUpdates(
                             }
 
                             // Check structural changes
-                            if (uiNode.parentId !== lifted.parentId) {
+                            if (uiNode.parentId !== logicNode.parentId) {
                                 needsUpdate = true;
                             }
 
-                            // Check selection changes from Brain
-                            // GUARD: If the node is selected in the UI, don't let a "false" from Brain overwrite it.
-                            // This prevents flickering during rapid selections or when menus are active.
-                            if (uiNode.selected !== logicNode.selected) {
-                                if (uiNode.selected && !logicNode.selected) {
-                                    // Brain thinks it's unselected, but UI says it's selected.
-                                    // We TRUST the UI here to prevent flickering.
-                                    needsUpdate = false;
-                                } else {
-                                    needsUpdate = true;
-                                }
-                            }
+                            if (needsUpdate || uiNode.selected !== logicNode.selected) {
+                                // Selection logic (UI wins for false-positives)
+                                const finalSelected = (uiNode.selected && !logicNode.selected) ? true : (logicNode.selected ?? false);
 
-                            if (needsUpdate) {
                                 nextNodes[existingIndex] = {
                                     ...uiNode,
                                     data: targetData,
                                     position: newPos,
-                                    parentId: lifted.parentId,
-                                    width: lifted.width,
-                                    height: lifted.height,
-                                    origin: lifted.origin,
-                                    style: { ...uiNode.style, ...lifted.style },
-                                    selected: (uiNode.selected || (logicNode.selected ?? false)) // UI selection wins
+                                    parentId: logicNode.parentId,
+                                    width: width as number,
+                                    height: height as number,
+                                    origin: uiOrigin,
+                                    style: { ...uiNode.style, ...style },
+                                    selected: finalSelected
                                 };
                                 changed = true;
                             }

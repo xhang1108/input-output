@@ -111,4 +111,67 @@ describe('Brain', () => {
             expect(Number(result.value)).toBe(10);
         });
     });
+
+    describe('Content Metrics Protocol', () => {
+        it('updateNodeBoundingBox should write width/height into NodeLogic', () => {
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: { id: 'N1', type: 'UI-01', position: { x: 100, y: 200 }, data: {} }
+            });
+
+            brain.updateNodeBoundingBox('N1', { width: 320, height: 180 });
+            const bbox = brain.getNodeBoundingBox('N1');
+
+            expect(bbox).not.toBeNull();
+            expect(bbox!.width).toBe(320);
+            expect(bbox!.height).toBe(180);
+        });
+
+        it('updateNodeBoundingBox should store absolute canvas position', () => {
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: { id: 'N2', type: 'UI-01', position: { x: 50, y: 75 }, data: {} }
+            });
+
+            brain.updateNodeBoundingBox('N2', { width: 100, height: 50 });
+            const bbox = brain.getNodeBoundingBox('N2');
+
+            // Absolute position should match node.position for a root node (no parent)
+            expect(bbox!.x).toBe(50);
+            expect(bbox!.y).toBe(75);
+        });
+
+        it('getNodeBoundingBox should return null before any measurement', () => {
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: { id: 'N3', type: 'UI-01', position: { x: 0, y: 0 }, data: {} }
+            });
+
+            expect(brain.getNodeBoundingBox('N3')).toBeNull();
+        });
+
+        it('updateNodeBoundingBox should not add to undo history', () => {
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: { id: 'N4', type: 'UI-01', position: { x: 0, y: 0 }, data: {} }
+            });
+
+            // Undo the ADD_NODE to get back to empty
+            brain.undo();
+            expect(brain.getNodesMap().size).toBe(0);
+
+            // Re-add the node
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: { id: 'N4', type: 'UI-01', position: { x: 0, y: 0 }, data: {} }
+            });
+
+            // Write bounding box — should NOT pollute history
+            brain.updateNodeBoundingBox('N4', { width: 200, height: 100 });
+
+            // Undo should remove the ADD_NODE, not the bounding box write
+            brain.undo();
+            expect(brain.getNodesMap().size).toBe(0);
+        });
+    });
 });

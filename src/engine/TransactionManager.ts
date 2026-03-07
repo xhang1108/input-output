@@ -1,5 +1,5 @@
 import { Edge } from '@xyflow/react';
-import { Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload, GraphState, NodeLogic } from './types';
+import { Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload, ResizeNodePayload, GraphState, NodeLogic } from './types';
 import { HistoryManager } from './HistoryManager';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { IncrementalPatch } from './SerializableGraph';
@@ -61,7 +61,8 @@ export class TransactionManager {
                         initialValue: node.value,
                         type: node.type,
                         data: { ...node.data },
-                        position: node.position
+                        position: node.position,
+                        parentId: node.parentId
                     } as AddNodePayload
                 };
 
@@ -104,7 +105,27 @@ export class TransactionManager {
                     type: 'MOVE_NODE',
                     payload: {
                         id: node.id,
-                        position: restorePos
+                        position: restorePos,
+                        parentId: node.parentId
+                    }
+                };
+            }
+
+            case 'RESIZE_NODE': {
+                const p = tx.payload as ResizeNodePayload;
+                const node = state.nodes.get(p.id);
+                if (!node) return null;
+                const restoreSize = p.oldSize || {
+                    width: node.measured?.width ?? node.width ?? 0,
+                    height: node.measured?.height ?? node.height ?? 0
+                };
+
+                return {
+                    type: 'RESIZE_NODE',
+                    payload: {
+                        id: node.id,
+                        width: restoreSize.width,
+                        height: restoreSize.height
                     }
                 };
             }
@@ -178,6 +199,7 @@ export class TransactionManager {
                     position: p.position as { x: number; y: number },
                     isInDirtyChain: true,
                     selected: (p as any).selected || false,
+                    parentId: p.parentId,
                 };
                 state.nodes.set(p.id, newNode);
                 hooks.onNodeAdded?.(newNode);
@@ -247,7 +269,22 @@ export class TransactionManager {
                 const node = state.nodes.get(p.id);
                 if (node) {
                     node.position = p.position;
+                    if (p.parentId !== undefined) {
+                        node.parentId = p.parentId;
+                    }
                     hooks.onNodeMoved?.(p.id);
+                    return { success: true };
+                }
+                return { success: false, reason: 'Node not found' };
+            }
+
+            case 'RESIZE_NODE': {
+                const p = tx.payload as ResizeNodePayload;
+                const node = state.nodes.get(p.id);
+                if (node) {
+                    node.width = p.width;
+                    node.height = p.height;
+                    hooks.onNodeDataUpdated?.(p.id); // Trigger visual update
                     return { success: true };
                 }
                 return { success: false, reason: 'Node not found' };

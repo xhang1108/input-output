@@ -15,6 +15,9 @@ export type NodeLogic = Node & {
     isInDirtyChain: boolean;
     position: { x: number; y: number };
     visualState?: VisualState;
+    parentId?: string; // Phase 4.1: Tree-based Coordinate System
+    /** UI-reported bounding box (absolute canvas coords). Written by useContentMetrics. */
+    boundingBox?: { width: number; height: number; x: number; y: number };
 };
 
 export interface GraphState {
@@ -31,6 +34,7 @@ export type TransactionType =
     | 'UPDATE_VALUE'
 
     | 'UPDATE_NODE_DATA'
+    | 'RESIZE_NODE'
     | 'MOVE_NODE'
     | 'REORDER_EDGES'
     | 'BATCH';
@@ -51,17 +55,26 @@ export interface AddNodePayload {
     type?: string;
     data?: Record<string, unknown>;
     position?: { x: number; y: number };
+    parentId?: string;
 }
 
 export interface MoveNodePayload {
     id: string;
     position: { x: number; y: number };
     oldPosition?: { x: number; y: number };
+    parentId?: string;
 }
 
 export interface UpdateValuePayload {
     id: string;
     value: unknown;
+}
+
+export interface ResizeNodePayload {
+    id: string;
+    width: number;
+    height: number;
+    oldSize?: { width: number; height: number };
 }
 
 export interface BrainEvent {
@@ -76,6 +89,7 @@ export interface InjectableGraph {
         position: { x: number; y: number };
         data?: Record<string, unknown>;
         value?: unknown;
+        parentId?: string;
     }[];
     edges: {
         id: string;

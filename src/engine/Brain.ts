@@ -543,6 +543,13 @@ export class Brain {
         });
     }
 
+    public resizeNode(id: string, width: number, height: number, oldSize?: { width: number; height: number }) {
+        this.applyTransaction({
+            type: 'RESIZE_NODE',
+            payload: { id, width, height, oldSize }
+        });
+    }
+
 
     // --- History Management (Rule #1) ---
     public undo() {
@@ -798,7 +805,8 @@ export class Brain {
             type: n.type || 'unknown',
             position: n.position || { x: 0, y: 0 },
             data: n.data,
-            value: n.value
+            value: n.value,
+            parentId: n.parentId // Phase 4.1: Top-level parent tracking
         }));
 
         const edges = this.state.edges.map(e => ({
@@ -851,7 +859,68 @@ export class Brain {
         return result;
     }
 
-    // --- Dev Tools ---
+    // --- Tree & Coordinate Utilities ---
+
+    /**
+     * Calculates the absolute position of a node by traversing its parent tree.
+     */
+    public getAbsolutePosition(nodeId: string): { x: number; y: number } {
+        const node = this.state.nodes.get(nodeId);
+        if (!node) return { x: 0, y: 0 };
+
+        if (!node.parentId) {
+            return { x: node.position.x, y: node.position.y };
+        }
+
+        const parentAbs = this.getAbsolutePosition(node.parentId);
+        const parentNode = this.state.nodes.get(node.parentId);
+
+        // Frames in Input-Output are centered on their position.
+        // Nested children positions are relative to the parent's top-left.
+        const pw = Number(parentNode?.data?.width ?? 0);
+        const ph = Number(parentNode?.data?.height ?? 0);
+
+        return {
+            x: parentAbs.x - pw / 2 + node.position.x,
+            y: parentAbs.y - ph / 2 + node.position.y
+        };
+    }
+
+    /**
+     * Returns all direct children of a given parent node.
+     */
+    public getChildren(parentId: string): NodeLogic[] {
+        return Array.from(this.state.nodes.values()).filter(n => n.parentId === parentId);
+    }
+
+    // --- UI → Engine Bounding Box Channel ---
+
+    /**
+     * Updates the cached bounding box of a node from UI measurements.
+     *
+     * Called by `useContentMetrics` (ResizeObserver bridge) when a node's DOM
+     * dimensions change due to content reflow (e.g. Sticky Note text growth).
+     *
+     * ⚠️ Pure metadata write — no Transaction, no Undo history, no dirty-chain.
+     * This is intentional: bounding box is a geometric read-only cache for A* routing.
+     */
+    public updateNodeBoundingBox(id: string, box: { width: number; height: number }) {
+        const node = this.state.nodes.get(id);
+        if (!node) return;
+        const abs = this.getAbsolutePosition(id);
+        node.boundingBox = { width: box.width, height: box.height, x: abs.x, y: abs.y };
+    }
+
+    /**
+     * Returns the last UI-reported bounding box for a node (absolute canvas coords).
+     * Used by A* routing to know the current physical extent of each node.
+     * Returns null if no measurement has been written yet.
+     */
+    public getNodeBoundingBox(id: string): { width: number; height: number; x: number; y: number } | null {
+        return this.state.nodes.get(id)?.boundingBox ?? null;
+    }
+
+
 
     public async injectNodes(
         graph: import('./types').InjectableGraph,
@@ -885,6 +954,12 @@ export class Brain {
                 }
             }
 
+            // Phase 4.1: Migrate legacy data.parentId to top-level parentId
+            let parentId = n.parentId;
+            if (!parentId && n.data && n.data.parentId) {
+                parentId = n.data.parentId as string;
+            }
+
             nodeTxs.push({
                 type: 'ADD_NODE',
                 payload: {
@@ -892,7 +967,8 @@ export class Brain {
                     type: n.type,
                     position: n.position,
                     data: nodeData,
-                    initialValue: initVal
+                    initialValue: initVal,
+                    parentId: parentId
                 }
             });
         });
@@ -930,6 +1006,7 @@ export class Brain {
                     type: n.type,
                     data: n.data || {},
                     position: n.position,
+                    parentId: n.parentId
                 } as NodeLogic);
             });
 
@@ -960,7 +1037,13 @@ export class Brain {
             this.transactionManager.recordTransaction(tx, inverseTx);
 
             // Helper to yield control to the browser for a paint
-            const yieldToPaint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+            const yieldToPaint = () => new Promise(r => {
+                if (typeof requestAnimationFrame !== 'undefined') {
+                    requestAnimationFrame(() => setTimeout(r, 0));
+                } else {
+                    setTimeout(r, 0); // Fallback for Node/Vitest environments
+                }
+            });
 
             const totalTxs = nodeTxs.length + edgeTxs.length;
             let processed = 0;

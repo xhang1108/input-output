@@ -134,7 +134,17 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         handles: [
             { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
         ],
-        defaultData: { rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]' }
+        defaultData: {
+            rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]',
+            width: 152,
+            height: 160
+        },
+        minWidth: 64,
+        minHeight: 88,
+        layoutMetadata: {
+            uiOrigin: [0, 0],
+            physicalAnchor: [0, 0]
+        }
     },
     {
         id: 'IN-08',
@@ -143,7 +153,13 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         handles: [
             { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] }
+        defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] },
+        minWidth: 220,
+        minHeight: 100,
+        layoutMetadata: {
+            uiOrigin: [0, 0],
+            physicalAnchor: [0, 0]
+        }
     },
     {
         id: 'IN-09',
@@ -155,6 +171,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: {
             type: 'expression',
             code: '1 + 2'
+        },
+        minWidth: 200,
+        layoutMetadata: {
+            uiOrigin: [0, 0],
+            physicalAnchor: [0, 0]
         },
         params: [
             { id: 'code', label: 'Expression', type: 'string', hint: 'Math e.g. 1 + 2' }
@@ -934,6 +955,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             height: 150
         },
         aliases: ['annotation', 'note', 'text', 'markdown'],
+        minWidth: 150,
+        minHeight: 100,
+        layoutMetadata: {
+            uiOrigin: [0, 0],
+            physicalAnchor: [0, 0]
+        },
         params: [
             { id: 'markdown', label: 'Content', type: 'textarea', hint: 'Supports Markdown & GFM alerts' },
             {

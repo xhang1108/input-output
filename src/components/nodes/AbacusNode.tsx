@@ -5,11 +5,12 @@ import { NodeProps, Position, useReactFlow } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
 import { AbacusRod } from './AbacusRod';
 import { ResizeHandle } from './ResizeHandle';
+import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 
 export const AbacusNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
-    const { updateNodeData, setNodes, getNode, getViewport } = useReactFlow();
-    const containerRef = useRef<HTMLDivElement>(null);
+    const { updateNodeData, getNode } = useReactFlow();
+    const nodeRef = useRef<HTMLDivElement>(null);
 
     // Custom handles: output value
     const handles = useMemo(() => [
@@ -25,22 +26,26 @@ export const AbacusNode = memo((props: NodeProps) => {
     const [digits, setDigits] = useState<number[]>(initialDigits);
 
     // Dynamic Width Calculation
+    const definition = NODE_DEFINITIONS.find(d => d.id === 'IN-08');
     const [localWidth, setLocalWidth] = useState<number | null>(null);
-    const containerWidth = localWidth || (data.width as number) || (7 * 28 + 24);
-    const rodCount = Math.max(7, Math.floor((containerWidth - 24) / 28));
 
-    // Standard Resize Logic (Right-side expansion)
+    // Use total node width as primary, subtract padding for internal content
+    const totalWidth = localWidth || (data.width as number) || definition?.minWidth || (7 * 28 + 24 + 24);
+    const contentWidth = totalWidth - 24; // BaseNode padding
+    const rodCount = Math.max(7, Math.floor((contentWidth - 24) / 28));
+
+    // Standard Resize Logic
     const handleResizeRight = useCallback(({ screenW }: { screenW: number }) => {
-        const { zoom } = getViewport();
-        const MIN_WIDTH = 220;
-        const nextWidth = Math.max(MIN_WIDTH, screenW / zoom);
-        setLocalWidth(nextWidth);
-        updateNodeData(id, { width: nextWidth });
-    }, [id, updateNodeData, getViewport]);
+        setLocalWidth(screenW);
+        updateNodeData(id, { width: screenW });
+    }, [id, updateNodeData]);
 
-    const handleResizeEnd = useCallback(() => {
+    const handleResizeEnd = useCallback(({ screenW }: { screenW: number }) => {
         setLocalWidth(null);
-    }, []);
+        // Only update width, keep current height
+        const currentHeight = (getNode(id)?.measured?.height) || (data.height as number) || 100;
+        Brain.getInstance().resizeNode(id, screenW, currentHeight);
+    }, [id, data.height, getNode]);
 
     // Adjust digits array when rodCount changes
     useEffect(() => {
@@ -100,13 +105,12 @@ export const AbacusNode = memo((props: NodeProps) => {
     };
 
     return (
-        <BaseNode {...props} data={nodeData} style={{ width: `${containerWidth + 24}px` }}>
+        <BaseNode {...props} ref={nodeRef} data={nodeData} style={{ width: `${totalWidth}px` }}>
             <div
                 className="p-3 flex justify-center items-center select-none nodrag nowheel nopan relative group"
-                style={{ width: `${containerWidth}px` }}
+                style={{ width: `${contentWidth}px` }}
             >
                 <div
-                    ref={containerRef}
                     className="relative flex gap-1 rounded-lg p-2 bg-zinc-900 border border-zinc-800 shadow-xl w-full h-full"
                 >
                     {/* Beam (橫梁) - Minimalist Line */}
@@ -129,7 +133,8 @@ export const AbacusNode = memo((props: NodeProps) => {
 
             {/* Standard Resize Handle (Bottom Right) */}
             <ResizeHandle
-                targetRef={containerRef}
+                id={id}
+                targetRef={nodeRef}
                 position="bottom-right"
                 onResize={handleResizeRight}
                 onResizeEnd={handleResizeEnd}
