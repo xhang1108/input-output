@@ -66,7 +66,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
     );
 
     // Dimension management via unified hook
-    const { width, height, onResize, onResizeEnd } = useNodeDimensions({
+    const { width, height, onResize, onResizeStart, onResizeEnd } = useNodeDimensions({
         id,
         type: 'IN-07',
         data,
@@ -141,6 +141,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                 targetRef={nodeRef}
                 position="bottom-right"
                 onResize={onResize}
+                onResizeStart={onResizeStart}
                 onResizeEnd={onResizeEnd}
             />
         </BaseNode>

@@ -174,4 +174,77 @@ describe('Brain', () => {
             expect(brain.getNodesMap().size).toBe(0);
         });
     });
+
+    describe('Layout Authority', () => {
+        it('computeBoundingBox returns null for unknown node', () => {
+            expect(brain.computeBoundingBox('no-such-node')).toBeNull();
+        });
+
+        it('computeBoundingBox uses data.width/height when available', () => {
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: {
+                    id: 'LA-1', type: 'IN-07',
+                    position: { x: 100, y: 50 },
+                    data: { width: 152, height: 160 }
+                }
+            });
+
+            const bbox = brain.computeBoundingBox('LA-1');
+            expect(bbox).not.toBeNull();
+            expect(bbox!.width).toBe(152);
+            expect(bbox!.height).toBe(160);
+        });
+
+        it('computeBoundingBox falls back to nodeDefinitions minWidth/minHeight', () => {
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: {
+                    id: 'LA-2', type: 'IN-07',
+                    position: { x: 0, y: 0 },
+                    data: {}  // No width/height
+                }
+            });
+
+            const bbox = brain.computeBoundingBox('LA-2');
+            expect(bbox).not.toBeNull();
+            // IN-07 minWidth=64, minHeight=88
+            expect(bbox!.width).toBe(64);
+            expect(bbox!.height).toBe(88);
+        });
+
+        it('refreshBoundingBoxes auto-runs after ADD_NODE', () => {
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: {
+                    id: 'LA-3', type: 'IN-07',
+                    position: { x: 200, y: 300 },
+                    data: {}
+                }
+            });
+
+            // After applyTransaction, refreshBoundingBoxes should have set boundingBox
+            const stored = brain.getNodeBoundingBox('LA-3');
+            expect(stored).not.toBeNull();
+            expect(stored!.width).toBe(64);  // fallback from minWidth
+        });
+
+        it('UI-reported bounding box takes priority over engine-computed', () => {
+            brain.applyTransaction({
+                type: 'ADD_NODE',
+                payload: {
+                    id: 'LA-4', type: 'IN-07',
+                    position: { x: 0, y: 0 },
+                    data: {}
+                }
+            });
+
+            // UI reports actual measured size
+            brain.updateNodeBoundingBox('LA-4', { width: 999, height: 777 });
+
+            const bbox = brain.computeBoundingBox('LA-4');
+            expect(bbox!.width).toBe(999);
+            expect(bbox!.height).toBe(777);
+        });
+    });
 });

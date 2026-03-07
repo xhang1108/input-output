@@ -150,7 +150,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
         <div
             ref={ref}
             className={cn(
-                "relative rounded-xl border transition duration-200 group flex flex-col overflow-hidden",
+                "relative rounded-xl border transition duration-200 group flex flex-col",
                 selected ? "border-zinc-400" : "border-zinc-700 hover:border-zinc-500"
             )}
             style={{
@@ -183,7 +183,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
 
             {/* Header */}
             <div
-                className="px-3 py-2 border-b border-zinc-800/60 flex items-center justify-between shrink-0"
+                className="px-3 py-2 border-b border-zinc-800/60 flex items-center justify-between shrink-0 rounded-t-xl"
                 style={{ background: 'var(--node-bg-header)' }}
                 onDoubleClick={handleRename}
             >
@@ -211,8 +211,8 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                 )}
             </div>
 
-            {/* Content Body */}
-            <div className="p-3 flex-1 flex flex-col min-h-0 min-w-0">
+            {/* Content Body — overflow-hidden here clips Sticky Note text without affecting Handles */}
+            <div className="p-3 flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden rounded-b-xl">
                 {children ? children : (
                     <div className="text-[10px] text-zinc-500 font-mono">ID: {id}</div>
                 )}

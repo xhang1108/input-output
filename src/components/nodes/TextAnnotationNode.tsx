@@ -19,7 +19,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
     const nodeRef = useRef<HTMLDivElement>(null);
 
     // Dimension management via unified hook
-    const { width, height, onResize, onResizeEnd } = useNodeDimensions({
+    const { width, height, onResize, onResizeStart, onResizeEnd } = useNodeDimensions({
         id,
         type: 'UI-01',
         data
@@ -84,6 +84,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                 targetRef={nodeRef}
                 position="bottom-right"
                 onResize={onResize}
+                onResizeStart={onResizeStart}
                 onResizeEnd={onResizeEnd}
             />
         </BaseNode>

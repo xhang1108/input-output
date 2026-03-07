@@ -26,6 +26,16 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
             return;
         }
 
+        // Guard: Skip MOVE_NODE / data syncs during Undo/Redo
+        // When Brain.undo() fires, useBrainUpdates pushes the restored position back to React Flow.
+        // useBrainSync would immediately see a position diff and re-write the OLD position back to Brain,
+        // cancelling the Undo. isUndoing flag prevents this race condition.
+        if (brain.isUndoing) {
+            prevNodesRef.current = new Map(nodes.map(n => [n.id, { ...n }]));
+            prevEdgesRef.current = new Set(edges.map(e => e.id));
+            return;
+        }
+
         // Fix: HMR Safety - ensure prevNodesRef is a Map
         if (!(prevNodesRef.current instanceof Map)) {
             prevNodesRef.current = new Map();
@@ -57,29 +67,34 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                     });
                 }
             } else {
-                // Check for Selection Changes
-                if (node.selected !== prevNode.selected) {
-                    syncTxs.push({
-                        type: 'UPDATE_NODE_DATA',
-                        payload: {
-                            id: node.id,
-                            data: { ...node.data, selected: node.selected }
-                        }
-                    });
-                }
+                // If an active resize is in progress, skip ALL data/position diffs —
+                // only the onResizeEnd's atomic BATCH should be recorded.
+                // We still update prevRef below so the diff resolves cleanly after resize.
+                if (!brain.isResizing) {
+                    // Check for Selection Changes
+                    if (node.selected !== prevNode.selected) {
+                        syncTxs.push({
+                            type: 'UPDATE_NODE_DATA',
+                            payload: {
+                                id: node.id,
+                                data: { ...node.data, selected: node.selected }
+                            }
+                        });
+                    }
 
-                // Check for Data Updates (Excluding internally managed 'value')
-                const { value: _v, ...currentData } = node.data || {};
-                const { value: _pv, ...prevData } = prevNode.data || {};
+                    // Check for Data Updates (Excluding internally managed 'value')
+                    const { value: _v, ...currentData } = node.data || {};
+                    const { value: _pv, ...prevData } = prevNode.data || {};
 
-                if (!deepEqual(currentData, prevData)) {
-                    syncTxs.push({
-                        type: 'UPDATE_NODE_DATA',
-                        payload: {
-                            id: node.id,
-                            data: currentData
-                        }
-                    });
+                    if (!deepEqual(currentData, prevData)) {
+                        syncTxs.push({
+                            type: 'UPDATE_NODE_DATA',
+                            payload: {
+                                id: node.id,
+                                data: currentData
+                            }
+                        });
+                    }
                 }
             }
 

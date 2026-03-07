@@ -530,6 +530,14 @@ export class Brain {
     /** Flag to suppress useBrainSync during relink drag (prevents circular history corruption) */
     public isReconnecting = false;
 
+    /** Flag to suppress useBrainSync MOVE_NODE/RESIZE_NODE during undo/redo (prevents Brain position being overwritten by stale React Flow state) */
+    public isUndoing = false;
+
+    /** Flag to suppress useBrainSync UPDATE_NODE_DATA during an active resize drag.
+     * Set to true in onResizeStart, false after onResizeEnd commits the atomic BATCH.
+     * Prevents the intermediate updateNodeData calls from polluting history. */
+    public isResizing = false;
+
     public moveNode(id: string, position: { x: number; y: number }, oldPosition?: { x: number; y: number }) {
         const node = this.state.nodes.get(id);
         // Optimization: Ignore micro-moves
@@ -553,13 +561,25 @@ export class Brain {
 
     // --- History Management (Rule #1) ---
     public undo() {
-        this.transactionManager.undo((tx, record, silent) => this.applyTransaction(tx, record, silent));
-        this.emit('graphChanged', null);
+        this.isUndoing = true;
+        try {
+            this.transactionManager.undo((tx, record, silent) => this.applyTransaction(tx, record, silent));
+            this.emit('graphChanged', null);
+        } finally {
+            // Reset flag after a short delay so useBrainUpdates can finish its sync
+            // before useBrainSync processes the resulting React Flow node changes
+            setTimeout(() => { this.isUndoing = false; }, 50);
+        }
     }
 
     public redo() {
-        this.transactionManager.redo((tx, record, silent) => this.applyTransaction(tx, record, silent));
-        this.emit('graphChanged', null);
+        this.isUndoing = true;
+        try {
+            this.transactionManager.redo((tx, record, silent) => this.applyTransaction(tx, record, silent));
+            this.emit('graphChanged', null);
+        } finally {
+            setTimeout(() => { this.isUndoing = false; }, 50);
+        }
     }
 
     // --- Transaction Handling ---
@@ -634,6 +654,12 @@ export class Brain {
 
         if (res.success && !silent) {
             this.emit('graphChanged', null);
+
+            // Layout Authority: refresh engine-side bounding box cache after structural changes
+            const layoutTriggers: Set<string> = new Set(['ADD_NODE', 'RESIZE_NODE', 'MOVE_NODE', 'BATCH']);
+            if (layoutTriggers.has(tx.type)) {
+                this.refreshBoundingBoxes();
+            }
 
             if (tx.type === 'BATCH' && this.worker.isEnabled()) {
                 this.syncWorker();
@@ -918,6 +944,57 @@ export class Brain {
      */
     public getNodeBoundingBox(id: string): { width: number; height: number; x: number; y: number } | null {
         return this.state.nodes.get(id)?.boundingBox ?? null;
+    }
+
+    // --- Layout Authority ---
+
+    /**
+     * Computes a best-effort bounding box for a node without relying on the DOM.
+     * Priority: UI-reported boundingBox > data.width/height > nodeDefinitions minWidth/minHeight.
+     * Returns null if no usable dimension information is available.
+     */
+    public computeBoundingBox(
+        id: string
+    ): { x: number; y: number; width: number; height: number } | null {
+        const node = this.state.nodes.get(id);
+        if (!node) return null;
+
+        // 1. UI has already reported a fresh measurement — trust it (highest fidelity)
+        if (node.boundingBox) return { ...node.boundingBox };
+
+        const abs = this.getAbsolutePosition(id);
+
+        // 2. User has manually resized — data.width/height persisted to store
+        const dataW = typeof node.data.width === 'number' ? node.data.width : null;
+        const dataH = typeof node.data.height === 'number' ? node.data.height : null;
+        if (dataW !== null && dataH !== null) {
+            return { x: abs.x, y: abs.y, width: dataW, height: dataH };
+        }
+
+        // 3. Fall back to nodeDefinitions minWidth/minHeight
+        const def = NODE_DEFINITIONS.find(d => d.id === node.type);
+        if (def?.minWidth && def?.minHeight) {
+            return { x: abs.x, y: abs.y, width: def.minWidth, height: def.minHeight };
+        }
+
+        return null;
+    }
+
+    /**
+     * Recomputes the engine-side boundingBox cache for ALL nodes that don't yet
+     * have a UI-reported measurement. Called after structural transactions.
+     * Does NOT overwrite boxes already reported by the UI (UI beats Engine).
+     */
+    private refreshBoundingBoxes(): void {
+        for (const [id, node] of this.state.nodes) {
+            // Skip nodes already measured by UI (highest fidelity — do not overwrite)
+            if (node.boundingBox) continue;
+
+            const computed = this.computeBoundingBox(id);
+            if (computed) {
+                node.boundingBox = computed;
+            }
+        }
     }
 
 
