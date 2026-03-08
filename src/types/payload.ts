@@ -28,23 +28,30 @@ export type Matrix = unknown;  // Will be mathjs.Matrix in Phase 2.3
 
 export enum DataType {
     Scalar = 'scalar',
-    Matrix = 'matrix',
-    Vector = 'vector', // Specialized 1D Matrix
+    Array = 'array', // Unified Tensor (Vector, Matrix, ND-Array)
     Unit = 'unit',
     String = 'string',
     Boolean = 'boolean',
     Error = 'error',
     Trigger = 'trigger', // For events/pulses
     Object = 'object',   // Generic JSON
-    Symbolic = 'symbolic' // For algebraic expressions, equations, etc.
+    Symbolic = 'symbolic', // For algebraic expressions, equations, etc.
+
+    /** @deprecated Use Array with Rank 1 */
+    Vector = 'vector',
+    /** @deprecated Use Array with Rank 2 */
+    Matrix = 'matrix',
 }
 
 // Strict union type for value (removing 'any' progressively)
-export type PayloadValue = number | string | boolean | Matrix | ASTNode | null;
+export type PayloadValue = number | string | boolean | unknown | ASTNode | null;
 
 export interface PayloadMetadata {
-    /** Matrix dimensions [rows, cols] */
-    dimensions?: [number, number];
+    /** Array dimensions [d1, d2, ... dn] (e.g., [3] for Vector, [3, 3] for Matrix) */
+    dimensions?: number[];
+
+    /** Tensor Rank (0=Scalar, 1=Vector, 2=Matrix) */
+    rank?: number;
 
     /** Physics unit (e.g., "kg", "m/s^2") */
     unit?: string;

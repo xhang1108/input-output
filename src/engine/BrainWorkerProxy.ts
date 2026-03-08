@@ -290,6 +290,29 @@ export class BrainWorkerProxy {
 
     // ─── Internal Helpers ──────────────────────────────────────────
 
+    /**
+     * Helper to strip functions and non-serializable values from objects 
+     * before sending across postMessage.
+     */
+    private static sanitizeData(obj: any): any {
+        if (obj === null || typeof obj !== 'object') return obj;
+        if (Array.isArray(obj)) return obj.map(v => BrainWorkerProxy.sanitizeData(v));
+
+        const result: Record<string, any> = {};
+        for (const [key, value] of Object.entries(obj)) {
+            // Skip functions
+            if (typeof value === 'function') continue;
+
+            // Recursively sanitize objects and arrays
+            if (value !== null && typeof value === 'object') {
+                result[key] = BrainWorkerProxy.sanitizeData(value);
+            } else {
+                result[key] = value;
+            }
+        }
+        return result;
+    }
+
     private flushQueue() {
         if (this.queuedPatch && !this.pendingRequest) {
             const patch = this.queuedPatch;
@@ -346,7 +369,7 @@ export class BrainWorkerProxy {
                 symbol: PayloadUtils.dehydrate(node.value.symbol) as import('../types/payload').ASTNode | null,
                 meta: PayloadUtils.dehydrate(node.value.meta) as Record<string, unknown>,
             } : null,
-            data: PayloadUtils.dehydrate(node.data) as Record<string, unknown> || {},
+            data: BrainWorkerProxy.sanitizeData(node.data) || {},
             isInDirtyChain: !!node.isInDirtyChain,
         };
     }

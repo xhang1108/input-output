@@ -21,7 +21,7 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const inputs = {
-            in: PayloadUtils.createMatrix([
+            in: PayloadUtils.createArray([
                 [12, -51, 4],
                 [6, 167, -68],
                 [-4, 24, -41]
@@ -35,8 +35,8 @@ describe('Linear Algebra & Array Nodes', () => {
         const val = result.value as any;
         expect(val.Q).toBeDefined();
         expect(val.R).toBeDefined();
-        expect(val.Q.type).toBe(DataType.Matrix);
-        expect(val.R.type).toBe(DataType.Matrix);
+        expect(val.Q.type).toBe(DataType.Array);
+        expect(val.R.type).toBe(DataType.Array);
     });
 
     test('DA-06 (ArrayExtract): Extract scalar from array', async () => {
@@ -50,7 +50,7 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const inputs = {
-            in: PayloadUtils.createMatrix([10, 20, 30] as any),
+            in: PayloadUtils.createArray([10, 20, 30] as any),
             index: PayloadUtils.createScalar(1) // 0-based in JS API (mathjs matrix index subset is 0-based)
         };
 
@@ -76,7 +76,7 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const result = await NodeRegistry.evaluate(node as any, inputs);
-        expect(result.type).toBe(DataType.Matrix);
+        expect(result.type).toBe(DataType.Array);
 
         // Output format could be JS array or MathJS matrix object, let's just check dehydration success
         expect(result.value).toBeDefined();
@@ -103,7 +103,7 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const result = await NodeRegistry.evaluate(node as any, inputs as any);
-        expect(result.type).toBe(DataType.Matrix);
+        expect(result.type).toBe(DataType.Array);
 
         // Output format should successfully dehydrate
         expect(result.value).toBeDefined();

@@ -14,11 +14,11 @@ export type { HandleConfig } from '../../types/NodeDefinition';
 import { SingleHandle } from './SingleHandle';
 import { CapsuleHandle } from './CapsuleHandle';
 
-const DynamicNodeHandle = memo(({ h, id, isConnectable }: { h: HandleConfig, id: string, isConnectable: boolean }) => {
+const DynamicNodeHandle = memo(({ h, id, isConnectable, data }: { h: HandleConfig, id: string, isConnectable: boolean, data: any }) => {
     if (h.variant === 'capsule') {
-        return <CapsuleHandle h={h} id={id} isConnectable={isConnectable} />;
+        return <CapsuleHandle h={h} id={id} isConnectable={isConnectable} nodeData={data} />;
     }
-    return <SingleHandle h={h} id={id} isConnectable={isConnectable} />;
+    return <SingleHandle h={h} id={id} isConnectable={isConnectable} nodeData={data} />;
 });
 DynamicNodeHandle.displayName = 'DynamicNodeHandle';
 
@@ -222,7 +222,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             {!hideDefaultHandles && (
                 <div className="absolute left-0 w-0 bottom-0 flex flex-col items-center justify-start pt-3" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
                     {leftHandles.map((h) => (
-                        <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} />
+                        <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} data={data} />
                     ))}
                 </div>
             )}
@@ -231,7 +231,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             {!hideDefaultHandles && (
                 <div className="absolute right-0 w-0 bottom-0 flex flex-col items-center justify-start pt-3" style={{ top: `${NODE_LAYOUT.headerH}px`, gap: `${NODE_LAYOUT.socketGap}px` }}>
                     {rightHandles.map((h) => (
-                        <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} />
+                        <DynamicNodeHandle key={h.id} h={h} id={id} isConnectable={isConnectable} data={data} />
                     ))}
                 </div>
             )}

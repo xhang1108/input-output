@@ -125,10 +125,10 @@ class IOGLLexer {
             return { type: 'RAW_VALUE', value: val, line: startLine, col: startCol } as Token;
         }
 
-        if (/[a-zA-Z0-9_\-\.]/.test(char)) {
+        if (/[a-zA-Z0-9_\-\.\[\]]/.test(char)) {
             let val = '';
             const startCol = this.col;
-            while (this.pos < this.input.length && /[a-zA-Z0-9_\-\.]/.test(this.input[this.pos])) {
+            while (this.pos < this.input.length && /[a-zA-Z0-9_\-\.\[\]]/.test(this.input[this.pos])) {
                 val += this.input[this.pos];
                 this.advance();
             }
@@ -187,14 +187,14 @@ class IOGLParser {
     public parse() {
         const lineData = this.collectLines();
 
-        // Pass 1: Node Definitions (Populate aliasToId)
+        // Pass 1: Node Definitions
         for (const line of lineData) {
             if (!line.hasArrow) {
-                this.parseNodeLine(line.tokens, line.valueToken);
+                this.parseNodeLine(line.tokens);
             }
         }
 
-        // Pass 2: Edge Definitions (Translate aliases to IDs)
+        // Pass 2: Edge Definitions
         for (const line of lineData) {
             if (line.hasArrow) {
                 this.parseEdgeLine(line.tokens);
@@ -202,34 +202,28 @@ class IOGLParser {
         }
     }
 
-    private collectLines(): { tokens: Token[], valueToken: Token | null, hasArrow: boolean }[] {
-        const lines: { tokens: Token[], valueToken: Token | null, hasArrow: boolean }[] = [];
+    private collectLines(): { tokens: Token[], hasArrow: boolean }[] {
+        const lines: { tokens: Token[], hasArrow: boolean }[] = [];
         while (this.currentToken.type !== 'EOF') {
             if (this.currentToken.type === 'NEWLINE') {
                 this.advance();
                 continue;
             }
 
-            let lineTokens: Token[] = [];
-            // Read until NEWLINE or EOF, but STOP at EQUALS to let readValue handle the string
-            while ((this.currentToken.type as string) !== 'NEWLINE' && (this.currentToken.type as string) !== 'EOF' && (this.currentToken.type as string) !== 'EQUALS') {
-                lineTokens.push(this.currentToken);
+            const tokens: Token[] = [];
+            let hasArrow = false;
+
+            // Greedily collect ALL tokens on the same line
+            while ((this.currentToken.type as any) !== 'NEWLINE' && (this.currentToken.type as any) !== 'EOF') {
+                if (this.currentToken.type !== 'UNKNOWN') {
+                    if (this.currentToken.type === 'ARROW') hasArrow = true;
+                    tokens.push({ ...this.currentToken });
+                }
                 this.advance();
             }
 
-            let valueToken: Token | null = null;
-            if (this.currentToken.type === 'EQUALS') {
-                // readValue now correctly consumes multi-line strings within single double-quotes
-                valueToken = this.lexer.readValue();
-                this.currentToken = this.lexer.readNext();
-            }
-
-            if (lineTokens.length > 0 || valueToken) {
-                lines.push({
-                    tokens: lineTokens,
-                    valueToken: valueToken,
-                    hasArrow: lineTokens.some(t => t.type === 'ARROW')
-                });
+            if (tokens.length > 0) {
+                lines.push({ tokens, hasArrow });
             }
         }
         return lines;
@@ -351,66 +345,63 @@ class IOGLParser {
         });
     }
 
-    private parseNodeLine(tokens: Token[], valueToken: Token | null) {
+    private parseNodeLine(tokens: Token[]) {
         if (tokens.length === 0 || tokens[0].type !== 'ID') {
-            this.diagnostics.push(`Line ${tokens.length > 0 ? tokens[0].line : 0}: Invalid node definition`);
+            const firstToken = tokens.length > 0 ? `${tokens[0].type} (${tokens[0].value})` : 'nothing';
+            this.diagnostics.push(`Line ${tokens.length > 0 ? tokens[0].line : 0}: Invalid node definition (Found ${firstToken})`);
             return;
         }
 
         const alias = tokens[0].value;
-        let idx = 1;
-
-        // Q2: Strict ID Collision (checked against aliases)
         if (this.aliasToId.has(alias)) {
             this.diagnostics.push(`Fatal Error: Duplicate Node ID detected '${alias}' at line ${tokens[0].line}`);
             return;
         }
 
-        // Generate Internal unique ID (Temporary until resolveType in convertToInjectable)
-        // Actually, we'll replace this with proper nanoids during conversion for consistency
         const internalId = `temp_${this.nodeCounter++}_${Math.random().toString(36).substr(2, 4)}`;
         this.aliasToId.set(alias, internalId);
 
         let category = '';
         let opCode = '';
+        let x: number | undefined;
+        let y: number | undefined;
+        let value: any = undefined;
 
-        if (idx < tokens.length && tokens[idx].type === 'COLON') {
-            idx++;
-            if (idx < tokens.length && tokens[idx].type === 'ID') {
-                category = tokens[idx].value;
-                idx++;
-            }
-            if (idx < tokens.length && tokens[idx].type === 'COLON') {
-                idx++;
-                if (idx < tokens.length && tokens[idx].type === 'ID') {
-                    opCode = tokens[idx].value;
-                    idx++;
-                }
-            }
-        }
+        // Find primary delimiters
+        const equalsIdx = tokens.findIndex(t => t.type === 'EQUALS');
+        const atIdx = tokens.findIndex(t => t.type === 'AT');
 
-        let x, y;
-        if (idx < tokens.length && tokens[idx].type === 'AT') {
-            idx++;
-            if (idx < tokens.length && tokens[idx].type === 'ID') {
-                x = parseFloat(tokens[idx].value);
-                idx++;
-                if (idx < tokens.length && tokens[idx].type === 'COMMA') {
-                    idx++;
-                    if (idx < tokens.length && tokens[idx].type === 'ID') {
-                        y = parseFloat(tokens[idx].value);
-                        idx++;
-                    }
-                }
+        // 1. Coordinates (Anywhere on the line)
+        if (atIdx !== -1 && atIdx + 1 < tokens.length) {
+            x = parseFloat(tokens[atIdx + 1].value);
+            if (atIdx + 3 < tokens.length && tokens[atIdx + 2].type === 'COMMA') {
+                y = parseFloat(tokens[atIdx + 3].value);
             }
         }
 
-        let val: any = undefined;
-        if (valueToken) {
-            if (valueToken.type === 'MULTILINE_STRING') {
-                val = valueToken.value;
-            } else {
-                val = GraphCodec.parseValue(valueToken.value);
+        // 2. Type Info (Between Alias and either '=' or '@')
+        const typeLimit = equalsIdx !== -1 ? equalsIdx : (atIdx !== -1 ? atIdx : tokens.length);
+        const typeTokens = tokens.slice(0, typeLimit);
+        const colonIndices = typeTokens.map((t, i) => t.type === 'COLON' ? i : -1).filter(i => i !== -1);
+        if (colonIndices.length > 0) {
+            category = typeTokens[colonIndices[0] + 1]?.value || '';
+            if (colonIndices.length > 1) {
+                opCode = typeTokens[colonIndices[1] + 1]?.value || '';
+            }
+        }
+
+        // 3. Value Extraction (After '=' until end of line or '@' if it follows)
+        if (equalsIdx !== -1) {
+            const valueEndIdx = (atIdx !== -1 && atIdx > equalsIdx) ? atIdx : tokens.length;
+            const valSegments = tokens.slice(equalsIdx + 1, valueEndIdx);
+
+            if (valSegments.length === 1 && (valSegments[0].type === 'RAW_VALUE' || valSegments[0].type === 'MULTILINE_STRING')) {
+                value = GraphCodec.parseValue(valSegments[0].value);
+            } else if (valSegments.length > 0) {
+                // If it's a series of tokens (e.g. JSON brackets), join them with space.
+                // parseValue is robust enough to handle the result.
+                const combined = valSegments.map(t => t.value).join(' ');
+                value = GraphCodec.parseValue(combined);
             }
         }
 
@@ -421,7 +412,7 @@ class IOGLParser {
             opCode,
             x,
             y,
-            value: val
+            value
         });
     }
 }
@@ -530,6 +521,14 @@ export class GraphCodec {
                 }
                 else if (typeInfo.id.startsWith('IN')) data.value = validValue;
 
+                // SPECIAL: If the node is Random (IN-10) and the value suggests a mode, set it.
+                // This allows io:rand = "vector" to work directly.
+                if (typeInfo.id === 'IN-10' && typeof validValue === 'string') {
+                    if (['float', 'vector', 'matrix'].includes(validValue.toLowerCase())) {
+                        data.mode = validValue.toLowerCase();
+                    }
+                }
+
                 // SPECIAL: If value is a JSON object, merge it directly into data fields
                 if (typeof validValue === 'object' && validValue !== null && !Array.isArray(validValue)) {
                     Object.assign(data, validValue);
@@ -556,6 +555,9 @@ export class GraphCodec {
                     if (op === 'combine') data.mode = 'combine';
                     if (op === 'separate' || op === 'split') data.mode = 'separate';
                     cNode.value = data.mode;
+                } else if (typeInfo.id === 'DT-05' || typeInfo.id === 'DT-07') {
+                    // Standardize Matrix/Vector OpCodes to Uppercase
+                    data.op = op.toUpperCase();
                 }
             }
 
@@ -681,10 +683,11 @@ export class GraphCodec {
                 return 'in';
             }
 
-            // Skip a/b aliasing for nodes that use raw a/b
-            if (typeId?.startsWith('DT-')) {
-                if (['a', 'b', 'data'].includes(h)) return h;
-            }
+            // Allow standard a/b aliasing for all nodes unless they explicitly use raw a/b
+            // This fix ensures that DT-05 (Vector Utils) can use 'a' and 'b' aliases correctly.
+            // if (typeId?.startsWith('DT-')) {
+            //     if (['a', 'b', 'data'].includes(h)) return h;
+            // }
 
             if (h === 'a') return 'in_a';
             if (h === 'b') return 'in_b';
@@ -808,7 +811,7 @@ export class GraphCodec {
         }
 
         // 3. Logic Family (LG)
-        if (catLower === 'logic') {
+        if (catLower === 'logic' || catLower === 'lg') {
             if (['and', 'or', 'xor', 'not', 'gate'].includes(opLower || '')) return NODE_DEFINITIONS.find(d => d.id === 'LG-01');
             if (opLower === 'switch') return NODE_DEFINITIONS.find(d => d.id === 'LG-02');
             if (opLower === 'split') return NODE_DEFINITIONS.find(d => d.id === 'LG-03');
@@ -817,19 +820,20 @@ export class GraphCodec {
         }
 
         // 4. Data & Structures (DT)
-        if (catLower.includes('data') || catLower.includes('structure')) {
+        if (catLower.includes('data') || catLower.includes('structure') || catLower === 'dt') {
             if (opLower === 'builder' || opLower === 'concat') return NODE_DEFINITIONS.find(d => d.id === 'DT-01');
             if (opLower === 'extract' || opLower === 'get') return NODE_DEFINITIONS.find(d => d.id === 'DT-02');
             if (opLower === 'list' || opLower === 'sort') return NODE_DEFINITIONS.find(d => d.id === 'DT-03');
             if (opLower === 'set' || opLower === 'union' || opLower === 'intersection') return NODE_DEFINITIONS.find(d => d.id === 'DT-04');
             if (opLower === 'vector' || opLower === 'dot' || opLower === 'cross' || opLower === 'vec') return NODE_DEFINITIONS.find(d => d.id === 'DT-05');
+            // 'split' is sometimes used instead of 'vec split'
             if (opLower === 'split' || opLower === 'separate' || opLower === 'combine') return NODE_DEFINITIONS.find(d => d.id === 'DT-06');
-            if (opLower === 'matrix' || opLower === 'mat') return NODE_DEFINITIONS.find(d => d.id === 'DT-07');
+            if (opLower === 'matrix' || opLower === 'mat' || opLower === 'det' || opLower === 'inv' || opLower === 'transpose' || opLower === 'trace') return NODE_DEFINITIONS.find(d => d.id === 'DT-07');
         }
 
         // 5. Calculus (CL)
-        if (catLower === 'calculus') {
-            if (opLower === 'derivative' || opLower === 'diff') return NODE_DEFINITIONS.find(d => d.id === 'CL-01');
+        if (catLower === 'calculus' || catLower === 'cl') {
+            if (opLower === 'derivative' || opLower === 'diff' || opLower === 'deriv') return NODE_DEFINITIONS.find(d => d.id === 'CL-01');
             if (opLower === 'integral' || opLower === 'integrate' || opLower === 'int') return NODE_DEFINITIONS.find(d => d.id === 'CL-02');
             if (opLower === 'limit' || opLower === 'lim') return NODE_DEFINITIONS.find(d => d.id === 'CL-03');
             if (opLower === 'solver' || opLower === 'solve') return NODE_DEFINITIONS.find(d => d.id === 'CL-04');
@@ -837,7 +841,7 @@ export class GraphCodec {
         }
 
         // 6. Transform (TR)
-        if (catLower === 'transform') {
+        if (catLower === 'transform' || catLower === 'tr') {
             if (opLower === 'unit') return NODE_DEFINITIONS.find(d => d.id === 'TR-01');
             if (opLower === 'base' || opLower === 'hex' || opLower === 'bin') return NODE_DEFINITIONS.find(d => d.id === 'TR-02');
             if (opLower === 'geometry' || opLower === 'shape' || opLower === 'geo') return NODE_DEFINITIONS.find(d => d.id === 'TR-03');

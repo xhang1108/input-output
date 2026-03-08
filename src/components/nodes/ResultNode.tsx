@@ -70,7 +70,7 @@ export const ResultNode = memo((props: NodeProps) => {
     let effectiveMode: 'text' | 'grid' | 'color' | 'formula' | 'latex' = 'text';
 
     if (viewMode === 'auto') {
-        if (payload?.type === DataType.Matrix) effectiveMode = 'grid';
+        if (payload?.type === DataType.Array || payload?.type === DataType.Matrix) effectiveMode = 'grid';
         else if (payload?.type === DataType.Symbolic) effectiveMode = 'formula';
         else if (payload?.type === DataType.Object && rawValue && typeof rawValue === 'object' && 'hex' in (rawValue as object)) effectiveMode = 'color';
         else effectiveMode = 'text';
@@ -102,6 +102,7 @@ export const ResultNode = memo((props: NodeProps) => {
     switch (payload?.type) {
         case DataType.Scalar: dataTypeColor = 'text-(--color-scalar)'; break;
         case DataType.String: dataTypeColor = 'text-(--color-string)'; break;
+        case DataType.Array:
         case DataType.Matrix: dataTypeColor = 'text-(--color-matrix)'; break;
         case DataType.Boolean: dataTypeColor = 'text-(--color-boolean)'; break;
         case DataType.Symbolic: dataTypeColor = 'text-[var(--color-symbolic,#b084e9)]'; break;
@@ -158,7 +159,7 @@ export const ResultNode = memo((props: NodeProps) => {
                         {payload?.symbol && effectiveMode !== 'formula' && (
                             <button
                                 onClick={() => handleViewModeSelect({ id: 'formula' } as any)}
-                                className="text-[8px] bg-(--color-math)/20 text-(--color-math) px-1 rounded-(--radius-sm) hover:bg-(--color-math)/40 transition-colors"
+                                className="text-[8px] bg-math/20 text-math px-1 rounded-sm hover:bg-math/40 transition-colors"
                                 title="Has Formula Trace"
                             >
                                 ƒx
@@ -189,7 +190,7 @@ export const ResultNode = memo((props: NodeProps) => {
 
                         <button
                             onClick={copyToClipboard}
-                            className={`nodrag p-1 rounded-(--radius-sm) hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
+                            className={`nodrag p-1 rounded-sm hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
                             title="Copy Value"
                         >
                             {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -197,7 +198,7 @@ export const ResultNode = memo((props: NodeProps) => {
                     </div>
                 </div>
 
-                <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-(--radius-lg) bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
+                <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-lg bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
                     {isError ? (
                         <div className="font-mono break-all whitespace-pre-wrap text-red-500 text-sm py-2 px-3">{errorStr}</div>
                     ) : !payload ? (

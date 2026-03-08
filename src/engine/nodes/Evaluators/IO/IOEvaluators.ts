@@ -24,24 +24,24 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             if (typeof dataVal === 'object' && dataVal !== null) {
                 if ('type' in (dataVal as any) && 'value' in (dataVal as any)) return dataVal as any;
                 if ('mathjs' in (dataVal as any)) {
-                    return { type: DataType.Matrix, value: dataVal, symbol: null, meta: {} };
+                    return { type: DataType.Array, value: dataVal, symbol: null, meta: {} };
                 }
-                return PayloadUtils.createMatrix(dataVal);
+                return PayloadUtils.createArray(dataVal);
             }
         }
         const raw = data.rawExpression as string;
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
-                return PayloadUtils.createMatrix(parsed);
+                return PayloadUtils.createArray(parsed);
             } catch (e) {
-                return PayloadUtils.createMatrix([]);
+                return PayloadUtils.createArray([]);
             }
         }
         if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
             return node.value as any;
         }
-        return PayloadUtils.createMatrix([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
+        return PayloadUtils.createArray([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
     },
     'IO-18': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
@@ -165,7 +165,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         };
     },
     'IO-16': (node, inputs) => {
-        return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createMatrix([]);
+        return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createArray([]);
     },
     'IO-05': (node, inputs) => {
         const data = (node.data || {}) as Record<string, unknown>;
@@ -205,12 +205,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         for (let i = 0; i < digits.length; i++) {
             total = total * 10 + digits[i];
         }
-        return {
-            type: DataType.Scalar,
-            value: PayloadUtils.dehydrate(total),
-            symbol: null,
-            meta: {}
-        };
+        return PayloadUtils.createScalar(total);
     },
     'IO-14': (node, inputs) => {
         // OT-03: Graph Plot — Pure engine sampling.

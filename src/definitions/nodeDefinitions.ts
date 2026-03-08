@@ -55,8 +55,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Input',
         handles: [
             { id: 'hex', type: 'source', variant: 'single', dataType: 'string', label: 'HEX' },
-            { id: 'rgb', type: 'source', variant: 'single', dataType: 'vector', label: 'RGB' },
-            { id: 'vec3', type: 'source', variant: 'single', dataType: 'vector', label: 'Vec3' }
+            { id: 'rgb', type: 'source', variant: 'single', dataType: 'array', label: 'RGB' },
+            { id: 'vec3', type: 'source', variant: 'single', dataType: 'array', label: 'Vec3' }
         ],
         defaultData: {
             type: 'color',
@@ -129,10 +129,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     },
     {
         id: 'IN-07',
-        label: 'Matrix Input',
+        label: 'Array Input',
         category: 'Input',
         handles: [
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: {
             rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]',
@@ -189,7 +189,13 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Input',
         aliases: ['rand', 'noise', 'white'],
         handles: [
-            { id: 'val', type: 'source', variant: 'single', dataType: 'scalar' }
+            {
+                id: 'out', type: 'source', variant: 'single', dataType: 'scalar',
+                dynamicColor: (data) => {
+                    if (data.mode === 'matrix' || data.mode === 'vector') return 'array';
+                    return 'scalar';
+                }
+            }
         ],
         defaultData: {
             type: 'random',
@@ -206,16 +212,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             {
                 id: 'mode', label: 'Output Mode', type: 'select', options: [
                     { label: 'Single Value', value: 'float' },
-                    { label: 'Vector', value: 'vector' },
-                    { label: 'Matrix', value: 'matrix' }
+                    { label: 'Array (1D)', value: 'vector' },
+                    { label: 'Array (2D)', value: 'matrix' }
                 ]
             },
             { id: 'isFloat', label: 'Is Float', type: 'boolean' },
             { id: 'min', label: 'Min', type: 'number' },
             { id: 'max', label: 'Max', type: 'number' },
-            { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1, hint: 'Matrix mode only', hidden: (d) => d.mode !== 'matrix' },
-            { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1, hint: 'Matrix mode only', hidden: (d) => d.mode !== 'matrix' },
-            { id: 'length', label: 'Length', type: 'number', min: 1, step: 1, hint: 'Vector mode only', hidden: (d) => d.mode !== 'vector' }
+            { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1, hint: 'Array (2D) only', hidden: (d) => d.mode !== 'matrix' },
+            { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1, hint: 'Array (2D) only', hidden: (d) => d.mode !== 'matrix' },
+            { id: 'length', label: 'Length', type: 'number', min: 1, step: 1, hint: 'Array (1D) only', hidden: (d) => d.mode !== 'vector' }
         ]
     },
     {
@@ -227,7 +233,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'param_n', type: 'target', variant: 'single', dataType: 'scalar', label: 'N' },
             { id: 'param_1', type: 'target', variant: 'single', dataType: 'scalar', label: 'P1' },
             { id: 'param_2', type: 'target', variant: 'single', dataType: 'scalar', label: 'P2' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { mode: 'Normal', n: 100, p1: 0, p2: 1 },
         opTokens: ['NORMAL', 'UNIFORM', 'POISSON'],
@@ -495,7 +501,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Calculus',
         handles: [
             { id: 'expr', type: 'target', variant: 'single', dataType: 'symbolic', label: "f(t,y)" },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { method: 'RK4', t0: 0, tEnd: 10, y0: 1, stepSize: 0.01 },
         aliases: ['rk4', 'diffeq', 'differential equation'],
@@ -520,7 +526,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Data & Structures',
         handles: [
             { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'In' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { axis: 0 },
         opTokens: ['BUILD', 'CONCAT'],
@@ -545,7 +551,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Array Extract',
         category: 'Data & Structures',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'matrix' },
+            { id: 'in', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'index', type: 'target', variant: 'single', dataType: 'scalar', label: 'Idx' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'any' }
         ],
@@ -565,8 +571,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'List Utility',
         category: 'Data & Structures',
         handles: [
-            { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'data', type: 'target', variant: 'single', dataType: 'array' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { mode: 'Sort (Asc)' },
         opTokens: ['SORT', 'REVERSE', 'UNIQUE', 'CLEAN'],
@@ -587,9 +593,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Set Operations',
         category: 'Data & Structures',
         handles: [
-            { id: 'a', type: 'target', variant: 'single', dataType: 'matrix', label: 'A' },
-            { id: 'b', type: 'target', variant: 'single', dataType: 'matrix', label: 'B' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'a', type: 'target', variant: 'single', dataType: 'array', label: 'A' },
+            { id: 'b', type: 'target', variant: 'single', dataType: 'array', label: 'B' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { mode: 'Union' },
         opTokens: ['UNION', 'INTERSECTION', 'DIFFERENCE'],
@@ -606,12 +612,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     },
     {
         id: 'DT-05',
-        label: 'Vector Utils',
+        label: 'Array Geometry',
         category: 'Data & Structures',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'vector', label: 'A' },
-            { id: 'in_b', type: 'target', variant: 'single', dataType: 'vector', label: 'B' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array', label: 'A' },
+            { id: 'in_b', type: 'target', variant: 'single', dataType: 'array', label: 'B' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'any' }
         ],
         defaultData: { op: 'DOT' },
         opTokens: ['DOT', 'CROSS'],
@@ -629,13 +635,14 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     },
     {
         id: 'DT-06',
-        label: 'Vector Split',
+        label: 'Array Split',
         category: 'Data & Structures',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'vector' },
+            { id: 'in', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'x', type: 'source', variant: 'single', dataType: 'scalar', label: 'X' },
             { id: 'y', type: 'source', variant: 'single', dataType: 'scalar', label: 'Y' },
-            { id: 'z', type: 'source', variant: 'single', dataType: 'scalar', label: 'Z' }
+            { id: 'z', type: 'source', variant: 'single', dataType: 'scalar', label: 'Z' },
+            { id: 'w', type: 'source', variant: 'single', dataType: 'scalar', label: 'W' }
         ],
         defaultData: { mode: 'separate' },
         opTokens: ['SEPARATE', 'COMBINE'],
@@ -643,19 +650,19 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             {
                 id: 'mode', label: 'Mode', type: 'select', options: [
-                    { label: 'Separate (vec → X, Y, Z)', value: 'separate' },
-                    { label: 'Combine (X, Y, Z → vec)', value: 'combine' }
+                    { label: 'Separate (Arr → Scalar)', value: 'separate' },
+                    { label: 'Combine (Scalar → Arr)', value: 'combine' }
                 ]
             }
         ]
     },
     {
         id: 'DT-07',
-        label: 'Matrix Utils',
+        label: 'Array Calculus',
         category: 'Data & Structures',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'matrix' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'in', type: 'target', variant: 'single', dataType: 'array' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { op: 'INV' },
         opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN'],
@@ -762,8 +769,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Transform',
         handles: [
             { id: 'in_f', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f' },
-            { id: 'out_field', type: 'source', variant: 'single', dataType: 'matrix', label: 'Arrows' },
-            { id: 'out_grad', type: 'source', variant: 'single', dataType: 'vector', label: 'Grad' }
+            { id: 'out_field', type: 'source', variant: 'single', dataType: 'array', label: 'Arrows' },
+            { id: 'out_grad', type: 'source', variant: 'single', dataType: 'array', label: 'Grad' }
         ],
         defaultData: { mode: 'gradient', var1: 'x', var2: 'y', min: -5, max: 5, density: 10 },
         aliases: ['grad', 'gradient', 'vector field'],
@@ -786,9 +793,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Smoothing',
         category: 'Transform',
         handles: [
-            { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
+            { id: 'data', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'window', type: 'target', variant: 'single', dataType: 'scalar', label: 'Win' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'matrix' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { windowMode: 3 },
         params: [
@@ -800,7 +807,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Statistics',
         category: 'Transform',
         handles: [
-            { id: 'data', type: 'target', variant: 'single', dataType: 'matrix' },
+            { id: 'data', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'Mean' },

@@ -20,27 +20,30 @@ function extractExprStr(payload: NodePayload | undefined): string | null {
 }
 
 export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
-    // DT-01: Array Builder
     'DT-01': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         let items: any[] = [];
 
-        // Support IOGL 2.0 Capsule handle 'in'
-        const capsuleInput = inputs['in'];
-        if (capsuleInput) {
-            if (Array.isArray(capsuleInput)) {
-                items = capsuleInput.map(p => PayloadUtils.hydrate(PayloadUtils.unwrap(p), math));
-            } else {
-                items = [PayloadUtils.hydrate(PayloadUtils.unwrap(capsuleInput), math)];
-            }
-        } else {
-            // Fallback to in_0, in_1... for legacy
-            Object.keys(inputs).sort().forEach(key => {
-                if (key.startsWith('in_')) items.push(PayloadUtils.hydrate(PayloadUtils.unwrap(inputs[key]), math));
-            });
-        }
+        // Support IOGL 2.0 Capsule handles: 'in', 'append', or numerical suffixes '[0]', '[1]'
+        // Also support 'in_0', 'in_1' for legacy nodes
+        Object.keys(inputs).sort((a, b) => {
+            // Sort by numerical suffix if available: [0], [1]...
+            const aNum = parseInt(a.match(/\d+/)?.[0] || '999');
+            const bNum = parseInt(b.match(/\d+/)?.[0] || '999');
+            return aNum - bNum;
+        }).forEach(key => {
+            const val = inputs[key];
+            if (!val) return;
 
-        return PayloadUtils.createMatrix(PayloadUtils.dehydrate(items));
+            // If it's a multi-link input (Array of payloads)
+            if (Array.isArray(val)) {
+                val.forEach(p => items.push(PayloadUtils.hydrate(PayloadUtils.unwrap(p), math)));
+            } else {
+                items.push(PayloadUtils.hydrate(PayloadUtils.unwrap(val), math));
+            }
+        });
+
+        return PayloadUtils.createArray(items);
     },
 
     // DT-02: Array Extract
@@ -73,8 +76,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'MIN') result = math.min(arr);
             else if (op === 'SORT') result = math.sort(arr);
             else result = arr.length;
-            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createMatrix(PayloadUtils.dehydrate(result)) : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
-        } catch (e: any) { return PayloadUtils.createError(`${op} Failed`); }
+            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createArray(PayloadUtils.dehydrate(result)) : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
 
     // DT-04: Set Operations
@@ -95,7 +98,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'INTERSECT') result = arrA.filter((x: any) => arrB.includes(x));
             else if (op === 'SUBTRACT') result = arrA.filter((x: any) => !arrB.includes(x));
             else result = [];
-            return PayloadUtils.createMatrix(PayloadUtils.dehydrate(result));
+            return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
         } catch (e) { return PayloadUtils.createError(`${op} Failed`); }
     },
 
@@ -116,7 +119,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'LUP') result = math.lup(hydrated).P;
             else if (op === 'QR') result = math.qr(hydrated).Q;
             else result = hydrated;
-            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createMatrix(PayloadUtils.dehydrate(result)) : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createArray(result) : PayloadUtils.createScalar(result);
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
 
@@ -129,14 +132,40 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         if (!valA || !valB) return PayloadUtils.createError('Missing Inputs');
         try {
             const hA = PayloadUtils.hydrate(PayloadUtils.unwrap(valA), math), hB = PayloadUtils.hydrate(PayloadUtils.unwrap(valB), math);
+
+            // Auto-flatten Rank-2 "vectors" (e.g. [[1,2,3]]) to Rank-1 for mathjs compatibility
+            const flattenIfNeeded = (h: any) => {
+                // Handle mathjs Matrix
+                if (h && typeof h === 'object' && h.isMatrix && h.size().length === 2) {
+                    const size = h.size();
+                    if (size[0] === 1 || size[1] === 1) return (h as any).toArray().flat(Infinity);
+                }
+                // Handle plain JS Array (the one mathjs dot logic often receives)
+                if (Array.isArray(h)) {
+                    // Row vector [[1, 2, 3]] -> [1, 2, 3]
+                    if (h.length === 1 && Array.isArray(h[0])) return h[0];
+                    // Column vector [[1], [2], [3]] -> [1, 2, 3]
+                    if (h.length > 1 && Array.isArray(h[0]) && h[0].length === 1) return h.map(r => r[0]);
+                }
+                return h;
+            };
+
+            const vA = flattenIfNeeded(hA), vB = flattenIfNeeded(hB);
             let result: any;
-            if (op === 'DOT') result = math.dot(hA, hB);
-            else if (op === 'CROSS') result = math.cross(hA, hB);
-            else if (op === 'NORM') result = math.norm(hA);
-            else if (op === 'DISTANCE') result = math.distance(hA, hB);
-            else result = math.dot(hA, hB);
-            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createMatrix(PayloadUtils.dehydrate(result)) : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
-        } catch (e) { return PayloadUtils.createError(`${op} Failed`); }
+            if (op === 'DOT') {
+                if (Array.isArray(vA) && Array.isArray(vB)) {
+                    // Force manual dot product for arrays to bypass mathjs dimensionality errors
+                    result = vA.reduce((sum, val, i) => sum + (val * (vB[i] || 0)), 0);
+                } else {
+                    result = math.dot(vA, vB);
+                }
+            }
+            else if (op === 'CROSS') result = math.cross(vA, vB);
+            else if (op === 'NORM') result = math.norm(vA);
+            else if (op === 'DISTANCE') result = math.distance(vA, vB);
+            else result = math.dot(vA, vB);
+            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createArray(result) : PayloadUtils.createScalar(result);
+        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
 
     // MA-15: Combinatorics (Mapping from registration if needed, or keeping for internal)
@@ -201,6 +230,10 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             if (Array.isArray(raw)) equations.push(...raw.map(String));
             else if (typeof raw === 'string') equations.push(...raw.split(',').map((s: string) => s.trim()));
             else equations.push(String(raw));
+        } else {
+            // Fallback to static expression from node.data
+            const expr = (node.data as any)?.expression;
+            if (expr) equations.push(expr);
         }
         if (equations.length === 0) return PayloadUtils.createError('No Equations');
         try {
@@ -212,14 +245,14 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 try {
                     // Try parsing as simple numeric array
                     const parsed = JSON.parse(textResult.replace(/Math\./g, ''));
-                    return PayloadUtils.createMatrix(parsed);
+                    return PayloadUtils.createArray(parsed);
                 } catch (e) {
                     // Fallback: split by comma if JSON parse fails (nerdamer specific format)
                     const elements = textResult.slice(1, -1).split(',').map((s: string) => s.trim());
-                    return PayloadUtils.createMatrix(elements);
+                    return PayloadUtils.createArray(elements);
                 }
             }
-            return PayloadUtils.createMatrix([textResult]);
+            return PayloadUtils.createArray([textResult]);
         } catch (e: any) { return PayloadUtils.createError(`Solve Failed: ${e.message}`); }
     },
 
@@ -235,7 +268,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             const svc = NerdamerService.getInstance();
             if (mode === 'gradient') {
                 const dx = svc.differentiate(exprStr, var1).text(), dy = svc.differentiate(exprStr, var2).text();
-                return PayloadUtils.createMatrix([dx, dy]);
+                return PayloadUtils.createArray([dx, dy]);
             }
             if (mode === 'divergence') {
                 const p = extractExprStr(inputs['in_p']), q = extractExprStr(inputs['in_q']);
@@ -258,27 +291,27 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any, mode = data.mode || 'separate';
         if (mode === 'separate') {
-            const inPayload = inputs['in'];
+            const inPayload = inputs['in'] || inputs['in_v'];
             if (!inPayload) return PayloadUtils.createError('No Input');
             const h = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
             const arr = (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
             return {
                 type: DataType.Object,
                 value: {
-                    out_x: PayloadUtils.dehydrate(arr[0] ?? 0),
-                    out_y: PayloadUtils.dehydrate(arr[1] ?? 0),
-                    out_z: PayloadUtils.dehydrate(arr[2] ?? 0),
-                    out_w: PayloadUtils.dehydrate(arr[3] ?? 0)
+                    x: PayloadUtils.dehydrate(arr[0] ?? 0),
+                    y: PayloadUtils.dehydrate(arr[1] ?? 0),
+                    z: PayloadUtils.dehydrate(arr[2] ?? 0),
+                    w: PayloadUtils.dehydrate(arr[3] ?? 0)
                 },
                 symbol: null,
                 meta: {}
             };
         } else {
-            const x = PayloadUtils.unwrap(inputs['in_x'] || PayloadUtils.createScalar(0));
-            const y = PayloadUtils.unwrap(inputs['in_y'] || PayloadUtils.createScalar(0));
-            const z = PayloadUtils.unwrap(inputs['in_z'] || PayloadUtils.createScalar(0));
-            const w = PayloadUtils.unwrap(inputs['in_w'] || PayloadUtils.createScalar(0));
-            return PayloadUtils.createMatrix([x, y, z, w]);
+            const x = PayloadUtils.unwrap(inputs['in_x'] || inputs['x'] || PayloadUtils.createScalar(0));
+            const y = PayloadUtils.unwrap(inputs['in_y'] || inputs['y'] || PayloadUtils.createScalar(0));
+            const z = PayloadUtils.unwrap(inputs['in_z'] || inputs['z'] || PayloadUtils.createScalar(0));
+            const w = PayloadUtils.unwrap(inputs['in_w'] || inputs['w'] || PayloadUtils.createScalar(0));
+            return PayloadUtils.createArray([x, y, z, w]);
         }
     },
 
@@ -352,7 +385,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 if (!isFinite(y) || Math.abs(y) > 1e15) return PayloadUtils.createError(`ODE diverged at t=${t.toFixed(4)}`);
                 results.push([parseFloat(t.toFixed(10)), y]);
             }
-            return PayloadUtils.createMatrix(results as any);
+            return PayloadUtils.createArray(results as any);
         } catch (e: any) { return PayloadUtils.createError(`ODE Failed: ${e.message}`); }
     },
 

@@ -106,6 +106,7 @@ function hydrateNode(sn: SerializedNodeLogic): NodeLogic {
             meta: sn.value.meta,
         } : undefined,
         data: sn.data || {},
+        selected: false,
         isInDirtyChain: sn.isInDirtyChain,
         position: { x: 0, y: 0 } // Position not needed for computation
     };
@@ -242,7 +243,11 @@ async function getValue(
         node.isInDirtyChain = false;
 
         // Stepwise propagation: mark children dirty only if value changed
-        const changed = !oldPayload || !deepEqual(oldPayload, resultPayload);
+        // Optimization: compare dehydrated values for better performance and to avoid issues with hydrated objects
+        const oldVal = oldPayload ? PayloadUtils.dehydrate(oldPayload.value) : undefined;
+        const newVal = PayloadUtils.dehydrate(resultPayload.value);
+        const changed = !oldPayload || !deepEqual(oldVal, newVal);
+
         if (changed) {
             const children = adjacency.get(nodeId) || [];
             for (const childId of children) {

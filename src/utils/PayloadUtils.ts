@@ -1,4 +1,4 @@
-import { DataType, NodePayload, PayloadValue, ASTNode, Matrix } from "../types/payload";
+import { DataType, NodePayload, PayloadValue, ASTNode, Matrix, PayloadMetadata } from "../types/payload";
 
 /**
  * 🛠️ Utility functions for creating and manipulating NodePayloads.
@@ -7,44 +7,65 @@ import { DataType, NodePayload, PayloadValue, ASTNode, Matrix } from "../types/p
 export const PayloadUtils = {
     /**
      * Converts a raw value into a proper NodePayload.
-     * Auto-detects type (Scalar, String, Boolean, Object).
+     * Auto-detects type (Scalar, String, Boolean, Array/Tensor).
      */
     wrap(value: unknown): NodePayload {
-        if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
-            // Already a payload, return as is (idempotent)
+        if (typeof value === 'object' && value !== null && 'type' in (value as any) && 'value' in (value as any)) {
             return value as NodePayload;
         }
 
         let type = DataType.Scalar;
+        const meta: PayloadMetadata = {};
+
         if (typeof value === 'string') type = DataType.String;
         else if (typeof value === 'boolean') type = DataType.Boolean;
-        else if (Array.isArray(value)) type = DataType.Matrix; // Preliminary array check
+        else if (Array.isArray(value) || (value && (value as any).isMatrix)) {
+            type = DataType.Array;
+            const dims = this.calculateDimensions(value);
+            meta.dimensions = dims;
+            meta.rank = dims.length;
+        }
         else if (typeof value === 'object') type = DataType.Object;
-        // String with equations usually isn't wrapped magically to Symbolic unless explicitly parsed, 
-        // so we leave it as string here or let specialized nodes create Symbolic.
 
         return {
             type,
-            value: value as PayloadValue,
+            value: this.dehydrate(value),
             symbol: null,
-            meta: {}
+            meta
         };
     },
 
     /**
+     * Helper to calculate Recursive Dimensions (Shape)
+     */
+    calculateDimensions(value: unknown): number[] {
+        if (!Array.isArray(value)) {
+            if (value && (value as any).isMatrix && (value as any).size) {
+                return (value as any).size();
+            }
+            return [];
+        }
+        const dims: number[] = [value.length];
+        let curr = value[0];
+        while (Array.isArray(curr)) {
+            dims.push(curr.length);
+            curr = curr[0];
+        }
+        return dims;
+    },
+
+    /**
      * Extracts the raw value from a payload.
-     * Essential for UI components during the migration phase.
      */
     unwrap(payload: NodePayload | number | unknown): unknown {
         if (typeof payload === 'object' && payload !== null && 'value' in (payload as Record<string, unknown>)) {
             return (payload as { value: unknown }).value;
         }
-        return payload; // Return raw value if not wrapped
+        return payload;
     },
 
     /**
      * Creates an error payload.
-     * Used for "Railroad Oriented Programming" error propagation.
      */
     createError(message: string): NodePayload {
         return {
@@ -52,30 +73,6 @@ export const PayloadUtils = {
             value: null,
             symbol: null,
             meta: { error: message }
-        };
-    },
-
-    /**
-     * Safe Scalar Creator
-     */
-    createScalar(value: PayloadValue, unit?: string): NodePayload {
-        return {
-            type: DataType.Scalar,
-            value: this.dehydrate(value),
-            symbol: null,
-            meta: { unit }
-        };
-    },
-
-    /**
-     * Safe String Creator
-     */
-    createString(value: string): NodePayload {
-        return {
-            type: DataType.String,
-            value,
-            symbol: null,
-            meta: {}
         };
     },
 
@@ -92,11 +89,23 @@ export const PayloadUtils = {
     },
 
     /**
-     * Safe Matrix/Vector Creator
+     * Safe Scalar Creator
      */
-    createVector(value: number[]): NodePayload {
+    createScalar(value: PayloadValue, unit?: string): NodePayload {
         return {
-            type: DataType.Matrix,
+            type: DataType.Scalar,
+            value: this.dehydrate(value),
+            symbol: null,
+            meta: { unit, rank: 0, dimensions: [] }
+        };
+    },
+
+    /**
+     * Safe String Creator
+     */
+    createString(value: string): NodePayload {
+        return {
+            type: DataType.String,
             value,
             symbol: null,
             meta: {}
@@ -104,16 +113,18 @@ export const PayloadUtils = {
     },
 
     /**
-     * Safe Matrix Creator
+     * Unified Array/Vector/Matrix Creator
      */
-    createMatrix(value: Matrix, unit?: string): NodePayload {
+    createArray(value: unknown, unit?: string): NodePayload {
+        const dims = this.calculateDimensions(value);
         return {
-            type: DataType.Matrix,
+            type: DataType.Array,
             value: this.dehydrate(value),
             symbol: null,
-            meta: { unit }
+            meta: { unit, dimensions: dims, rank: dims.length }
         };
     },
+
 
     /**
      * Safe Boolean Creator
@@ -380,8 +391,8 @@ export const PayloadUtils = {
 
         // Coercion Rules
 
-        // 1. Matrix -> Scalar (if 1x1)
-        if (payload.type === DataType.Matrix && expected === DataType.Scalar) {
+        // 1. Array -> Scalar (if 1x1)
+        if (payload.type === DataType.Array && expected === DataType.Scalar) {
             // For now, let's just return Error if mismatch.
             return this.createError(`Type Mismatch: Expected ${expected}, got ${payload.type}`);
         }

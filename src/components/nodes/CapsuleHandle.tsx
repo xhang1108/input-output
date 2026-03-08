@@ -10,9 +10,10 @@ interface CapsuleHandleProps {
     h: HandleConfig;
     id: string;
     isConnectable: boolean;
+    nodeData?: any;
 }
 
-export const CapsuleHandle = memo(({ h, id, isConnectable }: CapsuleHandleProps) => {
+export const CapsuleHandle = memo(({ h, id, isConnectable, nodeData }: CapsuleHandleProps) => {
     const connections = useNodeConnections({ handleType: h.type, handleId: h.id });
     const preview = useCapsulePreview();
     const updateNodeInternals = useUpdateNodeInternals();
@@ -46,7 +47,7 @@ export const CapsuleHandle = memo(({ h, id, isConnectable }: CapsuleHandleProps)
                 nodeId={id}
                 className="z-50 pointer-events-auto origin-center w-(--handle-size-sm)! rounded-full!"
                 style={{ height: `${dynamicHeight}px` }}
-                color={getHandleColor(h)}
+                color={h.dynamicColor ? getHandleColor({ ...h, dataType: h.dynamicColor(nodeData) }) : getHandleColor(h)}
                 isConnectable={isConnectable}
             />
 

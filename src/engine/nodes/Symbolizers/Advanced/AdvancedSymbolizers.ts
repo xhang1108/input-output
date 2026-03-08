@@ -2,6 +2,43 @@ import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeSymbolizer } from '../../../NodeRegistry';
 
 export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
+    // DT-01: Array Builder
+    'DT-01': (node, inputs) => {
+        const args = Object.keys(inputs).sort().map(k => inputs[k] || PayloadUtils.createSymbol('Literal', { value: '?' }));
+        return PayloadUtils.createSymbol('FunctionCall', { name: 'list', args });
+    },
+
+    // DT-02: Array Extract
+    'DT-02': (node, inputs) => {
+        const data = (node.data || {}) as any;
+        const index = data.index || 0;
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: 'extract',
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' }), PayloadUtils.createSymbol('Literal', { value: index })]
+        });
+    },
+
+    // DT-03: List Utility
+    'DT-03': (node, inputs) => {
+        const op = ((node.data || {}) as any).op || 'SIZE';
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: op.toLowerCase(),
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
+        });
+    },
+
+    // DT-04: Set Operations
+    'DT-04': (node, inputs) => {
+        const op = ((node.data || {}) as any).op || 'UNION';
+        return PayloadUtils.createSymbol('FunctionCall', {
+            name: op.toLowerCase(),
+            args: [
+                inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 'A' }),
+                inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 'B' })
+            ]
+        });
+    },
+
     // DT-07: Matrix Tools
     'DT-07': (node, inputs) => {
         const data = (node.data || {}) as any;

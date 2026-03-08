@@ -75,11 +75,11 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             const hB = procB as any;
             const isUnitA = hA && (hA.isUnit || hA.constructor?.name === 'Unit');
             const isUnitB = hB && (hB.isUnit || hB.constructor?.name === 'Unit');
-            const isMatrixA = hA && (Array.isArray(hA) || hA.isMatrix || hA.constructor?.name === 'Matrix');
-            const isMatrixB = hB && (Array.isArray(hB) || hB.isMatrix || hB.constructor?.name === 'Matrix');
+            const isArrayA = hA && (Array.isArray(hA) || hA.isMatrix || hA.constructor?.name === 'Matrix');
+            const isArrayB = hB && (Array.isArray(hB) || hB.isMatrix || hB.constructor?.name === 'Matrix');
 
-            if ((isMatrixA && !isMatrixB) || (!isMatrixA && isMatrixB)) {
-                return PayloadUtils.createError("Strict Mode: Cannot add/sub Matrix and Scalar");
+            if ((isArrayA && !isArrayB) || (!isArrayA && isArrayB)) {
+                return PayloadUtils.createError("Strict Mode: Cannot add/sub Array and Scalar");
             }
 
             if (isUnitA && !isUnitB && (mathInstance as any).equal(procB, 0)) procB = (mathInstance as any).unit(0, hA.formatUnits());
@@ -333,7 +333,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             } else if (Array.isArray(arr)) result = arr[Math.floor(i)];
             else result = arr;
             return {
-                type: Array.isArray(result) || (result && (result as any).isMatrix) ? DataType.Matrix : DataType.Scalar,
+                type: (Array.isArray(result) || (result && (result as any).isMatrix)) ? DataType.Array : DataType.Scalar,
                 value: PayloadUtils.dehydrate(result),
                 symbol: null,
                 meta: { unit: valPayload.meta?.unit }
@@ -355,16 +355,16 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             const inputKeys = Object.keys(inputs).filter(k => k.startsWith('in_')).sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]));
             items = inputKeys.map(k => PayloadUtils.hydrate(PayloadUtils.unwrap(inputs[k]), math));
         }
-        if (items.length === 0) return PayloadUtils.createMatrix([]);
+        if (items.length === 0) return PayloadUtils.createArray([]);
         try {
             if (items.length === 1) return {
                 type: Array.isArray(items[0]) || (items[0] && (items[0] as any).isMatrix) ? DataType.Matrix : DataType.Scalar,
                 value: PayloadUtils.dehydrate(items[0]), symbol: null, meta: {}
             };
             let result: unknown;
-            try { result = math.concat(...items, axis); } catch (e) { result = math.matrix(items); }
-            return { type: DataType.Matrix, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
-        } catch (e: unknown) { return PayloadUtils.createMatrix(PayloadUtils.dehydrate(items)); }
+            try { result = math.concat(...items, axis); } catch (e) { result = items; }
+            return { type: DataType.Array, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
+        } catch (e: unknown) { return PayloadUtils.createArray(items); }
     },
 
     // DA-01: Statistics
@@ -405,7 +405,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
-        if (arr.length === 0) return PayloadUtils.createMatrix([]);
+        if (arr.length === 0) return PayloadUtils.createArray([]);
         windowSize = Math.max(1, Math.min(arr.length, Math.floor(windowSize)));
         const result = [];
         for (let i = 0; i < arr.length; i++) {
@@ -414,7 +414,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             for (let j = start; j <= end; j++) { sum += Number(arr[j]) || 0; count++; }
             result.push(sum / count || 0);
         }
-        return PayloadUtils.createMatrix(PayloadUtils.dehydrate(result));
+        return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
     },
 
     // DA-03: List Utility
@@ -425,14 +425,14 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
-        if (arr.length === 0) return PayloadUtils.createMatrix([]);
+        if (arr.length === 0) return PayloadUtils.createArray([]);
         let result = [...arr];
         if (mode === 'Sort (Asc)') result.sort((a, b) => Number(a) - Number(b));
         else if (mode === 'Sort (Desc)') result.sort((a, b) => Number(b) - Number(a));
         else if (mode === 'Reverse') result.reverse();
         else if (mode === 'Unique') result = [...new Set(result.map(x => String(x)))].map((x: any) => (isNaN(Number(x)) ? x : Number(x)));
         else if (mode === 'Clean') result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
-        return PayloadUtils.createMatrix(PayloadUtils.dehydrate(result));
+        return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
     },
 
     // DA-04: Set Operations
@@ -451,7 +451,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         else if (mode === 'Intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
         else if (mode === 'Difference') resultSet = Array.from(setA).filter((x: string) => !setB.has(x));
         const final = resultSet.map((x: string) => (isNaN(Number(x)) ? x : Number(x)));
-        return PayloadUtils.createMatrix(PayloadUtils.dehydrate(final));
+        return PayloadUtils.createArray(final);
     },
 
     'DA-05': (node, inputs) => MathEvaluators['IN-11'](node, inputs),
@@ -482,16 +482,33 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                     samples[i] = -Math.log(Math.random()) / p1;
                 }
             }
-            return PayloadUtils.createMatrix(PayloadUtils.dehydrate(samples));
+            return PayloadUtils.createArray(samples);
         } catch { return PayloadUtils.createError('Distribution Failed'); }
     },
 
     // IN-10: Random generator (Moving logic here for easier registration)
     'IN-10': (node) => {
-        const engine = InputOutputEngine.getInstance();
-        const math = engine.getMathInstance() as any;
         const data = (node.data || {}) as Record<string, unknown>;
-        const mode = data.mode as string || 'scalar';
+
+        // --- Passive Evaluation Strategy (Phase 6 Fix) ---
+        // We only generate a NEW value if the node's parameters change.
+        const currentDataHash = JSON.stringify({
+            mode: data.mode,
+            min: data.min,
+            max: data.max,
+            isFloat: data.isFloat,
+            rows: data.rows,
+            cols: data.cols,
+            length: data.length
+        });
+
+        const lastDataHash = (node as any)._lastDataHash;
+        if (lastDataHash === currentDataHash && node.value) {
+            return node.value;
+        }
+        (node as any)._lastDataHash = currentDataHash;
+
+        const mode = data.mode as string || 'float';
         const isFloat = data.isFloat !== false;
         const min = Number(data.min ?? 0);
         const max = Number(data.max ?? 1);
@@ -504,14 +521,18 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return isFloat ? r : Math.floor(r);
         };
 
-        if (mode === 'matrix') {
-            const mat = Array.from({ length: rows }, () => Array.from({ length: cols }, getRand));
-            return PayloadUtils.createMatrix(PayloadUtils.dehydrate(mat));
-        } else if (mode === 'vector') {
-            const vec = Array.from({ length: length }, getRand);
-            return PayloadUtils.createMatrix(PayloadUtils.dehydrate(vec));
-        } else {
-            return PayloadUtils.createScalar(getRand());
+        try {
+            if (mode === 'matrix') {
+                const mat = Array.from({ length: rows }, () => Array.from({ length: cols }, getRand));
+                return PayloadUtils.createArray(mat);
+            } else if (mode === 'vector') {
+                const vec = Array.from({ length: length }, getRand);
+                return PayloadUtils.createArray(vec);
+            } else {
+                return PayloadUtils.createScalar(getRand());
+            }
+        } catch (e: any) {
+            return PayloadUtils.createError(`Random Failed: ${e.message}`);
         }
     },
 

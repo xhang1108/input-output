@@ -56,6 +56,16 @@ export const DisplayUtils = {
         }
 
         if (typeof val === 'object') {
+            // 🛡️ Handle NodePayloads specifically
+            if ('type' in val && ('value' in val || 'meta' in val)) {
+                if (val.type === 'error') return `ERR: ${val.meta?.error || 'Unknown'}`;
+                if (val.type === 'scalar') return this.formatValue(val.value, precision);
+                if (val.type === 'array') return this.formatValue(val.value, precision);
+                if (val.type === 'string') return String(val.value);
+                if (val.type === 'symbolic') return val.symbol || String(val.value);
+                // For complex objects in payloads, fall through to generic object formatter
+            }
+
             // Live MathJS Objects (not dehydrated)
             if (val.isBigNumber && typeof val.toString === 'function') return this.formatValue(val.toString(), precision);
             if (val.isFraction) return `${val.n}/${val.d}`;

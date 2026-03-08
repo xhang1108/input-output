@@ -1,7 +1,7 @@
 import { Position } from '@xyflow/react';
 
 // Data type determines handle color via CSS variable lookup
-export type HandleDataType = 'scalar' | 'matrix' | 'vector' | 'unit' | 'string' | 'color' | 'boolean' | 'symbolic' | 'any';
+export type HandleDataType = 'scalar' | 'array' | 'unit' | 'string' | 'color' | 'boolean' | 'symbolic' | 'any' | 'object' | 'vector' | 'matrix';
 
 // Handle configuration - fully describes a single connection point
 export interface HandleConfig {
@@ -12,6 +12,7 @@ export interface HandleConfig {
     dataType?: HandleDataType;  // Determines color. Default: 'scalar'
     label?: string;             // Optional label shown near handle
     y?: number | string;        // Optional manual Y position (percent or absolute px)
+    dynamicColor?: (data: any) => HandleDataType; // [0.11.4] Dynamic override based on node data
 }
 
 /**
@@ -25,14 +26,18 @@ export function resolveHandlePosition(h: HandleConfig): Position {
 // Color lookup: dataType → CSS variable
 export const HANDLE_COLOR_MAP: Record<HandleDataType, string> = {
     scalar: 'var(--color-scalar)',
-    matrix: 'var(--color-matrix)',
-    vector: 'var(--color-vector)',
+    array: 'var(--color-matrix)', // Unified color
     unit: 'var(--color-unit)',
     string: 'var(--color-string)',
     color: 'var(--color-color)',
     boolean: 'var(--color-boolean)',
     symbolic: 'var(--color-symbolic)',
-    any: 'var(--color-symbolic)', // Use symbolic (violet) for 'any' for now
+    any: 'var(--color-any)',
+    object: 'var(--color-object)',
+    /** @deprecated Use array */
+    matrix: 'var(--color-matrix)',
+    /** @deprecated Use array */
+    vector: 'var(--color-vector)',
 };
 
 export function getHandleColor(config: HandleConfig): string {

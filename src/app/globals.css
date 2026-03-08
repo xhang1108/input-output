@@ -25,15 +25,17 @@ body {
   --color-foreground: var(--foreground);
 
   /* ── Data Type Color Tokens (§0.1.2) ── */
-  --color-scalar:  hsl(38, 92%, 55%);   /* Amber Gold  – Number/Float  */
-  --color-matrix:  hsl(217, 91%, 60%);  /* Electric Blue – Matrix/Array */
-  --color-symbolic:hsl(270, 60%, 62%);  /* Violet       – AST/Symbol   */
-  --color-vector:  hsl(160, 84%, 45%);  /* Emerald      – Vector       */
-  --color-string:  hsl(340, 75%, 60%);  /* Rose         – String       */
-  --color-boolean: hsl(30, 100%, 55%);  /* Orange       – Boolean      */
-  --color-unit:    hsl(195, 85%, 48%);  /* Cyan         – Unit/SI      */
-  --color-error:   hsl(0, 72%, 55%);    /* Red          – Error State  */
-  --color-color:   hsl(285, 80%, 65%);  /* Magenta/Pink – Color/Visual */
+  --color-scalar:   hsl(0, 0%, 75%);      /* Light Gray    – Numbers      */
+  --color-matrix:   hsl(330, 80%, 45%);   /* Dark Pink     – Matrices     */
+  --color-vector:   hsl(220, 100%, 50%);  /* Dark Blue     – Vectors      */
+  --color-symbolic: hsl(265, 85%, 65%);  /* Violet        – Logic/AST    */
+  --color-string:   hsl(200, 100%, 85%);  /* Light Blue    – Text/Labels  */
+  --color-boolean:  hsl(330, 100%, 85%);  /* Light Pink    – True/False   */
+  --color-unit:     hsl(195, 85%, 48%);  /* Cyan          – Unit/SI      */
+  --color-error:    hsl(0, 72%, 55%);    /* Red           – Error State  */
+  --color-color:    hsl(50, 100%, 55%);   /* Yellow        – Color/Visual */
+  --color-object:   hsl(30, 100%, 55%);   /* Orange        - Objects      */
+  --color-any:      hsl(0, 0%, 100%);    /* White         - Universal    */
 
   /* ── Node Category Tokens ── */
   --color-input:   hsl(38, 92%, 55%);   /* Match scalar input */

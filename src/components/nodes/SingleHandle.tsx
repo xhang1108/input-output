@@ -8,9 +8,10 @@ interface SingleHandleProps {
     h: HandleConfig;
     id: string;
     isConnectable: boolean;
+    nodeData?: any;
 }
 
-export const SingleHandle = memo(({ h, id, isConnectable }: SingleHandleProps) => {
+export const SingleHandle = memo(({ h, id, isConnectable, nodeData }: SingleHandleProps) => {
     const isManual = h.y !== undefined;
     const dynamicHeight = 12;
     const updateNodeInternals = useUpdateNodeInternals();
@@ -35,7 +36,7 @@ export const SingleHandle = memo(({ h, id, isConnectable }: SingleHandleProps) =
                 id={h.id}
                 nodeId={id}
                 className="z-50 pointer-events-auto origin-center w-(--handle-size-sm)! h-(--handle-size-sm)!"
-                color={getHandleColor(h)}
+                color={h.dynamicColor ? getHandleColor({ ...h, dataType: h.dynamicColor(nodeData) }) : getHandleColor(h)}
                 isConnectable={isConnectable}
             />
 
