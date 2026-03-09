@@ -100,7 +100,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
 
     // Define Output Handle
     const handles = [
-        { id: 'out', type: 'source', position: 'right' as any, variant: 'single' as any, dataType: 'matrix' as any }
+        { id: 'out', type: 'source', position: 'right' as any, variant: 'single' as any, dataType: 'array' as any }
     ];
 
     const nodeData = {

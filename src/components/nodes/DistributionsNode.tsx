@@ -32,17 +32,11 @@ export const DistributionsNode = memo((props: NodeProps) => {
 
     const handleMenuSelect = (item: CategorizedMenuItem) => {
         const newMode = item.id;
-        const newHandles = [
-            { id: 'param_n', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
-            { id: 'param_1', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }
-        ];
-
-        if (newMode !== 'Poisson') {
-            newHandles.push({ id: 'param_2', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' });
-        }
-        newHandles.push({ id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' });
-
-        updateData({ mode: newMode, handles: newHandles });
+        updateData({
+            mode: newMode, handles: [
+                { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'array' }
+            ]
+        });
         closeMenu();
     };
 
@@ -56,10 +50,7 @@ export const DistributionsNode = memo((props: NodeProps) => {
     const nodeData = {
         ...data,
         handles: [
-            { id: 'param_n', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
-            { id: 'param_1', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
-            ...(mode !== 'Poisson' ? [{ id: 'param_2', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }] : []),
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'array' }
         ]
     };
 

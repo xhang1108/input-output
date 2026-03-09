@@ -2,7 +2,8 @@ import { memo, useEffect } from 'react';
 import { Position, useNodeConnections, useUpdateNodeInternals } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
-import { HandleConfig, getHandleColor, resolveHandlePosition } from '../../types/NodeDefinition';
+import { HandleConfig } from '../../types/NodeDefinition';
+import { getHandleColorByConfig as getHandleColor, resolveHandlePosition } from '../../utils/handleUtils';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
 
@@ -47,7 +48,10 @@ export const CapsuleHandle = memo(({ h, id, isConnectable, nodeData }: CapsuleHa
                 nodeId={id}
                 className="z-50 pointer-events-auto origin-center w-(--handle-size-sm)! rounded-full!"
                 style={{ height: `${dynamicHeight}px` }}
-                color={h.dynamicColor ? getHandleColor({ ...h, dataType: h.dynamicColor(nodeData) }) : getHandleColor(h)}
+                color={getHandleColor({
+                    ...h,
+                    dataType: h.dynamicColor ? h.dynamicColor(nodeData) : h.dataType
+                })}
                 isConnectable={isConnectable}
             />
 

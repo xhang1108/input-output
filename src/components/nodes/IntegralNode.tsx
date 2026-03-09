@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps, useReactFlow } from '@xyflow/react';
+import { NodeProps, useReactFlow, Position } from '@xyflow/react';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -15,6 +15,12 @@ const MODE_ITEMS: CategorizedMenuItem[] = [
     { id: 'indefinite', label: '∫ Indefinite', category: 'Integration' },
     { id: 'definite', label: '∫ₐᵇ Definite', category: 'Integration' },
 ];
+
+// Explicit map: which mode produces symbolic vs scalar output
+const INTEGRAL_MODE_OUTPUT: Record<string, 'symbolic' | 'scalar'> = {
+    indefinite: 'symbolic', // indefinite integration → formula
+    definite: 'scalar',   // definite integration → number
+};
 
 export const IntegralNode = memo((props: NodeProps) => {
     const { id, data } = props;
@@ -37,8 +43,16 @@ export const IntegralNode = memo((props: NodeProps) => {
         modeMenu.closeMenu();
     }, [id, updateNodeData, modeMenu]);
 
+    // Inject handles dynamically
+    const handles = [
+        { id: 'expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic', label: 'f(x)' },
+        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: INTEGRAL_MODE_OUTPUT[mode] ?? 'symbolic' }
+    ];
+
+    const nodeData = { ...data, handles };
+
     return (
-        <BaseNode {...props}>
+        <BaseNode {...props} data={nodeData}>
             <div className="flex flex-col gap-2 p-2 relative items-center justify-center min-w-[130px]">
                 <div className="text-[11px] font-bold text-zinc-300 tracking-widest uppercase mb-1">
                     Integral

@@ -1,5 +1,5 @@
 import { memo, useMemo, useRef, useCallback } from 'react';
-import { NodeProps } from '@xyflow/react';
+import { NodeProps, Position } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { VegaEmbed } from 'react-vega';
@@ -430,9 +430,11 @@ export const PlotNode = memo((props: NodeProps) => {
     return (
         <BaseNode
             {...props}
-            // 3.2 Dynamic Handles: Line mode supports multi-input via capsule
-            handleVariants={{
-                in: viewMode === 'line' ? 'capsule' : 'single'
+            data={{
+                ...data,
+                handles: [
+                    { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any', color: 'var(--color-any)' }
+                ]
             }}
         >
             <div className="w-[320px] bg-zinc-950/50 rounded-b-md relative flex flex-col" style={{ height: 240 }}>

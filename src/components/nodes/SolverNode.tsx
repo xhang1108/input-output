@@ -1,9 +1,10 @@
 
 import { memo, useMemo, useState, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps, useReactFlow, useNodes, useHandleConnections } from '@xyflow/react';
+import { NodeProps, useReactFlow, useNodes, useNodeConnections, Position } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
+import { HandleConfig } from '../../types/NodeDefinition';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
 export const SolverNode = memo((props: NodeProps) => {
@@ -11,11 +12,16 @@ export const SolverNode = memo((props: NodeProps) => {
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const { updateNodeData } = useReactFlow();
 
+    // Explicitly define handles to ensure 'symbolic' (Orange) color and avoid stale session data
+    const handles: HandleConfig[] = [
+        { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
+        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
+    ];
 
-
+    const nodeData = { ...data, handles };
 
     const nodes = useNodes();
-    const incomingConnections = useHandleConnections({ type: 'target', id: 'in' });
+    const incomingConnections = useNodeConnections({ handleType: 'target', handleId: 'in' });
 
     const variables = useMemo(() => {
         const vars = new Set<string>();
@@ -87,7 +93,7 @@ export const SolverNode = memo((props: NodeProps) => {
     const currentLabel = solveFor === '' ? 'Auto' : solveFor;
 
     return (
-        <BaseNode {...props}>
+        <BaseNode {...props} data={nodeData}>
             <div className="flex flex-col gap-2 p-2 relative items-center justify-center min-w-[120px]">
                 <div className="text-[11px] font-bold text-zinc-300 tracking-widest uppercase mb-1">
                     Solver
@@ -97,7 +103,7 @@ export const SolverNode = memo((props: NodeProps) => {
                     <div className="text-[9px] text-zinc-500 uppercase tracking-wider pl-1 font-semibold">Solve For</div>
                     {variables.length > 0 ? (
                         <button
-                            className="nodrag w-full bg-zinc-900 border border-zinc-700/50 rounded-(--radius-lg) px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group shadow-sm"
+                            className="nodrag w-full bg-zinc-900 border border-zinc-700/50 rounded-lg px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group shadow-sm"
                             onClick={handleTrigger}
                             onMouseDown={(e) => e.stopPropagation()}
                         >
@@ -108,7 +114,7 @@ export const SolverNode = memo((props: NodeProps) => {
                         </button>
                     ) : (
                         <input
-                            className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-2 py-1.5 rounded-(--radius-lg) text-xs w-full text-center focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
+                            className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-2 py-1.5 rounded-lg text-xs w-full text-center focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
                             value={solveFor}
                             onChange={handleInput}
                             placeholder="Type variable..."

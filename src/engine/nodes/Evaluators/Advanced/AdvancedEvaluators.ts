@@ -61,45 +61,38 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // DT-03: List Utility
     'DT-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as any;
-        const op = data.op || 'SIZE';
-        const inPayload = inputs['in'];
-        if (!inPayload) return PayloadUtils.createError('No Input');
-        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
-        const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : [hydrated]).flat(Infinity);
-        try {
-            let result: any;
-            if (op === 'SIZE') result = arr.length;
-            else if (op === 'SUM') result = math.sum(arr);
-            else if (op === 'MEAN') result = math.mean(arr);
-            else if (op === 'MAX') result = math.max(arr);
-            else if (op === 'MIN') result = math.min(arr);
-            else if (op === 'SORT') result = math.sort(arr);
-            else result = arr.length;
-            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createArray(PayloadUtils.dehydrate(result)) : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
-        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
+        const data = (node.data || {}) as any, mode = data.mode || 'Sort (Asc)';
+        const valPayload = inputs['data'] || inputs['in'];
+        if (!valPayload) return PayloadUtils.createError('No Input');
+        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+        let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
+        if (arr.length === 0) return PayloadUtils.createArray([]);
+        let result = [...arr];
+        if (mode === 'Sort (Asc)') result.sort((a, b) => Number(a) - Number(b));
+        else if (mode === 'Sort (Desc)') result.sort((a, b) => Number(b) - Number(a));
+        else if (mode === 'Reverse') result.reverse();
+        else if (mode === 'Unique') result = [...new Set(result.map(x => String(x)))].map((x: any) => (isNaN(Number(x)) ? x : Number(x)));
+        else if (mode === 'Clean') result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
+        return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
     },
 
     // DT-04: Set Operations
     'DT-04': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as any;
-        const op = data.op || 'UNION';
+        const mode = ((node.data || {}) as any).mode || 'Union';
         const getArr = (key: string) => {
-            const p = inputs[key];
-            if (!p) return [];
-            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math);
-            return (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
+            const p = inputs[key]; if (!p) return [];
+            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math) as any;
+            return (h && typeof h === 'object' && 'toArray' in h) ? h.toArray().flat(Infinity) : (Array.isArray(h) ? h : [h]);
         };
-        const arrA = getArr('in_a'), arrB = getArr('in_b');
-        try {
-            let result: any[];
-            if (op === 'UNION') result = Array.from(new Set([...arrA, ...arrB]));
-            else if (op === 'INTERSECT') result = arrA.filter((x: any) => arrB.includes(x));
-            else if (op === 'SUBTRACT') result = arrA.filter((x: any) => !arrB.includes(x));
-            else result = [];
-            return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
-        } catch (e) { return PayloadUtils.createError(`${op} Failed`); }
+        const setA = new Set<string>(getArr('a').map((x: any) => String(x)));
+        const setB = new Set<string>(getArr('b').map((x: any) => String(x)));
+        let resultSet: string[] = [];
+        if (mode === 'Union') resultSet = Array.from(new Set<string>([...Array.from(setA), ...Array.from(setB)]));
+        else if (mode === 'Intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
+        else if (mode === 'Difference') resultSet = Array.from(setA).filter((x: string) => !setB.has(x));
+        const final = resultSet.map((x: string) => (isNaN(Number(x)) ? x : Number(x)));
+        return PayloadUtils.createArray(final);
     },
 
     // DT-07: Matrix Tools
@@ -296,7 +289,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             const h = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
             const arr = (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
             return {
-                type: DataType.Object,
+                type: DataType.Array,
                 value: {
                     x: PayloadUtils.dehydrate(arr[0] ?? 0),
                     y: PayloadUtils.dehydrate(arr[1] ?? 0),
@@ -326,7 +319,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         else if (shape === 'Rectangle') { area = a * b; perimeter = 2 * (a + b); }
         else if (shape === 'Triangle') { area = 0.5 * a * b; perimeter = a + b + Math.sqrt(a * a + b * b); }
         return {
-            type: DataType.Object,
+            type: DataType.Array,
             value: { area: PayloadUtils.dehydrate(area), perimeter: PayloadUtils.dehydrate(perimeter) },
             symbol: null,
             meta: {}

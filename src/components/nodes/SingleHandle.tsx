@@ -2,7 +2,8 @@ import { memo, useEffect } from 'react';
 import { Position, useUpdateNodeInternals } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
-import { HandleConfig, getHandleColor, resolveHandlePosition } from '../../types/NodeDefinition';
+import { HandleConfig } from '../../types/NodeDefinition';
+import { getHandleColorByConfig as getHandleColor, resolveHandlePosition } from '../../utils/handleUtils';
 
 interface SingleHandleProps {
     h: HandleConfig;

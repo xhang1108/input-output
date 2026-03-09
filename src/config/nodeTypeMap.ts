@@ -1,14 +1,9 @@
-/**
- * Static Node & Edge Type Maps
- * Extracted from Body.tsx to keep the orchestrator lean.
- */
-
 import { BaseNode } from '../components/nodes/BaseNode';
 import { SolverNode } from '../components/nodes/SolverNode';
 import { FrameNode } from '../components/nodes/FrameNode';
 import { InputNode } from '../components/nodes/InputNode';
 import { UnitNode } from '../components/nodes/UnitNode';
-import { MathNode } from '../components/nodes/MathNode';
+import { GenericSelectorNode } from '../components/nodes/GenericSelectorNode';
 import { ResultNode } from '../components/nodes/ResultNode';
 import { ConstantNode } from '../components/nodes/ConstantNode';
 import { SliderNode } from '../components/nodes/SliderNode';
@@ -27,11 +22,9 @@ import { MagneticEdge } from '../components/edges/MagneticEdge';
 import { TextAnnotationNode } from '../components/nodes/TextAnnotationNode';
 import { RerouteNode } from '../components/nodes/RerouteNode';
 import { BaseConverterNode } from '../components/nodes/BaseConverterNode';
-import { LogNode } from '../components/nodes/LogNode';
 import { TrigNode } from '../components/nodes/TrigNode';
 import { NodeExpression } from '../components/nodes/NodeExpression';
 import { DebugNode } from '../components/nodes/DebugNode';
-import { MatrixToolsNode } from '../components/nodes/MatrixToolsNode';
 import { VectorUtilsNode } from '../components/nodes/VectorUtilsNode';
 import { CombinatoricsNode } from '../components/nodes/CombinatoricsNode';
 import { VectorSplitNode } from '../components/nodes/VectorSplitNode';
@@ -40,15 +33,19 @@ import { ArrayExtractNode } from '../components/nodes/ArrayExtractNode';
 import { ArrayBuilderNode } from '../components/nodes/ArrayBuilderNode';
 import { VectorFieldNode } from '../components/nodes/VectorFieldNode';
 
-// Removed legacy calculus nodes
+// Specialized components removed in favor of GenericSelectorNode
+// import { MathNode } from '../components/nodes/MathNode';
+// import { LogNode } from '../components/nodes/LogNode';
+// import { StatisticsNode } from '../components/nodes/StatisticsNode';
+// import { ListUtilityNode } from '../components/nodes/ListUtilityNode';
+// import { SetOpsNode } from '../components/nodes/SetOpsNode';
+// import { MatrixToolsNode } from '../components/nodes/MatrixToolsNode';
+
 import { DifferentialNode } from '../components/nodes/DifferentialNode';
 import { IntegralNode } from '../components/nodes/IntegralNode';
 import { LimitNode } from '../components/nodes/LimitNode';
 import { ODESolverNode } from '../components/nodes/ODESolverNode';
-import { StatisticsNode } from '../components/nodes/StatisticsNode';
 import { SmoothingNode } from '../components/nodes/SmoothingNode';
-import { ListUtilityNode } from '../components/nodes/ListUtilityNode';
-import { SetOpsNode } from '../components/nodes/SetOpsNode';
 import { DistributionsNode } from '../components/nodes/DistributionsNode';
 import { StatusNode } from '../components/nodes/StatusNode';
 
@@ -68,9 +65,9 @@ export const nodeTypes = {
     'IN-11': DistributionsNode,
 
     // ─── 3. Math ────────────────────────────────────────────
-    'MA-01': MathNode,
-    'MA-02': MathNode,
-    'MA-03': LogNode,
+    'MA-01': GenericSelectorNode,
+    'MA-02': GenericSelectorNode,
+    'MA-03': GenericSelectorNode,
     'MA-04': TrigNode,
     'MA-05': RoundingNode,
     'MA-06': FractionNode,
@@ -87,11 +84,11 @@ export const nodeTypes = {
     // ─── 5. Data & Structures ───────────────────────────────
     'DT-01': ArrayBuilderNode,
     'DT-02': ArrayExtractNode,
-    'DT-03': ListUtilityNode,
-    'DT-04': SetOpsNode,
+    'DT-03': GenericSelectorNode,
+    'DT-04': GenericSelectorNode,
     'DT-05': VectorUtilsNode,
     'DT-06': VectorSplitNode,
-    'DT-07': MatrixToolsNode,
+    'DT-07': GenericSelectorNode,
 
     // ─── 6. Transform ───────────────────────────────────────
     'TR-01': UnitNode,
@@ -99,7 +96,7 @@ export const nodeTypes = {
     'TR-03': GeometryNode,
     'TR-04': VectorFieldNode,
     'TR-05': SmoothingNode,
-    'TR-06': StatisticsNode,
+    'TR-06': GenericSelectorNode,
 
     // ─── 7. Logic & Flow ────────────────────────────────────
     'LG-01': LogicNode,      // Logic Gate
@@ -119,9 +116,6 @@ export const nodeTypes = {
     // ─── Fallback & Special ─────────────────────────────────
     'baseNode': BaseNode,
     'frame': FrameNode,
-    'IO-16': ResultNode,
-    'IO-17': ResultNode,
-    'IO-19': ResultNode,
     'IN-03': ColorNode,     // New Color ID
 };
 

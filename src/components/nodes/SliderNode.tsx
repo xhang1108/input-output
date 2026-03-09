@@ -61,14 +61,14 @@ export const SliderNode = memo((props: NodeProps) => {
                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Slider</label>
                         <button
                             onClick={() => setShowSettings(!showSettings)}
-                            className={`p-1 rounded-(--radius-sm) hover:bg-zinc-800 transition-colors ${showSettings ? 'text-cyan-400' : 'text-zinc-600'}`}
+                            className={`p-1 rounded-sm hover:bg-zinc-800 transition-colors ${showSettings ? 'text-cyan-400' : 'text-zinc-600'}`}
                         >
                             <Settings2 size={12} />
                         </button>
                     </div>
                     <span
-                        className="text-xs font-mono px-1.5 py-0.5 rounded-(--radius-sm) border border-zinc-800"
-                        style={{ background: 'var(--node-bg)', color: 'var(--color-unit)' }}
+                        className="text-xs font-mono px-1.5 py-0.5 rounded-sm border border-zinc-800"
+                        style={{ background: 'var(--node-bg)', color: 'var(--color-scalar)' }}
                     >
                         {localValue}
                     </span>
@@ -83,7 +83,7 @@ export const SliderNode = memo((props: NodeProps) => {
                                     type="number"
                                     value={min}
                                     onChange={(e) => handleSettingChange('min', e.target.value)}
-                                    className="bg-zinc-950 border border-zinc-800 rounded-(--radius-sm) px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
+                                    className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
                                 />
                             </div>
                             <div className="flex flex-col gap-1">
@@ -92,7 +92,7 @@ export const SliderNode = memo((props: NodeProps) => {
                                     type="number"
                                     value={max}
                                     onChange={(e) => handleSettingChange('max', e.target.value)}
-                                    className="bg-zinc-950 border border-zinc-800 rounded-(--radius-sm) px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
+                                    className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
                                 />
                             </div>
                             <div className="flex flex-col gap-1">
@@ -101,7 +101,7 @@ export const SliderNode = memo((props: NodeProps) => {
                                     type="number"
                                     value={step}
                                     onChange={(e) => handleSettingChange('step', e.target.value)}
-                                    className="bg-zinc-950 border border-zinc-800 rounded-(--radius-sm) px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
+                                    className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
                                 />
                             </div>
                         </div>
@@ -123,7 +123,7 @@ export const SliderNode = memo((props: NodeProps) => {
                         onMouseUp={() => {
                             isInteracting.current = false;
                         }}
-                        className="nodrag w-full h-1.5 bg-zinc-800 rounded-(--radius-lg) appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400 transition-all"
+                        className="nodrag w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400 transition-all"
                     />
                 </div>
 

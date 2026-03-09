@@ -249,11 +249,13 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Control') setIsSnapping(true);
-            if (e.shiftKey || e.ctrlKey || e.metaKey) setIsModifierActive(true);
+            // ONLY Shift triggers additive selection. 
+            // Control is for Snapping, Meta/Cmd is for system shortcuts.
+            if (e.shiftKey) setIsModifierActive(true);
         };
         const handleKeyUp = (e: KeyboardEvent) => {
             if (e.key === 'Control') setIsSnapping(false);
-            const anyActive = e.shiftKey || e.ctrlKey || e.metaKey;
+            const anyActive = e.shiftKey;
             if (!anyActive) setIsModifierActive(false);
         };
         const handleBlur = () => {
@@ -560,6 +562,8 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
                     nodeOrigin={[0.5, 0.5]}
                     snapToGrid={effectiveSnap}
+                    selectionKeyCode={['Shift']}
+                    multiSelectionKeyCode={['Shift']}
 
                     onPaneContextMenu={(e) => {
                         e.preventDefault();
@@ -598,7 +602,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
                     nodesDraggable={false} // Disable native drag to use our custom system
                     panOnDrag={[1]}
-                    selectionOnDrag={true}
+                    selectionOnDrag={false}
                     panOnScroll={panOnScroll}
                     zoomOnScroll={!panOnScroll}
                     zoomOnPinch={true}
@@ -606,7 +610,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     preventScrolling={true}
                     panOnScrollSpeed={1}
                     selectionMode={SelectionMode.Partial}
-                    multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
                     connectionLineType={{
                         bezier: ConnectionLineType.Bezier,
                         straight: ConnectionLineType.Straight,

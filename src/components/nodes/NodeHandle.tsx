@@ -12,34 +12,47 @@ interface CustomHandleProps extends HandleProps {
 
 /**
  * NodeHandle - Performance-optimized custom handle.
- *
- * 🔑 Key Design Decision (Performance §0.9):
- * Previously, each handle subscribed to `useStore` to track connectionHandleId/nodeId,
- * causing 200+ re-renders per frame during connection drag (50 nodes × 4 handles).
- *
- * Now: ALL hover/glow effects use pure CSS (`:hover`, `.react-flow__handle-valid`).
- * React Flow already applies these classes natively. Zero JS overhead.
+ * Robust implementation for consistent color rendering.
  */
 export function NodeHandle({ className, color, id, nodeId, ...props }: CustomHandleProps) {
-    const isPending = id.endsWith('_pending');
     const updateNodeInternals = useUpdateNodeInternals();
 
-    // Notify React Flow to recalculate handle positions when this handle mounts/unmounts
     useEffect(() => {
         updateNodeInternals(nodeId);
         return () => updateNodeInternals(nodeId);
     }, [nodeId, updateNodeInternals]);
 
+    const isPending = id.endsWith('_pending');
+    const normalizedColor = String(color || '').trim().toLowerCase();
+
+    // Symbolic detection: Equation Solver (CL-04) or symbolic keywords
+    const isSymbolic =
+        (nodeId || '').includes('CL-04') ||
+        normalizedColor.includes('symbolic') ||
+        normalizedColor === '#fb923c' ||
+        normalizedColor.includes('formula') ||
+        normalizedColor.includes('eq');
+
+    const isWhite =
+        normalizedColor === 'var(--color-any)' ||
+        normalizedColor === 'white' ||
+        normalizedColor === '#ffffff' ||
+        normalizedColor === 'hsl(0, 0%, 100%)';
+
     return (
         <Handle
             id={id}
+            // Use data-handle-type for CSS-level !important overrides in globals.css
+            data-handle-type={isSymbolic ? 'symbolic' : (isWhite ? 'any' : undefined)}
             className={cn(
-                "z-50 pointer-events-auto origin-center w-(--handle-size-sm)! h-(--handle-size-sm) rounded-full border-2 border-zinc-900",
+                "z-50 pointer-events-auto origin-center w-(--handle-size-sm)! rounded-full border-2 border-zinc-900 transition-colors",
                 isPending && "border-dashed opacity-100 border-zinc-300! bg-transparent!",
+                isWhite && "shadow-(--glow-any)!",
                 className
             )}
             style={{
-                background: isPending ? 'transparent' : (color || 'var(--color-scalar)'),
+                // Base background color, overridden by [data-handle-type] in CSS if symbolic
+                backgroundColor: isPending ? 'transparent' : (isSymbolic ? '#fb923c' : (isWhite ? '#ffffff' : (color || 'var(--color-scalar)'))),
                 ...props.style
             }}
             {...props}

@@ -25,7 +25,12 @@ export const PayloadUtils = {
             meta.dimensions = dims;
             meta.rank = dims.length;
         }
-        else if (typeof value === 'object') type = DataType.Object;
+        else if (typeof value === 'object' && value !== null) {
+            type = DataType.Array; // Unified Struct/Tensor
+            const dims = this.calculateDimensions(value);
+            meta.dimensions = dims;
+            meta.rank = dims.length;
+        }
 
         return {
             type,

@@ -1,14 +1,32 @@
 
 import { memo } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps, useReactFlow } from '@xyflow/react';
+import { NodeProps, useReactFlow, Position } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { HandleConfig } from '../../types/NodeDefinition';
 
 export const FractionNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const { updateNodeData } = useReactFlow();
 
     const isMixed = data.mixed === true;
+
+    // Dynamic handles based on mixed mode
+    const handles: HandleConfig[] = [
+        { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }
+    ];
+
+    if (isMixed) {
+        handles.push({ id: 'int', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'int' });
+    }
+
+    handles.push(
+        { id: 'numerator', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'n' },
+        { id: 'denominator', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'd' },
+        { id: 'string', type: 'source', position: Position.Right, variant: 'single', dataType: 'string', label: 'Text' }
+    );
+
+    const nodeData = { ...data, handles };
 
     const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
         const checked = e.target.checked;

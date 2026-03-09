@@ -19,7 +19,7 @@ export const ArrayBuilderNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const opMenu = useNodeMenu();
     const axisMenu = useNodeMenu();
-    
+
     const op = (data.op as string) || 'BUILD';
     const axis = (data.axis as number) ?? 0;
 
@@ -41,7 +41,7 @@ export const ArrayBuilderNode = memo((props: NodeProps) => {
 
     const handles: any[] = [
         { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'matrix' }
+        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'array' }
     ];
 
     const nodeData = { ...data, handles };

@@ -13,7 +13,8 @@ export const DebugNode = memo((props: NodeProps) => {
             id: 'in',
             type: 'target',
             position: Position.Left,
-            variant: 'single'
+            variant: 'single',
+            dataType: 'any'
         }
     ];
 

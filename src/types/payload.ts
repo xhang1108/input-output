@@ -28,17 +28,15 @@ export type Matrix = unknown;  // Will be mathjs.Matrix in Phase 2.3
 
 export enum DataType {
     Scalar = 'scalar',
-    Array = 'array', // Unified Tensor (Vector, Matrix, ND-Array)
+    Array = 'array',       // Unified Tensor (Vector, Matrix, ND-Array)
     Unit = 'unit',
     String = 'string',
     Boolean = 'boolean',
-    Error = 'error',
-    Trigger = 'trigger', // For events/pulses
-    Object = 'object',   // Generic JSON
     Symbolic = 'symbolic', // For algebraic expressions, equations, etc.
+    Color = 'color',       // HEX/HSL/RGBA visual types
+    Error = 'error',       // Error states
+    Any = 'any',           // Universal/Undetermined slot
 
-    /** @deprecated Use Array with Rank 1 */
-    Vector = 'vector',
     /** @deprecated Use Array with Rank 2 */
     Matrix = 'matrix',
 }

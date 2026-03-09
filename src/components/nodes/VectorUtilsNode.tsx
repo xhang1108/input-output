@@ -4,6 +4,14 @@ import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { NodeOpSelect } from './NodeOpSelect';
 
+// Explicit map: which ops produce a scalar vs vector output
+const VECTOR_OP_OUTPUT: Record<string, 'scalar' | 'array'> = {
+    DOT: 'scalar',  // dot product → number
+    NORM: 'scalar',  // magnitude → number
+    DISTANCE: 'scalar',  // distance → number
+    CROSS: 'array',   // cross product → 3D vector
+};
+
 export const VectorUtilsNode = memo((props: NodeProps) => {
     const { data } = props;
     const op = (data.op as string) || 'DOT';
@@ -11,12 +19,12 @@ export const VectorUtilsNode = memo((props: NodeProps) => {
     // Dynamic handles based on op: NORM only needs one input
     const handles = useMemo<any[]>(() => {
         const h: any[] = [
-            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector', label: 'A' }
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'array', label: 'A' }
         ];
         if (op !== 'NORM') {
-            h.push({ id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector', label: 'B' });
+            h.push({ id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'array', label: 'B' });
         }
-        h.push({ id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' });
+        h.push({ id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: VECTOR_OP_OUTPUT[op] ?? 'scalar' });
         return h;
     }, [op]);
 

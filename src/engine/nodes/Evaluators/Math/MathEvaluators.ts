@@ -192,18 +192,28 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             const f = math.fraction(raw);
             let n = Number(f.n), d = Number(f.d), integerPart = 0;
             let str = math.format(f);
+            let latex = str;
             if (isMixed && d !== 0) {
                 integerPart = Math.floor(n / d);
                 n = n % d;
-                if (integerPart !== 0) str = n === 0 ? `${integerPart}` : `${integerPart} ${n}/${d}`;
+                if (integerPart !== 0) {
+                    str = n === 0 ? `${integerPart}` : `${integerPart} ${n}/${d}`;
+                    latex = n === 0 ? `${integerPart}` : `${integerPart} \\frac{${n}}{${d}}`;
+                } else {
+                    latex = `\\frac{${n}}{${d}}`;
+                }
+            } else if (d !== 1 && d !== 0) {
+                latex = `\\frac{${n}}{${d}}`;
             }
+
             return {
-                type: DataType.Object,
+                type: DataType.Array,
                 value: {
                     int: PayloadUtils.createScalar(integerPart),
                     numerator: PayloadUtils.createScalar(n),
                     denominator: PayloadUtils.createScalar(d),
-                    string: PayloadUtils.createString(str)
+                    string: PayloadUtils.createString(str),
+                    latex: PayloadUtils.createString(latex)
                 },
                 symbol: null,
                 meta: {}
@@ -307,154 +317,11 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     },
     'MA-17': (node, inputs) => MathEvaluators['MA-04'](node, inputs),
 
-    // DA-06: Array Extract
-    'DA-06': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in'];
-        const idxPayload = inputs['index'];
-        if (!valPayload || !idxPayload) return PayloadUtils.createError('Missing Inputs');
-        let arr = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-        let idx = PayloadUtils.hydrate(PayloadUtils.unwrap(idxPayload), math);
-        try {
-            let i = typeof idx === 'number' ? idx : (idx && typeof idx === 'object' && 'toNumber' in idx) ? (idx as any).toNumber() : 0;
-            let result: unknown;
-            if (arr && typeof arr === 'object' && 'get' in (arr as any)) {
-                try {
-                    const size = (arr as any).size();
-                    if (size.length === 1) result = (arr as any).get([Math.floor(i)]);
-                    else {
-                        const indexObj = math.index(Math.floor(i));
-                        result = math.subset(arr, indexObj);
-                    }
-                } catch (e) {
-                    const flat = (arr as any).toArray ? (arr as any).toArray() : arr;
-                    result = Array.isArray(flat) ? flat[Math.floor(i)] : flat;
-                }
-            } else if (Array.isArray(arr)) result = arr[Math.floor(i)];
-            else result = arr;
-            return {
-                type: (Array.isArray(result) || (result && (result as any).isMatrix)) ? DataType.Array : DataType.Scalar,
-                value: PayloadUtils.dehydrate(result),
-                symbol: null,
-                meta: { unit: valPayload.meta?.unit }
-            };
-        } catch (e: unknown) { return PayloadUtils.createError('Extract Failed (Out of Bounds?)'); }
-    },
 
-    // DA-07: Array Builder
-    'DA-07': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as Record<string, unknown>;
-        const axis = data.axis as number || 0;
-        let items: any[] = [];
-        if (inputs['in']) {
-            const val = inputs['in'];
-            if (Array.isArray(val)) items = val.map(p => PayloadUtils.hydrate(PayloadUtils.unwrap(p), math));
-            else items = [PayloadUtils.hydrate(PayloadUtils.unwrap(val), math)];
-        } else {
-            const inputKeys = Object.keys(inputs).filter(k => k.startsWith('in_')).sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]));
-            items = inputKeys.map(k => PayloadUtils.hydrate(PayloadUtils.unwrap(inputs[k]), math));
-        }
-        if (items.length === 0) return PayloadUtils.createArray([]);
-        try {
-            if (items.length === 1) return {
-                type: Array.isArray(items[0]) || (items[0] && (items[0] as any).isMatrix) ? DataType.Matrix : DataType.Scalar,
-                value: PayloadUtils.dehydrate(items[0]), symbol: null, meta: {}
-            };
-            let result: unknown;
-            try { result = math.concat(...items, axis); } catch (e) { result = items; }
-            return { type: DataType.Array, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
-        } catch (e: unknown) { return PayloadUtils.createArray(items); }
-    },
 
-    // DA-01: Statistics
-    'DA-01': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as any;
-        const op = data.op || 'Mean';
-        const valPayload = inputs['data'];
-        if (!valPayload) return PayloadUtils.createError('No Input');
-        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-        let arr: any[] = [];
-        if (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) arr = (hydrated as any).toArray().flat(Infinity);
-        else if (Array.isArray(hydrated)) arr = hydrated.flat(Infinity);
-        else arr = [hydrated];
-        if (arr.length === 0) return PayloadUtils.createError('Empty Array');
-        try {
-            let result: unknown = 0;
-            switch (op) {
-                case 'Mean': result = math.mean(arr); break;
-                case 'Max': result = math.max(arr); break;
-                case 'Min': result = math.min(arr); break;
-                case 'StdDev': result = math.std(arr); break;
-                case 'Median': result = math.median(arr); break;
-                case 'Variance': result = math.variance(arr); break;
-                case 'Sum': result = math.sum(arr); break;
-                default: result = math.mean(arr);
-            }
-            return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
-        } catch (e: any) { return PayloadUtils.createError(`Stats Failed: ${e.message}`); }
-    },
 
-    // DA-02: Smoothing
-    'DA-02': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as any;
-        let windowSize = inputs['window'] ? Number(PayloadUtils.unwrap(inputs['window'])) || 3 : (data.windowMode ?? 3);
-        const valPayload = inputs['data'];
-        if (!valPayload) return PayloadUtils.createError('No Input');
-        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-        let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
-        if (arr.length === 0) return PayloadUtils.createArray([]);
-        windowSize = Math.max(1, Math.min(arr.length, Math.floor(windowSize)));
-        const result = [];
-        for (let i = 0; i < arr.length; i++) {
-            let sum = 0, count = 0;
-            const start = Math.max(0, i - Math.floor(windowSize / 2)), end = Math.min(arr.length - 1, i + Math.floor(windowSize / 2));
-            for (let j = start; j <= end; j++) { sum += Number(arr[j]) || 0; count++; }
-            result.push(sum / count || 0);
-        }
-        return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
-    },
 
-    // DA-03: List Utility
-    'DA-03': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as any, mode = data.mode || 'Sort (Asc)';
-        const valPayload = inputs['data'];
-        if (!valPayload) return PayloadUtils.createError('No Input');
-        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-        let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
-        if (arr.length === 0) return PayloadUtils.createArray([]);
-        let result = [...arr];
-        if (mode === 'Sort (Asc)') result.sort((a, b) => Number(a) - Number(b));
-        else if (mode === 'Sort (Desc)') result.sort((a, b) => Number(b) - Number(a));
-        else if (mode === 'Reverse') result.reverse();
-        else if (mode === 'Unique') result = [...new Set(result.map(x => String(x)))].map((x: any) => (isNaN(Number(x)) ? x : Number(x)));
-        else if (mode === 'Clean') result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
-        return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
-    },
 
-    // DA-04: Set Operations
-    'DA-04': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const mode = ((node.data || {}) as any).mode || 'Union';
-        const getArr = (key: string) => {
-            const p = inputs[key]; if (!p) return [];
-            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math) as any;
-            return (h && typeof h === 'object' && 'toArray' in h) ? h.toArray().flat(Infinity) : (Array.isArray(h) ? h.flat(Infinity) : [h]);
-        };
-        const setA = new Set<string>(getArr('a').map((x: any) => String(x)));
-        const setB = new Set<string>(getArr('b').map((x: any) => String(x)));
-        let resultSet: string[] = [];
-        if (mode === 'Union') resultSet = Array.from(new Set<string>([...Array.from(setA), ...Array.from(setB)]));
-        else if (mode === 'Intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
-        else if (mode === 'Difference') resultSet = Array.from(setA).filter((x: string) => !setB.has(x));
-        const final = resultSet.map((x: string) => (isNaN(Number(x)) ? x : Number(x)));
-        return PayloadUtils.createArray(final);
-    },
-
-    'DA-05': (node, inputs) => MathEvaluators['IN-11'](node, inputs),
 
     'IN-11': (node, inputs) => {
         const data = (node.data || {}) as any, mode = data.mode || 'Normal';
@@ -591,20 +458,29 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'TR-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'MEAN';
-        const valPayload = inputs['in'];
+        const op = data.op || 'Mean';
+        const valPayload = inputs['data'] || inputs['in'];
         if (!valPayload) return PayloadUtils.createError('No Input');
+        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+        let arr: any[] = [];
+        if (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) arr = (hydrated as any).toArray().flat(Infinity);
+        else if (Array.isArray(hydrated)) arr = hydrated.flat(Infinity);
+        else arr = [hydrated];
+        if (arr.length === 0) return PayloadUtils.createError('Empty Array');
         try {
-            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-            const arr = (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
-            let result: any;
-            if (op === 'MEAN') result = math.mean(arr);
-            else if (op === 'MEDIAN') result = math.median(arr);
-            else if (op === 'STD') result = math.std(arr);
-            else if (op === 'VARIANCE') result = math.variance(arr);
-            else result = math.mean(arr);
+            let result: unknown = 0;
+            switch (op) {
+                case 'Mean': result = math.mean(arr); break;
+                case 'Max': result = math.max(arr); break;
+                case 'Min': result = math.min(arr); break;
+                case 'StdDev': result = math.std(arr); break;
+                case 'Median': result = math.median(arr); break;
+                case 'Variance': result = math.variance(arr); break;
+                case 'Sum': result = math.sum(arr); break;
+                default: result = math.mean(arr);
+            }
             return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
-        } catch (e) { return PayloadUtils.createError('Stats Failed'); }
+        } catch (e: any) { return PayloadUtils.createError(`Stats Failed: ${e.message}`); }
     },
     // TR-05: Smoothing
     'TR-05': (node, inputs) => {

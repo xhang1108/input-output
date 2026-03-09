@@ -83,7 +83,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const bOut = Math.round(bNorm * scaler);
 
         return {
-            type: DataType.Object,
+            type: DataType.Array,
             value: {
                 hex: hex,
                 rgb: [rOut, gOut, bOut],
@@ -142,7 +142,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             hex = `#${toHex(fr)}${toHex(fg)}${toHex(fb)}`;
 
             return {
-                type: DataType.Object,
+                type: DataType.Array,
                 value: {
                     hex,
                     rgb: [fr, fg, fb],

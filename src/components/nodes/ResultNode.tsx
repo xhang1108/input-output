@@ -40,16 +40,7 @@ export const ResultNode = memo((props: NodeProps) => {
     const viewMenu = useNodeMenu();
     const precMenu = useNodeMenu();
 
-    const handles = useMemo(() => [
-        {
-            id: 'in',
-            type: 'target' as const,
-            position: Position.Left,
-            variant: 'single' as const
-        }
-    ], []);
-
-    const nodeData = { ...data, handles };
+    const nodeData = data;
     const value = data.value;
 
     const precision = typeof data.precision === 'number' ? data.precision : -1;
@@ -64,7 +55,7 @@ export const ResultNode = memo((props: NodeProps) => {
     const [copied, setCopied] = useState(false);
 
     const rawValue = payload ? PayloadUtils.unwrap(payload) : null;
-    const isError = payload?.type === DataType.Error;
+    const isError = payload?.meta?.error !== undefined;
     const errorStr = isError ? String(payload?.meta?.error || 'Error') : '';
 
     let effectiveMode: 'text' | 'grid' | 'color' | 'formula' | 'latex' = 'text';
@@ -72,7 +63,7 @@ export const ResultNode = memo((props: NodeProps) => {
     if (viewMode === 'auto') {
         if (payload?.type === DataType.Array || payload?.type === DataType.Matrix) effectiveMode = 'grid';
         else if (payload?.type === DataType.Symbolic) effectiveMode = 'formula';
-        else if (payload?.type === DataType.Object && rawValue && typeof rawValue === 'object' && 'hex' in (rawValue as object)) effectiveMode = 'color';
+        else if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) && 'hex' in (rawValue as object)) effectiveMode = 'color';
         else effectiveMode = 'text';
     } else {
         effectiveMode = viewMode;
@@ -94,8 +85,13 @@ export const ResultNode = memo((props: NodeProps) => {
 
     let formulaStr = '';
     if ((effectiveMode === 'formula' || effectiveMode === 'latex') && payload) {
-        if (payload.symbol) formulaStr = (effectiveMode === 'latex') ? FormulaRenderer.render(payload.symbol) : PayloadUtils.stringifySymbol(payload.symbol);
-        else formulaStr = String(rawValue);
+        if (payload.symbol) {
+            formulaStr = (effectiveMode === 'latex') ? FormulaRenderer.render(payload.symbol) : PayloadUtils.stringifySymbol(payload.symbol);
+        } else if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) && (rawValue as any).latex) {
+            formulaStr = PayloadUtils.unwrap((rawValue as any).latex) as string;
+        } else {
+            formulaStr = String(rawValue);
+        }
     }
 
     let dataTypeColor = 'text-zinc-400';
@@ -105,7 +101,7 @@ export const ResultNode = memo((props: NodeProps) => {
         case DataType.Array:
         case DataType.Matrix: dataTypeColor = 'text-(--color-matrix)'; break;
         case DataType.Boolean: dataTypeColor = 'text-(--color-boolean)'; break;
-        case DataType.Symbolic: dataTypeColor = 'text-[var(--color-symbolic,#b084e9)]'; break;
+        case DataType.Symbolic: dataTypeColor = 'text-(--color-symbolic)'; break;
     }
 
     const copyToClipboard = useCallback(() => {

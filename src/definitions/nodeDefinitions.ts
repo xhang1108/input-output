@@ -54,7 +54,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Color',
         category: 'Input',
         handles: [
-            { id: 'hex', type: 'source', variant: 'single', dataType: 'string', label: 'HEX' },
+            { id: 'hex', type: 'source', variant: 'single', dataType: 'color', label: 'HEX' },
             { id: 'rgb', type: 'source', variant: 'single', dataType: 'array', label: 'RGB' },
             { id: 'vec3', type: 'source', variant: 'single', dataType: 'array', label: 'Vec3' }
         ],
@@ -166,7 +166,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Expression',
         category: 'Input',
         handles: [
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic' }
         ],
         defaultData: {
             type: 'expression',
@@ -230,9 +230,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Input',
         aliases: ['gaussian', 'normal', 'uniform', 'probability'],
         handles: [
-            { id: 'param_n', type: 'target', variant: 'single', dataType: 'scalar', label: 'N' },
-            { id: 'param_1', type: 'target', variant: 'single', dataType: 'scalar', label: 'P1' },
-            { id: 'param_2', type: 'target', variant: 'single', dataType: 'scalar', label: 'P2' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { mode: 'Normal', n: 100, p1: 0, p2: 1 },
@@ -489,8 +486,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Equation Solver',
         category: 'Calculus',
         handles: [
-            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'Eq' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic' }
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
+            { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
         ],
         defaultData: { op: 'SOLVE' },
         aliases: ['eqn', 'solve', 'equation', 'nerdamer', 'solver']
@@ -662,7 +659,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Data & Structures',
         handles: [
             { id: 'in', type: 'target', variant: 'single', dataType: 'array' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'any' }
         ],
         defaultData: { op: 'INV' },
         opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN'],
@@ -689,7 +686,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Transform',
         handles: [
             { id: 'in', type: 'target', variant: 'single', dataType: 'scalar' },
-            { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
+            { id: 'out', type: 'source', variant: 'single', dataType: 'unit' }
         ],
         defaultData: { type: 'unit', unit: 'm', customUnit: '' },
         params: [
@@ -726,8 +723,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Base Converter',
         category: 'Transform',
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any' },
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'string' }
         ],
         defaultData: { base: 'HEX' },
         params: [
@@ -886,7 +883,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Result',
         category: 'Output',
         handles: [
-            { id: 'in', type: 'target', variant: 'single' }
+            { id: 'in', type: 'target', variant: 'single', dataType: 'any' }
         ],
         defaultData: { type: 'result', viewMode: 'auto' },
         params: [
@@ -921,7 +918,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Status',
         category: 'Output',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'any' }
+            { id: 'in', type: 'target', variant: 'single', dataType: 'boolean' }
         ],
         defaultData: { state: 'void' }
     },

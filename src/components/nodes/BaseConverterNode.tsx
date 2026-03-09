@@ -15,7 +15,7 @@ export const BaseConverterNode = memo((props: NodeProps) => {
     // Standard handles for 1-in-1-out
     const handles: HandleConfig[] = [
         { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any' }
+        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'unit' }
     ];
 
     const currentBase = (data.base as string) || 'HEX';

@@ -1,12 +1,21 @@
 import { Node, Edge, Position } from '@xyflow/react';
-import { HandleConfig, HandleDataType } from '../types/NodeDefinition';
+import { DataType } from '../types/payload';
+import { NodeDefinition, HandleConfig, HandleDataType } from '../types/NodeDefinition';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+
+/**
+ * Helper to resolve the position of a handle if not explicitly provided.
+ */
+export function resolveHandlePosition(h: HandleConfig): Position {
+    if (h.position) return h.position;
+    return h.type === 'target' ? Position.Left : Position.Right;
+}
 
 /**
  * Central constants for the handle system
  */
 export const HANDLE_SLOT_SPACING = 14;
-export const HANDLE_MIN_CAPSULE_HEIGHT = 24;
+export const HANDLE_MIN_CAPSULE_HEIGHT = 28;
 export const HANDLE_BASE_PADDING = 12;
 export const HANDLE_RADIUS = 0; // Default visual radius of circular handles
 
@@ -18,8 +27,8 @@ export function getHandleVariant(node: any, handleId: string): 'single' | 'capsu
 
 
     // 2. Check static handle definitions (blueprint)
-    const targetDef = NODE_DEFINITIONS.find(d => d.id === (node.type || node.nodeType));
-    const staticHandle = targetDef?.handles.find(h => h.id === handleId);
+    const targetDef = NODE_DEFINITIONS.find((d: NodeDefinition) => d.id === (node.type || node.nodeType));
+    const staticHandle = targetDef?.handles.find((h: HandleConfig) => h.id === handleId);
     if (staticHandle?.variant) return staticHandle.variant;
 
     return 'single'; // Default
@@ -86,4 +95,44 @@ export function findNearestSlot(
     }
 
     return bestIndex;
+}
+
+/**
+ * Maps a DataType to its corresponding CSS color token
+ * Defined in globals.css (§0.1.2)
+ */
+export function getHandleColor(type: DataType | string): string {
+    if (!type) return 'var(--color-scalar)';
+
+    const t = String(type).trim().toLowerCase();
+
+    // Standard Mapping (Defined in globals.css)
+    if (t === 'any' || t === 'universal') return 'var(--color-any)';
+    if (t === 'scalar' || t === 'number' || t === 'float') return 'var(--color-scalar)';
+    if (t === 'array' || t === 'matrix' || t === 'vector') return 'var(--color-matrix)';
+    if (t === 'string' || t === 'text') return 'var(--color-string)';
+    if (t === 'boolean' || t === 'bool') return 'var(--color-boolean)';
+    if (t === 'color') return 'var(--color-color)';
+    if (t === 'symbolic' || t === 'formula' || t === 'ast' || t === 'eq' || t === 'expression') return 'var(--color-symbolic)';
+    if (t === 'unit') return 'var(--color-unit)';
+
+    // Enum Fallback
+    switch (t) {
+        case DataType.Scalar: return 'var(--color-scalar)';
+        case DataType.Array: return 'var(--color-matrix)';
+        case DataType.String: return 'var(--color-string)';
+        case DataType.Boolean: return 'var(--color-boolean)';
+        case DataType.Color: return 'var(--color-color)';
+        case DataType.Any: return 'var(--color-any)';
+        case DataType.Symbolic: return 'var(--color-symbolic)';
+        case DataType.Unit: return 'var(--color-unit)';
+        default: return 'var(--color-any)';
+    }
+}
+
+/**
+ * Specialized version for UI components that work with HandleConfig objects.
+ */
+export function getHandleColorByConfig(config: HandleConfig): string {
+    return config.color || getHandleColor(config.dataType || 'scalar');
 }

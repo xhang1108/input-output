@@ -22,13 +22,13 @@ export const VectorSplitNode = memo((props: NodeProps) => {
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
         const newMode = item.id;
         const newHandles = newMode === 'separate' ? [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector' },
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'array' },
             { id: 'x', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'X' },
             { id: 'y', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Y' },
             { id: 'z', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Z' }
         ] : [
             { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar', label: 'Split' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'vector' }
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'array' }
         ];
 
         Brain.getInstance().applyTransaction({
@@ -49,7 +49,7 @@ export const VectorSplitNode = memo((props: NodeProps) => {
 
     if (mode === 'separate') {
         handles = [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'vector' },
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'array' },
             { id: 'x', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'X' },
             { id: 'y', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Y' },
             { id: 'z', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Z' }
@@ -57,7 +57,7 @@ export const VectorSplitNode = memo((props: NodeProps) => {
     } else {
         handles = [
             { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar', label: 'Split' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'vector' }
+            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'array' }
         ];
     }
 
