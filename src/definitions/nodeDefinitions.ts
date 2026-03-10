@@ -119,10 +119,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             {
                 id: 'val', label: 'Constant', type: 'select', options: [
-                    { label: 'π (Pi)', value: 'pi' },
-                    { label: 'e (Euler)', value: 'e' },
-                    { label: 'φ (Golden Ratio)', value: 'phi' },
-                    { label: 'τ (Tau)', value: 'tau' }
+                    { label: 'π (Pi)', value: 'pi', category: 'Mathematical' },
+                    { label: 'e (Euler)', value: 'e', category: 'Mathematical' },
+                    { label: 'φ (Golden Ratio)', value: 'phi', category: 'Mathematical' },
+                    { label: 'τ (Tau)', value: 'tau', category: 'Mathematical' }
                 ]
             }
         ]
@@ -264,10 +264,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
-                    { label: 'Add (+)', value: 'ADD' },
-                    { label: 'Subtract (−)', value: 'SUB' },
-                    { label: 'Multiply (×)', value: 'MUL' },
-                    { label: 'Divide (÷)', value: 'DIV' }
+                    { label: 'Add (+)', value: 'ADD', category: 'Arithmetic' },
+                    { label: 'Subtract (−)', value: 'SUB', category: 'Arithmetic' },
+                    { label: 'Multiply (×)', value: 'MUL', category: 'Arithmetic' },
+                    { label: 'Divide (÷)', value: 'DIV', category: 'Arithmetic' }
                 ]
             }
         ]
@@ -285,11 +285,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
-                    { label: 'Power (xⁿ)', value: 'POW' },
-                    { label: 'Square Root (√x)', value: 'SQRT' },
-                    { label: 'Absolute Value (|x|)', value: 'ABS' },
-                    { label: 'Negate (−x)', value: 'NEG' },
-                    { label: 'Sign', value: 'SIGN' }
+                    { label: 'Power (xⁿ)', value: 'POW', category: 'Exponents' },
+                    { label: 'Square Root (√x)', value: 'SQRT', category: 'Exponents' },
+                    { label: 'Absolute Value (|x|)', value: 'ABS', category: 'Basic' },
+                    { label: 'Negate (−x)', value: 'NEG', category: 'Basic' },
+                    { label: 'Sign', value: 'SIGN', category: 'Basic' }
                 ]
             }
         ]
@@ -308,10 +308,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             {
                 id: 'op', label: 'Mode', type: 'select', options: [
-                    { label: 'Natural Log (ln)', value: 'LN' },
-                    { label: 'Log Base 10 (log₁₀)', value: 'LOG10' },
-                    { label: 'Log Base 2 (log₂)', value: 'LOG2' },
-                    { label: 'Log Base N (logₙ)', value: 'LOGN' }
+                    { label: 'Natural Log (ln)', value: 'LN', category: 'Logarithms' },
+                    { label: 'Log Base 10 (log₁₀)', value: 'LOG10', category: 'Logarithms' },
+                    { label: 'Log Base 2 (log₂)', value: 'LOG2', category: 'Logarithms' },
+                    { label: 'Log Base N (logₙ)', value: 'LOGN', category: 'Logarithms' }
                 ]
             }
         ]
@@ -329,15 +329,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             {
                 id: 'op', label: 'Function', type: 'select', options: [
-                    { label: 'Sine (sin)', value: 'SIN' },
-                    { label: 'Cosine (cos)', value: 'COS' },
-                    { label: 'Tangent (tan)', value: 'TAN' },
-                    { label: 'Arcsine (asin)', value: 'ASIN' },
-                    { label: 'Arccosine (acos)', value: 'ACOS' },
-                    { label: 'Arctangent (atan)', value: 'ATAN' },
-                    { label: 'Atan2 (y, x)', value: 'ATAN2' },
-                    { label: 'Hyperbolic Sine (sinh)', value: 'SINH' },
-                    { label: 'Hyperbolic Cosine (cosh)', value: 'COSH' }
+                    { label: 'Sine (sin)', value: 'SIN', category: 'Circular' },
+                    { label: 'Cosine (cos)', value: 'COS', category: 'Circular' },
+                    { label: 'Tangent (tan)', value: 'TAN', category: 'Circular' },
+                    { label: 'Arcsine (asin)', value: 'ASIN', category: 'Inverse' },
+                    { label: 'Arccosine (acos)', value: 'ACOS', category: 'Inverse' },
+                    { label: 'Arctangent (atan)', value: 'ATAN', category: 'Inverse' },
+                    { label: 'Atan2 (y, x)', value: 'ATAN2', category: 'Inverse' },
+                    { label: 'Hyperbolic Sine (sinh)', value: 'SINH', category: 'Hyperbolic' },
+                    { label: 'Hyperbolic Cosine (cosh)', value: 'COSH', category: 'Hyperbolic' }
                 ]
             }
         ]
@@ -355,10 +355,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             {
                 id: 'op', label: 'Mode', type: 'select', options: [
-                    { label: 'Round (nearest)', value: 'ROUND' },
-                    { label: 'Floor (↓)', value: 'FLOOR' },
-                    { label: 'Ceiling (↑)', value: 'CEIL' },
-                    { label: 'Truncate', value: 'TRUNC' }
+                    { label: 'Round (nearest)', value: 'ROUND', category: 'Rounding' },
+                    { label: 'Floor (↓)', value: 'FLOOR', category: 'Rounding' },
+                    { label: 'Ceiling (↑)', value: 'CEIL', category: 'Rounding' },
+                    { label: 'Truncate', value: 'TRUNC', category: 'Rounding' }
                 ]
             },
             { id: 'precision', label: 'Decimal Places', type: 'number', min: 0, max: 15, step: 1 }

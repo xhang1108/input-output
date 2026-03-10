@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FolderOpen, Plus, Trash2, Pencil, Check, X,
-    Box, GitBranch, Clock, Cloud, Lock
+    Box, GitBranch, Clock, Cloud
 } from 'lucide-react';
 import { SaveManager, SaveSlotMeta } from '../../services/SaveManager';
 
@@ -55,7 +55,7 @@ function SaveSlotCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="group relative bg-zinc-900 border border-zinc-800 rounded-(--radius-xl) overflow-hidden
+            className="group relative bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden
                        hover:border-zinc-600 transition-all duration-200 cursor-pointer"
             onClick={() => { if (!isRenaming && !confirmDelete) onOpen(); }}
         >
@@ -91,7 +91,7 @@ function SaveSlotCard({
                                 value={nameInput}
                                 onChange={e => setNameInput(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setIsRenaming(false); }}
-                                className="flex-1 bg-zinc-800 border border-zinc-600 rounded-(--radius-sm) px-2 py-0.5 text-sm text-zinc-100
+                                className="flex-1 bg-zinc-800 border border-zinc-600 rounded-sm px-2 py-0.5 text-sm text-zinc-100
                                            outline-none focus:border-unit"
                             />
                             <button onClick={submitRename} className="p-1 text-emerald-400 hover:text-emerald-300">
@@ -126,14 +126,14 @@ function SaveSlotCard({
                 >
                     <button
                         onClick={onOpen}
-                        className="flex-1 text-xs py-1.5 rounded-(--radius-sm) bg-unit/15 text-unit
+                        className="flex-1 text-xs py-1.5 rounded-sm bg-unit/15 text-unit
                                    hover:bg-unit/25 font-medium transition-colors"
                     >
                         Open
                     </button>
                     <button
                         onClick={() => { setNameInput(meta.name); setIsRenaming(true); }}
-                        className="p-1.5 rounded-(--radius-sm) text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+                        className="p-1.5 rounded-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
                         title="Rename"
                     >
                         <Pencil className="w-3.5 h-3.5" />
@@ -142,7 +142,7 @@ function SaveSlotCard({
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={onDelete}
-                                className="text-[10px] px-2 py-1 rounded-(--radius-sm) bg-red-500/20 text-red-400 hover:bg-red-500/30 font-medium"
+                                className="text-[10px] px-2 py-1 rounded-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 font-medium"
                             >
                                 Confirm
                             </button>
@@ -156,7 +156,7 @@ function SaveSlotCard({
                     ) : (
                         <button
                             onClick={() => setConfirmDelete(true)}
-                            className="p-1.5 rounded-(--radius-sm) text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="p-1.5 rounded-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                             title="Delete"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -178,10 +178,10 @@ function NewProjectCard({ onClick }: { onClick: () => void }) {
             transition={{ duration: 0.2, delay: 0.05 }}
             onClick={onClick}
             className="flex flex-col items-center justify-center bg-zinc-900/50 border-2 border-dashed border-zinc-800
-                       rounded-(--radius-xl) min-h-[220px] cursor-pointer
+                       rounded-xl min-h-[220px] cursor-pointer
                        hover:border-unit/50 hover:bg-zinc-900/80 transition-all duration-200 group"
         >
-            <div className="w-12 h-12 rounded-(--radius-xl) bg-zinc-800 flex items-center justify-center mb-3
+            <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3
                           group-hover:bg-unit/20 transition-colors duration-200">
                 <Plus className="w-6 h-6 text-zinc-500 group-hover:text-unit transition-colors" />
             </div>
@@ -224,25 +224,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     };
 
     return (
-        <div className="fixed inset-0 bg-black z-9999 flex flex-col overflow-auto">
-            {/* ── Header ── */}
-            <header className="shrink-0 border-b border-zinc-900 px-8 py-6">
-                <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-(--radius-lg) bg-linear-to-br from-unit to-[hsl(270,60%,62%)] flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">🐙</span>
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-zinc-100 tracking-tight">Input-Output</h1>
-                            <p className="text-xs text-zinc-500">Select a project to open</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-zinc-600">
-                        <FolderOpen className="w-4 h-4" />
-                        <span>{slots.length} project{slots.length !== 1 ? 's' : ''}</span>
-                    </div>
-                </div>
-            </header>
+        <div className="flex-1 flex flex-col overflow-auto bg-black">
 
             {/* ── Grid ── */}
             <main className="flex-1 px-8 py-8">
@@ -267,8 +249,6 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
             {/* ── Cloud Footer (Phase 2 placeholder) ── */}
             <footer className="shrink-0 border-t border-zinc-900 px-8 py-4">
                 <div className="max-w-5xl mx-auto flex items-center justify-center gap-2 text-xs text-zinc-700">
-                    <Lock className="w-3 h-3" />
-                    <Cloud className="w-3.5 h-3.5" />
                     <span>Cloud sync coming soon — Google Login + Cloudflare</span>
                 </div>
             </footer>

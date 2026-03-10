@@ -97,7 +97,8 @@ export function CategorizedMenu({
         const root: Record<string, CategoryGroup> = {};
 
         filteredItems.forEach(item => {
-            const parts = item.category.split('.');
+            const category = item.category || 'General';
+            const parts = category.split('.');
             let current = root;
             let path = '';
 

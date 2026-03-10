@@ -17,6 +17,7 @@ interface ContextMenuActions {
     copyToClipboard: () => void;
     detachSelected: () => void;
     deleteSelected: () => void;
+    viewSpecs: () => void;
     logAction: (msg: string) => void;
 }
 
@@ -29,12 +30,21 @@ export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: nu
     ];
 }
 
-export function getNodeMenuItems(actions: ContextMenuActions): ContextMenuItemDef[] {
-    return [
+export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean = false): ContextMenuItemDef[] {
+    const items: ContextMenuItemDef[] = [
         { label: 'Rename', shortcut: 'Enter', action: () => actions.rename() },
+    ];
+
+    if (hasSpecs) {
+        items.push({ label: 'View Specs', shortcut: 'F1', action: () => actions.viewSpecs() });
+    }
+
+    items.push(
         { label: 'Duplicate', shortcut: 'Shift+D', action: () => actions.duplicateAndGrab() },
         { label: 'Copy', shortcut: 'Ctrl+C', action: () => actions.copyToClipboard() },
         { label: 'Detach', shortcut: 'Alt+Drag', action: () => actions.detachSelected() },
         { label: 'Delete', shortcut: 'Del', danger: true, action: () => actions.deleteSelected() },
-    ];
+    );
+
+    return items;
 }

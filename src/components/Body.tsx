@@ -39,8 +39,11 @@ import { Brain } from '../engine/Brain';
 import { NodeRegistry } from '../engine/NodeRegistry';
 import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
+import { useExampleListener } from '../hooks/useExampleListener';
 import { useAppStore } from '../store/useStore';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { getDocInfo, hasDocForToken } from '../config/docRegistry';
 
 // nodeTypes and edgeTypes imported from config/nodeTypeMap.ts
 
@@ -53,8 +56,12 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+    // Enable cross-page example loading (The Living Lab)
+    useExampleListener();
+
     // UI Helpers
     const { fitView, getViewport, setViewport } = useReactFlow();
+    const router = useRouter();
     const mousePosRef = useRef({ x: 0, y: 0 });
     const [isModifierActive, setIsModifierActive] = useState(false);
     const [isSnapping, setIsSnapping] = useState(false);
@@ -680,23 +687,38 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                                     copyToClipboard,
                                     detachSelected,
                                     deleteSelected,
+                                    viewSpecs: () => { }, // Canvas has no specs
                                     logAction,
                                 }, contextMenu.x, contextMenu.y)
-                                : getNodeMenuItems({
-                                    openPalette: () => { },
-                                    resetView,
-                                    pasteFromClipboard,
-                                    selectAll: () => { },
-                                    rename: () => logAction('Rename via Menu (Todo)'),
-                                    duplicateAndGrab: () => {
-                                        const duplicated = duplicateSelected();
-                                        if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes);
-                                    },
-                                    copyToClipboard,
-                                    detachSelected,
-                                    deleteSelected,
-                                    logAction,
-                                })
+                                : (() => {
+                                    const node = nodes.find(n => n.id === contextMenu.nodeId);
+                                    const nodeType = node?.type || '';
+                                    const opToken = (node?.data?.opToken as string) || '';
+                                    const docInfo = getDocInfo(nodeType, opToken);
+                                    const hasSpecs = !!docInfo;
+
+                                    return getNodeMenuItems({
+                                        openPalette: () => { },
+                                        resetView,
+                                        pasteFromClipboard,
+                                        selectAll: () => { },
+                                        rename: () => logAction('Rename via Menu (Todo)'),
+                                        viewSpecs: () => {
+                                            if (docInfo) {
+                                                router.push(`/wiki#${docInfo.anchor}`);
+                                                logAction(`View Specs: ${docInfo.anchor}`);
+                                            }
+                                        },
+                                        duplicateAndGrab: () => {
+                                            const duplicated = duplicateSelected();
+                                            if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes);
+                                        },
+                                        copyToClipboard,
+                                        detachSelected,
+                                        deleteSelected,
+                                        logAction,
+                                    }, hasSpecs);
+                                })()
                             }
                         />
                     )}

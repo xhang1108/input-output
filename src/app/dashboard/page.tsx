@@ -5,6 +5,7 @@ import { Body } from '@/components/Body';
 import { ProjectLoadScreen } from '@/components/ui/ProjectLoadScreen';
 import { VisualClock } from '@/components/VisualClock';
 import { Brain } from '@/engine/Brain';
+import { SystemHeader } from '@/components/ui/SystemHeader';
 
 export default function Dashboard() {
     const [activeProject, setActiveProject] = useState<string | null>(null);
@@ -24,15 +25,26 @@ export default function Dashboard() {
     }, []);
 
     return (
-        <div className="w-screen h-screen bg-black relative">
-            <VisualClock />
+        <div className="w-screen h-screen bg-black relative flex flex-col overflow-hidden">
             {!activeProject ? (
-                <ProjectLoadScreen onOpen={handleOpenProject} onNewProject={handleNewProject} />
+                <>
+                    <SystemHeader
+                        isDashboard
+                        title="Input-Output Engine"
+                        subtitle="SYSTEM: READY"
+                    />
+                    <div className="flex-1 relative overflow-hidden flex flex-col">
+                        <VisualClock />
+                        <ProjectLoadScreen onOpen={handleOpenProject} onNewProject={handleNewProject} />
+                    </div>
+                </>
             ) : (
-                <Body
-                    projectId={activeProject}
-                    onBackToProjects={handleBackToProjects}
-                />
+                <div className="flex-1 relative overflow-hidden">
+                    <Body
+                        projectId={activeProject}
+                        onBackToProjects={handleBackToProjects}
+                    />
+                </div>
             )}
         </div>
     );

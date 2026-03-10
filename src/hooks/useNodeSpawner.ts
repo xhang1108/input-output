@@ -78,6 +78,7 @@ export function useNodeSpawner({
             data: {
                 label,
                 type: type === 'baseNode' ? undefined : type,
+                ...(nodeDef?.defaultData || {}),
                 ...(extraData as Record<string, unknown>),
                 definitionId: type
             },
