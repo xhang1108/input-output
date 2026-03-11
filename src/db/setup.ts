@@ -18,7 +18,7 @@ export function getDb() {
     // 3. Local Development Fallback (Next.js Node Server)
     if (process.env.NODE_ENV === "development") {
         if (!localDbCache) {
-            console.warn("⚠️ D1 Binding 'DB' not found. Falling back to local SQLite (.wrangler/state/v3/d1).");
+            // console.warn("⚠️ D1 Binding 'DB' not found. Falling back to local SQLite (.wrangler/state/v3/d1).");
             const Database = require('better-sqlite3');
             const { drizzle: drizzleSqlite } = require('drizzle-orm/better-sqlite3');
             const fs = require('fs');

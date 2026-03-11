@@ -90,7 +90,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             };
         },
     },
-    debug: true,
+    debug: false,
 });
 
 export async function requireAuth() {
