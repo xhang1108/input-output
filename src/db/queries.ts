@@ -1,0 +1,118 @@
+import { eq, and, or, desc, count } from "drizzle-orm";
+import * as schema from "./schema";
+import { MAX_GRAPHS_PER_USER } from "../constants/schema";
+import { getDb } from "./setup";
+
+
+export async function getUserGraphs(userId: string) {
+    const db = getDb();
+    return db.query.graphs.findMany({
+        where: eq(schema.graphs.userId, userId),
+        orderBy: [desc(schema.graphs.updatedAt)],
+        columns: {
+            payload: false // Exclude payload for lists to save bandwidth
+        }
+    });
+}
+
+export async function getGraphById(userId: string, graphId: string) {
+    const db = getDb();
+    const rawId = graphId.replace(/^(cloud:)+/gi, '');
+    const idWithPrefix = `cloud:${rawId}`;
+    
+    // Support legacy (unprefixed) and current (prefixed) IDs
+    return db.query.graphs.findFirst({
+        where: and(
+            or(
+                eq(schema.graphs.id, idWithPrefix),
+                eq(schema.graphs.id, rawId)
+            ),
+            eq(schema.graphs.userId, userId)
+        )
+    });
+}
+
+export async function createGraph(
+    userId: string, 
+    payload: string, 
+    title?: string, 
+    providedId?: string,
+    createdAt?: Date,
+    updatedAt?: Date
+) {
+    const db = getDb();
+
+    // Check limit
+    const existingCountResult = await db.select({ count: count() })
+        .from(schema.graphs)
+        .where(eq(schema.graphs.userId, userId));
+
+    const currentCount = existingCountResult[0].count;
+
+    if (currentCount >= MAX_GRAPHS_PER_USER) {
+        throw new Error(`Graph limit reached (${MAX_GRAPHS_PER_USER})`);
+    }
+
+    // Default title from timestamp
+    const defaultTitle = title || `Untitled Graph ${new Date().toLocaleDateString()}`;
+
+    // Use provided ID or generate explicit UUIDv7
+    const { v7: uuidv7 } = await import('uuid');
+    const rawId = providedId ? providedId.replace(/^(cloud:)+/gi, '') : uuidv7();
+    const newId = `cloud:${rawId}`;
+
+    const now = new Date();
+    const finalCreatedAt = createdAt || now;
+    const finalUpdatedAt = updatedAt || now;
+
+    const [inserted] = await db.insert(schema.graphs).values({
+        id: newId,
+        userId: userId,
+        title: defaultTitle,
+        payload,
+        createdAt: finalCreatedAt,
+        updatedAt: finalUpdatedAt
+    }).returning();
+
+    return inserted;
+}
+
+export async function updateGraph(userId: string, graphId: string, payload?: string, title?: string) {
+    const db = getDb();
+    const normalizedId = `cloud:${graphId.replace(/^(cloud:)+/gi, '')}`;
+
+    const updateData: any = {
+        updatedAt: new Date()
+    };
+
+    if (payload !== undefined) updateData.payload = payload;
+    if (title !== undefined) updateData.title = title;
+
+    const [updated] = await db.update(schema.graphs)
+        .set(updateData)
+        .where(and(
+            eq(schema.graphs.id, normalizedId),
+            eq(schema.graphs.userId, userId)
+        ))
+        .returning();
+
+    return updated;
+}
+
+export async function deleteGraph(userId: string, graphId: string) {
+    const db = getDb();
+    const rawId = graphId.replace(/^(cloud:)+/gi, '');
+    const idWithPrefix = `cloud:${rawId}`;
+
+    const [deleted] = await db.delete(schema.graphs)
+        .where(and(
+            or(
+                eq(schema.graphs.id, idWithPrefix),
+                eq(schema.graphs.id, rawId)
+            ),
+            eq(schema.graphs.userId, userId)
+        ))
+        .returning();
+
+    return deleted;
+}

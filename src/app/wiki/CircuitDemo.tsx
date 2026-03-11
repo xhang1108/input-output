@@ -19,23 +19,29 @@ const CircuitDemoInner: React.FC<CircuitDemoProps> = ({ iogl, label, height = 30
     // Generate a unique namespace prefix for this demo block to prevent ID collisions with main canvas
     const namespace = useMemo(() => `demo-${Math.random().toString(36).substr(2, 6)}-`, []);
 
+    const initialNodesStr = JSON.stringify(iogl.nodes);
+
     const initialNodes: Node[] = useMemo(() => {
-        return iogl.nodes.map(n => ({
+        const nodes = initialNodesStr ? JSON.parse(initialNodesStr) : [];
+        return nodes.map((n: any) => ({
             ...n,
             id: `${namespace}${n.id}`,
             data: { ...n.data },
             draggable: false
         }));
-    }, [iogl.nodes, namespace]);
+    }, [initialNodesStr, namespace]);
+
+    const initialEdgesStr = JSON.stringify(iogl.edges);
 
     const initialEdges: Edge[] = useMemo(() => {
-        return iogl.edges.map(e => ({
+        const edges = initialEdgesStr ? JSON.parse(initialEdgesStr) : [];
+        return edges.map((e: any) => ({
             ...e,
             id: `${namespace}${e.id}`,
             source: `${namespace}${e.source}`,
             target: `${namespace}${e.target}`,
         }));
-    }, [iogl.edges, namespace]);
+    }, [initialEdgesStr, namespace]);
 
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);

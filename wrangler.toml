@@ -1,0 +1,13 @@
+name = "input-output"
+compatibility_date = "2024-03-20"
+
+# [vars]
+# Add any non-sensitive variables here
+# Sensitive vars (like GOOGLE_CLIENT_SECRET) should be stored in .dev.vars (locally)
+# or deployed using `npx wrangler secret put ...`
+
+[[d1_databases]]
+binding = "DB"
+database_name = "io-brain-db"
+database_id = "799ebbb7-d622-48a8-95d8-4dd7a801aeff"
+migrations_dir = "drizzle"

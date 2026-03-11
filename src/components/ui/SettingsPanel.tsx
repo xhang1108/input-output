@@ -2,6 +2,7 @@ import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, Upload, Download
 import { useState } from 'react';
 import { Panel } from '@xyflow/react';
 import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
+import { AuthButton } from './AuthButton';
 
 interface SettingsPanelProps {
     isSnapping: boolean;
@@ -64,6 +65,11 @@ export function SettingsPanel({
             {/* Menu Panel */}
             {isOpen && (
                 <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2 fade-in duration-200">
+
+                    {/* User Authentication */}
+                    <AuthButton />
+
+                    <div className="h-px bg-zinc-800 my-1 pb-1" />
 
                     {/* Snapping */}
                     <ToggleRow

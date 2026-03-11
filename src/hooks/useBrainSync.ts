@@ -99,7 +99,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
             }
 
             // Sync Position (Phase 1.4)
-            if (node.position && (!prevNode || !prevNode.position || Math.abs(node.position.x - prevNode.position.x) > 0.1 || Math.abs(node.position.y - prevNode.position.y) > 0.1)) {
+            if (node.position && (!prevNode || !prevNode.position || Math.abs(node.position.x - prevNode.position.x) > 0.5 || Math.abs(node.position.y - prevNode.position.y) > 0.5)) {
                 // Determine old position. If none, assume 0,0 
                 const oldPos = prevNode?.position || { x: 0, y: 0 };
                 syncTxs.push({

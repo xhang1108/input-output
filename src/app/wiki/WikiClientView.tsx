@@ -304,13 +304,6 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                     </AnimatePresence>
                 </main>
             </div>
-
-            <StatusBarContent
-                mode="IDLE"
-                nodeCount={0}
-                selectionCount={0}
-                isStandalone={true}
-            />
         </div>
     );
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -17,27 +17,102 @@ interface MarkdownRendererProps {
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
-    const flattenText = (children: React.ReactNode): string => {
-        return React.Children.toArray(children).reduce((text: string, child: any) => {
-            if (typeof child === 'string') return text + child;
-            if (React.isValidElement(child) && (child as any).props.children) {
-                return text + flattenText((child as any).props.children);
-            }
-            return text;
-        }, '');
-    };
+    const components = useMemo(() => {
+        const flattenText = (children: React.ReactNode): string => {
+            return React.Children.toArray(children).reduce((text: string, child: any) => {
+                if (typeof child === 'string') return text + child;
+                if (React.isValidElement(child) && (child as any).props.children) {
+                    return text + flattenText((child as any).props.children);
+                }
+                return text;
+            }, '');
+        };
 
-    const HeadingWithAnchor = (level: number) => ({ node, ...props }: any) => {
-        const text = flattenText(props.children);
-        const match = text.match(/\(([A-Z0-9]{2}-\d{2})\)/);
-        const id = match ? match[1] : text.toLowerCase().replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        const Tag = `h${level}` as any;
-        return (
-            <Tag id={id} className="scroll-mt-24 group relative" {...props}>
-                {props.children}
-            </Tag>
-        );
-    };
+        const HeadingWithAnchor = (level: number) => ({ node, ...props }: any) => {
+            const text = flattenText(props.children);
+            const match = text.match(/\(([A-Z0-9]{2}-\d{2})\)/);
+            const id = match ? match[1] : text.toLowerCase().replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            const Tag = `h${level}` as any;
+            return (
+                <Tag id={id} className="scroll-mt-24 group relative" {...props}>
+                    {props.children}
+                </Tag>
+            );
+        };
+
+        return {
+            h1: HeadingWithAnchor(1),
+            h2: HeadingWithAnchor(2),
+            h3: HeadingWithAnchor(3),
+            code({ node, inline, className, children, ...props }: any) {
+                const match = /language-(\w+)/.exec(className || '');
+                const language = match ? match[1] : '';
+
+                if (!inline && language === 'playground') {
+                    try {
+                        const payload = JSON.parse(String(children).replace(/\n$/, ''));
+                        return (
+                            <NodeDemo
+                                nodeType={payload.nodeType}
+                                initialData={payload.initialData || payload.data}
+                                label={payload.label}
+                                height={payload.height}
+                            />
+                        );
+                    } catch (e) {
+                        return (
+                            <div className="p-4 border border-red-900/30 rounded-xl bg-red-900/10 text-red-400 text-xs font-mono">
+                                [Playground Error]: Invalid JSON configuration
+                            </div>
+                        );
+                    }
+                }
+
+                if (!inline && language === 'iogl-example') {
+                    try {
+                        const payload = JSON.parse(String(children).replace(/\n$/, ''));
+                        return (
+                            <SpawnerButton
+                                label={payload.label}
+                                iogl={payload.iogl}
+                            />
+                        );
+                    } catch (e) {
+                        return (
+                            <div className="p-4 border border-orange-900/30 rounded-xl bg-orange-900/10 text-orange-400 text-xs font-mono">
+                                [Example Error]: Invalid IOGL example configuration
+                            </div>
+                        );
+                    }
+                }
+
+                if (!inline && language === 'iogl-circuit') {
+                    try {
+                        const payload = JSON.parse(String(children).replace(/\n$/, ''));
+                        return (
+                            <CircuitDemo
+                                iogl={payload.iogl}
+                                label={payload.label}
+                                height={payload.height}
+                            />
+                        );
+                    } catch (e) {
+                        return (
+                            <div className="p-4 border border-blue-900/30 rounded-xl bg-blue-900/10 text-blue-400 text-xs font-mono">
+                                [Circuit Error]: Invalid IOGL circuit configuration
+                            </div>
+                        );
+                    }
+                }
+
+                return (
+                    <code className={className} {...props}>
+                        {children}
+                    </code>
+                );
+            }
+        };
+    }, []);
 
     return (
         <div className="prose prose-invert prose-zinc max-w-none 
@@ -56,78 +131,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     ">
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={{
-                    h1: HeadingWithAnchor(1),
-                    h2: HeadingWithAnchor(2),
-                    h3: HeadingWithAnchor(3),
-                    code({ node, inline, className, children, ...props }: any) {
-                        const match = /language-(\w+)/.exec(className || '');
-                        const language = match ? match[1] : '';
-
-                        if (!inline && language === 'playground') {
-                            try {
-                                const payload = JSON.parse(String(children).replace(/\n$/, ''));
-                                return (
-                                    <NodeDemo
-                                        nodeType={payload.nodeType}
-                                        initialData={payload.initialData || payload.data}
-                                        label={payload.label}
-                                        height={payload.height}
-                                    />
-                                );
-                            } catch (e) {
-                                return (
-                                    <div className="p-4 border border-red-900/30 rounded-xl bg-red-900/10 text-red-400 text-xs font-mono">
-                                        [Playground Error]: Invalid JSON configuration
-                                    </div>
-                                );
-                            }
-                        }
-
-                        if (!inline && language === 'iogl-example') {
-                            try {
-                                const payload = JSON.parse(String(children).replace(/\n$/, ''));
-                                return (
-                                    <SpawnerButton
-                                        label={payload.label}
-                                        iogl={payload.iogl}
-                                    />
-                                );
-                            } catch (e) {
-                                return (
-                                    <div className="p-4 border border-orange-900/30 rounded-xl bg-orange-900/10 text-orange-400 text-xs font-mono">
-                                        [Example Error]: Invalid IOGL example configuration
-                                    </div>
-                                );
-                            }
-                        }
-
-                        if (!inline && language === 'iogl-circuit') {
-                            try {
-                                const payload = JSON.parse(String(children).replace(/\n$/, ''));
-                                return (
-                                    <CircuitDemo
-                                        iogl={payload.iogl}
-                                        label={payload.label}
-                                        height={payload.height}
-                                    />
-                                );
-                            } catch (e) {
-                                return (
-                                    <div className="p-4 border border-blue-900/30 rounded-xl bg-blue-900/10 text-blue-400 text-xs font-mono">
-                                        [Circuit Error]: Invalid IOGL circuit configuration
-                                    </div>
-                                );
-                            }
-                        }
-
-                        return (
-                            <code className={className} {...props}>
-                                {children}
-                            </code>
-                        );
-                    }
-                }}
+                components={components}
             >
                 {content}
             </ReactMarkdown>

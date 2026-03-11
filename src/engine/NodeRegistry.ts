@@ -2,7 +2,6 @@ import { NodeLogic } from './types';
 import { InputOutputEngine } from './InputOutputEngine';
 import { NodePayload, DataType, ASTNode } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
-import { Brain } from './Brain';
 import { NerdamerService } from './calculus/NerdamerService';
 import { RuntimeGuard } from './calculus/RuntimeGuard';
 

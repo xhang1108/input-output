@@ -95,7 +95,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     const effectiveSnap = isSnapping || manualSnap;
 
     // Save/Load Hook
-    const { saveProject, isLoaded } = useProjectSave(projectId, setNodes);
+    const { saveProject, autoSave, isLoaded } = useProjectSave(projectId, setNodes);
 
     // Sync Edge Type for existing edges
     // (Removed duplicate useEffect that caused ReferenceError)
@@ -153,15 +153,10 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         }
 
         // Additive Selection Strategy: 
-        // If any modifier (Shift/Ctrl/Cmd) is active, we treat selection as "Union".
         if (isModifierActive) {
-            // Get a snapshot of currently selected IDs BEFORE applying the new changes
             const currentlySelected = new Set(nodes.filter(n => n.selected).map(n => n.id));
 
             const enforcedChanges = changes.map(c => {
-                // If it's a selection change trying to UNSELECT a node that was ALREADY selected,
-                // we FORCE it back to true instead of just filtering it out.
-                // This manually bridges any state sync gaps in xyflow.
                 if (c.type === 'select' && !c.selected && currentlySelected.has(c.id)) {
                     return { ...c, selected: true };
                 }
@@ -169,11 +164,18 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             });
 
             onNodesChange(enforcedChanges);
+            autoSave();
             return;
         }
 
         onNodesChange(changes);
-    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, nodes]);
+        autoSave();
+    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, nodes, autoSave]);
+
+    const onEdgesChangeSafe = useCallback((changes: any[]) => {
+        onEdgesChange(changes);
+        autoSave();
+    }, [onEdgesChange, autoSave]);
 
     // --- Canvas Reset ---
     const clearMemory = useCallback(() => {
@@ -527,7 +529,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     return (
         <RelinkContext.Provider value={relinkValue}>
             <div
-                className="h-screen w-screen bg-zinc-950 relative"
+                className="h-full w-full bg-zinc-950 relative"
                 onMouseMove={onMouseMove}
                 onMouseDown={onMouseDown}
                 onMouseUp={onMouseUp}
@@ -553,8 +555,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     nodes={nodes}
                     edges={edges}
                     onNodesChange={onNodesChangeSafe}
-
-                    onEdgesChange={onEdgesChange}
+                    onEdgesChange={onEdgesChangeSafe}
                     onConnect={onRelinkConnect}
                     onConnectStart={onConnectStart}
                     onConnectEnd={onConnectEnd}

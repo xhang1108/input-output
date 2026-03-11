@@ -103,6 +103,9 @@ export class BrainWorkerProxy {
         console.warn('[BrainWorkerProxy] Respawning Worker...');
         this.pendingRequest = false;
         this.queuedPatch = null;
+        
+        // Notify main thread that a crash occurred so locks (like isRecalculating) can be released
+        this.callbacks.onError(this.epoch, 'Worker crashed unexpectedly');
 
         // Terminate old worker
         if (this.worker) {

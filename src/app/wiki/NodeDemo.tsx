@@ -17,6 +17,8 @@ interface NodeDemoProps {
 const NodeDemoInner: React.FC<NodeDemoProps> = ({ nodeType, initialData, label, height = 240 }) => {
     const id = useMemo(() => `demo-${nodeType}-${Math.random().toString(36).substr(2, 9)}`, [nodeType]);
 
+    const initialDataStr = JSON.stringify(initialData);
+
     const initialNodes: Node[] = useMemo(() => {
         const def = NODE_DEFINITIONS.find(d => d.id === nodeType);
         return [
@@ -24,11 +26,11 @@ const NodeDemoInner: React.FC<NodeDemoProps> = ({ nodeType, initialData, label, 
                 id,
                 type: nodeType,
                 position: { x: 10, y: 10 },
-                data: { ...(def?.defaultData || {}), ...initialData, label: label || 'Demo' },
+                data: { ...(def?.defaultData || {}), ...(initialDataStr ? JSON.parse(initialDataStr) : {}), label: label || 'Demo' },
                 draggable: false
             }
         ];
-    }, [id, nodeType, initialData, label]);
+    }, [id, nodeType, initialDataStr, label]);
 
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
 
@@ -82,7 +84,7 @@ const NodeDemoInner: React.FC<NodeDemoProps> = ({ nodeType, initialData, label, 
                 payload: { id }
             });
         };
-    }, [id, nodeType, initialData, label, setNodes]);
+    }, [id, nodeType, initialDataStr, label, setNodes]);
 
     const initialEdges: Edge[] = [];
 

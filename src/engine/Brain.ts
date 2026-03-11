@@ -27,6 +27,7 @@ export class Brain {
     private visualTick: number = 0;
     private readonly HEARTBEAT_MS = 16.67;
     private pendingPatch: IncrementalPatch = { dirtyChainNodeIds: [] };
+    private dirtyNodes: Set<string> = new Set();
 
     private constructor() {
         this.state = {
@@ -45,7 +46,14 @@ export class Brain {
             },
             onTriggerDirty: (id) => this.triggerDirtyChain(id),
             syncRequester: () => this.syncWorker(),
-            emit: (ev, p) => this.emit(ev, p)
+            emit: (ev, p) => {
+                this.emit(ev, p);
+                if (ev === 'workerError') {
+                    this.isRecalculating = false;
+                    this.pendingPatch = { dirtyChainNodeIds: [] }; // Clear pending patch on crash
+                    console.warn('[Brain] Released recalculating lock due to Worker crash');
+                }
+            }
         });
 
         this.transactionManager = new TransactionManager();
@@ -66,6 +74,7 @@ export class Brain {
             if (node) {
                 node.value = payload;
                 node.isInDirtyChain = false;
+                this.dirtyNodes.delete(id);
             }
         }
         this.isRecalculating = false;
@@ -166,41 +175,23 @@ export class Brain {
         if (this.heartbeatInterval) return;
 
         this.heartbeatInterval = setInterval(async () => {
-            // 1. Global Visual Tick (Real-time derivative)
-            // performance.now() provides sub-millisecond precision for smooth animations
+            // 1. Global Visual Tick
             const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
             this.visualTick = Math.floor(now / 16.67) % 10000;
 
-            let hasVisualChange = true;
-
-            for (const node of this.state.nodes.values()) {
-                if (!node.visualState) {
-                    node.visualState = { muted: !!node.data?.muted, visualTick: this.visualTick };
-                }
-
-                // Sync tick
-                node.visualState.visualTick = this.visualTick;
-
-                // Muted sync
-                const isMuted = !!node.data?.muted;
-                if (node.visualState.muted !== isMuted) {
-                    node.visualState.muted = isMuted;
-                }
-            }
-
-            if (hasVisualChange && !this.isRecalculating) {
-                this.emit('visualUpdate', null);
+            if (!this.isRecalculating) {
+                this.emit('visualUpdate', this.visualTick);
             }
 
             if (this.isRecalculating) return;
 
-            const hasDirty = Array.from(this.state.nodes.values()).some(n => n.isInDirtyChain)
-                || this.worker.getFreshlyUpdated().size > 0;
+            // O(1) dirty check
+            const hasDirty = this.dirtyNodes.size > 0 || this.worker.getFreshlyUpdated().size > 0;
             if (hasDirty) {
                 this.isRecalculating = true;
 
                 if (this.worker.isEnabled()) {
-                    await this.worker.init(); // Ensure worker is ready
+                    await this.worker.init();
                     await this.worker.syncAndEval(this.state.nodes, this.state.edges, this.topology);
                 } else {
                     try {
@@ -283,6 +274,10 @@ export class Brain {
     // if and only if the parent's actual computed value changed.
     private triggerDirtyChain(startNodeId: string) {
         this.topology.triggerDirtyChain(startNodeId, this.state.nodes);
+        // Sync the Set with any nodes the topology manager might have marked
+        for (const [id, node] of this.state.nodes) {
+            if (node.isInDirtyChain) this.dirtyNodes.add(id);
+        }
     }
 
     public clearAll() {

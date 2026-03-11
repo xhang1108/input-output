@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { v7 as uuidv7 } from 'uuid';
 import { Serializer, ProjectData } from '../engine/Serializer';
 import { Brain } from '../engine/Brain';
 
@@ -62,7 +63,7 @@ export class SaveManager {
             throw new Error(`Save limit reached (max ${MAX_SLOTS}). Delete an old save first.`);
         }
 
-        const id = slotId ?? nanoid(10);
+        const id = slotId ?? uuidv7();
         const encoded = Serializer.serialize(brain, settings);
 
         // Extract metadata from brain state
@@ -96,12 +97,16 @@ export class SaveManager {
      * Load a project from a saved slot.
      */
     static load(slotId: string): ProjectData | null {
-        const encoded = localStorage.getItem(SLOT_PREFIX + slotId);
-        if (!encoded) {
-            console.error(`[SaveManager] No data found for slot ${slotId}`);
-            return null;
-        }
+        const encoded = this.getRawData(slotId);
+        if (!encoded) return null;
         return Serializer.deserialize(encoded);
+    }
+
+    /**
+     * Get the raw encoded data string for a slot.
+     */
+    static getRawData(slotId: string): string | null {
+        return localStorage.getItem(SLOT_PREFIX + slotId);
     }
 
     /**
@@ -135,6 +140,45 @@ export class SaveManager {
     }
 
     /**
+     * Transfer a slot between storage types (Local <-> Cloud)
+     * This moves the data in local storage and updates the index.
+     */
+    static transferSlot(oldId: string, newId: string, meta?: Partial<SaveSlotMeta>): void {
+        const encoded = localStorage.getItem(SLOT_PREFIX + oldId);
+        if (!encoded) return;
+
+        // Move the data
+        localStorage.setItem(SLOT_PREFIX + newId, encoded);
+        localStorage.removeItem(SLOT_PREFIX + oldId);
+
+        // Update index
+        const index = this.list();
+        const slotIndex = index.findIndex(s => s.id === oldId);
+        
+        if (slotIndex !== -1) {
+            index[slotIndex].id = newId;
+            if (meta) {
+                if (meta.name) index[slotIndex].name = meta.name;
+                if (meta.updatedAt) index[slotIndex].updatedAt = meta.updatedAt;
+                if (meta.createdAt) index[slotIndex].createdAt = meta.createdAt;
+            }
+        } else {
+            // New local entry (e.g. cloud-only project being downloaded)
+            index.push({
+                id: newId,
+                name: meta?.name || "Untitled Project",
+                updatedAt: meta?.updatedAt || Date.now(),
+                createdAt: meta?.createdAt || Date.now(),
+                nodeCount: meta?.nodeCount || 0,
+                edgeCount: meta?.edgeCount || 0,
+                version: meta?.version || "2.0"
+            });
+        }
+        
+        localStorage.setItem(INDEX_KEY, JSON.stringify(index));
+    }
+
+    /**
      * Migrate the legacy autosave into the new system, if it exists.
      * Called once on first app load.
      */
@@ -146,7 +190,7 @@ export class SaveManager {
         if (!data) return null;
 
         // Create a new slot from the legacy autosave
-        const id = nanoid(10);
+        const id = uuidv7();
         const now = Date.now();
         const meta: SaveSlotMeta = {
             id,

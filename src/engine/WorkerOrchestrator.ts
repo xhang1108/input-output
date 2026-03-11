@@ -44,7 +44,10 @@ export class WorkerOrchestrator {
                 const { BrainWorkerProxy } = await import('./BrainWorkerProxy');
                 this.workerProxy = new BrainWorkerProxy({
                     onResults: this.callbacks.onResults,
-                    onError: (_epoch: number, error: string) => console.error('[WorkerOrchestrator] error:', error),
+                    onError: (epoch: number, error: string) => {
+                        console.error('[WorkerOrchestrator] error:', error);
+                        this.callbacks.emit('workerError', error);
+                    },
                     onSyncing: () => this.callbacks.emit('workerSyncing', null),
                     onReady: () => {
                         this.callbacks.emit('workerReady', null);
