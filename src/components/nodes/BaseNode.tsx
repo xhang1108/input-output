@@ -125,7 +125,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     };
 
     const minHeight = Math.max(
-        60,
+        definition?.minHeight || 60,
         Math.max(calculateSideHeight(leftHandles), calculateSideHeight(rightHandles)) + NODE_LAYOUT.headerH
     );
 

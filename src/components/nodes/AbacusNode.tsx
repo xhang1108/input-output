@@ -109,7 +109,7 @@ export const AbacusNode = memo((props: NodeProps) => {
     return (
         <BaseNode {...props} ref={nodeRef} data={nodeData} style={{ width: `${totalWidth}px` }}>
             <div
-                className="p-3 flex justify-center items-center select-none nodrag nowheel nopan relative group"
+                className="p-3 flex-1 flex justify-center items-center select-none nodrag nowheel nopan relative group w-full h-full"
                 style={{ width: `${contentWidth}px` }}
             >
                 <div

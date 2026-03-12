@@ -154,8 +154,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] },
-        minWidth: 220,
-        minHeight: 100,
+        minWidth: 240,
+        minHeight: 210,
         layoutMetadata: {
             uiOrigin: [0, 0],
             physicalAnchor: [0, 0]
