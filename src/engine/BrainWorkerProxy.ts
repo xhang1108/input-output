@@ -283,8 +283,8 @@ export class BrainWorkerProxy {
         return [...this.auditLog];
     }
 
-    /** Terminate the Worker */
-    public terminate() {
+    /** Terminate and cleanup the Worker */
+    public dispose() {
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;

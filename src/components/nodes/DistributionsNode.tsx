@@ -2,7 +2,7 @@
 import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -14,6 +14,7 @@ const DIST_ITEMS: CategorizedMenuItem[] = [
 
 export const DistributionsNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const mode = (data.mode as string) || 'Normal';
     const n = data.n !== undefined ? Number(data.n) : 100;
@@ -24,11 +25,11 @@ export const DistributionsNode = memo((props: NodeProps) => {
 
 
     const updateData = useCallback((updates: Partial<typeof data>) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: updates }
         });
-    }, [id]);
+    }, [id, brain]);
 
     const handleMenuSelect = (item: CategorizedMenuItem) => {
         const newMode = item.id;

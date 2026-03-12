@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { CategorizedMenuItem } from '../components/ui/CategorizedMenu';
 import { Brain } from '../engine/Brain';
+import { useBrain } from '../context/BrainContext';
 
 export interface UseNodeParamResult {
     /** Options in CategorizedMenu format, built from the definition. */
@@ -30,6 +31,7 @@ export function useNodeParam(
     paramId: string,
     data: Record<string, unknown>
 ): UseNodeParamResult {
+    const brain = useBrain();
     const def = NODE_DEFINITIONS.find(d => d.id === defId);
     const param = def?.params?.find(p => p.id === paramId);
 
@@ -37,7 +39,7 @@ export function useNodeParam(
     const options: CategorizedMenuItem[] = (param?.options ?? []).map(opt => ({
         id: String(opt.value),
         label: opt.label,
-        category: opt.category,
+        category: opt.category || '',
         aliases: opt.aliases,
     }));
 
@@ -46,7 +48,7 @@ export function useNodeParam(
 
     const dispatch = useCallback(
         (value: string, extraData?: Record<string, unknown>) => {
-            Brain.getInstance().applyTransaction({
+            brain.applyTransaction({
                 type: 'UPDATE_NODE_DATA',
                 payload: {
                     id: nodeId,
@@ -54,7 +56,7 @@ export function useNodeParam(
                 }
             });
         },
-        [nodeId, paramId]
+        [nodeId, paramId, brain]
     );
 
     return { options, currentValue, currentLabel, dispatch };

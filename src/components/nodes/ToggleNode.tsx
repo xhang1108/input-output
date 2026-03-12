@@ -2,10 +2,12 @@ import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 
 export const ToggleNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
 
     const isActive = !!PayloadUtils.unwrap(data.value);
 
@@ -17,11 +19,11 @@ export const ToggleNode = memo((props: NodeProps) => {
 
     const handleToggle = useCallback(() => {
         const newValue = !isActive;
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { value: newValue } }
         });
-    }, [id, isActive]);
+    }, [id, isActive, brain]);
 
     return (
         <BaseNode {...props} data={nodeData}>

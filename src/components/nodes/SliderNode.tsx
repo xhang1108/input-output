@@ -2,11 +2,13 @@ import { memo, useCallback, useState, useEffect, useRef } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { Settings2 } from 'lucide-react';
 
 export const SliderNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
 
     // Internal state for immediate UI feedback
     // Unwrap payload to get numeric value
@@ -35,18 +37,18 @@ export const SliderNode = memo((props: NodeProps) => {
             setLocalValue(val);
 
             // Send to Brain. Brain handles debouncing the heavy calculation.
-            Brain.getInstance().applyTransaction({
+            brain.applyTransaction({
                 type: 'UPDATE_VALUE',
                 payload: { id, value: val }
             });
         }
-    }, [id]);
+    }, [id, brain]);
 
     const handleSettingChange = (key: string, value: string) => {
         const numVal = parseFloat(value);
         if (!isNaN(numVal)) {
             updateNodeData(id, { [key]: numVal });
-            Brain.getInstance().applyTransaction({
+            brain.applyTransaction({
                 type: 'UPDATE_NODE_DATA',
                 payload: { id, data: { [key]: numVal } }
             });

@@ -6,111 +6,117 @@ export interface DocEntry {
 
 export const DOC_REGISTRY: DocEntry[] = [
   {
-    "id": "body-metaphor",
+    "id": "00_mathengine",
     "modes": [
-      "engineer"
+      "developer"
     ]
   },
   {
-    "id": "brain-architecture",
+    "id": "00_quick-start",
     "modes": [
-      "engineer"
+      "user"
+    ]
+  },
+  {
+    "id": "01_contributing",
+    "modes": [
+      "developer"
+    ]
+  },
+  {
+    "id": "03_faq",
+    "modes": [
+      "user"
     ]
   },
   {
     "id": "calculus-nodes",
     "modes": [
-      "operator"
+      "user"
+    ]
+  },
+  {
+    "id": "custom-nodes",
+    "modes": [
+      "developer"
     ]
   },
   {
     "id": "data-nodes",
     "modes": [
-      "operator"
+      "user"
     ]
   },
   {
     "id": "data-symbology",
     "modes": [
-      "operator"
+      "user"
     ]
   },
   {
     "id": "evaluator-internals",
     "modes": [
-      "engineer"
+      "developer"
     ]
   },
   {
     "id": "input-nodes",
     "modes": [
-      "operator"
+      "user"
     ]
   },
   {
     "id": "interaction-physics",
     "modes": [
-      "operator"
+      "user"
     ]
   },
   {
     "id": "iogl-protocol",
     "modes": [
-      "operator"
+      "user"
     ]
   },
   {
     "id": "logic-nodes",
     "modes": [
-      "operator"
+      "user"
     ]
   },
   {
     "id": "math-nodes",
     "modes": [
-      "operator"
-    ]
-  },
-  {
-    "id": "node-forger",
-    "modes": [
-      "engineer"
+      "user"
     ]
   },
   {
     "id": "output-nodes",
     "modes": [
-      "operator"
-    ]
-  },
-  {
-    "id": "performance-cycles",
-    "modes": [
-      "engineer"
+      "user"
     ]
   },
   {
     "id": "shortcuts",
     "modes": [
-      "operator"
+      "user"
     ]
   },
   {
-    "id": "transaction-system",
+    "id": "system-architecture",
     "modes": [
-      "engineer"
+      "developer"
     ]
   },
   {
     "id": "transform-nodes",
     "modes": [
-      "operator"
+      "user"
     ]
   },
   {
     "id": "utility-nodes",
     "modes": [
-      "operator"
+      "user"
     ]
   }
 ];

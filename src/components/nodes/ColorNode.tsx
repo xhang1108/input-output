@@ -4,6 +4,7 @@ import { memo, useCallback, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
@@ -22,6 +23,7 @@ const DEPTH_ITEMS: CategorizedMenuItem[] = [
  */
 export const ColorNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const depthMenu = useNodeMenu();
 
     const depth = (data.depth as string) || '8bit';
@@ -63,14 +65,14 @@ export const ColorNode = memo((props: NodeProps) => {
         const g = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
         const b = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
 
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: {
                 id,
                 data: { ...data, value: { hex, vec3: [r, g, b] } }
             }
         });
-    }, [id, data]);
+    }, [id, data, brain]);
 
     const handleChannelChange = useCallback((channel: 0 | 1 | 2, valStr: string) => {
         const val = Math.min(maxRange, Math.max(0, parseInt(valStr) || 0));
@@ -81,14 +83,14 @@ export const ColorNode = memo((props: NodeProps) => {
         const toHex = (c: number) => Math.max(0, Math.min(255, Math.round(c * 255))).toString(16).padStart(2, '0');
         const newHex = `#${toHex(newVec3[0])}${toHex(newVec3[1])}${toHex(newVec3[2])}`;
 
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: {
                 id,
                 data: { ...data, value: { hex: newHex, vec3: newVec3 } } // Preserve depth in data spread
             }
         });
-    }, [id, maxRange, rNorm, gNorm, bNorm, data]);
+    }, [id, maxRange, rNorm, gNorm, bNorm, data, brain]);
 
     // For high bit depth, we display the raw Integer RGB values as the primary label
     const primaryLabel = displayColor;
@@ -151,7 +153,7 @@ export const ColorNode = memo((props: NodeProps) => {
                                     const toHex = (c: number) => Math.max(0, Math.min(255, Math.round(c * 255))).toString(16).padStart(2, '0');
                                     const newHex = `#${toHex(newVec3[0])}${toHex(newVec3[1])}${toHex(newVec3[2])}`;
 
-                                    Brain.getInstance().applyTransaction({
+                                    brain.applyTransaction({
                                         type: 'UPDATE_NODE_DATA',
                                         payload: {
                                             id,
@@ -185,7 +187,7 @@ export const ColorNode = memo((props: NodeProps) => {
                     trigger={depthMenu.trigger}
                     onClose={depthMenu.closeMenu}
                     onSelect={(item) => {
-                        Brain.getInstance().applyTransaction({
+                        brain.applyTransaction({
                             type: 'UPDATE_NODE_DATA',
                             payload: { id, data: { ...data, depth: item.id } }
                         });

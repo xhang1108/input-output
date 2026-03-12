@@ -5,6 +5,7 @@ import { Body } from '@/components/Body';
 import { VisualClock } from '@/components/VisualClock';
 import { SystemHeader } from '@/components/ui/SystemHeader';
 import { useRouter } from 'next/navigation';
+import { BrainProvider } from '@/context/BrainContext';
 
 export default function ProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
     const { projectId } = use(params);
@@ -15,14 +16,16 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
     };
 
     return (
-        <div className="w-screen h-screen bg-black relative flex flex-col overflow-hidden">
-            <div className="flex-1 relative overflow-hidden flex flex-col">
-                <VisualClock />
-                <Body
-                    projectId={projectId}
-                    onBackToProjects={handleBackToProjects}
-                />
+        <BrainProvider session="main">
+            <div className="w-screen h-screen bg-black relative flex flex-col overflow-hidden">
+                <div className="flex-1 relative overflow-hidden flex flex-col">
+                    <VisualClock />
+                    <Body
+                        projectId={projectId}
+                        onBackToProjects={handleBackToProjects}
+                    />
+                </div>
             </div>
-        </div>
+        </BrainProvider>
     );
 }

@@ -1,4 +1,5 @@
 import { RefObject, useEffect, useRef } from 'react';
+import { useBrain } from '../../../context/BrainContext';
 import { Brain } from '../../../engine/Brain';
 
 interface UseContentMetricsOptions {
@@ -29,12 +30,11 @@ export function useContentMetrics(
 ) {
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastBoxRef = useRef<{ width: number; height: number } | null>(null);
-
+    const brain = useBrain();
+ 
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
-
-        const brain = Brain.getInstance();
 
         const flush = (width: number, height: number) => {
             const last = lastBoxRef.current;

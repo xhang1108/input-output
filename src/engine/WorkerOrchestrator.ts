@@ -94,4 +94,12 @@ export class WorkerOrchestrator {
         this.clearFreshlyUpdated();
         this.workerProxy.syncAndEval(snapshot, dirtyChainNodeIds);
     }
+
+    public dispose() {
+        if (this.workerProxy) {
+            this.workerProxy.dispose();
+            this.workerProxy = null;
+        }
+        this.workerInitPromise = null;
+    }
 }

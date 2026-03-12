@@ -1,7 +1,5 @@
-
 import { Edge, Connection } from '@xyflow/react';
 import { Brain } from './Brain';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { getHandleVariant } from '../utils/handleUtils';
 
 export class BrainHelper {
@@ -11,16 +9,17 @@ export class BrainHelper {
      * 
      * For 'capsule' variant handles (multi-input), NO replacement occurs.
      * 
+     * @param brain The Brain instance (session-aware)
      * @param params The proposed connection (Source -> Target)
      * @param edges The current list of edges in the graph
      * @returns Object containing validity, reason, and any edge that would be replaced.
      */
     static checkConnectionWithReplacement(
+        brain: Brain,
         params: Connection | Edge,
         edges: Edge[]
     ): { isValid: boolean; reason?: string; edgeToReplace?: Edge } {
 
-        const brain = Brain.getInstance();
         const { source, sourceHandle, target, targetHandle } = params;
 
         if (!source || !target) {

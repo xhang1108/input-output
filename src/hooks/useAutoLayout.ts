@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
+import { useBrain } from '../context/BrainContext';
 import { getLayoutedElements, LayoutAlgorithm, LayoutDirection } from '../nerves/layoutEngine';
 
 export function useAutoLayout(
@@ -13,6 +14,7 @@ export function useAutoLayout(
     logAction: (msg: string) => void
 ) {
     const { fitView } = useReactFlow();
+    const brain = useBrain();
 
     // 1. Manual Layout Trigger
     const handleAutoLayout = useCallback(async () => {
@@ -82,7 +84,6 @@ export function useAutoLayout(
 
     // 2. Brain Event Listener (RE-LAYOUT)
     useEffect(() => {
-        const brain = Brain.getInstance();
 
         // Listener for automatic layout requests (e.g. after IOGL import)
         const cleanupLayout = brain.on('RE-LAYOUT', async () => {

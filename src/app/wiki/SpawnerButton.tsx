@@ -38,7 +38,7 @@ export const SpawnerButton: React.FC<SpawnerButtonProps> = ({ label = "Try Examp
     return (
         <button
             onClick={handleSpawn}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs transition-all uppercase tracking-widest active:scale-95 my-6 border border-white/10 shadow-lg shadow-blue-900/20 group"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs transition-all uppercase tracking-widest active:scale-95 my-6 border border-white/10 shadow-lg shadow-blue-900/20 group cursor-pointer"
         >
             <Package size={14} className="group-hover:rotate-12 transition-transform" />
             {label}

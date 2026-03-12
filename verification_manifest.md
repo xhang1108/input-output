@@ -1,4 +1,4 @@
-# Verification Plan: Auth & Database (Singularity v1.3)
+# Verification Plan: Auth & Database (Singularity V1.0)
 
 To ensure the stability of the Google Login and Cloudflare D1/R2 storage systems, we need to verify the following critical path items.
 

@@ -1,7 +1,7 @@
 import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -17,6 +17,7 @@ const AXIS_ITEMS: CategorizedMenuItem[] = [
 
 export const ArrayBuilderNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const opMenu = useNodeMenu();
     const axisMenu = useNodeMenu();
 
@@ -24,20 +25,20 @@ export const ArrayBuilderNode = memo((props: NodeProps) => {
     const axis = (data.axis as number) ?? 0;
 
     const handleOpSelect = useCallback((item: CategorizedMenuItem) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { op: item.id } }
         });
         opMenu.closeMenu();
-    }, [id, opMenu]);
+    }, [id, brain, opMenu]);
 
     const handleAxisSelect = useCallback((item: CategorizedMenuItem) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { axis: parseInt(item.id) } }
         });
         axisMenu.closeMenu();
-    }, [id, axisMenu]);
+    }, [id, brain, axisMenu]);
 
     const handles: any[] = [
         { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any' },

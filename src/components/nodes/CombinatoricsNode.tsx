@@ -2,7 +2,7 @@
 import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -14,21 +14,19 @@ const COMB_OPERATIONS: CategorizedMenuItem[] = [
 
 export const CombinatoricsNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const [op, setOp] = useState<string>((data.op as string) || 'nCr');
-
-
-
 
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
         const newOp = item.id;
         setOp(newOp);
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { op: newOp } }
         });
         closeMenu();
-    }, [id]);
+    }, [id, brain, closeMenu]);
 
 
     const handles: any[] = [

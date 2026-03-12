@@ -2,7 +2,7 @@
 import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -23,17 +23,18 @@ const NT_OP_OUTPUT: Record<string, 'scalar' | 'boolean'> = {
 
 export const NumberTheoryNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const op = (data.op as string) || 'GCD';
 
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
         const newOp = item.id;
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { op: newOp } }
         });
         closeMenu();
-    }, [id, closeMenu]);
+    }, [id, brain, closeMenu]);
 
     // Dynamic handles
     const handles = [

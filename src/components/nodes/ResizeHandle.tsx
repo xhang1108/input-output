@@ -4,6 +4,7 @@ import { useFlexibleResize, ResizeDimensions } from './hooks/useFlexibleResize';
 import { cn } from '@/lib/utils';
 import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 
 export type ResizeHandlePosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 
@@ -38,6 +39,7 @@ export const ResizeHandle = memo(({
     className
 }: ResizeHandleProps) => {
     const { getViewport, setNodes, getNode } = useReactFlow();
+    const brain = useBrain();
 
     // Origin Swapping Logic:
     // When resizing starts, if the node is in Center Origin [0.5, 0.5],
@@ -121,7 +123,7 @@ export const ResizeHandle = memo(({
             } : n));
         }
 
-        // The actual Brain.getInstance().resizeNode is now handled by useNodeDimensions
+        // The actual brain.resizeNode is now handled by useNodeDimensions
         // where it has access to the component-specific snapped dimensions (onProject).
 
         onResizeEnd?.(compensatedDims);

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Brain } from '@/engine/Brain';
+import { useBrain } from '@/context/BrainContext';
 
 /**
  * VisualClock bridge component.
@@ -9,8 +10,8 @@ import { Brain } from '@/engine/Brain';
  * to a global CSS variable for perfectly synchronized animations across all nodes.
  */
 export function VisualClock() {
+    const brain = useBrain();
     useEffect(() => {
-        const brain = Brain.getInstance();
 
         const handleVisualUpdate = () => {
             const tick = brain.getVisualTick();

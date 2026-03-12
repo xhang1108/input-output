@@ -284,6 +284,9 @@ export class TransactionManager {
                 if (node) {
                     node.width = p.width;
                     node.height = p.height;
+                    // Sync to data object as well, as many functional components 
+                    // (like MatrixInputNode) use data.width/height as the primary reference
+                    node.data = { ...node.data, width: p.width, height: p.height };
                     hooks.onNodeDataUpdated?.(p.id); // Trigger visual update
                     return { success: true };
                 }

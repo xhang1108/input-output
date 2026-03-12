@@ -2,6 +2,7 @@ import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -16,6 +17,7 @@ const OP_ITEMS: CategorizedMenuItem[] = [
 
 export const TrigNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const [op, setOp] = useState<string>((data.op as string) || 'SIN');
     const [angleMode, setAngleMode] = useState<string>((data.angleMode as string) || 'RAD');
@@ -24,7 +26,7 @@ export const TrigNode = memo((props: NodeProps) => {
         const newOp = item.id;
         setOp(newOp);
 
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: {
                 id,
@@ -32,19 +34,19 @@ export const TrigNode = memo((props: NodeProps) => {
             }
         });
         closeMenu();
-    }, [id]);
+    }, [id, brain, closeMenu]);
 
     const toggleAngleMode = useCallback(() => {
         const newMode = angleMode === 'RAD' ? 'DEG' : 'RAD';
         setAngleMode(newMode);
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: {
                 id,
                 data: { angleMode: newMode }
             }
         });
-    }, [angleMode, id]);
+    }, [angleMode, id, brain]);
 
     const currentLabel = OP_ITEMS.find(i => i.id === op)?.label || op;
 

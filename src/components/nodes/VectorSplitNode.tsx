@@ -3,6 +3,7 @@ import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -13,6 +14,7 @@ const MODE_ITEMS: CategorizedMenuItem[] = [
 
 export const VectorSplitNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const mode = (data.mode as string) || 'separate'; // 'separate' | 'combine'
 
@@ -31,7 +33,7 @@ export const VectorSplitNode = memo((props: NodeProps) => {
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'array' }
         ];
 
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: {
                 id,
@@ -42,7 +44,7 @@ export const VectorSplitNode = memo((props: NodeProps) => {
             }
         });
         closeMenu();
-    }, [id]);
+    }, [id, brain, closeMenu]);
 
 
     let handles: any[] = [];

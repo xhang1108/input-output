@@ -4,6 +4,7 @@ import { NodeProps, Position } from '@xyflow/react';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { FormulaRenderer } from '../../utils/FormulaRenderer';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { Copy, Check, ChevronDown } from 'lucide-react';
 import { DataType } from '../../types/payload';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
@@ -37,6 +38,7 @@ const PRECISION_ITEMS: CategorizedMenuItem[] = [
 
 export const ResultNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const viewMenu = useNodeMenu();
     const precMenu = useNodeMenu();
 
@@ -121,27 +123,27 @@ export const ResultNode = memo((props: NodeProps) => {
     }, [isError, errorStr, effectiveMode, matrixData, rawValue, formulaStr]);
 
     const handlePrecisionSelect = useCallback((item: CategorizedMenuItem) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { precision: parseInt(item.id) } }
         });
         precMenu.closeMenu();
-    }, [id, precMenu]);
+    }, [id, precMenu, brain]);
 
     const handleViewModeSelect = useCallback((item: CategorizedMenuItem) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { viewMode: item.id as ResultViewMode } }
         });
         viewMenu.closeMenu();
-    }, [id, viewMenu]);
+    }, [id, viewMenu, brain]);
 
     const handleDepthChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { depth: e.target.value } }
         });
-    }, [id]);
+    }, [id, brain]);
 
     const currentModeLabel = VIEW_MODE_ITEMS.find(v => v.id === viewMode)?.label || viewMode;
     const currentPrecLabel = precision === -1 ? 'Auto' : `${precision} d.p.`;

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { Brain } from '../../../engine/Brain';
+import { useBrain } from '../../../context/BrainContext';
 import deepEqual from 'fast-deep-equal';
 
 /**
@@ -15,6 +16,7 @@ export function useNodeDebounce<T>(
     onSync: (value: T) => Record<string, unknown>,
     delay: number = 300
 ) {
+    const brain = useBrain();
     const { updateNodeData } = useReactFlow();
     const [localValue, setLocalValue] = useState<T>(initialValue);
 
@@ -42,7 +44,7 @@ export function useNodeDebounce<T>(
                 updateNodeData(id, updatePayload);
 
                 // Notify Brain of the update
-                Brain.getInstance().applyTransaction({
+                brain.applyTransaction({
                     type: 'UPDATE_NODE_DATA',
                     payload: {
                         id,

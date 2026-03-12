@@ -108,7 +108,7 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
 
                 <span>Nodes: {nodeCount}</span>
                 {selectionCount > 0 && <span className="text-zinc-200">Selected: {selectionCount}</span>}
-                <span>Ver 0.8.3</span>
+                <span>V1.0</span>
             </div>
         </div>
     );

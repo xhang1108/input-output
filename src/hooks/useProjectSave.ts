@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { toast } from 'sonner';
 import { useDebounceCallback } from 'usehooks-ts';
+import { useBrain } from '../context/BrainContext';
 import { Brain } from '../engine/Brain';
 import { Serializer } from '../engine/Serializer';
 import { SaveManager } from '../services/SaveManager';
@@ -21,6 +22,7 @@ function restoreSettings(settings: Record<string, unknown>) {
 
 export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev: any[]) => any[])) => void) {
     const { getViewport, setViewport, fitView } = useReactFlow();
+    const brain = useBrain();
     const [isLoaded, setIsLoaded] = useState(false);
     const { data: session } = useSession();
 
@@ -81,7 +83,6 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
     }, [setNodes, fitView]);
 
     const saveProject = useCallback(async (silent = false) => {
-        const brain = Brain.getInstance();
         const settings = useAppStore.getState();
         const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);
 
@@ -179,23 +180,21 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         if (data.settings) restoreSettings(data.settings);
 
         if (data.graph) {
-            const brain = Brain.getInstance();
-            brain.injectNodes(data.graph, true).then(() => {
+             brain.injectNodes(data.graph, true).then(() => {
                 toast.success('Project loaded successfully');
                 focusAndSelectAll({ duration: 400 });
             });
         }
-    }, [focusAndSelectAll]);
+    }, [focusAndSelectAll, brain]);
 
     // Initial Load — delayed to ensure useBrainUpdates listener is registered first
     useEffect(() => {
         setIsLoaded(false);
         const rafId = requestAnimationFrame(() => {
             if (actualId === 'new') {
-                const brain = Brain.getInstance();
-                brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
-                    setIsLoaded(true);
-                });
+                 brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
+                     setIsLoaded(true);
+                 });
                 return;
             }
 
@@ -209,13 +208,12 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                     .then(data => {
                         clearTimeout(timeoutId);
                         if (data.error) {
-                            // If 404, it's likely a brand new cloud ID from URL that hasn't been POSTed yet
-                            if (data.status === 404 || data.error.includes("not found")) {
-                                hasSyncedRef.current = false;
-                                const brain = Brain.getInstance();
-                                brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
-                                    setIsLoaded(true);
-                                });
+                             // If 404, it's likely a brand new cloud ID from URL that hasn't been POSTed yet
+                             if (data.status === 404 || data.error.includes("not found")) {
+                                 hasSyncedRef.current = false;
+                                 brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
+                                     setIsLoaded(true);
+                                 });
                                 return;
                             }
                             throw new Error(data.error);
@@ -229,12 +227,11 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                             // Load function helper so we don't repeat the injection code
                             const loadGraphData = (sourceData: any) => {
                                 if (sourceData) {
-                                    if (sourceData.settings) restoreSettings(sourceData.settings);
-                                    if (sourceData.graph) {
-                                        const brain = Brain.getInstance();
-                                        brain.injectNodes(sourceData.graph, true, true).then(() => {
-                                            focusAndSelectAll({ duration: 0 });
-                                            revealAfterPaint();
+                                     if (sourceData.settings) restoreSettings(sourceData.settings);
+                                     if (sourceData.graph) {
+                                         brain.injectNodes(sourceData.graph, true, true).then(() => {
+                                             focusAndSelectAll({ duration: 0 });
+                                             revealAfterPaint();
                                         });
                                     } else {
                                         setIsLoaded(true);
@@ -287,29 +284,27 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 // Fetch from LocalStorage
                 const data = currentSlotIdRef.current ? SaveManager.load(currentSlotIdRef.current) : null;
                 if (data) {
-                    if (data.settings) restoreSettings(data.settings);
-
-                    if (data.graph) {
-                        const brain = Brain.getInstance();
-                        brain.injectNodes(data.graph, true, true).then(() => {
-                            focusAndSelectAll({ duration: 0 });
-                            revealAfterPaint();
+                     if (data.settings) restoreSettings(data.settings);
+ 
+                     if (data.graph) {
+                         brain.injectNodes(data.graph, true, true).then(() => {
+                             focusAndSelectAll({ duration: 0 });
+                             revealAfterPaint();
                         });
                     } else {
                         setIsLoaded(true);
                     }
-                } else {
-                    // This is a brand new UUID from URL that hasn't been saved yet
-                    const brain = Brain.getInstance();
-                    brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
-                        setIsLoaded(true);
-                    });
+                 } else {
+                     // This is a brand new UUID from URL that hasn't been saved yet
+                     brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
+                         setIsLoaded(true);
+                     });
                 }
             }
         });
 
         return () => cancelAnimationFrame(rafId);
-    }, [actualId, isCloud, focusAndSelectAll, revealAfterPaint]);
+    }, [actualId, isCloud, focusAndSelectAll, revealAfterPaint, brain]);
 
     return { saveProject, autoSave, loadProject, currentSlotId: currentSlotIdRef, isLoaded };
 }

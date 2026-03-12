@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useReactFlow, Node, XYPosition } from '@xyflow/react';
 import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { Brain } from '../engine/Brain';
+import { useBrain } from '../context/BrainContext';
 import { Transaction } from '../engine/types';
 import { useClipboard } from './useClipboard';
 import { useSelection } from './useSelection';
@@ -16,6 +17,7 @@ type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
  */
 export function useHand() {
     const { getNodes, setNodes, getViewport, setViewport } = useReactFlow();
+    const brain = useBrain();
     const { project } = useCanvasProjection();
     const [mode, setMode] = useState<InteractionMode>('IDLE');
 
@@ -96,7 +98,7 @@ export function useHand() {
                 maxAbsX = Math.max(maxAbsX, absCX + w / 2); maxAbsY = Math.max(maxAbsY, absCY + h / 2);
             });
 
-            const config = Brain.getInstance().getPhysicsConfig();
+            const config = brain.getPhysicsConfig();
             const PAD = config.layout.nodePadding, TOP_PAD = config.layout.frameTopPadding;
             const newAbsTL_X = minAbsX - PAD, newAbsTL_Y = minAbsY - TOP_PAD;
             const newW = (maxAbsX + PAD) - newAbsTL_X, newH = (maxAbsY + PAD) - newAbsTL_Y;
@@ -392,7 +394,7 @@ export function useHand() {
 
             if (axisLock === 'X') dy = 0;
             if (axisLock === 'Y') dx = 0;
-            const config = Brain.getInstance().getPhysicsConfig();
+            const config = brain.getPhysicsConfig();
 
             if (ctrlKey) {
                 const GRID_SIZE = config.interaction.snapGridSize;
@@ -449,9 +451,9 @@ export function useHand() {
             return;
         }
 
-        const { x, y } = mousePosRef.current;
-        const config = Brain.getInstance().getPhysicsConfig();
-        const pad = config.interaction.autoPanPadding;
+         const { x, y } = mousePosRef.current;
+        const config = brain.getPhysicsConfig();
+         const pad = config.interaction.autoPanPadding;
         const w = window.innerWidth;
         const h = window.innerHeight;
 
@@ -657,7 +659,7 @@ export function useHand() {
             if (!node || node.type === 'frame') return;
 
             const oldParentId = node.parentId || null;
-            const absPos = Brain.getInstance().getAbsolutePosition(id);
+            const absPos = brain.getAbsolutePosition(id);
             const { w, h } = getSize(node);
 
             // Detect new parent
@@ -718,12 +720,12 @@ export function useHand() {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             children.forEach(c => {
                 const { w, h } = getSize(c);
-                const cAbs = Brain.getInstance().getAbsolutePosition(c.id);
+                const cAbs = brain.getAbsolutePosition(c.id);
                 minX = Math.min(minX, cAbs.x - w / 2); minY = Math.min(minY, cAbs.y - h / 2);
                 maxX = Math.max(maxX, cAbs.x + w / 2); maxY = Math.max(maxY, cAbs.y + h / 2);
             });
 
-            const config = Brain.getInstance().getPhysicsConfig();
+            const config = brain.getPhysicsConfig();
             const PAD = config.layout.nodePadding;
             const newAbsTL_X = minX - PAD, newAbsTL_Y = minY - PAD;
             const newWidth = (maxX + PAD) - newAbsTL_X, newHeight = (maxY + PAD) - newAbsTL_Y;
@@ -732,7 +734,7 @@ export function useHand() {
             txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: parentId, data: { width: Math.round(newWidth), height: Math.round(newHeight) } } });
 
             children.forEach(c => {
-                const cAbs = Brain.getInstance().getAbsolutePosition(c.id);
+                const cAbs = brain.getAbsolutePosition(c.id);
                 const newRelativePos = { x: cAbs.x - newAbsTL_X, y: cAbs.y - newAbsTL_Y };
                 const initPos = initialPositions.current.get(c.id) || c.position;
 
@@ -756,7 +758,7 @@ export function useHand() {
 
             if (!actualParentId && node.parentId) {
                 // Detached from parent
-                const absPos = Brain.getInstance().getAbsolutePosition(id);
+                const absPos = brain.getAbsolutePosition(id);
                 txs.push({ type: 'MOVE_NODE', payload: { id, position: absPos, oldPosition: initialPositions.current.get(id)!, parentId: null } });
 
                 if (plannedDimensions.has(id)) {
@@ -774,7 +776,7 @@ export function useHand() {
         });
 
         if (txs.length > 0) {
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+            brain.applyTransaction({ type: 'BATCH', payload: txs });
         }
 
         isResolvingRef.current = true;
@@ -868,7 +870,7 @@ export function useHand() {
                 currentMousePos.x - pendingGrabStart.current.x,
                 currentMousePos.y - pendingGrabStart.current.y
             );
-            const config = Brain.getInstance().getPhysicsConfig();
+            const config = brain.getPhysicsConfig();
             if (dist > config.interaction.dragThreshold) {
                 startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey, undefined, false);
                 pendingGrabStart.current = null;

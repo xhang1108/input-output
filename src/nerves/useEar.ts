@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useBrain } from '../context/BrainContext';
 import { Brain } from '../engine/Brain';
 
 type HotkeyAction = (e: KeyboardEvent) => void;
@@ -26,7 +27,7 @@ type EarProps = {
  * 3. Biological Input Guard: Automatically ignores shortcuts when typing in inputs.
  */
 export function useEar(props: EarProps = {}) {
-
+    const brain = useBrain();
     const [keys, setKeys] = useState<Set<string>>(new Set());
     const { shortcuts, onKeyDown, onKeyUp, deps = [] } = props;
 
@@ -72,14 +73,14 @@ export function useEar(props: EarProps = {}) {
             // Undo (Ctrl+Z)
             if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
                 e.preventDefault();
-                Brain.getInstance().undo();
+                brain.undo();
                 return;
             }
 
             // Redo (Ctrl+Y or Ctrl+Shift+Z)
             if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
                 e.preventDefault();
-                Brain.getInstance().redo();
+                brain.redo();
                 return;
             }
 

@@ -37,6 +37,7 @@ import { ContextMenu } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
 import { Brain } from '../engine/Brain';
 import { NodeRegistry } from '../engine/NodeRegistry';
+import { useBrain } from '../context/BrainContext';
 import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useExampleListener } from '../hooks/useExampleListener';
@@ -53,6 +54,7 @@ interface BodyProps {
 }
 
 export function Body({ projectId, onBackToProjects }: BodyProps) {
+    const brain = useBrain();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -180,7 +182,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     // --- Canvas Reset ---
     const clearMemory = useCallback(() => {
         if (confirm('Are you sure you want to wipe all memory? This cannot be undone.')) {
-            Brain.getInstance().clearAll();
+            brain.clearAll();
             setNodes([]);
             setEdges([]);
             logAction('Memory Wiped');
@@ -224,7 +226,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
     // Connect Brain Log to UI Log
     useEffect(() => {
-        const brain = Brain.getInstance();
         // @ts-expect-error - Expose for debugging
         window.Brain = Brain;
         // @ts-expect-error - Expose for debugging
@@ -429,7 +430,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                 const selected = nodes.filter(n => n.selected);
                 selected.forEach(node => {
                     const isMuted = !!node.data?.muted;
-                    Brain.getInstance().applyTransaction({
+                    brain.applyTransaction({
                         type: 'UPDATE_NODE_DATA',
                         payload: { id: node.id, data: { muted: !isMuted } }
                     });

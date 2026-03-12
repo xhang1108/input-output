@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
+import { useBrain } from '../context/BrainContext';
 import deepEqual from 'fast-deep-equal';
 
 /**
@@ -11,11 +12,11 @@ import deepEqual from 'fast-deep-equal';
  * This ensures Brain always has an up-to-date topology model.
  */
 export function useBrainSync(nodes: Node[], edges: Edge[]) {
+    const brain = useBrain();
     const prevNodesRef = useRef<Map<string, Node>>(new Map());
     const prevEdgesRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
-        const brain = Brain.getInstance();
 
         // Guard: Skip transaction recording during relink drag
         // The relink system removes edges from UI for visual feedback,

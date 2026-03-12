@@ -8,10 +8,17 @@ export interface DocMetadata {
     icon?: string;
 }
 
+export interface TOCItem {
+    id: string;
+    title: string;
+    level: number;
+}
+
 export interface DocContent {
     id: string;
     metadata: DocMetadata;
     content: string;
+    toc: TOCItem[];
 }
 
 export interface DocSection {
@@ -21,6 +28,43 @@ export interface DocSection {
 }
 
 const DOCS_PATH = path.join(process.cwd(), 'src/assets/docs');
+
+/**
+ * Utility to extract headings from markdown content
+ */
+function extractHeadings(content: string): TOCItem[] {
+    const headingRegex = /^(#{2,3})\s+(.+)$/gm;
+    const toc: TOCItem[] = [];
+    let match;
+
+    while ((match = headingRegex.exec(content)) !== null) {
+        const level = match[1].length;
+        const rawTitle = match[2].trim();
+        // Remove anchor notation like (IO-01) if present
+        const title = rawTitle.replace(/\s*\([A-Z0-9-]+\)$/, '').trim();
+        
+        // Generate ID consistent with MarkdownRenderer's logic
+        const anchorMatch = rawTitle.match(/\(([A-Z0-9-]{3,10})\)/);
+        const id = anchorMatch ? anchorMatch[1] : title.toLowerCase()
+            .replace(/[^\w-]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+
+        toc.push({ id, title, level });
+    }
+    return toc;
+}
+
+/**
+ * Extract the main title (# H1) from content, or fallback to metadata
+ */
+function extractMainTitle(content: string, fallback: string): string {
+    const h1Match = content.match(/^#\s+(.+)$/m);
+    if (h1Match) {
+        return h1Match[1].trim().replace(/\s*\([A-Z0-9-]+\)$/, '');
+    }
+    return fallback;
+}
 
 /**
  * Builds a list of sections and their corresponding documents for a given mode (operator/engineer).
@@ -48,10 +92,14 @@ export function getWikiData(mode: string): DocSection[] {
                     const fileContent = fs.readFileSync(filePath, 'utf8');
                     const { data, content } = matter(fileContent);
 
+                    const toc = extractHeadings(content);
+                    const title = extractMainTitle(content, (data as DocMetadata).title || file.replace('.md', ''));
+
                     return {
                         id: file.replace('.md', ''),
-                        metadata: data as DocMetadata,
-                        content
+                        metadata: { ...data, title } as DocMetadata,
+                        content,
+                        toc
                     };
                 })
                 .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0));

@@ -16,8 +16,9 @@ import { PHYSICS_CONFIG } from './physicsConfig';
 import deepEqual from 'fast-deep-equal';
 
 export class Brain {
-    private static instance: Brain;
+    private static instances: Map<string, Brain> = new Map();
     private state: GraphState;
+    private id: string;
 
     private topology: TopologyManager;
     private worker: WorkerOrchestrator;
@@ -29,7 +30,8 @@ export class Brain {
     private pendingPatch: IncrementalPatch = { dirtyChainNodeIds: [] };
     private dirtyNodes: Set<string> = new Set();
 
-    private constructor() {
+    private constructor(id: string) {
+        this.id = id;
         this.state = {
             nodes: new Map(),
             edges: [],
@@ -225,11 +227,44 @@ export class Brain {
         return PHYSICS_CONFIG;
     }
 
-    public static getInstance(): Brain {
-        if (!Brain.instance) {
-            Brain.instance = new Brain();
+    public static getComputeSession(id: string = 'main'): Brain {
+        if (!Brain.instances.has(id)) {
+            Brain.instances.set(id, new Brain(id));
         }
-        return Brain.instance;
+        return Brain.instances.get(id)!;
+    }
+
+    /** Legacy alias for the main compute session */
+    public static getInstance(): Brain {
+        return this.getComputeSession('main');
+    }
+
+    /** 
+     * Completely destroys this brain instance, cleaning up all intervals, 
+     * workers, and listeners. 
+     */
+    public dispose() {
+        // 1. Stop Heartbeat
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+
+        // 2. Shut down Worker
+        this.worker.dispose();
+
+        // 3. Clear Listeners
+        this.listeners.clear();
+
+        // 4. Reset State
+        this.state = { nodes: new Map(), edges: [] };
+        this.topology.clear();
+        this.dirtyNodes.clear();
+
+        // 5. Remove from instances map
+        Brain.instances.delete(this.id);
+
+        console.log(`[Brain] Session "${this.id}" disposed.`);
     }
 
     public on(eventType: string, callback: (payload: unknown) => void): () => void {

@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { Brain } from '../engine/Brain';
+import { useBrain } from '../context/BrainContext';
 import { DataType } from '../types/payload';
 
 /**
@@ -10,7 +11,8 @@ import { DataType } from '../types/payload';
  * Doesn't strictly block connections but provides metadata for visual feedback.
  */
 export function useNose() {
-    const getBrain = useCallback(() => Brain.getInstance(), []);
+    const brain = useBrain();
+    const getBrain = useCallback(() => brain, [brain]);
 
     /**
      * Identifies the data type of a specific node's current value.

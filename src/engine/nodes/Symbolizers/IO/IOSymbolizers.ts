@@ -1,6 +1,7 @@
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeSymbolizer } from '../../../NodeRegistry';
 import { Brain } from '../../../Brain';
+import { NodeLogic } from '../../../types';
 
 export const IOSymbolizers: Record<string, NodeSymbolizer> = {
     'IO-01': (node) => {
@@ -55,10 +56,12 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
             ]
         });
     },
-    'IO-21': (node) => {
+    'IO-21': (node: NodeLogic, inputs: Record<string, any>, brain?: Brain) => {
         let total = 0;
         const accumulateValue = (currentNodeId: string): void => {
-            const brainNodeMap = Brain.getInstance().getNodesMap();
+            // If brain is not provided (standalone test/utility), we fall back to singleton if exists
+            const activeBrain = brain || (Brain as any).getInstance();
+            const brainNodeMap = activeBrain.getNodesMap();
             const currentNode = brainNodeMap.get(currentNodeId);
             const nodeData = (currentNode?.data || (currentNodeId === node.id ? node.data : {})) as Record<string, unknown>;
             if (nodeData.prevAbacusId) accumulateValue(nodeData.prevAbacusId as string);

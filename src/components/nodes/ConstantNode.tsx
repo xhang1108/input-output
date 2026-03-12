@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { NodeProps, Position } from '@xyflow/react';
 import { BaseNode, HandleConfig } from './BaseNode';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -34,6 +35,7 @@ const HANDLES: HandleConfig[] = [
 
 export const ConstantNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const constMenu = useNodeMenu();
     const precMenu = useNodeMenu();
 
@@ -47,21 +49,21 @@ export const ConstantNode = memo((props: NodeProps) => {
     }), [data]);
 
     const handleConstantSelect = useCallback((item: CategorizedMenuItem) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { val: item.id } }
         });
         constMenu.closeMenu();
-    }, [id, constMenu]);
+    }, [id, constMenu, brain]);
 
     const handlePrecisionSelect = useCallback((item: CategorizedMenuItem) => {
         const p = parseInt(item.id);
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { precision: p } }
         });
         precMenu.closeMenu();
-    }, [id, precMenu]);
+    }, [id, precMenu, brain]);
 
     const handleConstTrigger = (e: React.MouseEvent) => {
         constMenu.handleTrigger(e);

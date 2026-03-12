@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useReactFlow, Node } from '@xyflow/react';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { Brain } from '../engine/Brain';
+import { useBrain } from '../context/BrainContext';
 import { Transaction } from '../engine/types';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { HandleConfig } from '../types/NodeDefinition';
@@ -12,7 +13,8 @@ import { HandleConfig } from '../types/NodeDefinition';
  */
 export function useSelection() {
     const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
-    const config = Brain.getInstance().getPhysicsConfig();
+    const brain = useBrain();
+    const config = brain.getPhysicsConfig();
 
     // --- Command: Delete Selected ---
     const deleteSelected = useCallback(() => {
@@ -167,7 +169,7 @@ export function useSelection() {
                 }
             });
 
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+            brain.applyTransaction({ type: 'BATCH', payload: txs });
             return;
         }
 
@@ -189,7 +191,7 @@ export function useSelection() {
         });
 
         // 2. Add padding (extra top for label)
-        const config = Brain.getInstance().getPhysicsConfig();
+        const config = brain.getPhysicsConfig();
         const PAD = config.layout.nodePadding;
         const TOP_PAD = config.layout.frameTopPadding;
 
@@ -234,7 +236,7 @@ export function useSelection() {
             });
         });
 
-        Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+        brain.applyTransaction({ type: 'BATCH', payload: txs });
     }, [getNodes]);
 
     // --- Command: Detach / Ungroup (Alt + G or Drag Out) ---
@@ -262,7 +264,7 @@ export function useSelection() {
                 type: 'DISCONNECT',
                 payload: e.id
             }));
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+            brain.applyTransaction({ type: 'BATCH', payload: txs });
         }
     }, [getNodes, getEdges]);
 
@@ -325,7 +327,7 @@ export function useSelection() {
         });
 
         if (txs.length > 0) {
-            Brain.getInstance().applyTransaction({ type: 'BATCH', payload: txs });
+            brain.applyTransaction({ type: 'BATCH', payload: txs });
         }
     }, [getNodes, getEdges]);
 

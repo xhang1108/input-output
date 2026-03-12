@@ -249,7 +249,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ]
     },
 
-    // ─── 3. Math ───────────────────────────────────────────
     {
         id: 'MA-01',
         label: 'Basic Math',

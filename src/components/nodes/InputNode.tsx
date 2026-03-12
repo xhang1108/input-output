@@ -2,20 +2,22 @@ import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 
 export const InputNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const val = parseFloat(e.target.value);
         if (!isNaN(val)) {
-            Brain.getInstance().applyTransaction({
+            brain.applyTransaction({
                 type: 'UPDATE_VALUE',
                 payload: { id, value: val } // Brain will wrap this
             });
         }
-    }, [id]);
+    }, [id, brain]);
 
     const displayValue = Number(PayloadUtils.unwrap(data.value)) || 0;
 
@@ -31,7 +33,7 @@ export const InputNode = memo((props: NodeProps) => {
                         placeholder="Text..."
                         value={String(PayloadUtils.unwrap(data.value) || '')}
                         onChange={(e) => {
-                            Brain.getInstance().applyTransaction({
+                            brain.applyTransaction({
                                 type: 'UPDATE_VALUE',
                                 payload: { id, value: PayloadUtils.createSymbolic(e.target.value) }
                             });
@@ -71,7 +73,7 @@ export const InputNode = memo((props: NodeProps) => {
                                 e.currentTarget.value = String(newVal); // This might desync with React state if not careful
 
                                 // Update Brain
-                                Brain.getInstance().applyTransaction({
+                                brain.applyTransaction({
                                     type: 'UPDATE_VALUE',
                                     payload: { id, value: newVal }
                                 });

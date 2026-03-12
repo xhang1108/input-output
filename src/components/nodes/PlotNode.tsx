@@ -1,11 +1,13 @@
 import { memo, useMemo, useRef, useCallback } from 'react';
 import { NodeProps, Position } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
+import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { VegaEmbed } from 'react-vega';
 
 export const PlotNode = memo((props: NodeProps) => {
-    const { data } = props;
+    const { data, id } = props;
+    const brain = useBrain();
 
     // 3.1 Mode Switching Logic
     const viewMode = (data.viewMode as 'line' | 'bar' | 'scatter' | 'area' | 'vector' | 'heatmap' | 'hist') || 'line';
@@ -408,11 +410,13 @@ export const PlotNode = memo((props: NodeProps) => {
                 // Update ref BEFORE transaction to block feedback re-renders from triggering another update
                 lastSyncedRange.current = [Number(newMinX), Number(newMaxX)];
 
-                const brain = require('../../engine/Brain').Brain.getInstance();
+                // Update ref BEFORE transaction to block feedback re-renders from triggering another update
+                lastSyncedRange.current = [Number(newMinX), Number(newMaxX)];
+
                 brain.applyTransaction({
                     type: 'UPDATE_NODE_DATA',
                     payload: {
-                        id: props.id,
+                        id: id,
                         data: {
                             minX: Number(Number(newMinX).toFixed(4)),
                             maxX: Number(Number(newMaxX).toFixed(4))
@@ -421,7 +425,7 @@ export const PlotNode = memo((props: NodeProps) => {
                 });
             }
         }
-    }, [props.id, data.minX, data.maxX]);
+    }, [id, data.minX, data.maxX, brain]);
 
     const signalListeners = useMemo(() => ({
         grid: handleGridSignal
@@ -445,10 +449,9 @@ export const PlotNode = memo((props: NodeProps) => {
                             <button
                                 key={m}
                                 onClick={() => {
-                                    const brain = require('../../engine/Brain').Brain.getInstance();
                                     brain.applyTransaction({
                                         type: 'UPDATE_NODE_DATA',
-                                        payload: { id: props.id, data: { viewMode: m } }
+                                        payload: { id, data: { viewMode: m } }
                                     });
                                 }}
                                 className={`px-2 py-0.5 text-[9px] uppercase font-bold transition-colors ${viewMode === m ? 'bg-purple-600/50 text-purple-200' : 'bg-transparent text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
@@ -462,10 +465,9 @@ export const PlotNode = memo((props: NodeProps) => {
                     {seriesCount > 1 && (
                         <button
                             onClick={() => {
-                                const brain = require('../../engine/Brain').Brain.getInstance();
                                 brain.applyTransaction({
                                     type: 'UPDATE_NODE_DATA',
-                                    payload: { id: props.id, data: { dualAxis: !data.dualAxis } }
+                                    payload: { id, data: { dualAxis: !data.dualAxis } }
                                 });
                             }}
                             className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold transition-colors border ${data.dualAxis
@@ -524,10 +526,9 @@ export const PlotNode = memo((props: NodeProps) => {
                             value={(data.minX ?? -10) as string | number}
                             className="bg-transparent outline-none text-zinc-300 w-full text-center"
                             onChange={(e) => {
-                                const brain = require('../../engine/Brain').Brain.getInstance();
                                 brain.applyTransaction({
                                     type: 'UPDATE_NODE_DATA',
-                                    payload: { id: props.id, data: { minX: Number(e.target.value) } }
+                                    payload: { id, data: { minX: Number(e.target.value) } }
                                 });
                             }}
                         />
@@ -539,10 +540,9 @@ export const PlotNode = memo((props: NodeProps) => {
                             value={(data.maxX ?? 10) as string | number}
                             className="bg-transparent outline-none text-zinc-300 w-full text-center"
                             onChange={(e) => {
-                                const brain = require('../../engine/Brain').Brain.getInstance();
                                 brain.applyTransaction({
                                     type: 'UPDATE_NODE_DATA',
-                                    payload: { id: props.id, data: { maxX: Number(e.target.value) } }
+                                    payload: { id, data: { maxX: Number(e.target.value) } }
                                 });
                             }}
                         />
@@ -554,10 +554,9 @@ export const PlotNode = memo((props: NodeProps) => {
                             value={(data.points ?? 100) as string | number}
                             className="bg-transparent outline-none text-zinc-300 w-full text-center"
                             onChange={(e) => {
-                                const brain = require('../../engine/Brain').Brain.getInstance();
                                 brain.applyTransaction({
                                     type: 'UPDATE_NODE_DATA',
-                                    payload: { id: props.id, data: { points: Number(e.target.value) } }
+                                    payload: { id, data: { points: Number(e.target.value) } }
                                 });
                             }}
                         />

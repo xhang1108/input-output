@@ -3,6 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import { ResizeDimensions } from './useFlexibleResize';
 import { NODE_DEFINITIONS } from '../../../definitions/nodeDefinitions';
 import { Brain } from '../../../engine/Brain';
+import { useBrain } from '../../../context/BrainContext';
 
 interface UseNodeDimensionsProps {
     id: string;
@@ -22,6 +23,7 @@ interface UseNodeDimensionsProps {
  * (e.g. matrix rows/cols) that occurred during the drag.
  */
 export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResizeCallback }: UseNodeDimensionsProps) => {
+    const brain = useBrain();
     const { updateNodeData, getNode } = useReactFlow();
     const [localSize, setLocalSize] = useState<{ w: number; h: number } | null>(null);
     // Captures the size + full data at the START of a drag for correct Undo payload
@@ -62,8 +64,8 @@ export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResiz
         startSizeRef.current = { w: curW, h: curH };
 
         // Block useBrainSync UPDATE_NODE_DATA during resize to prevent history spam
-        Brain.getInstance().isResizing = true;
-    }, [data.width, data.height, definition]);
+        brain.isResizing = true;
+    }, [brain, data.width, data.height, definition]);
 
     const onResizeEnd = useCallback(({ screenW, screenH }: ResizeDimensions) => {
         // Clear local override — let React Flow State / Brain take over
@@ -79,10 +81,8 @@ export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResiz
             : undefined;
         startSizeRef.current = null;
 
-        // --- Atomic Undo Commit ---
         // Get the final React Flow node data (all updateNodeData calls during drag are reflected here)
         const finalNodeData = getNode(id)?.data;
-        const brain = Brain.getInstance();
 
         if (finalNodeData) {
             // Exclude value (managed by Brain) and raw dimension fields (handled by RESIZE_NODE below)

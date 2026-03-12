@@ -2,17 +2,19 @@ import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 
 export const SmoothingNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const windowMode = data.windowMode !== undefined ? Number(data.windowMode) : 3;
 
     const updateData = useCallback((updates: Partial<typeof data>) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: updates }
         });
-    }, [id]);
+    }, [id, brain]);
 
     return (
         <BaseNode {...props}>

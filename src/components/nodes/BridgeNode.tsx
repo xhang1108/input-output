@@ -2,11 +2,13 @@ import { memo } from 'react';
 import { Position, NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { CapsuleHandle } from './CapsuleHandle';
 
 export const BridgeNode = memo((props: NodeProps) => {
     const { id, isConnectable } = props;
-    const logic = Brain.getInstance().getNode(id);
+    const brain = useBrain();
+    const logic = brain.getNode(id);
     const isInput = logic?.type === 'BRIDGE_IN';
 
     // Fallback if data is missing

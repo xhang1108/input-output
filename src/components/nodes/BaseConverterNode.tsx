@@ -4,13 +4,14 @@ import { memo } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { HandleConfig } from '../../types/NodeDefinition';
-import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 
 // Define bases options
 const BASES = ['BIN', 'OCT', 'DEC', 'DUO', 'HEX'] as const;
 
 export const BaseConverterNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
 
     // Standard handles for 1-in-1-out
     const handles: HandleConfig[] = [
@@ -21,7 +22,7 @@ export const BaseConverterNode = memo((props: NodeProps) => {
     const currentBase = (data.base as string) || 'HEX';
 
     const handleBaseClick = (base: string) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: {
                 id,

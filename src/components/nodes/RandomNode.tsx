@@ -2,7 +2,7 @@
 import React, { memo, useState, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -14,28 +14,25 @@ const RANDOM_MODES: CategorizedMenuItem[] = [
 
 export const RandomNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const { updateNodeData } = useReactFlow();
-
-
-
 
     const mode = data.mode as string || 'scalar';
     const isFloat = data.isFloat !== false;
 
     const handleChange = useCallback((key: string, value: unknown) => {
         updateNodeData(id, { [key]: value });
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { [key]: value } }
         });
-    }, [id, updateNodeData]);
+    }, [id, updateNodeData, brain]);
 
     const handleMenuSelect = useCallback((item: CategorizedMenuItem) => {
         handleChange('mode', item.id);
         closeMenu();
-    }, [handleChange]);
-
+    }, [handleChange, closeMenu]);
 
     const handleRegenerate = () => {
         const trigger = Date.now();

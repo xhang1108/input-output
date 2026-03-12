@@ -2,7 +2,7 @@
 import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
@@ -14,10 +14,8 @@ const MODE_ITEMS: CategorizedMenuItem[] = [
 
 export const ButtonNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
-
-
-
 
     const isActive = !!PayloadUtils.unwrap(data.value);
     const mode = (data as any).mode || 'sticky';
@@ -30,28 +28,27 @@ export const ButtonNode = memo((props: NodeProps) => {
     const nodeData = { ...data, handles };
 
     const toggleActive = useCallback(() => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { value: !isActive } }
         });
-    }, [id, isActive]);
+    }, [id, isActive, brain]);
 
     const setPressed = useCallback((pressed: boolean) => {
         if (isSticky) return;
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { value: pressed } }
         });
-    }, [id, isSticky]);
+    }, [id, isSticky, brain]);
 
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { mode: item.id, value: false } }
         });
         closeMenu();
-    }, [id]);
-
+    }, [id, closeMenu, brain]);
 
     const currentModeLabel = isSticky ? 'Sticky' : 'Momentary';
 

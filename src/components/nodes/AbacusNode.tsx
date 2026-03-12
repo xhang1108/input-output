@@ -3,12 +3,14 @@ import { BaseNode } from './BaseNode';
 import { NodeProps, Position, useReactFlow } from '@xyflow/react';
 
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { AbacusRod } from './AbacusRod';
 import { ResizeHandle } from './ResizeHandle';
 import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 
 export const AbacusNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
+    const brain = useBrain();
     const { updateNodeData, getNode } = useReactFlow();
     const nodeRef = useRef<HTMLDivElement>(null);
 
@@ -44,8 +46,8 @@ export const AbacusNode = memo((props: NodeProps) => {
         setLocalWidth(null);
         // Only update width, keep current height
         const currentHeight = (getNode(id)?.measured?.height) || (data.height as number) || 100;
-        Brain.getInstance().resizeNode(id, screenW, currentHeight);
-    }, [id, data.height, getNode]);
+        brain.resizeNode(id, screenW, currentHeight);
+    }, [id, data.height, getNode, brain]);
 
     // Adjust digits array when rodCount changes
     useEffect(() => {
@@ -92,7 +94,7 @@ export const AbacusNode = memo((props: NodeProps) => {
         setDigits(newDigits);
         updateNodeData(id, { digits: newDigits });
 
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { digits: newDigits } }
         });

@@ -3,6 +3,7 @@ import { memo, useCallback, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { InputOutputEngine } from '../../engine/InputOutputEngine';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
@@ -46,6 +47,7 @@ const PREDEFINED_UNIT_IDS = UNIT_ITEMS.map(u => u.id);
 
 export const UnitNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
 
     // Remote states
@@ -86,19 +88,19 @@ export const UnitNode = memo((props: NodeProps) => {
                 updates.unit = unit;
             }
 
-            Brain.getInstance().applyTransaction({
+            brain.applyTransaction({
                 type: 'UPDATE_NODE_DATA',
                 payload: { id, data: updates }
             });
         } catch (e) {
             setIsValid(false);
         }
-    }, [id, mode]);
+    }, [id, mode, brain]);
 
     const handleMenuSelect = (item: CategorizedMenuItem) => {
         if (item.id === 'CUSTOM_ENTRY') {
             setMode('custom');
-            Brain.getInstance().applyTransaction({
+            brain.applyTransaction({
                 type: 'UPDATE_NODE_DATA',
                 payload: { id, data: { unit: 'CUSTOM' } }
             });
@@ -129,7 +131,7 @@ export const UnitNode = memo((props: NodeProps) => {
             setLocalUnit(fallback);
             validateAndApply(fallback);
         } else {
-            Brain.getInstance().applyTransaction({
+            brain.applyTransaction({
                 type: 'UPDATE_NODE_DATA',
                 payload: { id, data: { unit: 'CUSTOM' } }
             });

@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+import { useCallback, RefObject, useEffect, useRef } from 'react';
+import { useBrain } from '../context/BrainContext';
 import { Brain } from '../engine/Brain';
 import { GraphCodec } from '../engine/GraphCodec';
 import { parseLatexToGraph } from '../utils/latex/latexToGraph';
@@ -8,23 +9,23 @@ import { parseLatexToGraph } from '../utils/latex/latexToGraph';
  * Handles all I/O flows: Import (Eating) and Export (Speaking).
  */
 export function useMouth() {
-    const getBrain = useCallback(() => Brain.getInstance(), []);
+    const brain = useBrain();
 
     /**
      * Generates a IOGL representation of the current graph.
      */
     const generateIOGL = useCallback(() => {
-        const graph = getBrain().toInjectable();
+        const graph = brain.toInjectable();
         return GraphCodec.encode(graph);
-    }, [getBrain]);
+    }, [brain]);
 
     /**
      * Generates a JSON representation of the current graph.
      */
     const generateJSON = useCallback(() => {
-        const graph = getBrain().toInjectable();
+        const graph = brain.toInjectable();
         return JSON.stringify(graph, null, 2);
-    }, [getBrain]);
+    }, [brain]);
 
     /**
      * Triggers a browser download of a string content.
@@ -78,7 +79,6 @@ export function useMouth() {
                 throw new Error(`Please enter ${mode} data.`);
             }
 
-            const brain = getBrain();
             let injectDiagnostics: string[] = [];
             let parseDiagnostics: string[] = [];
 
@@ -131,7 +131,7 @@ export function useMouth() {
                 error: (err as Error).message || "Failed to parse or inject data."
             };
         }
-    }, [getBrain]);
+    }, [brain]);
 
     return {
         generateIOGL,

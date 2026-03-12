@@ -3,6 +3,7 @@ import { memo, useCallback, useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
@@ -28,6 +29,7 @@ const PRECISION_ITEMS: CategorizedMenuItem[] = [
 
 export const RoundingNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const opMenu = useNodeMenu();
     const precMenu = useNodeMenu();
 
@@ -42,21 +44,21 @@ export const RoundingNode = memo((props: NodeProps) => {
     const nodeData = { ...data, handles };
 
     const handleOpSelect = useCallback((item: CategorizedMenuItem) => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { op: item.id } }
         });
         opMenu.closeMenu();
-    }, [id, opMenu]);
+    }, [id, opMenu, brain]);
 
     const handlePrecSelect = useCallback((item: CategorizedMenuItem) => {
         const p = parseInt(item.id);
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { precision: p } }
         });
         precMenu.closeMenu();
-    }, [id, precMenu]);
+    }, [id, precMenu, brain]);
 
     const currentOpLabel = MODE_ITEMS.find(i => i.id === op)?.label || 'Round';
     const currentPrecLabel = PRECISION_ITEMS.find(i => i.id === precision.toString())?.label || `${precision} d.p.`;

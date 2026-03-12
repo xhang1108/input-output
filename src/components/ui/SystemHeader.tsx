@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, BookOpen, LayoutGrid, Terminal } from 'lucide-react';
 import { AuthButton } from './AuthButton';
 
-type WikiMode = 'operator' | 'engineer';
+type WikiMode = 'user' | 'developer';
 
 interface SystemHeaderProps {
     showModeSwitcher?: boolean;
@@ -82,7 +82,7 @@ export function SystemHeader({
 
                 {showModeSwitcher && onModeChange && (
                     <div className="flex bg-zinc-950 border border-zinc-800 p-1 rounded-lg">
-                        {(['operator', 'engineer'] as const).map((m) => (
+                        {(['user', 'developer'] as const).map((m) => (
                             <button
                                 key={m}
                                 onClick={() => onModeChange(m)}

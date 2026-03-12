@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
+import { useBrain } from '../context/BrainContext';
 import { Brain } from '../engine/Brain';
 import { toast } from 'sonner';
 
@@ -11,13 +12,13 @@ import { toast } from 'sonner';
  * Injects the graph into the Brain if found.
  */
 export function useExampleListener() {
+    const brain = useBrain();
     useEffect(() => {
         const checkPendingExample = () => {
             const pendingIogl = localStorage.getItem('pending_example_iogl');
             if (pendingIogl) {
                 try {
                     const graph = JSON.parse(pendingIogl);
-                    const brain = Brain.getInstance();
 
                     // Inject the nodes into the current canvas
                     // we don't clear the existing project, just append the example.

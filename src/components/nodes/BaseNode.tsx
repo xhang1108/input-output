@@ -1,6 +1,7 @@
 import { memo, useState, useRef, useEffect, useMemo, forwardRef } from 'react';
 import { NodeProps, Position, useReactFlow, useUpdateNodeInternals, useNodeConnections, useEdges, useStore, ReactFlowState, Edge } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
@@ -45,7 +46,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
 
     // Visual State Subscription (Strict DOM Isolation)
     const [visualTick, setVisualTick] = useState(0);
-    const brain = Brain.getInstance();
+    const brain = useBrain();
     const nodeLogic = brain.getNode(id);
     const visualState = nodeLogic?.visualState;
 

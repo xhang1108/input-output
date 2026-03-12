@@ -2,11 +2,12 @@
 import { memo } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow, Position } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
 import { HandleConfig } from '../../types/NodeDefinition';
 
 export const FractionNode = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const { updateNodeData } = useReactFlow();
 
     const isMixed = data.mixed === true;
@@ -31,7 +32,7 @@ export const FractionNode = memo((props: NodeProps) => {
     const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
         const checked = e.target.checked;
         updateNodeData(id, { mixed: checked });
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { mixed: checked } }
         });

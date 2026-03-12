@@ -1,12 +1,12 @@
 import { memo, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
-import { InputOutputEngine } from '../../engine/InputOutputEngine';
+import { useBrain } from '../../context/BrainContext';
 import { HandleConfig } from '../../types/NodeDefinition';
 
 export const NodeExpression = memo((props: NodeProps) => {
     const { id, data } = props;
+    const brain = useBrain();
     const [code, setCode] = useState<string>((data.code as string) || '');
 
     const handles: HandleConfig[] = [
@@ -27,7 +27,7 @@ export const NodeExpression = memo((props: NodeProps) => {
     };
 
     const handleBlur = () => {
-        Brain.getInstance().applyTransaction({
+        brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: {
                 id,

@@ -1,11 +1,11 @@
 'use client';
 
 import { useStore, useReactFlow } from '@xyflow/react';
+import { useBrain } from '../../context/BrainContext';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { X, Cpu } from 'lucide-react';
 import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 import { NodeParameter } from '../../types/NodeDefinition';
-import { Brain } from '../../engine/Brain';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 
 // ─── Atomic Field Components ──────────────────────────────────────────────────
@@ -243,6 +243,7 @@ function SettingsSection({
 
 export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const { setNodes, updateNodeData } = useReactFlow();
+    const brain = useBrain();
 
     // Single selected node (reactive to React Flow store)
     const selectedNode = useStore(s => {
@@ -270,7 +271,7 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
         // 2. Specialized Brain Sync
         if (key === 'value') {
-            Brain.getInstance().applyTransaction({
+            brain.applyTransaction({
                 type: 'UPDATE_VALUE',
                 payload: { id: selectedNode.id, value }
             });

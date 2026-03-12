@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
+import { useBrain } from '../context/BrainContext';
 import { NodeLogic } from '../engine/types';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { useAppStore } from '../store/useStore';
@@ -26,8 +27,8 @@ export function useBrainUpdates(
     setNodes: React.Dispatch<React.SetStateAction<Node[]>>,
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>
 ) {
+    const brain = useBrain();
     useEffect(() => {
-        const brain = Brain.getInstance();
 
         const handleGraphChange = (payload?: unknown) => {
             const forceFullSync = payload === true;
