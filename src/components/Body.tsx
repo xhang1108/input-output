@@ -514,7 +514,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     // Auto Insert logic managed by useAutoInsert hook
 
     const updateModifier = useCallback((e: React.MouseEvent) => {
-        const active = e.shiftKey || e.ctrlKey || e.metaKey;
+        const active = e.shiftKey;
         if (active !== isModifierActive) setIsModifierActive(active);
     }, [isModifierActive]);
 
@@ -591,7 +591,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
                     nodeOrigin={[0.5, 0.5]}
                     snapToGrid={effectiveSnap}
-                    selectionKeyCode={['Shift']}
+                    selectionKeyCode={null}
                     multiSelectionKeyCode={['Shift']}
 
                     onPaneContextMenu={(e) => {
@@ -631,7 +631,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
                     nodesDraggable={false} // Disable native drag to use our custom system
                     panOnDrag={[1]}
-                    selectionOnDrag={false}
+                    selectionOnDrag={true}
                     panOnScroll={panOnScroll}
                     zoomOnScroll={!panOnScroll}
                     zoomOnPinch={true}

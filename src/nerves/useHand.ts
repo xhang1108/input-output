@@ -835,6 +835,10 @@ export function useHand() {
         if (target.closest('.react-flow__handle') || target.closest('.react-flow__edge')) return;
         if (target.closest('.nodrag')) return; // Ignore custom drag if clicking on a protected area
 
+        // Note: React Flow uses button 1 for middle-click and 2 for right-click in panOnDrag
+        // We allow these to pass through unless Ctrl+RightClick is used for cutting
+        if ((e.button === 1 || e.button === 2) && !(e.ctrlKey && e.button === 2)) return;
+
         if (e.ctrlKey && e.button === 2) {
             setMode('CUTTING');
             startCut({ x: e.clientX, y: e.clientY });
@@ -849,7 +853,7 @@ export function useHand() {
                     const nodes = getNodes();
                     const clickedNode = nodes.find(n => n.id === nodeId);
                     if (clickedNode) {
-                        if (!e.shiftKey && !e.ctrlKey) {
+                        if (!e.shiftKey) {
                             if (!clickedNode.selected) selectNode(nodeId, true);
                         } else {
                             selectNode(nodeId, false);
