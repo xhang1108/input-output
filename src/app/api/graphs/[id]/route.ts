@@ -38,9 +38,9 @@ export async function PUT(
 
         const { id } = await context.params;
         const body = await req.json();
-        const { payload, title } = body;
+        const { payload, title, nodeCount, edgeCount } = body;
 
-        const updatedGraph = await updateGraph(user.id, id, payload, title);
+        const updatedGraph = await updateGraph(user.id, id, payload, title, nodeCount, edgeCount);
 
         if (!updatedGraph) {
             return NextResponse.json({ error: "Graph not found or no permission" }, { status: 404 });

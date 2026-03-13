@@ -37,10 +37,11 @@ export function getDb() {
 
             if (!sqliteFile) {
                 // Creates an in-memory or empty local.db if Wrangler hasn't generated one yet
-                console.warn("Local Wrangler DB not found. Ensure you ran `wrangler d1 migrations apply io-brain-db --local`.");
+                console.warn("Auth: Local Wrangler DB not found. Ensure you ran `wrangler d1 migrations apply io-brain-db --local`.");
                 sqliteFile = path.resolve('.wrangler/local.db'); 
             }
 
+            console.log("Auth: Using local SQLite database at:", sqliteFile);
             const sqlite = new Database(sqliteFile);
             sqlite.pragma('foreign_keys = OFF'); // Prevent NextAuth missing Local User FK constraint errors
             localDbCache = drizzleSqlite(sqlite, { schema });

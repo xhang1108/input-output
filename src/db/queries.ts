@@ -38,7 +38,9 @@ export async function createGraph(
     title?: string, 
     providedId?: string,
     createdAt?: Date,
-    updatedAt?: Date
+    updatedAt?: Date,
+    nodeCount?: number,
+    edgeCount?: number
 ) {
     const db = getDb();
 
@@ -70,6 +72,8 @@ export async function createGraph(
         userId: userId,
         title: defaultTitle,
         payload,
+        nodeCount: nodeCount || 0,
+        edgeCount: edgeCount || 0,
         createdAt: finalCreatedAt,
         updatedAt: finalUpdatedAt
     }).returning();
@@ -77,7 +81,14 @@ export async function createGraph(
     return inserted;
 }
 
-export async function updateGraph(userId: string, graphId: string, payload?: string, title?: string) {
+export async function updateGraph(
+    userId: string, 
+    graphId: string, 
+    payload?: string, 
+    title?: string,
+    nodeCount?: number,
+    edgeCount?: number
+) {
     const db = getDb();
     const normalizedId = `cloud:${graphId.replace(/^(cloud:)+/gi, '')}`;
 
@@ -87,6 +98,8 @@ export async function updateGraph(userId: string, graphId: string, payload?: str
 
     if (payload !== undefined) updateData.payload = payload;
     if (title !== undefined) updateData.title = title;
+    if (nodeCount !== undefined) updateData.nodeCount = nodeCount;
+    if (edgeCount !== undefined) updateData.edgeCount = edgeCount;
 
     const [updated] = await db.update(schema.graphs)
         .set(updateData)

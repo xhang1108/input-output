@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { payload, title, id, createdAt, updatedAt } = body;
+        const { payload, title, id, createdAt, updatedAt, nodeCount, edgeCount } = body;
 
         if (payload === undefined || payload === null || typeof payload !== "string") {
             return NextResponse.json({ error: "Missing or invalid payload" }, { status: 400 });
@@ -40,7 +40,9 @@ export async function POST(req: NextRequest) {
             title, 
             id,
             createdAt ? new Date(createdAt) : undefined,
-            updatedAt ? new Date(updatedAt) : undefined
+            updatedAt ? new Date(updatedAt) : undefined,
+            nodeCount,
+            edgeCount
         );
 
         return NextResponse.json(newGraph, { status: 201 });

@@ -37,6 +37,7 @@ import { ContextMenu } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
 import { Brain } from '../engine/Brain';
 import { NodeRegistry } from '../engine/NodeRegistry';
+import { SaveManager } from '../services/SaveManager';
 import { useBrain } from '../context/BrainContext';
 import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
@@ -188,7 +189,26 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             logAction('Memory Wiped');
             setTimeout(() => fitView({ duration: 400 }), 100);
         }
-    }, [setNodes, setEdges, logAction, fitView]);
+    }, [setNodes, setEdges, logAction, fitView, brain]);
+
+    const handleRename = useCallback(() => {
+        const currentId = projectId === 'new' ? null : (projectId.startsWith('cloud:') ? projectId : projectId);
+        const meta = currentId ? SaveManager.getMeta(currentId) : null;
+        const currentName = meta?.name || 'Untitled Project';
+
+        const newName = prompt('Enter new project name:', currentName);
+        if (newName && newName !== currentName) {
+            if (currentId) {
+                SaveManager.rename(currentId, newName);
+                logAction(`Project renamed to: ${newName}`);
+                // Trigger an immediate save to sync the new name to cloud if applicable
+                saveProject(true);
+            } else {
+                // If it's a 'new' project, we just save it for the first time with the name
+                saveProject(false);
+            }
+        }
+    }, [projectId, saveProject, logAction]);
 
     // Node Spawner (Command Palette + Auto-Link)
     const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
@@ -684,7 +704,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                                     resetView,
                                     pasteFromClipboard,
                                     selectAll: () => setNodes((nds: Node[]) => nds.map(n => ({ ...n, selected: true }))),
-                                    rename: () => logAction('Rename via Menu (Todo)'),
+                                    rename: handleRename,
                                     duplicateAndGrab: () => { },
                                     copyToClipboard,
                                     detachSelected,
@@ -704,7 +724,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                                         resetView,
                                         pasteFromClipboard,
                                         selectAll: () => { },
-                                        rename: () => logAction('Rename via Menu (Todo)'),
+                                        rename: handleRename,
                                         viewSpecs: () => {
                                             if (docInfo) {
                                                 router.push(`/wiki#${docInfo.anchor}`);

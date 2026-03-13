@@ -8,6 +8,13 @@
       "when": 1773126840373,
       "tag": "0000_yellow_hellion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1773361589794,
+      "tag": "0001_great_namorita",
+      "breakpoints": true
     }
   ]
 }

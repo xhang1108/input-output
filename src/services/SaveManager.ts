@@ -211,8 +211,27 @@ export class SaveManager {
         // Remove legacy keys
         localStorage.removeItem('Input-Output-autocsave');
         localStorage.removeItem('Input-Output-flow-storage-v1');
-
         return id;
+    }
+
+    /**
+     * Purge all cloud-cached data from local storage.
+     * Called on logout to prevent offline access to cloud projects.
+     */
+    static purgeCloudCache(): void {
+        const index = this.list();
+        const cloudIds = index
+            .filter(s => s.id.startsWith('cloud:'))
+            .map(s => s.id);
+            
+        cloudIds.forEach(id => {
+            localStorage.removeItem(SLOT_PREFIX + id);
+        });
+        
+        const newIndex = index.filter(s => !s.id.startsWith('cloud:'));
+        localStorage.setItem(INDEX_KEY, JSON.stringify(newIndex));
+        
+        console.log(`[SaveManager] Purged ${cloudIds.length} cloud projects from cache.`);
     }
 }
 

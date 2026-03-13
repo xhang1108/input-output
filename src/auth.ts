@@ -38,13 +38,18 @@ if (googleId && googleSecret && googleSecret.trim().length > 0) {
 
 let adapter;
 try {
+    console.log("Auth: Initializing adapter...");
     const db = getDb();
+    console.log("Auth: DB obtained from getDb()");
     if (db) {
         adapter = DrizzleAdapter(db);
+        console.log("Auth: Adapter successfully initialized with Drizzle.");
+    } else {
+        console.log("Auth: No DB binding found, adapter remains undefined.");
     }
 } catch (e) {
     if (process.env.NODE_ENV === "development") {
-        console.log("Auth: Running in JWT-only mode (No DB binding/fallback found locally).");
+        console.warn("Auth: Running in JWT-only mode (No DB binding or adapter error).", e);
     } else {
         console.error("Auth: Adapter init failed", e);
     }
@@ -59,38 +64,54 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     secret: process.env.AUTH_SECRET,
     trustHost: true,
+    events: {
+        async createUser({ user }) {
+            console.log("Auth: Event - User Created:", user.id, user.email);
+        },
+        async linkAccount({ account, user }) {
+            console.log("Auth: Event - Account Linked:", account.provider, "to User:", user.id);
+        },
+        async signIn({ user, account, profile }) {
+            console.log("Auth: Event - Sign In Successful:", user?.email, "via", account?.provider);
+        },
+    },
     callbacks: {
-        async jwt({ token, user, account }) {
+        async jwt({ token, user, account, profile }) {
+            console.log("Auth: JWT Callback - Account:", account?.provider);
             // Capture immutable provider ID on first login
             if (account?.providerAccountId) {
                 token.id = account.providerAccountId;
-                console.log("Auth: JWT - New Login Captured:", token.id);
+                console.log("Auth: JWT - New Login Captured ID:", token.id);
             } else if (!token.id) {
                 // Fallback to sub or user.id
                 token.id = token.sub || (user as any)?.id;
             }
-            // Ensure we return a plain object
+            
+            if (token.id) {
+                console.log("Auth: JWT token ID established:", token.id);
+            }
+
             return token;
         },
-        async session({ session, token }) {
-            // Defensively construct a brand new plain object for the client
-            // Next.js 16 (Turbopack) is extremely sensitive to non-serializable data in RSC/Flight stream
-            const userId = (token.id || session.user?.id || token.sub) as string;
+        async session({ session, token, user }) {
+            const userId = (user?.id || token?.id || session.user?.id || token?.sub) as string;
             
-            console.log("Auth: Session Active for User ID:", userId);
+            console.log("Auth: Session Callback for User ID:", userId);
+
+            if (!userId) {
+                console.warn("Auth: Session Callback - No user ID found in session, token, or user object!");
+            }
 
             return {
-                expires: session.expires,
+                ...session,
                 user: {
+                    ...session.user,
                     id: userId,
-                    name: session.user?.name || null,
-                    email: session.user?.email || null,
-                    image: session.user?.image || null,
                 }
             };
         },
     },
-    debug: false,
+    debug: true,
 });
 
 export async function requireAuth() {

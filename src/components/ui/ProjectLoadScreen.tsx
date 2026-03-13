@@ -321,8 +321,8 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                     name: g.title,
                     createdAt: new Date(g.createdAt).getTime(),
                     updatedAt: new Date(g.updatedAt).getTime(),
-                    nodeCount: 0,
-                    edgeCount: 0,
+                    nodeCount: g.nodeCount || 0,
+                    edgeCount: g.edgeCount || 0,
                     version: "2.0"
                 };
             });
@@ -339,8 +339,13 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     useEffect(() => {
         if (session) {
             loadCloudGraphs();
+        } else {
+            // Logout: Clear cloud-prefixed metadata from local storage
+            SaveManager.purgeCloudCache();
+            refreshLocal();
+            setCloudSlots([]);
         }
-    }, [session, loadCloudGraphs]);
+    }, [session, loadCloudGraphs, refreshLocal]);
 
     const handleDelete = async (id: string, isCloud: boolean) => {
         if (isCloud) {
@@ -425,7 +430,9 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                         title,
                         id: canonicalId,
                         createdAt: meta?.createdAt || Date.now(),
-                        updatedAt: meta?.updatedAt || Date.now()
+                        updatedAt: meta?.updatedAt || Date.now(),
+                        nodeCount: meta?.nodeCount || 0,
+                        edgeCount: meta?.edgeCount || 0
                     })
                 });
                 if (!res.ok) {
@@ -485,8 +492,12 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     const projectMap = new Map<string, SaveSlotMeta & { isCloud: boolean }>();
 
     slots.forEach(s => {
-        const cid = getCanonicalId(s.id);
         const isCloudPrefix = s.id.startsWith('cloud:');
+        
+        // Hide cloud projects from local list when logged out
+        if (!session && isCloudPrefix) return;
+
+        const cid = getCanonicalId(s.id);
         projectMap.set(cid, { ...s, isCloud: isCloudPrefix });
     });
 

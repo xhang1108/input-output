@@ -84,6 +84,9 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
     const saveProject = useCallback(async (silent = false) => {
         const settings = useAppStore.getState();
+        const { setSaveStatus } = settings;
+        
+        setSaveStatus('SAVING');
         const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);
 
         const slotName = currentSlotIdRef.current
@@ -106,8 +109,10 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 currentSlotIdRef.current = id;
                 // ONLY show local toast if it's strictly a local project
                 if (!isCloud && !silent) toast.success('Project saved locally!');
+                if (!isCloud) setSaveStatus('SAVED');
             } catch (e) {
                 console.error("Local Backup Save Error:", e);
+                setSaveStatus('IDLE');
             }
         }
 
@@ -118,6 +123,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 if (!silent) toast.error('Cloud sync unavailable: Authenticated session required', {
                     description: 'Please sign in to enable persistent cloud storage.'
                 });
+                setSaveStatus('IDLE');
                 return;
             }
 
@@ -132,7 +138,9 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                     body: JSON.stringify({ 
                         payload: encoded, 
                         title,
-                        id: actualId // Pass our pre-generated UUID to the backend
+                        id: actualId, // Pass our pre-generated UUID to the backend
+                        nodeCount: brain.getNodesMap().size,
+                        edgeCount: brain.getEdges().length
                     })
                 });
 
@@ -154,14 +162,23 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                     );
                 }
 
+                setSaveStatus('SAVED');
                 if (!silent) toast.success('Project saved to Cloud ☁️!');
+                
+                // Reset to idle after a show period
+                setTimeout(() => {
+                    if (useAppStore.getState().saveStatus === 'SAVED') {
+                        setSaveStatus('IDLE');
+                    }
+                }, 2000);
             } catch (e: any) {
+                setSaveStatus('IDLE');
                 if (!silent) toast.error(`Cloud save failed (Local Backup remains safe): ${e.message}`);
                 console.error("Cloud Save Error:", e);
             }
         }
 
-    }, [isCloud, actualId, session]); 
+    }, [isCloud, actualId, session, brain]); 
 
     // Debounced Auto-Save (5 seconds for Cloud Sync Safety)
     const autoSave = useDebounceCallback(() => {
@@ -169,6 +186,19 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             saveProject(true);
         }
     }, 5000);
+
+    // Force sync on tab close / navigation
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            // If it's a known project, trigger one last silent save
+            if (actualId !== 'new') {
+                saveProject(true);
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [actualId, saveProject]);
 
     const loadProject = useCallback((encoded: string) => {
         const data = Serializer.deserialize(encoded);
