@@ -7,10 +7,11 @@ import { v7 as uuidv7 } from 'uuid';
 import {
     Plus, Trash2, Pencil, Check, X,
     Box, GitBranch, Clock, Cloud, HardDrive,
-    ArrowDownToLine
+    ArrowDownToLine, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SaveManager, SaveSlotMeta } from '../../services/SaveManager';
+import { SharePopover } from './SharePopover';
 
 // ─── Helper ───────────────────────────────────────────
 
@@ -41,6 +42,7 @@ function SaveSlotCard({
     canSyncToCloud = false,
     isTransferring = false,
     loading = false,
+    onVisibilityChange,
 }: {
     meta: SaveSlotMeta;
     isCloud?: boolean;
@@ -51,6 +53,7 @@ function SaveSlotCard({
     canSyncToCloud?: boolean;
     isTransferring?: boolean;
     loading?: boolean;
+    onVisibilityChange?: (visibility: 'private' | 'public') => void;
 }) {
     const [isRenaming, setIsRenaming] = useState(false);
     const [nameInput, setNameInput] = useState(meta.name);
@@ -70,24 +73,29 @@ function SaveSlotCard({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className={`group relative flex flex-col overflow-hidden border border-zinc-900 
-                       rounded-xl bg-linear-to-br transition-all duration-300
-                       ${isCloud ? 'from-blue-900/10 to-blue-900/5 shadow-[0_0_15px_-3px_rgba(59,130,246,0.1)]' : 'from-zinc-900/50 to-zinc-900/30'}
+            className={`group relative flex flex-col border transition-all duration-300
+                       ${meta.syncStatus === 'pending' 
+                        ? 'border-amber-500/50 from-amber-900/10 to-amber-900/5 shadow-[0_0_20px_-3px_rgba(245,158,11,0.15)]' 
+                        : isCloud ? 'border-zinc-900 from-blue-900/10 to-blue-900/5 shadow-[0_0_15px_-3px_rgba(59,130,246,0.1)]' : 'border-zinc-900 from-zinc-900/50 to-zinc-900/30'}
                        ${loading ? 'opacity-70 pointer-events-none' : 'hover:border-zinc-700 hover:shadow-xl hover:-translate-y-1 cursor-pointer'} 
                        ${isTransferring ? 'animate-pulse' : ''}`}
             whileTap={{ scale: 0.97, opacity: 0.8 }}
             onClick={() => !loading && onOpen()}
         >
             {/* ── Type Badge ── */}
-            <div className={`absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border ${isCloud
-                ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'}`}>
+            <div className={`absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border ${
+                meta.syncStatus === 'pending'
+                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                    : isCloud
+                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                        : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'}`}>
                 {isTransferring ? (
                     <div className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
                 ) : (
+                    meta.syncStatus === 'pending' ? <AlertTriangle className="w-2.5 h-2.5" /> :
                     isCloud ? <Cloud className="w-2.5 h-2.5" /> : <HardDrive className="w-2.5 h-2.5" />
                 )}
-                {isTransferring ? 'Syncing...' : (isCloud ? 'Cloud' : 'Local')}
+                {isTransferring ? 'Syncing...' : (meta.syncStatus === 'pending' ? 'Pending' : isCloud ? 'Cloud' : 'Local')}
             </div>
 
             {/* Visual Header / Thumbnail */}
@@ -102,13 +110,13 @@ function SaveSlotCard({
                 ) : (
                     <div className="flex items-center gap-3">
                         <div className="flex flex-col items-center">
-                            <span className={`text-3xl font-bold ${isCloud ? 'text-blue-400/70' : 'text-zinc-500'}`}>{meta.nodeCount}</span>
-                            <span className={`text-[10px] uppercase tracking-wider ${isCloud ? 'text-blue-500/50' : 'text-zinc-600'}`}>nodes</span>
+                            <span className={`text-3xl font-bold ${meta.syncStatus === 'pending' ? 'text-amber-500/70' : isCloud ? 'text-blue-400/70' : 'text-zinc-500'}`}>{meta.nodeCount}</span>
+                            <span className={`text-[10px] uppercase tracking-wider ${meta.syncStatus === 'pending' ? 'text-amber-500/50' : isCloud ? 'text-blue-500/50' : 'text-zinc-600'}`}>nodes</span>
                         </div>
-                        <div className={`w-px h-10 ${isCloud ? 'bg-blue-900/30' : 'bg-zinc-800'}`} />
+                        <div className={`w-px h-10 ${meta.syncStatus === 'pending' ? 'bg-amber-901/30' : isCloud ? 'bg-blue-900/30' : 'bg-zinc-800'}`} />
                         <div className="flex flex-col items-center">
-                            <span className={`text-3xl font-bold ${isCloud ? 'text-blue-400/70' : 'text-zinc-500'}`}>{meta.edgeCount}</span>
-                            <span className={`text-[10px] uppercase tracking-wider ${isCloud ? 'text-blue-500/50' : 'text-zinc-600'}`}>edges</span>
+                            <span className={`text-3xl font-bold ${meta.syncStatus === 'pending' ? 'text-amber-500/70' : isCloud ? 'text-blue-400/70' : 'text-zinc-500'}`}>{meta.edgeCount}</span>
+                            <span className={`text-[10px] uppercase tracking-wider ${meta.syncStatus === 'pending' ? 'text-amber-500/50' : isCloud ? 'text-blue-500/50' : 'text-zinc-600'}`}>edges</span>
                         </div>
                     </div>
                 )}
@@ -118,14 +126,14 @@ function SaveSlotCard({
                 <div className={`absolute bottom-3 left-3 w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-blue-500/20' : 'bg-zinc-800'}`} />
                 <div className={`absolute bottom-3 right-3 w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-blue-500/20' : 'bg-zinc-800'}`} />
 
-                {isCloud && !loading && (
-                    <motion.div
-                        animate={{ rotate: [0, 5, 0, -5, 0] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute bottom-2 right-2"
-                    >
-                        <Cloud className="w-6 h-6 text-blue-500/20" />
-                    </motion.div>
+                {/* Dynamic Status Badge (Pending Sync) */}
+                {isCloud && !loading && meta.syncStatus === 'pending' && (
+                    <div className="absolute top-2 right-2 animate-in fade-in zoom-in duration-300">
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[9px] font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            Pending Sync
+                        </div>
+                    </div>
                 )}
             </div>
 
@@ -151,7 +159,7 @@ function SaveSlotCard({
                             </button>
                         </div>
                     ) : (
-                        <span className="text-sm font-semibold text-zinc-200 truncate flex-1">{meta.name}</span>
+                        <span className={`text-sm font-semibold truncate flex-1 ${meta.syncStatus === 'pending' ? 'text-amber-400' : 'text-zinc-200'}`}>{meta.name}</span>
                     )}
                 </div>
 
@@ -167,15 +175,6 @@ function SaveSlotCard({
                     className="flex items-center gap-1.5 pt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
                     onClick={e => e.stopPropagation()}
                 >
-                    <button
-                        onClick={onOpen}
-                        className={`flex-1 text-xs py-1.5 rounded-sm font-medium transition-colors cursor-pointer ${isCloud
-                            ? 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'
-                            : 'bg-unit/15 text-unit hover:bg-unit/25'
-                            }`}
-                    >
-                        {loading ? 'Opening...' : 'Open'}
-                    </button>
 
                     {isCloud ? (
                         <button
@@ -220,13 +219,22 @@ function SaveSlotCard({
                             </button>
                         </div>
                     ) : (
-                        <button
-                            onClick={() => setConfirmDelete(true)}
-                            className="p-1.5 rounded-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                            title="Delete"
-                        >
-                            <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <>
+                            {isCloud && (
+                                <SharePopover 
+                                    projectId={meta.id} 
+                                    visibility={meta.visibility || 'private'}
+                                    onVisibilityChange={onVisibilityChange}
+                                />
+                            )}
+                            <button
+                                onClick={() => setConfirmDelete(true)}
+                                className="p-1.5 rounded-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                title="Delete"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -323,11 +331,12 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                     updatedAt: new Date(g.updatedAt).getTime(),
                     nodeCount: g.nodeCount || 0,
                     edgeCount: g.edgeCount || 0,
-                    version: "2.0"
+                    version: "2.0",
+                    visibility: g.visibility || 'private'
                 };
             });
 
-            setCloudSlots(mappedSlots);
+            setCloudSlots(JSON.parse(JSON.stringify(mappedSlots)));
         } catch (e: any) {
             console.error(e);
         } finally {
@@ -357,8 +366,13 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                 if (!res.ok && res.status !== 404) {
                     throw new Error("Failed to delete cloud graph");
                 }
+
+                // IMPORTANT: Always purge the local backup/cache too to prevent it from "re-appearing"
+                // due to the unified merge logic in ProjectLoadScreen.
+                SaveManager.delete(id);
                 
                 loadCloudGraphs();
+                refreshLocal(); // Refresh local list to reflect the deletion of the backup
             } catch (e) {
                 console.error(e);
                 toast.error("Failed to delete cloud graph");
@@ -369,17 +383,31 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
         }
     };
 
-    const handleRename = async (id: string, name: string, isCloud: boolean) => {
+    const handleRename = async (id: string, name: string, isCloud: boolean, visibility?: 'private' | 'public') => {
         if (isCloud) {
+            // Optimistic update for visibility toggle to prevent Popover closing on re-render
+            if (visibility) {
+                setCloudSlots(prev => prev.map(s => s.id === id ? { ...s, visibility } : s));
+            }
+
             try {
                 const apiId = getCanonicalId(id);
                 const res = await fetch(`/api/graphs/${apiId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: name })
+                    body: JSON.stringify({ title: name, visibility })
                 });
-                if (!res.ok) throw new Error("Failed to rename cloud graph");
-                loadCloudGraphs();
+                if (!res.ok) {
+                    // Revert on error if visibility was toggled
+                    if (visibility) loadCloudGraphs();
+                    throw new Error("Failed to update cloud graph");
+                }
+                
+                // Only full reload if title changed, visibility is handled optimistically
+                const originalMeta = cloudSlots.find(s => s.id === id);
+                if (originalMeta?.name !== name) {
+                    loadCloudGraphs();
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -435,10 +463,18 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                         edgeCount: meta?.edgeCount || 0
                     })
                 });
+
                 if (!res.ok) {
                     const err = await res.json();
                     throw new Error(err.error || "Cloud sync failed");
                 }
+                // SUCCESS: Cloud is confirmed
+                loadCloudGraphs(); // Refresh dashboard list
+                
+                // CRITICAL: Use correct storage ID with prefix
+                const actualId = getCanonicalId(id); // Ensure we have the canonical ID for the local meta
+                const storageId = `cloud:${actualId}`;
+                SaveManager.updateMeta(storageId, { syncStatus: 'synced' });
             } else {
                 // Actual Network Sync: Remove from Cloud
                 const apiId = canonicalId;
@@ -456,7 +492,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
             
             // If data was missing locally but fetched from cloud, store it temporarily so transferSlot works
             if (!SaveManager.getRawData(id) && !SaveManager.getRawData(`cloud:${canonicalId}`)) {
-                localStorage.setItem(`io-slot-${id}`, rawData);
+                SaveManager.putRawData(id, rawData);
             }
 
             SaveManager.transferSlot(id, newId, meta || undefined);
@@ -510,10 +546,12 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
             ...(existing || s),
             id: s.id,
             isCloud: true,
+            visibility: s.visibility || (existing?.visibility as 'private' | 'public'),
             // Keep the best metadata
             updatedAt: Math.max(s.updatedAt, existing?.updatedAt || 0),
             nodeCount: s.nodeCount || existing?.nodeCount || 0,
-            edgeCount: s.edgeCount || existing?.edgeCount || 0
+            edgeCount: s.edgeCount || existing?.edgeCount || 0,
+            syncStatus: existing?.syncStatus || s.syncStatus
         });
     });
 
@@ -531,7 +569,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
         const id = uuidv7();
         setLoadingId('new-project');
         if (canCreateCloud) {
-            onNewProject(`cloud:${id}`);
+            onNewProject(`cloud:${id}?new=1`);
             toast.info("Initialising cloud-synced project");
         } else {
             onNewProject(id);
@@ -551,6 +589,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
             )}
 
             <main className="flex-1 px-8 py-20">
+                <AutoSyncManager allProjects={allProjects} session={session} refreshLocal={refreshLocal} />
                 <div className="max-w-6xl mx-auto space-y-12">
                     
                     {/* Header Section */}
@@ -593,6 +632,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                                         onDelete={() => handleDelete(meta.id, isCloud)}
                                         onRename={(name) => handleRename(meta.id, name, isCloud)}
                                         onTransfer={(toCloud) => handleTransfer(meta.id, toCloud)}
+                                        onVisibilityChange={(newVisibility) => handleRename(meta.id, meta.name, true, newVisibility)}
                                         canSyncToCloud={!!session && cloudSlots.length < 20}
                                     />
                                 );
@@ -615,5 +655,80 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
             </main>
         </div>
     );
+}
+
+/**
+ * Internal component to handle background sync logic without polluting main render
+ */
+function AutoSyncManager({ allProjects, session, refreshLocal }: { allProjects: any[], session: any, refreshLocal: () => void }) {
+    useEffect(() => {
+        if (!session || typeof navigator === 'undefined' || !navigator.onLine) return;
+
+        const pendingCloud = allProjects.filter(p => p.isCloud && p.syncStatus === 'pending');
+        if (pendingCloud.length === 0) return;
+
+        // Debounce to prevent rapid fire
+        const timer = setTimeout(() => {
+            console.log(`[AutoSync] Found ${pendingCloud.length} projects pending sync. Retrying...`);
+            
+            pendingCloud.forEach(async (p) => {
+                try {
+                    const rawData = SaveManager.getRawData(p.id);
+                    if (!rawData) return;
+
+                    // Clean the ID for API (remove 'cloud:' prefix if present)
+                    const cid = p.id.replace(/^cloud:/, '');
+                    const fetchOptions = {
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            payload: rawData,
+                            title: p.name,
+                            id: cid, // Explicitly provide ID for POST
+                            nodeCount: p.nodeCount,
+                            edgeCount: p.edgeCount,
+                            visibility: p.visibility || 'private'
+                        })
+                    };
+
+                    let res = await fetch(`/api/graphs/${cid}`, {
+                        method: 'PUT',
+                        ...fetchOptions
+                    });
+
+                    // Fallback to POST if project doesn't exist on server yet (404)
+                    if (res.status === 404) {
+                        console.log(`[AutoSync] Project ${cid} not found on server (likely offline created). Attempting POST.`);
+                        res = await fetch(`/api/graphs`, {
+                            method: 'POST',
+                            ...fetchOptions
+                        });
+                    }
+
+                    if (res.ok) {
+                        SaveManager.updateMeta(p.id, { syncStatus: 'synced' });
+                        refreshLocal();
+                        toast.success(`Synced "${p.name}" to Cloud ☁️`);
+                    } else {
+                        const err = await res.json().catch(() => ({ error: 'Sync failed' }));
+                        
+                        if (err.error?.includes('Graph limit reached')) {
+                            toast.error('Cloud Space Full (10/10)', {
+                                description: `Background sync failed for "${p.name}". Please free up some cloud space.`,
+                                duration: 8000
+                            });
+                        }
+                        
+                        console.warn(`[AutoSync] Failed to sync ${p.id}:`, err.error);
+                    }
+                } catch (e) {
+                    console.warn(`[AutoSync] Failed to sync ${p.id}:`, e);
+                }
+            });
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [session, allProjects, refreshLocal]);
+
+    return null;
 }
 

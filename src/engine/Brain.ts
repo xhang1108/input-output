@@ -1130,8 +1130,7 @@ export class Brain {
             }
 
             if (diagnostics.some(d => d.includes('Pre-validation failed'))) {
-                this.log(`Batch injection aborted due to validation errors.`);
-                return diagnostics; // Return early without applying
+                this.log(`Batch injection proceeding with ${edgeTxs.length - diagnostics.length} valid edges (Skipped ${diagnostics.length} invalid connections).`);
             }
 
             const startTime = performance.now();

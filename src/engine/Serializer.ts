@@ -20,13 +20,18 @@ export class Serializer {
         settings: Record<string, unknown>,
         mathPrecision: number = 64
     ): string {
-        const data: ProjectData = {
+        return this.serializeData({
             version: this.VERSION,
             mathPrecision,
             settings: this.cleanSettings(settings),
             graph: brain.toInjectable()
-        };
+        });
+    }
 
+    /**
+     * Serializes a ProjectData object into a compressed URL-safe string.
+     */
+    public static serializeData(data: ProjectData): string {
         const jsonString = JSON.stringify(data);
         return LZString.compressToEncodedURIComponent(jsonString);
     }

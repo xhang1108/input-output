@@ -27,10 +27,10 @@ export function SystemHeader({
     subtitle,
     onDashboardClick,
     onWikiClick,
-    isLoading = false
+    isLoading = false,
 }: SystemHeaderProps) {
     return (
-        <header className="sticky top-0 z-50 border-b border-zinc-900 bg-zinc-950/60 backdrop-blur-md">
+        <header className="sticky top-0 z-50 border-b border-zinc-900 bg-zinc-950">
             <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
                 <div className="flex items-center gap-6">
                     {!isDashboard ? (
@@ -97,8 +97,8 @@ export function SystemHeader({
                     </div>
                 )}
 
-                {/* Auth Button Container - Right Aligned */}
-                <div className="flex items-center ml-auto">
+                {/* Auth & Share Container - Right Aligned */}
+                <div className="flex items-center gap-4 ml-auto">
                     <div className="w-48">
                         <AuthButton />
                     </div>

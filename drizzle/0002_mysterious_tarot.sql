@@ -1,0 +1,1 @@
+ALTER TABLE `graph` ADD `visibility` text DEFAULT 'private';

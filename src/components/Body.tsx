@@ -14,6 +14,8 @@ import {
     useReactFlow,
 } from '@xyflow/react';
 import { RelinkLine, RelinkContext } from './edges/RelinkLine';
+import { useSession } from 'next-auth/react';
+import { Plus } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
@@ -46,16 +48,27 @@ import { useAppStore } from '../store/useStore';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { getDocInfo, hasDocForToken } from '../config/docRegistry';
+import { FloatingProjectControls } from './ui/FloatingProjectControls';
 
 // nodeTypes and edgeTypes imported from config/nodeTypeMap.ts
 
 interface BodyProps {
-    projectId: string; // slot id or 'new' for blank canvas
-    onBackToProjects: () => void;
+    projectId: string;
+    onBackToProjects?: () => void;
+    onProjectLoaded?: (meta: { title: string; visibility: 'private' | 'public'; userId: string }) => void;
+    onForbidden?: () => void;
+    visibility?: 'private' | 'public';
 }
 
-export function Body({ projectId, onBackToProjects }: BodyProps) {
+export function Body({
+    projectId,
+    onBackToProjects,
+    onProjectLoaded,
+    onForbidden,
+    visibility
+}: BodyProps) {
     const brain = useBrain();
+    const { data: session } = useSession();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -97,8 +110,31 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
     const effectiveSnap = isSnapping || manualSnap;
 
-    // Save/Load Hook
-    const { saveProject, autoSave, isLoaded } = useProjectSave(projectId, setNodes);
+    const { 
+        saveProject, 
+        autoSave, 
+        isLoaded, 
+        projectMeta, 
+        permissionError,
+        forkProject,
+        isOwner,
+        isReadOnly 
+    } = useProjectSave(projectId, setNodes, visibility);
+
+    // Propagate metadata to parent
+    useEffect(() => {
+        if (projectMeta && onProjectLoaded) {
+            onProjectLoaded(projectMeta);
+        }
+    }, [projectMeta, onProjectLoaded]);
+
+    // Handle Permission Error
+    useEffect(() => {
+        if (permissionError && onForbidden) {
+            onForbidden();
+        }
+    }, [permissionError, onForbidden]);
+
 
     // Sync Edge Type for existing edges
     // (Removed duplicate useEffect that caused ReferenceError)
@@ -149,6 +185,10 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
     // Intercept React Flow node changes to prevent native deselection during operation
     const onNodesChangeSafe = useCallback((changes: any[]) => {
+        // Block destructive/structural changes for non-owners, but allow 'add' for ephemeral experiments
+        const isDestructive = changes.some(c => c.type === 'remove' || c.type === 'position' || c.type === 'dimensions');
+        if (isReadOnly && isDestructive) return;
+
         if (isResolvingTransform() || ['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
             const filtered = changes.filter(c => c.type !== 'select');
             if (filtered.length > 0) onNodesChange(filtered);
@@ -172,16 +212,19 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         }
 
         onNodesChange(changes);
-        autoSave();
-    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, nodes, autoSave]);
+        if (!isReadOnly) autoSave();
+    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, nodes, autoSave, isReadOnly]);
 
     const onEdgesChangeSafe = useCallback((changes: any[]) => {
+        const isDestructive = changes.some(c => c.type === 'remove');
+        if (isReadOnly && isDestructive) return;
         onEdgesChange(changes);
-        autoSave();
-    }, [onEdgesChange, autoSave]);
+        if (!isReadOnly) autoSave();
+    }, [onEdgesChange, autoSave, isReadOnly]);
 
     // --- Canvas Reset ---
     const clearMemory = useCallback(() => {
+        if (isReadOnly) return;
         if (confirm('Are you sure you want to wipe all memory? This cannot be undone.')) {
             brain.clearAll();
             setNodes([]);
@@ -189,9 +232,10 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             logAction('Memory Wiped');
             setTimeout(() => fitView({ duration: 400 }), 100);
         }
-    }, [setNodes, setEdges, logAction, fitView, brain]);
+    }, [setNodes, setEdges, logAction, fitView, brain, isReadOnly]);
 
     const handleRename = useCallback(() => {
+        if (isReadOnly) return;
         const currentId = projectId === 'new' ? null : (projectId.startsWith('cloud:') ? projectId : projectId);
         const meta = currentId ? SaveManager.getMeta(currentId) : null;
         const currentName = meta?.name || 'Untitled Project';
@@ -208,7 +252,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                 saveProject(false);
             }
         }
-    }, [projectId, saveProject, logAction]);
+    }, [projectId, saveProject, logAction, isReadOnly]);
 
     // Node Spawner (Command Palette + Auto-Link)
     const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
@@ -267,7 +311,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
         const cleanupLog = brain.on('log', (msg: unknown) => logAction(String(msg)));
         return () => { cleanupLog(); };
-    }, [logAction]);
+    }, [logAction, brain]);
 
 
     // Debug: Log Mode Changes
@@ -344,8 +388,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         onRelinkEnd(event, connectionState);
     }, [onRelinkEnd]);
 
-    // --- Auto-Resize Frame on Child Drag ---
-
 
     const relinkValue = {
         ...relinkState,
@@ -353,18 +395,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
         startEdgeDragDisconnect
     };
 
-    // --- FEEL NERVES (Input Handling) ---
-    // ... (Keep useEar existing logic) ...
-    // Note: Since I am replacing the block where pendingInputRelocation was defined, I must be careful not to delete useEar if it was below.
-    // Checking file content... useEar starts at line 265.
-    // I will target the onConnect/Return block specifically.
-
-    /*
-     Wait, I cannot easily replace the useState AND the JSX in one go if they are far apart.
-     I will break this into two edits.
-     1. Add State (Lines 258-260).
-     2. Update JSX (Lines 504-600).
-    */
     // Guard: Prevent onConnectStart from interfering with native Reconnect
     const paletteGuardRef = useRef(false);
 
@@ -377,9 +407,22 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
     useEar({
         shortcuts: {
             // Creation & Layout
-            'shift+a': autoConfirm((e) => { e.preventDefault(); setPalettePosition(mousePosRef.current); setShowPalette(true); logAction('Show Palette (Shift+A)'); }),
-            'alt+s': autoConfirm((e) => { e.preventDefault(); swapConnections(); logAction('Swap Inputs (Alt+S)'); }),
-            'l': autoConfirm(() => { handleAutoLayout(); }),
+            'shift+a': autoConfirm((e) => { 
+                e.preventDefault(); 
+                setPalettePosition(mousePosRef.current); 
+                setShowPalette(true); 
+                logAction('Show Palette (Shift+A)'); 
+            }),
+            'alt+s': autoConfirm((e) => { 
+                if (isReadOnly) return;
+                e.preventDefault(); 
+                swapConnections(); 
+                logAction('Swap Inputs (Alt+S)'); 
+            }),
+            'l': autoConfirm(() => { 
+                if (isReadOnly) return;
+                handleAutoLayout(); 
+            }),
             '.': (e) => {
                 if (mode === 'GRABBING' || mode === 'SCALING' || mode === 'ROTATING') {
                     handleTypeNum('.');
@@ -391,10 +434,23 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             },
 
             // Transform Commands
-            'g': autoConfirm((e) => { startGrab(mousePosRef.current, e.altKey, undefined, true); logAction('Start Grab (G)'); }),
-            's': autoConfirm((e) => { startScale(mousePosRef.current); logAction('Start Scale (S)'); }),
-            'r': autoConfirm((e) => { startRotate(mousePosRef.current); logAction('Start Rotate (R)'); }),
+            'g': autoConfirm((e) => { 
+                if (isReadOnly) return;
+                startGrab(mousePosRef.current, e.altKey, undefined, true); 
+                logAction('Start Grab (G)'); 
+            }),
+            's': autoConfirm((e) => { 
+                if (isReadOnly) return;
+                startScale(mousePosRef.current); 
+                logAction('Start Scale (S)'); 
+            }),
+            'r': autoConfirm((e) => { 
+                if (isReadOnly) return;
+                startRotate(mousePosRef.current); 
+                logAction('Start Rotate (R)'); 
+            }),
             'shift+d': autoConfirm((e) => {
+                if (isReadOnly) return;
                 e.preventDefault();
                 const duplicated = duplicateSelected();
                 if (duplicated) {
@@ -404,6 +460,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             }),
             'f': (e) => {
                 if (mode === 'IDLE') {
+                    if (isReadOnly) return;
                     e.preventDefault();
                     bundleSelected();
                     logAction('Frame Selected (F)');
@@ -412,6 +469,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
             // Node Operations
             'delete': () => {
+                if (isReadOnly) return;
                 const active = document.activeElement?.tagName;
                 if (active !== 'INPUT' && active !== 'TEXTAREA') {
                     if (mode !== 'IDLE') confirmGrab();
@@ -427,6 +485,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     setAxisLock('X');
                     logAction('Axis Lock X');
                 } else if (mode === 'IDLE') {
+                    if (isReadOnly) return;
                     deleteSelected();
                     logAction('Delete Selected');
                 }
@@ -464,8 +523,16 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
             // Clipboard
             'ctrl+c': autoConfirm(() => { copyToClipboard(); logAction('Copy (Ctrl+C)'); }),
             'cmd+c': autoConfirm(() => { copyToClipboard(); logAction('Copy (Cmd+C)'); }),
-            'ctrl+v': autoConfirm(() => { pasteFromClipboard(project(mousePosRef.current)); logAction('Paste (Ctrl+V)'); }),
-            'cmd+v': autoConfirm(() => { pasteFromClipboard(project(mousePosRef.current)); logAction('Paste (Cmd+V)'); }),
+            'ctrl+v': autoConfirm(() => { 
+                if (isReadOnly) return;
+                pasteFromClipboard(project(mousePosRef.current)); 
+                logAction('Paste (Ctrl+V)'); 
+            }),
+            'cmd+v': autoConfirm(() => { 
+                if (isReadOnly) return;
+                pasteFromClipboard(project(mousePosRef.current)); 
+                logAction('Paste (Cmd+V)'); 
+            }),
 
             // Save
             'ctrl+s': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project (Ctrl+S)'); }),
@@ -501,17 +568,16 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                         handleTypeNum('Backspace');
                     } else {
                         if (mode !== 'IDLE') confirmGrab();
+                        if (isReadOnly) return;
                         resetSelected();
                         logAction('Reset Selected');
                     }
                 }
             },
         },
-        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, bundleSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject]
+        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, bundleSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
     });
 
-
-    // Auto Insert logic managed by useAutoInsert hook
 
     const updateModifier = useCallback((e: React.MouseEvent) => {
         const active = e.shiftKey;
@@ -577,9 +643,9 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     edges={edges}
                     onNodesChange={onNodesChangeSafe}
                     onEdgesChange={onEdgesChangeSafe}
-                    onConnect={onRelinkConnect}
-                    onConnectStart={onConnectStart}
-                    onConnectEnd={onConnectEnd}
+                    onConnect={isReadOnly ? undefined : onRelinkConnect}
+                    onConnectStart={isReadOnly ? undefined : onConnectStart}
+                    onConnectEnd={isReadOnly ? undefined : onConnectEnd}
                     isValidConnection={isValidRelinkConnection}
 
                     nodeTypes={nodeTypes}
@@ -600,6 +666,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                             cancelGrab();
                             return;
                         }
+                        if (isReadOnly) return;
                         setContextMenu({
                             isOpen: true,
                             x: e.clientX,
@@ -614,6 +681,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                             cancelGrab();
                             return;
                         }
+                        if (isReadOnly) return;
                         // Auto-select if not selected
                         if (!node.selected) {
                             selectNode(node.id, true);
@@ -630,6 +698,8 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
 
                     nodesDraggable={false} // Disable native drag to use our custom system
+                    nodesConnectable={!isReadOnly}
+                    elementsSelectable={true}
                     panOnDrag={[1]}
                     selectionOnDrag={true}
                     panOnScroll={panOnScroll}
@@ -682,7 +752,7 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                         panOnScroll={panOnScroll}
                         setPanOnScroll={setPanOnScroll}
                         onReset={clearMemory}
-                        onBackToProjects={onBackToProjects}
+                        onBackToProjects={onBackToProjects || (() => {})}
                     />
 
 
@@ -767,19 +837,27 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
 
                 {/* Node Picker (Shift + A) - Moved outside ReactFlow to avoid transform scaling issues */}
                 {showPalette && (
-                    <NodePicker
-                        isOpen={true}
-                        position={palettePosition}
-                        onClose={() => {
-                            setShowPalette(false);
-                            setPendingConnection(null);
-                        }}
-                        onSelect={(type, label, data, isContinuous) => {
-                            spawnNode(type, label, data, isContinuous, mousePosRef.current);
-                        }}
-                        pendingConnection={pendingConnection}
-                    />
+                    <div className="absolute top-0 left-0 w-full h-full z-100 flex items-center justify-center pointer-events-none">
+                        <NodePicker
+                            isOpen={showPalette}
+                            position={palettePosition || { x: 0, y: 0 }}
+                            onSelect={(type, opToken) => {
+                                spawnNode(type, opToken);
+                                setShowPalette(false);
+                            }}
+                            onClose={() => setShowPalette(false)}
+                        />
+                    </div>
                 )}
+
+                {/* Floating Project Controls */}
+                <FloatingProjectControls 
+                    isOwner={isOwner}
+                    projectId={projectId}
+                    onBack={onBackToProjects || (() => {})}
+                    onFork={forkProject}
+                    visibility={visibility}
+                />
 
                 {/* Additive Selection Active Indicator */}
                 {isModifierActive && (
@@ -789,6 +867,6 @@ export function Body({ projectId, onBackToProjects }: BodyProps) {
                     </div>
                 )}
             </div>
-        </RelinkContext.Provider >
+        </RelinkContext.Provider>
     );
 }

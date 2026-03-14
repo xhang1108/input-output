@@ -8,15 +8,20 @@ export async function GET(
 ) {
     try {
         const user = await requireAuth();
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
         const { id } = await context.params;
-        const graph = await getGraphById(user.id, id);
+        
+        // Fetch graph without identity filter
+        const graph = await getGraphById(id);
 
         if (!graph) {
             return NextResponse.json({ error: "Graph not found" }, { status: 404 });
+        }
+
+        // PERMISSION CHECK
+        // Public graphs are accessible to everyone
+        // Private graphs are only accessible to the owner
+        if (graph.visibility === 'private' && graph.userId !== user?.id) {
+            return NextResponse.json({ error: "No permission to access this private project" }, { status: 403 });
         }
 
         return NextResponse.json(graph);
@@ -38,9 +43,9 @@ export async function PUT(
 
         const { id } = await context.params;
         const body = await req.json();
-        const { payload, title, nodeCount, edgeCount } = body;
+        const { payload, title, nodeCount, edgeCount, visibility } = body;
 
-        const updatedGraph = await updateGraph(user.id, id, payload, title, nodeCount, edgeCount);
+        const updatedGraph = await updateGraph(user.id, id, payload, title, nodeCount, edgeCount, visibility);
 
         if (!updatedGraph) {
             return NextResponse.json({ error: "Graph not found or no permission" }, { status: 404 });

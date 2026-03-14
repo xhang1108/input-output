@@ -52,16 +52,24 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
             {/* Right: Stats */}
             <div className="flex gap-4 items-center">
                 {/* Save Status Indicator */}
-                <span className={`transition-all duration-300 flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm ${saveStatus === 'SAVING' ? 'text-blue-400 bg-blue-400/10' :
+                <span className={`transition-all duration-300 flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm ${
+                    saveStatus === 'SAVING' ? 'text-blue-400 bg-blue-400/10' :
+                    saveStatus === 'PENDING_SYNC' ? 'text-amber-500 bg-amber-500/10' :
+                    saveStatus === 'CLOUD_SYNCED' ? 'text-green-400 bg-green-400/10 border border-green-500/20' :
                     saveStatus === 'SAVED' ? 'text-green-400 bg-green-400/10' :
-                        'text-zinc-600'
-                    }`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${saveStatus === 'SAVING' ? 'bg-blue-400 animate-pulse' :
-                        saveStatus === 'SAVED' ? 'bg-green-400' :
-                            'bg-zinc-700'
-                        }`} />
+                    'text-zinc-600'
+                }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                        saveStatus === 'SAVING' ? 'bg-blue-400 animate-pulse' :
+                        saveStatus === 'PENDING_SYNC' ? 'bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]' :
+                        saveStatus === 'CLOUD_SYNCED' || saveStatus === 'SAVED' ? 'bg-green-400' :
+                        'bg-zinc-700'
+                    }`} />
                     <span className="text-[9px] font-medium tracking-tight">
-                        {saveStatus === 'SAVING' ? 'SYNCING...' : saveStatus === 'SAVED' ? 'SAVED' : 'CLOUD SYNCED'}
+                        {saveStatus === 'SAVING' ? 'SYNCING...' : 
+                         saveStatus === 'PENDING_SYNC' ? 'SYNC PENDING' : 
+                         saveStatus === 'CLOUD_SYNCED' ? 'CLOUD SYNCED' : 
+                         'SAVED'}
                     </span>
                 </span>
 

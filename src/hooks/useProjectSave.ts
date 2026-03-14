@@ -9,6 +9,7 @@ import { SaveManager } from '../services/SaveManager';
 import { useAppStore } from '../store/useStore';
 
 import { useSession } from "next-auth/react";
+import { useRouter } from 'next/navigation';
 
 function restoreSettings(settings: Record<string, unknown>) {
     const store = useAppStore.getState();
@@ -20,10 +21,13 @@ function restoreSettings(settings: Record<string, unknown>) {
     if (typeof settings.layoutDirection === 'string') store.setLayoutDirection(settings.layoutDirection as any);
 }
 
-export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev: any[]) => any[])) => void) {
+export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev: any[]) => any[])) => void, existingVisibility?: 'private' | 'public') {
     const { getViewport, setViewport, fitView } = useReactFlow();
+    const router = useRouter();
     const brain = useBrain();
     const [isLoaded, setIsLoaded] = useState(false);
+    const [permissionError, setPermissionError] = useState(false);
+    const [projectMeta, setProjectMeta] = useState<{ title: string; visibility: 'private' | 'public'; userId: string } | null>(null);
     const { data: session } = useSession();
 
     // URL parts can be encoded multiple times in some proxied environments
@@ -35,10 +39,10 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             decodedProjectId = next;
         } catch { break; }
     }
-    
+
     // Check if the project is a Cloud graph based on the prefix 'cloud:'
     const isCloud = decodedProjectId.startsWith('cloud:');
-    
+
     // actualId should be the raw ID without any prefix for database lookups
     // Strip "cloud:" prefix idempotently
     const actualId = decodedProjectId ? decodedProjectId.replace(/^(cloud:)+/i, '') : 'new';
@@ -49,8 +53,8 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
     // Track if this cloud project has been synced to the DB yet
     // If it's a new UUID from the URL that wasn't previously in our list, it starts as false
-    const hasSyncedRef = useRef<boolean>(true); 
-    
+    const hasSyncedRef = useRef<boolean>(true);
+
     // We'll update hasSyncedRef during the initial load or first save
 
     // Helper: wait N frames then reveal
@@ -82,103 +86,204 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         });
     }, [setNodes, fitView]);
 
+    const isOwner = !isCloud || (session?.user?.id !== undefined && projectMeta?.userId === session.user.id);
+    const isReadOnly = isCloud && (session?.user?.id === undefined || (projectMeta !== null && projectMeta.userId !== session.user.id));
+
     const saveProject = useCallback(async (silent = false) => {
+        // ... (existing logic, ensured to check isOwner below)
+        if (isReadOnly) return;
+
         const settings = useAppStore.getState();
         const { setSaveStatus } = settings;
-        
+
         setSaveStatus('SAVING');
         const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);
 
         const slotName = currentSlotIdRef.current
-                ? (SaveManager.getMeta(currentSlotIdRef.current)?.name ?? 'Untitled')
-                : 'Untitled';
+            ? (SaveManager.getMeta(currentSlotIdRef.current)?.name ?? 'Untitled')
+            : 'Untitled';
 
         const isFirstCloudSync = isCloud && !hasSyncedRef.current;
 
-        // 核心架构原则：永远第一时间写入 LocalStorage (Instant Local)，作为终极防线
-        // 对于已存在的云端专案或任何本地专案，永远无认件瞬间本地存盘。
-        // 如果是全新的云专案且从未同步过，我们先跳过本地备份，等第一次同步成功拿回确认后再存，防止 ID 不一致
-        if (!isFirstCloudSync) {
-            try {
-                const id = SaveManager.save(
-                    slotName,
-                    brain,
-                    settings as unknown as Record<string, unknown>,
-                    currentSlotIdRef.current ?? undefined
-                );
-                currentSlotIdRef.current = id;
-                // ONLY show local toast if it's strictly a local project
-                if (!isCloud && !silent) toast.success('Project saved locally!');
-                if (!isCloud) setSaveStatus('SAVED');
-            } catch (e) {
-                console.error("Local Backup Save Error:", e);
-                setSaveStatus('IDLE');
+        try {
+            const id = SaveManager.save(
+                slotName,
+                brain,
+                settings as unknown as Record<string, unknown>,
+                currentSlotIdRef.current || (isCloud ? `cloud:${actualId}` : undefined)
+            );
+            
+            // Clarify log: this is a local save to a cloud-prefixed slot
+            console.log(`[useProjectSave] Local backup updated ${isCloud ? '(Cloud Slot)' : ''}. Slot: ${id}. Size: ${Math.round(encoded.length / 1024)}KB`);
+            currentSlotIdRef.current = id;
+
+            // ONLY show local toast if it's strictly a local project
+            if (!isCloud && !silent) toast.success('Project saved locally!');
+
+            // Mark as locally saved first - this is our baseline safety
+            setSaveStatus('LOCAL_SAVED');
+        } catch (e) {
+            console.error("Local Backup Save Error:", e);
+            if (!isCloud) {
+                setSaveStatus('ERROR');
+                return;
             }
         }
 
-        // 如果是云端专案，额外发起网络请求去写入 D1
         if (isCloud) {
-            // AUTH CHECK: Ensure user is logged in for cloud sync
             if (!session) {
-                if (!silent) toast.error('Cloud sync unavailable: Authenticated session required', {
-                    description: 'Please sign in to enable persistent cloud storage.'
+                if (!silent) toast.error('Cloud sync unavailable', {
+                    description: 'Local backup updated. Please sign in to sync with Cloud.'
                 });
-                setSaveStatus('IDLE');
                 return;
             }
 
+            // NEW: Explicit Sync Telemetry
+            console.log(`[useProjectSave] saveProject triggered. isCloud:${isCloud}, hasSynced:${hasSyncedRef.current}, online:${navigator.onLine}`);
+
             try {
+                // HARDWARE CHECK: Verify physical network connection
+                if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                    console.log("[useProjectSave] Device is offline, skipping cloud sync.");
+                    throw new Error("OFFLINE_BACKUP_ONLY");
+                }
+
                 const method = isFirstCloudSync ? "POST" : "PUT";
                 const url = isFirstCloudSync ? "/api/graphs" : `/api/graphs/${actualId}`;
                 const title = slotName || ("Cloud Graph " + new Date().toLocaleDateString());
 
-                const response = await fetch(url, {
+                const payload = {
+                    payload: encoded,
+                    title,
+                    id: actualId,
+                    nodeCount: brain.getNodesMap().size,
+                    edgeCount: brain.getEdges().length,
+                    visibility: existingVisibility || projectMeta?.visibility
+                };
+
+                let response = await fetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        payload: encoded, 
-                        title,
-                        id: actualId, // Pass our pre-generated UUID to the backend
-                        nodeCount: brain.getNodesMap().size,
-                        edgeCount: brain.getEdges().length
-                    })
+                    cache: 'no-store', // FORCE real network handshake, skip browser cache
+                    body: JSON.stringify(payload)
                 });
 
+                // FALLBACK: If PUT failed with 404, the project was created offline. Retry with POST.
+                if (!isFirstCloudSync && response.status === 404) {
+                    console.log(`[useProjectSave] Project ${actualId} not found on server (404). Attempting POST creation.`);
+                    response = await fetch("/api/graphs", {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
                 if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.error || "Failed to save to cloud");
+                    const data = await response.json().catch(() => ({ error: 'Sync failed' }));
+                    if (data.error?.includes('Graph limit reached')) {
+                        throw new Error("LIMIT_REACHED: " + data.error);
+                    }
+                    throw new Error(data.error || "Failed to sync to cloud");
                 }
 
-                // Success!
+                const result = await response.json().catch(() => ({}));
+                if (result.visibility) {
+                    setProjectMeta(prev => prev ? { ...prev, visibility: result.visibility } : result);
+                }
+
+                // SUCCESS: Cloud is confirmed
                 hasSyncedRef.current = true;
+                setSaveStatus('CLOUD_SYNCED');
                 
-                if (isFirstCloudSync) {
-                    // 云端第一次同步成功，立刻补做一次 LocalStorage 本地备案
-                    SaveManager.save(
-                        slotName,
-                        brain,
-                        settings as unknown as Record<string, unknown>,
-                        currentSlotIdRef.current ?? undefined
-                    );
-                }
+                // CRITICAL: Use correct storage ID with prefix
+                const storageId = `cloud:${actualId}`;
+                SaveManager.updateMeta(storageId, { syncStatus: 'synced' });
 
-                setSaveStatus('SAVED');
-                if (!silent) toast.success('Project saved to Cloud ☁️!');
-                
-                // Reset to idle after a show period
+                if (!silent) toast.success('Cloud Synced ☁️');
+
+                // Auto-transition to SAVED status for UI polish
                 setTimeout(() => {
-                    if (useAppStore.getState().saveStatus === 'SAVED') {
-                        setSaveStatus('IDLE');
+                    const currentStatus = useAppStore.getState().saveStatus;
+                    if (currentStatus === 'CLOUD_SYNCED' || currentStatus === 'LOCAL_SAVED') {
+                        setSaveStatus('SAVED');
                     }
                 }, 2000);
+
             } catch (e: any) {
-                setSaveStatus('IDLE');
-                if (!silent) toast.error(`Cloud save failed (Local Backup remains safe): ${e.message}`);
-                console.error("Cloud Save Error:", e);
+                console.warn("Cloud Sync Failed (Local copy is safe):", e);
+                setSaveStatus('PENDING_SYNC');
+
+                // Mark as pending in local index
+                const storageId = `cloud:${actualId}`;
+                SaveManager.updateMeta(storageId, { syncStatus: 'pending' });
+
+                if (!silent) {
+                    if (e.message?.includes('limit reached')) {
+                        toast.error('Cloud Space Full (10/10)', {
+                            description: 'You have reached the cloud project limit. Please delete an old project to sync this one.',
+                            duration: 10000
+                        });
+                    } else if (e.message === 'OFFLINE_BACKUP_ONLY') {
+                        toast.info('Offline Backup Saved', {
+                            description: 'You are offline. Your work is saved locally and will sync when you reconnect.'
+                        });
+                    } else {
+                        toast.warning('Sync Pending (Network Error)', {
+                            description: 'Local backup updated, but could not reach server. We will auto-sync when possible.'
+                        });
+                    }
+                }
             }
+        } else {
+            // Local-only project: transition to SAVED immediately
+            setTimeout(() => {
+                const currentStatus = useAppStore.getState().saveStatus;
+                if (currentStatus === 'LOCAL_SAVED') {
+                    setSaveStatus('SAVED');
+                }
+            }, 1000);
         }
 
-    }, [isCloud, actualId, session, brain]); 
+    }, [isCloud, actualId, session, brain, isReadOnly, existingVisibility, projectMeta?.visibility]);
+
+    const forkProject = useCallback(async (targetType: 'cloud' | 'local' = 'cloud') => {
+        const settings = useAppStore.getState();
+        const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);
+        const title = `Copy of ${projectMeta?.title || 'Untitled'}`;
+
+        if (targetType === 'cloud') {
+            if (!session) {
+                toast.error('Login required to fork to Cloud');
+                return;
+            }
+            try {
+                const response = await fetch('/api/graphs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        payload: encoded,
+                        title,
+                        nodeCount: brain.getNodesMap().size,
+                        edgeCount: brain.getEdges().length,
+                        visibility: 'private'
+                    })
+                });
+                if (!response.ok) throw new Error("Fork failed");
+                const result = await response.json();
+                toast.success('Project forked to your Cloud!');
+                router.push(`/d/cloud:${result.id.replace(/^(cloud:)+/i, '')}`);
+            } catch (e) {
+                toast.error('Failed to fork project');
+            }
+        } else {
+            const newId = SaveManager.save(title, brain, settings as unknown as Record<string, unknown>);
+            toast.success('Project forked to your Local storage!');
+            // Small delay to ensure localStorage write/indexing is finished before navigation
+            setTimeout(() => {
+                router.push(`/d/${newId}`);
+            }, 100);
+        }
+    }, [brain, projectMeta, session, router]);
 
     // Debounced Auto-Save (5 seconds for Cloud Sync Safety)
     const autoSave = useDebounceCallback(() => {
@@ -210,7 +315,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         if (data.settings) restoreSettings(data.settings);
 
         if (data.graph) {
-             brain.injectNodes(data.graph, true).then(() => {
+            brain.injectNodes(data.graph, true).then(() => {
                 toast.success('Project loaded successfully');
                 focusAndSelectAll({ duration: 400 });
             });
@@ -221,10 +326,13 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
     useEffect(() => {
         setIsLoaded(false);
         const rafId = requestAnimationFrame(() => {
-            if (actualId === 'new') {
-                 brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
-                     setIsLoaded(true);
-                 });
+            const isBrandNew = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('new') === '1';
+
+            if (actualId === 'new' || isBrandNew) {
+                hasSyncedRef.current = false;
+                brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
+                    setIsLoaded(true);
+                });
                 return;
             }
 
@@ -232,63 +340,96 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+                // Load function helper hoisted for both cloud success & offline fallback
+                const loadGraphData = (sourceData: any) => {
+                    if (sourceData) {
+                        if (sourceData.settings) restoreSettings(sourceData.settings);
+                        if (sourceData.graph) {
+                            console.log(`[useProjectSave] Injecting graph with ${sourceData.graph.nodes.length} nodes...`);
+                            brain.injectNodes(sourceData.graph, true, true).then((diagnostics) => {
+                                if (diagnostics && diagnostics.length > 0) {
+                                    console.warn("[useProjectSave] Injection diagnostics:", diagnostics);
+                                }
+                                focusAndSelectAll({ duration: 0 });
+                                revealAfterPaint();
+                            });
+                        } else {
+                            console.warn("[useProjectSave] Load data found but no graph present.");
+                            setIsLoaded(true);
+                        }
+                    } else {
+                        setIsLoaded(true); // Treat missing data as blank rather than error loop
+                    }
+                };
+
                 // Fetch from REST API
                 fetch(`/api/graphs/${actualId}`, { signal: controller.signal })
-                    .then(res => res.json())
-                    .then(data => {
+                    .then(async res => {
                         clearTimeout(timeoutId);
-                        if (data.error) {
-                             // If 404, it's likely a brand new cloud ID from URL that hasn't been POSTed yet
-                             if (data.status === 404 || data.error.includes("not found")) {
-                                 hasSyncedRef.current = false;
-                                 brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
-                                     setIsLoaded(true);
-                                 });
-                                return;
+                        if (!res.ok) {
+                            if (res.status === 403) {
+                                throw new Error("PERMISSION_DENIED");
                             }
-                            throw new Error(data.error);
+                            if (res.status === 404) {
+                                // Check for local backup before assuming it's "New"
+                                // This prevents wiping unsynced projects when they are opened online
+                                const localData = currentSlotIdRef.current ? SaveManager.load(currentSlotIdRef.current) : null;
+                                if (localData) {
+                                    console.log("[useProjectSave] Project 404 on server, but found local backup. Using backup.");
+                                    hasSyncedRef.current = false;
+                                    return { 
+                                        payload: Serializer.serializeData(localData), 
+                                        title: SaveManager.getMeta(currentSlotIdRef.current!)?.name || "Untitled",
+                                        userId: session?.user?.id, // Inject current user ID to restore ownership
+                                        __fromLocal: true 
+                                    };
+                                }
+                                
+                                hasSyncedRef.current = false;
+                                return { __isNew: true };
+                            }
+                            const data = await res.json();
+                            throw new Error(data.error || "Failed to load project");
                         }
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (data.__isNew) {
+                            brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
+                                setIsLoaded(true);
+                            });
+                            return;
+                        }
+
                         if (data.payload) {
-                            hasSyncedRef.current = true;
+                            hasSyncedRef.current = !data.__fromLocal;
+                            setProjectMeta({
+                                title: data.title,
+                                visibility: data.visibility || 'private',
+                                userId: data.userId
+                            });
                             const parsedData = Serializer.deserialize(data.payload);
                             const cloudUpdatedAt = new Date(data.updatedAt).getTime();
                             const localMeta = currentSlotIdRef.current ? SaveManager.getMeta(currentSlotIdRef.current) : undefined;
-                            
-                            // Load function helper so we don't repeat the injection code
-                            const loadGraphData = (sourceData: any) => {
-                                if (sourceData) {
-                                     if (sourceData.settings) restoreSettings(sourceData.settings);
-                                     if (sourceData.graph) {
-                                         brain.injectNodes(sourceData.graph, true, true).then(() => {
-                                             focusAndSelectAll({ duration: 0 });
-                                             revealAfterPaint();
-                                        });
-                                    } else {
-                                        setIsLoaded(true);
-                                    }
-                                } else {
-                                    throw new Error("Graph payload parse failed");
-                                }
-                            };
 
                             // Conflict Resolution: Local vs Cloud
                             if (localMeta && (localMeta.updatedAt - cloudUpdatedAt) > 5000) {
                                 toast('⚠️ Version Conflict Detected', {
-                                    description: 'Your local backup is newer than the cloud version. This usually happens if you worked offline. Which version would you like to load?',
+                                    description: 'Local backup is newer. Load local or force cloud?',
                                     duration: Infinity,
                                     action: {
-                                        label: 'Load Local Backup (Recommended)',
+                                        label: 'Load Local',
                                         onClick: () => {
                                             const localData = currentSlotIdRef.current ? SaveManager.load(currentSlotIdRef.current) : null;
                                             loadGraphData(localData);
-                                            toast.success("Loaded newer local version");
+                                            toast.success("Loaded local version");
                                         }
                                     },
                                     cancel: {
-                                        label: 'Force Cloud Version',
+                                        label: 'Force Cloud',
                                         onClick: () => {
                                             loadGraphData(parsedData);
-                                            toast.info("Loaded older Cloud version");
+                                            toast.info("Loaded cloud version");
                                         }
                                     }
                                 });
@@ -303,8 +444,25 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                     })
                     .catch(e => {
                         clearTimeout(timeoutId);
+                        
+                        // Error Recovery: If cloud fetch fails (offline/timeout), check for local backup
+                        const localData = currentSlotIdRef.current ? SaveManager.load(currentSlotIdRef.current) : null;
+                        if (localData) {
+                            console.log("[useProjectSave] Cloud fetch failed, falling back to local copy", e);
+                            loadGraphData(localData);
+                            toast.info('Offline Backup Loaded', {
+                                description: 'Could not reach cloud, using latest local version.'
+                            });
+                            return;
+                        }
+
                         if (e.name === 'AbortError') {
                             toast.error(`Cloud fetch timed out`);
+                        } else if (e.message === 'PERMISSION_DENIED') {
+                            setPermissionError(true);
+                            toast.error('Access Denied', {
+                                description: 'This project is private. You do not have permission to view it.'
+                            });
                         } else {
                             toast.error(`Failed to load cloud project: ${e.message}`);
                         }
@@ -314,21 +472,21 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 // Fetch from LocalStorage
                 const data = currentSlotIdRef.current ? SaveManager.load(currentSlotIdRef.current) : null;
                 if (data) {
-                     if (data.settings) restoreSettings(data.settings);
- 
-                     if (data.graph) {
-                         brain.injectNodes(data.graph, true, true).then(() => {
-                             focusAndSelectAll({ duration: 0 });
-                             revealAfterPaint();
+                    if (data.settings) restoreSettings(data.settings);
+
+                    if (data.graph) {
+                        brain.injectNodes(data.graph, true, true).then(() => {
+                            focusAndSelectAll({ duration: 0 });
+                            revealAfterPaint();
                         });
                     } else {
                         setIsLoaded(true);
                     }
-                 } else {
-                     // This is a brand new UUID from URL that hasn't been saved yet
-                     brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
-                         setIsLoaded(true);
-                     });
+                } else {
+                    // This is a brand new UUID from URL that hasn't been saved yet
+                    brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
+                        setIsLoaded(true);
+                    });
                 }
             }
         });
@@ -336,5 +494,16 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         return () => cancelAnimationFrame(rafId);
     }, [actualId, isCloud, focusAndSelectAll, revealAfterPaint, brain]);
 
-    return { saveProject, autoSave, loadProject, currentSlotId: currentSlotIdRef, isLoaded };
+    return {
+        saveProject,
+        autoSave,
+        loadProject,
+        currentSlotId: currentSlotIdRef,
+        isLoaded,
+        projectMeta,
+        permissionError,
+        forkProject,
+        isOwner,
+        isReadOnly
+    };
 }

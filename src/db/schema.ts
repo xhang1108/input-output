@@ -63,6 +63,7 @@ export const graphs = sqliteTable("graph", {
         .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     payload: text("payload").notNull(), // Compressed JSON string holding the Brain graph (nodes, edges)
+    visibility: text("visibility").default("private"), // 'private' or 'public'
     nodeCount: integer("nodeCount").default(0),
     edgeCount: integer("edgeCount").default(0),
     createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),

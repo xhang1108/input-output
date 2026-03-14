@@ -17,7 +17,7 @@ interface AppState {
     layoutAlgorithm: LayoutAlgorithm;
     layoutDirection: LayoutDirection;
     panOnScroll: boolean;
-    saveStatus: 'IDLE' | 'SAVING' | 'SAVED';
+    saveStatus: 'IDLE' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR';
     mathPrecision: MathPrecision;
     lastEvalMs: number | null;
     lastImportMs: number | null;
@@ -42,7 +42,7 @@ interface AppState {
     setLayoutAlgorithm: (algo: LayoutAlgorithm | ((prev: LayoutAlgorithm) => LayoutAlgorithm)) => void;
     setLayoutDirection: (dir: LayoutDirection | ((prev: LayoutDirection) => LayoutDirection)) => void;
     setPanOnScroll: (enabled: boolean | ((prev: boolean) => boolean)) => void;
-    setSaveStatus: (status: 'IDLE' | 'SAVING' | 'SAVED') => void;
+    setSaveStatus: (status: 'IDLE' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR') => void;
     setMathPrecision: (precision: MathPrecision) => void;
     setLastEvalMs: (ms: number | null) => void;
     setLastImportMs: (ms: number | null) => void;

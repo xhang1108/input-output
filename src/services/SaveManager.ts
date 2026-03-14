@@ -13,6 +13,8 @@ export interface SaveSlotMeta {
     nodeCount: number;
     edgeCount: number;
     version: string;
+    visibility?: 'private' | 'public';
+    syncStatus?: 'synced' | 'pending';
 }
 
 export interface SaveSlot {
@@ -80,6 +82,9 @@ export class SaveManager {
             nodeCount: graph.nodes.length,
             edgeCount: graph.edges.length,
             version: Serializer.VERSION,
+            syncStatus: slotId 
+                ? (index.find(s => s.id === slotId)?.syncStatus)
+                : undefined
         };
 
         // Persist the data blob
@@ -110,6 +115,13 @@ export class SaveManager {
     }
 
     /**
+     * Set raw encoded data string for a slot (Internal use for transfer/migration).
+     */
+    static putRawData(slotId: string, data: string): void {
+        localStorage.setItem(SLOT_PREFIX + slotId, data);
+    }
+
+    /**
      * Delete a save slot.
      */
     static delete(slotId: string): void {
@@ -123,12 +135,18 @@ export class SaveManager {
      * Rename a save slot.
      */
     static rename(slotId: string, newName: string): void {
-        const index = this.list();
-        const slot = index.find(s => s.id === slotId);
-        if (!slot) return;
+        this.updateMeta(slotId, { name: newName });
+    }
 
-        slot.name = newName;
-        slot.updatedAt = Date.now();
+    /**
+     * Update specific metadata fields for a slot.
+     */
+    static updateMeta(slotId: string, updates: Partial<SaveSlotMeta>): void {
+        const index = this.list();
+        const slotIdx = index.findIndex(s => s.id === slotId);
+        if (slotIdx === -1) return;
+
+        index[slotIdx] = { ...index[slotIdx], ...updates, updatedAt: Date.now() };
         localStorage.setItem(INDEX_KEY, JSON.stringify(index));
     }
 
@@ -171,7 +189,8 @@ export class SaveManager {
                 createdAt: meta?.createdAt || Date.now(),
                 nodeCount: meta?.nodeCount || 0,
                 edgeCount: meta?.edgeCount || 0,
-                version: meta?.version || "2.0"
+                version: meta?.version || "2.0",
+                visibility: meta?.visibility
             });
         }
         
@@ -220,18 +239,19 @@ export class SaveManager {
      */
     static purgeCloudCache(): void {
         const index = this.list();
-        const cloudIds = index
-            .filter(s => s.id.startsWith('cloud:'))
+        // ONLY purge projects that are NOT pending sync
+        const purgeableIds = index
+            .filter(s => s.id.startsWith('cloud:') && s.syncStatus !== 'pending')
             .map(s => s.id);
             
-        cloudIds.forEach(id => {
+        purgeableIds.forEach(id => {
             localStorage.removeItem(SLOT_PREFIX + id);
         });
         
-        const newIndex = index.filter(s => !s.id.startsWith('cloud:'));
+        const newIndex = index.filter(s => !s.id.startsWith('cloud:') || s.syncStatus === 'pending');
         localStorage.setItem(INDEX_KEY, JSON.stringify(newIndex));
         
-        console.log(`[SaveManager] Purged ${cloudIds.length} cloud projects from cache.`);
+        console.log(`[SaveManager] Purged ${purgeableIds.length} cloud projects from cache. Preserved pending ones.`);
     }
 }
 
