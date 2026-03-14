@@ -99,9 +99,7 @@ export function SystemHeader({
 
                 {/* Auth & Share Container - Right Aligned */}
                 <div className="flex items-center gap-4 ml-auto">
-                    <div className="w-48">
-                        <AuthButton />
-                    </div>
+                    <AuthButton />
                 </div>
             </div>
         </header>

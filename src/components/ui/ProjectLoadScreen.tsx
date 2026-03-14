@@ -73,7 +73,7 @@ function SaveSlotCard({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className={`group relative flex flex-col border transition-all duration-300
+            className={`group relative flex flex-col border transition-all duration-300 rounded-2xl overflow-hidden
                        ${meta.syncStatus === 'pending' 
                         ? 'border-amber-500/50 from-amber-900/10 to-amber-900/5 shadow-[0_0_20px_-3px_rgba(245,158,11,0.15)]' 
                         : isCloud ? 'border-zinc-900 from-blue-900/10 to-blue-900/5 shadow-[0_0_15px_-3px_rgba(59,130,246,0.1)]' : 'border-zinc-900 from-zinc-900/50 to-zinc-900/30'}
@@ -140,23 +140,34 @@ function SaveSlotCard({
             {/* ── Info Section ── */}
             <div className="p-3 space-y-2">
                 {/* Title Row */}
-                <div className="flex items-center justify-between min-h-[28px]">
+                <div className="flex items-center justify-between min-h-[32px] gap-2">
                     {isRenaming ? (
-                        <div className="flex items-center gap-1.5 flex-1" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1 flex-1 min-w-0" onClick={e => e.stopPropagation()}>
                             <input
                                 autoFocus
                                 value={nameInput}
                                 onChange={e => setNameInput(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setIsRenaming(false); }}
-                                className="flex-1 bg-zinc-800 border border-zinc-600 rounded-sm px-2 py-0.5 text-sm text-zinc-100
+                                onKeyDown={e => { 
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        submitRename();
+                                    }
+                                    if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        setIsRenaming(false);
+                                    }
+                                }}
+                                className="flex-1 min-w-0 bg-zinc-800 border border-zinc-600 rounded-sm px-2 py-0.5 text-sm text-zinc-100
                                            outline-none focus:border-unit"
                             />
-                            <button onClick={submitRename} className="p-1 text-emerald-400 hover:text-emerald-300">
-                                <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => setIsRenaming(false)} className="p-1 text-zinc-500 hover:text-zinc-300">
-                                <X className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-0.5">
+                                <button onClick={submitRename} className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors">
+                                    <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => setIsRenaming(false)} className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors">
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <span className={`text-sm font-semibold truncate flex-1 ${meta.syncStatus === 'pending' ? 'text-amber-400' : 'text-zinc-200'}`}>{meta.name}</span>
@@ -203,39 +214,41 @@ function SaveSlotCard({
                     >
                         <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    {confirmDelete ? (
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={onDelete}
-                                className="text-[10px] px-2 py-1 rounded-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 font-medium cursor-pointer"
-                            >
-                                Confirm
-                            </button>
-                            <button
-                                onClick={() => setConfirmDelete(false)}
-                                className="p-1 text-zinc-500 hover:text-zinc-300 cursor-pointer"
-                            >
-                                <X className="w-3 h-3" />
-                            </button>
-                        </div>
-                    ) : (
-                        <>
-                            {isCloud && (
-                                <SharePopover 
-                                    projectId={meta.id} 
-                                    visibility={meta.visibility || 'private'}
-                                    onVisibilityChange={onVisibilityChange}
-                                />
-                            )}
-                            <button
-                                onClick={() => setConfirmDelete(true)}
-                                className="p-1.5 rounded-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                                title="Delete"
-                            >
-                                <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                        </>
-                    )}
+                    <div className="relative ml-auto flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                        {confirmDelete ? (
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 p-1 bg-zinc-900 border border-zinc-800 rounded-md shadow-2xl flex items-center gap-1.5 animate-in zoom-in-95 fade-in duration-150">
+                                <button
+                                    onClick={onDelete}
+                                    className="text-[9px] px-2 py-1 rounded-[4px] bg-red-500/20 text-red-400 hover:bg-red-500/30 font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                >
+                                    Confirm
+                                </button>
+                                <button
+                                    onClick={() => setConfirmDelete(false)}
+                                    className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                {isCloud && (
+                                    <SharePopover 
+                                        projectId={meta.id} 
+                                        visibility={meta.visibility || 'private'}
+                                        onVisibilityChange={onVisibilityChange}
+                                    />
+                                )}
+                                <button
+                                    onClick={() => setConfirmDelete(true)}
+                                    className="p-1.5 rounded-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                    title="Delete"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </motion.div>
@@ -253,7 +266,7 @@ function NewProjectCard({ onClick, isCloud = false, disabled = false, descriptio
             whileTap={{ scale: 0.94, opacity: 0.7 }}
             onClick={() => !disabled && !loading && onClick()}
             className={`flex flex-col items-center justify-center border-2 border-dashed
-                       rounded-xl min-h-[220px] transition-all duration-200 group
+                       rounded-2xl min-h-[220px] transition-all duration-200 group
                        ${(disabled || loading) ? 'opacity-40 cursor-not-allowed border-zinc-800' : 'cursor-pointer'}
                        ${isCloud 
                           ? 'bg-blue-900/5 border-blue-900/30 hover:border-blue-500/50 hover:bg-blue-900/10 shadow-[0_0_15px_-3px_rgba(59,130,246,0.05)]' 
@@ -384,12 +397,14 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     };
 
     const handleRename = async (id: string, name: string, isCloud: boolean, visibility?: 'private' | 'public') => {
+        // Optimistic UI Update
         if (isCloud) {
-            // Optimistic update for visibility toggle to prevent Popover closing on re-render
-            if (visibility) {
-                setCloudSlots(prev => prev.map(s => s.id === id ? { ...s, visibility } : s));
-            }
+            setCloudSlots(prev => prev.map(s => s.id === id ? { ...s, name, visibility: visibility || s.visibility } : s));
+        } else {
+            setSlots(prev => prev.map(s => s.id === id ? { ...s, name } : s));
+        }
 
+        if (isCloud) {
             try {
                 const apiId = getCanonicalId(id);
                 const res = await fetch(`/api/graphs/${apiId}`, {
@@ -398,18 +413,20 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                     body: JSON.stringify({ title: name, visibility })
                 });
                 if (!res.ok) {
-                    // Revert on error if visibility was toggled
-                    if (visibility) loadCloudGraphs();
+                    // Revert on error
+                    loadCloudGraphs();
                     throw new Error("Failed to update cloud graph");
                 }
                 
-                // Only full reload if title changed, visibility is handled optimistically
+                // If title changed, we might want to sync with local storage if it's cached
                 const originalMeta = cloudSlots.find(s => s.id === id);
                 if (originalMeta?.name !== name) {
-                    loadCloudGraphs();
+                    SaveManager.rename(id, name);
                 }
             } catch (e) {
                 console.error(e);
+                toast.error("Failed to rename cloud graph");
+                loadCloudGraphs(); // Sync back from server
             }
         } else {
             SaveManager.rename(id, name);
