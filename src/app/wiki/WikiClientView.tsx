@@ -99,7 +99,7 @@ const WikiSidebar = ({
                                         >
                                             <span className="truncate relative z-10">{item.metadata.title}</span>
                                             {activeItemId === item.id && (
-                                                <motion.div 
+                                                <motion.div
                                                     layoutId="active-item-bg"
                                                     className="absolute inset-y-0 -left-px w-[2px] bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] z-20"
                                                 />
@@ -234,7 +234,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
     // Progressive Loading: Reset and stagger item rendering on section change
     useEffect(() => {
         setVisibleItemsCount(2); // Show first 2 items immediately
-        
+
         if (activeSection.items.length > 2) {
             const timer = setInterval(() => {
                 setVisibleItemsCount(prev => {
@@ -266,7 +266,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
             if (visibleEntries.length > 0) {
                 // The first entry is the one highest up in the viewport
                 const closestId = (visibleEntries[0].target as HTMLElement).dataset.wikiItem;
-                
+
                 if (closestId) {
                     const section = sections.find(s => s.items.some(i => i.id === closestId));
                     if (section && section.id !== activeSectionId) {
@@ -311,7 +311,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                 mode={mode}
                 onModeChange={(m) => setMode(m as WikiMode)}
                 title="I/O System Blueprint"
-                subtitle={`ENGINE: STABLE_V1.0 // ${mode.toUpperCase()}_MODE_ACTIVE`}
+                subtitle={`ENGINE: V1.0 // ${mode.toUpperCase()}_MODE_ACTIVE`}
             />
 
             <div className="flex-1 flex max-w-7xl mx-auto px-8 w-full overflow-hidden">

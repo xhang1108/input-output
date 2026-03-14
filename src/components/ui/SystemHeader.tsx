@@ -22,7 +22,7 @@ export function SystemHeader({
     showModeSwitcher,
     mode,
     onModeChange,
-    title = "I/O System Blueprint",
+    title = "Input-Output",
     isDashboard = false,
     subtitle,
     onDashboardClick,
