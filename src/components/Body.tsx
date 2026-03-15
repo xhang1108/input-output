@@ -110,15 +110,15 @@ export function Body({
 
     const effectiveSnap = isSnapping || manualSnap;
 
-    const { 
-        saveProject, 
-        autoSave, 
-        isLoaded, 
-        projectMeta, 
+    const {
+        saveProject,
+        autoSave,
+        isLoaded,
+        projectMeta,
         permissionError,
         forkProject,
         isOwner,
-        isReadOnly 
+        isReadOnly
     } = useProjectSave(projectId, setNodes, visibility);
 
     // Propagate metadata to parent
@@ -407,21 +407,21 @@ export function Body({
     useEar({
         shortcuts: {
             // Creation & Layout
-            'shift+a': autoConfirm((e) => { 
-                e.preventDefault(); 
-                setPalettePosition(mousePosRef.current); 
-                setShowPalette(true); 
-                logAction('Show Palette (Shift+A)'); 
+            'shift+a': autoConfirm((e) => {
+                e.preventDefault();
+                setPalettePosition(mousePosRef.current);
+                setShowPalette(true);
+                logAction('Show Palette (Shift+A)');
             }),
-            'alt+s': autoConfirm((e) => { 
+            'alt+s': autoConfirm((e) => {
                 if (isReadOnly) return;
-                e.preventDefault(); 
-                swapConnections(); 
-                logAction('Swap Inputs (Alt+S)'); 
+                e.preventDefault();
+                swapConnections();
+                logAction('Swap Inputs (Alt+S)');
             }),
-            'l': autoConfirm(() => { 
+            'l': autoConfirm(() => {
                 if (isReadOnly) return;
-                handleAutoLayout(); 
+                handleAutoLayout();
             }),
             '.': (e) => {
                 if (mode === 'GRABBING' || mode === 'SCALING' || mode === 'ROTATING') {
@@ -434,20 +434,20 @@ export function Body({
             },
 
             // Transform Commands
-            'g': autoConfirm((e) => { 
+            'g': autoConfirm((e) => {
                 if (isReadOnly) return;
-                startGrab(mousePosRef.current, e.altKey, undefined, true); 
-                logAction('Start Grab (G)'); 
+                startGrab(mousePosRef.current, e.altKey, undefined, true);
+                logAction('Start Grab (G)');
             }),
-            's': autoConfirm((e) => { 
+            's': autoConfirm((e) => {
                 if (isReadOnly) return;
-                startScale(mousePosRef.current); 
-                logAction('Start Scale (S)'); 
+                startScale(mousePosRef.current);
+                logAction('Start Scale (S)');
             }),
-            'r': autoConfirm((e) => { 
+            'r': autoConfirm((e) => {
                 if (isReadOnly) return;
-                startRotate(mousePosRef.current); 
-                logAction('Start Rotate (R)'); 
+                startRotate(mousePosRef.current);
+                logAction('Start Rotate (R)');
             }),
             'shift+d': autoConfirm((e) => {
                 if (isReadOnly) return;
@@ -523,15 +523,15 @@ export function Body({
             // Clipboard
             'ctrl+c': autoConfirm(() => { copyToClipboard(); logAction('Copy (Ctrl+C)'); }),
             'cmd+c': autoConfirm(() => { copyToClipboard(); logAction('Copy (Cmd+C)'); }),
-            'ctrl+v': autoConfirm(() => { 
+            'ctrl+v': autoConfirm(() => {
                 if (isReadOnly) return;
-                pasteFromClipboard(project(mousePosRef.current)); 
-                logAction('Paste (Ctrl+V)'); 
+                pasteFromClipboard(project(mousePosRef.current));
+                logAction('Paste (Ctrl+V)');
             }),
-            'cmd+v': autoConfirm(() => { 
+            'cmd+v': autoConfirm(() => {
                 if (isReadOnly) return;
-                pasteFromClipboard(project(mousePosRef.current)); 
-                logAction('Paste (Cmd+V)'); 
+                pasteFromClipboard(project(mousePosRef.current));
+                logAction('Paste (Cmd+V)');
             }),
 
             // Save
@@ -752,7 +752,7 @@ export function Body({
                         panOnScroll={panOnScroll}
                         setPanOnScroll={setPanOnScroll}
                         onReset={clearMemory}
-                        onBackToProjects={onBackToProjects || (() => {})}
+                        onBackToProjects={onBackToProjects || (() => { })}
                     />
 
 
@@ -841,9 +841,11 @@ export function Body({
                         <NodePicker
                             isOpen={showPalette}
                             position={palettePosition || { x: 0, y: 0 }}
-                            onSelect={(type, opToken) => {
+                            onSelect={(type, opToken, data, isContinuous) => {
                                 spawnNode(type, opToken);
-                                setShowPalette(false);
+                                if (!isContinuous) {
+                                    setShowPalette(false);
+                                }
                             }}
                             onClose={() => setShowPalette(false)}
                         />
@@ -851,10 +853,10 @@ export function Body({
                 )}
 
                 {/* Floating Project Controls */}
-                <FloatingProjectControls 
+                <FloatingProjectControls
                     isOwner={isOwner}
                     projectId={projectId}
-                    onBack={onBackToProjects || (() => {})}
+                    onBack={onBackToProjects || (() => { })}
                     onFork={forkProject}
                     visibility={visibility}
                 />

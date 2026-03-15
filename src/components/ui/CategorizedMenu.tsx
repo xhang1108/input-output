@@ -229,9 +229,19 @@ export function CategorizedMenu({
             menuEl.style.transform = `scale(${currentZoom})`;
             menuEl.style.transformOrigin = `${shouldFlipY ? 'bottom' : 'top'} left`;
             menuEl.style.maxWidth = `min(95vw, ${Math.max(minPossibleWidth, availableWidth / currentZoom)}px)`;
-            menuEl.style.visibility = 'visible';
+            
+            // First draw: position is set but it's still hidden. 
+            // Second draw: it becomes visible, matching the CSS animation start.
+            if (menuEl.style.visibility === 'hidden') {
+                requestAnimationFrame(() => {
+                    menuEl.style.visibility = 'visible';
+                });
+            }
 
-            requestId = requestAnimationFrame(updatePosition);
+            // Only continue tracking if there's a trigger element to follow
+            if (trigger) {
+                requestId = requestAnimationFrame(updatePosition);
+            }
         };
 
         // Run synchronously once first to set initial layout before animation frame
@@ -310,7 +320,7 @@ export function CategorizedMenu({
             />
             <div
                 ref={menuRef}
-                className="fixed z-10000 bg-[#141416]/95 border border-[#27272a] shadow-2xl rounded-lg overflow-visible flex flex-col animate-in fade-in duration-150"
+                className="fixed z-10000 bg-[#141416]/95 border border-[#27272a] shadow-2xl rounded-lg overflow-visible flex flex-col animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 ease-out"
                 style={{
                     visibility: 'hidden',
                     maxHeight: maxHeight,
@@ -439,7 +449,7 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
                 : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
                 }`}
             onClick={(e) => {
-                const isContinuous = e.ctrlKey || e.metaKey;
+                const isContinuous = e.ctrlKey || e.metaKey || e.shiftKey;
                 onSelect(item, isContinuous);
                 if (isContinuous) {
                     setSearch('');
