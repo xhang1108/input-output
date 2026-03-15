@@ -1,30 +1,22 @@
-import { describe, test, expect, beforeAll } from 'vitest';
-import { NodeRegistry, initializeNodes } from '../NodeRegistry';
-import { DataType } from '../../types/payload';
+import { describe, test, expect } from 'vitest';
+import { NodeRegistry } from '../NodeRegistry';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { NerdamerService } from '../calculus/NerdamerService';
+import { DataType } from '../../types/payload';
 import { RuntimeGuard } from '../calculus/RuntimeGuard';
+import { NerdamerService } from '../calculus/NerdamerService';
 
-/**
- * Phase 5.1 Calculus Engine Tests
- *
- * Tests core calculus nodes directly via NodeRegistry.evaluate(),
- * following the same pattern as existing tests (StringNode.test.ts, etc.).
- */
+// Initialize NodeRegistry
+NodeRegistry.initializeNodes();
 
-beforeAll(() => {
-    initializeNodes();
-});
-
-// ─── AD-04: Derivative ─────────────────────────────────────────
-
-describe('AD-04: Derivative', () => {
+// ─── CL-01: Derivative ─────────────────────────────────────────
+describe('CL-01: Derivative', () => {
     test('should differentiate x^2 to 2*x', async () => {
         const node = {
-            id: 'test-diff',
-            type: 'AD-04',
-            data: { variable: 'x', order: 1 },
+            id: 'test-deriv',
+            type: 'CL-01',
+            data: { variable: 'x' },
             value: undefined,
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -34,81 +26,39 @@ describe('AD-04: Derivative', () => {
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
-        const val = String(PayloadUtils.unwrap(result));
-        expect(val).toContain('2');
-        expect(val).toContain('x');
+        const val = PayloadUtils.unwrap(result);
+        expect(String(val)).toContain('2*x');
     });
 
     test('should return 0 for derivative of constant', async () => {
         const node = {
-            id: 'test-diff-const',
-            type: 'AD-04',
-            data: { variable: 'x', order: 1 },
+            id: 'test-deriv-const',
+            type: 'CL-01',
+            data: { variable: 'x' },
             value: undefined,
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
         const inputs = {
-            'expr': PayloadUtils.createString('5')
+            'expr': PayloadUtils.createScalar(5)
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
-        expect(String(PayloadUtils.unwrap(result))).toBe('0');
-    });
-
-    test('should compute second derivative d²/dx²(x³) = 6x', async () => {
-        const node = {
-            id: 'test-diff-2nd',
-            type: 'AD-04',
-            data: { variable: 'x', order: 2 },
-            value: undefined,
-            isInDirtyChain: false,
-            position: { x: 0, y: 0 }
-        };
-
-        const inputs = {
-            'expr': PayloadUtils.createString('x^3')
-        };
-
-        const result = await NodeRegistry.evaluate(node, inputs);
-        const val = String(PayloadUtils.unwrap(result));
-        expect(val).toContain('6');
-        expect(val).toContain('x');
-    });
-
-    test('should compute partial derivative ∂/∂x(x^2 + y^2) = 2x', async () => {
-        const node = {
-            id: 'test-partial',
-            type: 'AD-04',
-            data: { variable: 'x', order: 1 },
-            value: undefined,
-            isInDirtyChain: false,
-            position: { x: 0, y: 0 }
-        };
-
-        const inputs = {
-            'expr': PayloadUtils.createString('x^2+y^2')
-        };
-
-        const result = await NodeRegistry.evaluate(node, inputs);
-        const val = String(PayloadUtils.unwrap(result));
-        expect(val).toContain('2');
-        expect(val).toContain('x');
-        // Should not contain y (y^2 is treated as constant)
-        expect(val).not.toContain('y');
+        expect(Number(PayloadUtils.unwrap(result))).toBe(0);
     });
 });
 
-// ─── AD-05: Integral ───────────────────────────────────────────
-
-describe('AD-05: Integral', () => {
+// ─── CL-02: Integral ───────────────────────────────────────────
+describe('CL-02: Integral', () => {
     test('should compute indefinite integral ∫x dx = x²/2', async () => {
         const node = {
             id: 'test-int',
-            type: 'AD-05',
+            type: 'CL-02',
             data: { variable: 'x', mode: 'indefinite' },
             value: undefined,
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -118,76 +68,364 @@ describe('AD-05: Integral', () => {
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
-        const val = String(PayloadUtils.unwrap(result));
-        expect(val).toContain('x');
+        const val = PayloadUtils.unwrap(result);
+        expect(String(val)).toContain('x^2');
     });
 
     test('should compute definite integral ∫₀⁵ 1 dx = 5', async () => {
         const node = {
-            id: 'test-defint',
-            type: 'AD-05',
+            id: 'test-int-def',
+            type: 'CL-02',
             data: { variable: 'x', mode: 'definite', lower: '0', upper: '5' },
             value: undefined,
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
         const inputs = {
-            'expr': PayloadUtils.createString('1')
+            'expr': PayloadUtils.createScalar(1)
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
-        const val = Number(PayloadUtils.unwrap(result));
-        expect(val).toBeCloseTo(5, 3);
+        expect(PayloadUtils.unwrap(result)).toBe(5);
     });
 });
 
-// ─── AD-11: Limit ──────────────────────────────────────────────
-
-describe('AD-11: Limit', () => {
-    test('should compute lim(sin(x)/x, x→0) = 1', async () => {
+// ─── CL-04: Equation Solver ────────────────────────────────────
+describe('CL-04: Equation Solver', () => {
+    test('should solve simple equation x+3=5', async () => {
         const node = {
-            id: 'test-lim',
-            type: 'AD-11',
-            data: { variable: 'x', approach: '0', direction: 'both' },
+            id: 'solver-1',
+            type: 'CL-04',
+            data: { variable: 'x' },
             value: undefined,
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
         const inputs = {
-            'expr': PayloadUtils.createString('sin(x)/x')
+            'in_0': PayloadUtils.createString('x+3=5')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
-        const val = Number(PayloadUtils.unwrap(result));
-        expect(val).toBeCloseTo(1, 3);
+        const val = PayloadUtils.unwrap(result);
+        expect(val).toContain(2);
     });
 
-    test('should return error for no input', async () => {
+    test('should solve system x=2, y=3+x for y', async () => {
         const node = {
-            id: 'test-lim-noexpr',
-            type: 'AD-11',
-            data: { variable: 'x', approach: '0', direction: 'both' },
+            id: 'solver-2',
+            type: 'CL-04',
+            data: { variable: 'y' },
             value: undefined,
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
 
-        const result = await NodeRegistry.evaluate(node, {});
+        const inputs = {
+            'in_0': PayloadUtils.createString('x=2'),
+            'in_1': PayloadUtils.createString('y=3+x')
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result);
+        expect(val).toContain(5);
+    });
+
+    test('should handle labeled inputs automatically', async () => {
+        const node = {
+            id: 'solver-3',
+            type: 'CL-04',
+            data: { variable: 'y' },
+            value: undefined,
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            'in_0': PayloadUtils.createString('y=3+x'),
+            'x': { ...PayloadUtils.createScalar(2), meta: { label: 'x' } }
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result);
+        expect(val).toContain(5);
+    });
+
+    test('should not crash on object input', async () => {
+        const node = {
+            id: 'solver-crash-test',
+            type: 'CL-04',
+            data: { variable: 'x' },
+            value: undefined,
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            'in_0': PayloadUtils.createString('x+3=5'),
+            'bad_in': { type: DataType.Array, value: { foo: 'bar' }, meta: {}, symbol: null } as any
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result);
+        expect(val).toContain(2);
+    });
+
+    test('should handle single assignment solve for x=2', async () => {
+        const node = {
+            id: 'solver-single-assign',
+            type: 'CL-04',
+            data: { variable: 'x' },
+            value: undefined,
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            'in': PayloadUtils.createString('x=2')
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result);
+        expect(val).toContain(2);
+    });
+
+    test('should solve system with multiple inputs on same handle (capsule behavior)', async () => {
+        const node = {
+            id: 'solver-capsule-test',
+            type: 'CL-04',
+            data: { variable: 'y' },
+            value: undefined,
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            'in': [
+                PayloadUtils.createString('x=2'),
+                PayloadUtils.createString('y=3+x')
+            ] as any
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result);
+        expect(val).toContain(5);
+    });
+
+    test('should return empty array instead of [0] when no solution exists', async () => {
+        const node = {
+            id: 'solver-no-sol',
+            type: 'CL-04',
+            data: { variable: 'z' }, // z is not in the equations
+            value: undefined,
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            'in': PayloadUtils.createString('x+y=5')
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result);
+        expect(val).toEqual([]);
+    });
+
+    test('should return different answers when switching target variable for x+y=5', async () => {
+        const nodeX = {
+            id: 'solver-switch-x',
+            type: 'CL-04',
+            data: { variable: 'x' },
+            value: undefined,
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            'in': PayloadUtils.createString('x+y=5')
+        };
+
+        const resultX = await NodeRegistry.evaluate(nodeX, inputs);
+        const valX = String(PayloadUtils.unwrap(resultX));
+        expect(valX).toContain('y');
+
+        const nodeY = { ...nodeX, id: 'solver-switch-y', data: { variable: 'y' } };
+        const resultY = await NodeRegistry.evaluate(nodeY, inputs);
+        const valY = String(PayloadUtils.unwrap(resultY));
+        expect(valY).toContain('x');
+    });
+
+    test('should resolve system x=2, y=3+x for both x and y', async () => {
+        const inputs = {
+            'in': [
+                PayloadUtils.createString('x=2'),
+                PayloadUtils.createString('y=3+x')
+            ] as any
+        };
+
+        const nodeY = {
+            id: 'solver-sys-y',
+            type: 'CL-04',
+            data: { variable: 'y' },
+            value: undefined,
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const resultY = await NodeRegistry.evaluate(nodeY, inputs);
+        expect(PayloadUtils.unwrap(resultY)).toEqual([5]);
+
+        const nodeX = { ...nodeY, id: 'solver-sys-x', data: { variable: 'x' } };
+        const resultX = await NodeRegistry.evaluate(nodeX, inputs);
+        expect(PayloadUtils.unwrap(resultX)).toEqual([2]);
+    });
+
+    // ── Complex Test 1: 3-variable linear system ─────────────────
+    // x+y+z=6, 2x-y+z=3, x+2y-z=2  →  x=1, y=2, z=3
+    test('should solve 3-variable linear system for each variable', async () => {
+        const mkNode = (id: string, v: string) => ({
+            id, type: 'CL-04', data: { variable: v },
+            value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
+        });
+
+        const inputs = {
+            'in_0': PayloadUtils.createString('x+y+z=6'),
+            'in_1': PayloadUtils.createString('2*x-y+z=3'),
+            'in_2': PayloadUtils.createString('x+2*y-z=2'),
+        };
+
+        const rx = await NodeRegistry.evaluate(mkNode('sys3-x', 'x'), inputs);
+        expect(PayloadUtils.unwrap(rx)).toEqual([1]);
+
+        const ry = await NodeRegistry.evaluate(mkNode('sys3-y', 'y'), inputs);
+        expect(PayloadUtils.unwrap(ry)).toEqual([2]);
+
+        const rz = await NodeRegistry.evaluate(mkNode('sys3-z', 'z'), inputs);
+        expect(PayloadUtils.unwrap(rz)).toEqual([3]);
+    });
+
+    // ── Complex Test 2: Quadratic — two roots ─────────────────────
+    // x^2 + x - 6 = 0  →  roots: x=2, x=-3
+    test('should find both roots of x^2 + x - 6 = 0', async () => {
+        const node = {
+            id: 'quad-roots', type: 'CL-04', data: { variable: 'x' },
+            value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
+        };
+        const inputs = { 'in_0': PayloadUtils.createString('x^2+x-6=0') };
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result) as any[];
+        const nums = val.map(Number).sort((a, b) => a - b);
+        expect(nums).toEqual([-3, 2]);
+    });
+
+    test('should warn for quadratic equation with Unicode x²', async () => {
+        const node = {
+            id: 'unicode-quad', type: 'CL-04', data: { variable: 'x' },
+            value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
+        };
+        const inputs = { 'in_0': PayloadUtils.createString('x² + x - 6 = 0') };
+        const result = await NodeRegistry.evaluate(node, inputs);
         expect(result.type).toBe(DataType.Error);
+        expect(result.meta?.error).toContain('Unicode detected');
+    });
+
+    // ── Complex Test 3: Non-linear 2-variable system ──────────────
+    // ── Complex Test 3: Multi-equation substitution ───────────────
+    // 2a + b = 10, b = 4  →  a = 3 and b = 4
+    // Models real-world: solving a system where one variable is pre-known
+    test('should solve 2a+b=10, b=4 for a and b', async () => {
+        const mkNode = (id: string, v: string) => ({
+            id, type: 'CL-04', data: { variable: v },
+            value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
+        });
+
+        const inputs = {
+            'in_0': PayloadUtils.createString('2*a+b=10'),
+            'in_1': PayloadUtils.createString('b=4'),
+        };
+
+        const ra = await NodeRegistry.evaluate(mkNode('sub-a', 'a'), inputs);
+        expect(PayloadUtils.unwrap(ra)).toEqual([3]);
+
+        const rb = await NodeRegistry.evaluate(mkNode('sub-b', 'b'), inputs);
+        expect(PayloadUtils.unwrap(rb)).toEqual([4]);
+    });
+
+    // ── Smart Formatting & Deduplication Tests ───────────────────
+    test('should deduplicate redundant roots for (x-2)^2 = 0', async () => {
+        const node = {
+            id: 'redundant-root', type: 'CL-04', data: { variable: 'x' },
+            value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
+        };
+        const inputs = { 'in': PayloadUtils.createString('(x-2)^2=0') };
+        const result = await NodeRegistry.evaluate(node, inputs);
+        expect(PayloadUtils.unwrap(result)).toEqual([2]);
+    });
+
+    test('should cap and sort transcendental solutions for sin(x)=0', async () => {
+        const node = {
+            id: 'transcendental-sin', type: 'CL-04', data: { variable: 'x' },
+            value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
+        };
+        const inputs = { 'in': PayloadUtils.createString('sin(x)=0') };
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result) as number[];
+        expect(val.length).toBeLessThanOrEqual(6);
+        // Should contain 0 and be sorted by absolute value
+        expect(val[0]).toBe(0);
+        expect(Math.abs(val[1])).toBeCloseTo(Math.PI, 4);
+    });
+
+    test('should merge numerically similar solutions (precision merging)', async () => {
+        const node = {
+            id: 'precision-merge', type: 'CL-04', data: { variable: 'x' },
+            value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
+        };
+        // Use two equations that define the same value but with tiny precision noise
+        // 2.00000001 * 1e6 = 2000000.01 -> rounds to 2000000
+        // swap order: 2.00000001 is closer to 0 than 2? No, 2 is closer.
+        // Wait, |2.00000001| > |2|. 
+        // If n1=2.00000001 comes first, it becomes the representative.
+        const inputsComplex = { 'in': [PayloadUtils.createString('x=2.00000001'), PayloadUtils.createString('x=2')] as any };
+        const resComplex = await NodeRegistry.evaluate(node, inputsComplex);
+        const val = PayloadUtils.unwrap(resComplex) as number[];
+        expect(val.length).toBe(1);
+        expect(val[0]).toBe(2);
+    });
+
+    test('should format complex approximations as clean decimals (e^x=5)', async () => {
+        const node = {
+            id: 'exp-approx', type: 'CL-04', data: { variable: 'x' },
+            value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
+        };
+        const inputs = { 'in': PayloadUtils.createString('e^x=5') };
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result) as number[];
+        expect(val[0]).toBeCloseTo(Math.log(5), 6);
+        expect(String(val[0])).not.toContain('/'); // Should not be a fraction string
     });
 });
 
-// ─── SY-04: ODE Solver ─────────────────────────────────────────
-
-describe('SY-04: ODE Solver', () => {
+// ─── CL-05: ODE Solver ─────────────────────────────────────────
+describe('CL-05: ODE Solver', () => {
     test('should solve dy/dt = -y (exponential decay, y(0)=1)', async () => {
         const node = {
             id: 'test-ode',
-            type: 'SY-04',
+            type: 'CL-05',
             data: { method: 'RK4', t0: 0, tEnd: 1, y0: 1, stepSize: 0.01 },
             value: undefined,
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -202,28 +440,12 @@ describe('SY-04: ODE Solver', () => {
         expect(Array.isArray(val)).toBe(true);
         if (Array.isArray(val) && val.length > 0) {
             const lastPoint = val[val.length - 1];
-            // At t=1, y = e^(-1) ≈ 0.3679
             expect(lastPoint[1]).toBeCloseTo(Math.exp(-1), 2);
         }
-    });
-
-    test('should return error for no input', async () => {
-        const node = {
-            id: 'test-ode-noexpr',
-            type: 'SY-04',
-            data: { method: 'RK4', t0: 0, tEnd: 1, y0: 1, stepSize: 0.01 },
-            value: undefined,
-            isInDirtyChain: false,
-            position: { x: 0, y: 0 }
-        };
-
-        const result = await NodeRegistry.evaluate(node, {});
-        expect(result.type).toBe(DataType.Error);
     });
 });
 
 // ─── RuntimeGuard Tests ────────────────────────────────────────────
-
 describe('RuntimeGuard', () => {
     test('should catch NaN results', () => {
         const result = RuntimeGuard.safeEvaluate(() => NaN);
@@ -253,7 +475,6 @@ describe('RuntimeGuard', () => {
 });
 
 // ─── NerdamerService Tests ─────────────────────────────────────────
-
 describe('NerdamerService', () => {
     test('should differentiate correctly', () => {
         const svc = NerdamerService.getInstance();

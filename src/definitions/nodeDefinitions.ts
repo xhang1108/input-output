@@ -487,8 +487,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in', type: 'target', variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
         ],
-        defaultData: { op: 'SOLVE' },
-        aliases: ['eqn', 'solve', 'equation', 'nerdamer', 'solver']
+        defaultData: { op: 'SOLVE', variable: 'x' },
+        aliases: ['eqn', 'solve', 'equation', 'nerdamer', 'solver'],
+        params: [
+            { id: 'variable', label: 'Solve For', type: 'string', hint: 'Variable to solve for (e.g. x, y)' }
+        ]
     },
     {
         id: 'CL-05',

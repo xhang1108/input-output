@@ -62,7 +62,7 @@ export const SolverNode = memo((props: NodeProps) => {
         return Array.from(vars).sort();
     }, [nodes, incomingConnections]);
 
-    const solveFor = (data.solveFor as string) || '';
+    const variable = (data.variable as string) || '';
 
     const menuItems = useMemo(() => {
         const items: CategorizedMenuItem[] = [
@@ -73,24 +73,23 @@ export const SolverNode = memo((props: NodeProps) => {
             items.push({ id: v, label: v, category: 'Detected Variables' });
         });
 
-        if (solveFor && !variables.includes(solveFor) && solveFor !== '') {
-            items.push({ id: solveFor, label: `${solveFor} (Custom)`, category: 'Manual Entry' });
+        if (variable && !variables.includes(variable) && variable !== '') {
+            items.push({ id: variable, label: `${variable} (Custom)`, category: 'Manual Entry' });
         }
 
         return items;
-    }, [variables, solveFor]);
+    }, [variables, variable]);
 
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
-        updateNodeData(id, { solveFor: item.id });
+        updateNodeData(id, { variable: item.id });
         closeMenu();
     }, [id, updateNodeData]);
 
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        updateNodeData(id, { solveFor: e.target.value });
+        updateNodeData(id, { variable: e.target.value });
     };
 
-
-    const currentLabel = solveFor === '' ? 'Auto' : solveFor;
+    const currentLabel = variable === '' ? 'Auto' : variable;
 
     return (
         <BaseNode {...props} data={nodeData}>
@@ -115,7 +114,7 @@ export const SolverNode = memo((props: NodeProps) => {
                     ) : (
                         <input
                             className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-2 py-1.5 rounded-lg text-xs w-full text-center focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
-                            value={solveFor}
+                            value={variable}
                             onChange={handleInput}
                             placeholder="Type variable..."
                         />

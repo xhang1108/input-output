@@ -1,5 +1,6 @@
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeSymbolizer } from '../../../NodeRegistry';
+import { ASTNode } from '../../../../types/payload';
 
 export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
     // DT-01: Array Builder
@@ -90,9 +91,23 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
 
     // CL-04: Solver
     'CL-04': (node, inputs) => {
+        const args: ASTNode[] = [];
+        Object.keys(inputs).sort().forEach(key => {
+            const sym = inputs[key];
+            if (Array.isArray(sym)) {
+                args.push(...sym);
+            } else if (sym) {
+                args.push(sym);
+            }
+        });
+
+        const data = (node.data || {}) as any;
+        const variable = data.variable || data.solveFor || '';
+        if (args.length === 0) args.push(PayloadUtils.createSymbol('Literal', { value: '0' }));
+
         return PayloadUtils.createSymbol('FunctionCall', {
-            name: 'solve',
-            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '0' })]
+            name: variable ? `solve_{${variable}}` : 'solve',
+            args
         });
     },
 

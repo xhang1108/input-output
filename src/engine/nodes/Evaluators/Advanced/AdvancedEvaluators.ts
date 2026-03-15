@@ -217,36 +217,226 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // CL-04: Solver
     'CL-04': (node, inputs) => {
         const equations: string[] = [];
-        const inPayload = inputs['in'];
-        if (inPayload) {
-            const raw = PayloadUtils.unwrap(inPayload);
-            if (Array.isArray(raw)) equations.push(...raw.map(String));
-            else if (typeof raw === 'string') equations.push(...raw.split(',').map((s: string) => s.trim()));
-            else equations.push(String(raw));
-        } else {
+        const data = (node.data || {}) as any;
+        let targetVar = data.variable || data.solveFor || '';
+
+        // 1. Collect equations from ALL handles (Capsule support)
+        const processPayload = (payload: any, key: string) => {
+            if (!payload) return;
+
+            // Handle Array of Payloads (Capsule behavior)
+            if (Array.isArray(payload)) {
+                payload.forEach(p => processPayload(p, key));
+                return;
+            }
+
+            const raw = PayloadUtils.unwrap(payload);
+            const items = Array.isArray(raw) ? raw.map(String) : [String(raw)];
+
+            items.forEach(val => {
+                if (val === null || val === undefined) return;
+                const valStr = String(val).trim();
+                
+                if (!valStr || valStr === 'null' || valStr === 'undefined' || valStr === '[object Object]') return;
+
+                // Priority 1: Use explicit label from metadata (if node is labeled)
+                const label = payload.meta?.label;
+                
+                // If it's a numeric/string scalar and has a label, convert to equation
+                if (label && typeof label === 'string' && !valStr.includes('=') && !['in', 'expr', 'in_a', 'in_b'].includes(label)) {
+                    equations.push(`${label} = ${valStr}`);
+                } 
+                // Priority 2: Use key if it's not a generic handle (wireless links using node label)
+                else if (!key.startsWith('in') && !key.startsWith('append') && !valStr.includes('=')) {
+                    equations.push(`${key} = ${valStr}`);
+                }
+                else {
+                    equations.push(valStr);
+                }
+            });
+        };
+
+        Object.keys(inputs).sort().forEach(key => processPayload(inputs[key], key));
+
+        if (equations.length === 0) {
             // Fallback to static expression from node.data
             const expr = (node.data as any)?.expression;
             if (expr) equations.push(expr);
         }
+
         if (equations.length === 0) return PayloadUtils.createError('No Equations');
+
+        // 1. Unicode Case Warning: detect non-ASCII characters often used in math (², ×, −, etc.)
+        const hasUnicode = equations.some(eq => /[^\x00-\x7F]/.test(eq));
+        if (hasUnicode) {
+            return PayloadUtils.createError('Unicode detected: Please use standard ASCII (e.g., x^2 instead of x², * for multiply, - for minus)');
+        }
+
         try {
             const svc = NerdamerService.getInstance();
-            const textResult = svc.evaluate(`solve(${equations.join(',')}, x)`);
+            const nerd = svc.getNerdamer();
 
-            // Handle array results [1, 2, 3] or single value
-            if (textResult.startsWith('[') && textResult.endsWith(']')) {
-                try {
-                    // Try parsing as simple numeric array
-                    const parsed = JSON.parse(textResult.replace(/Math\./g, ''));
-                    return PayloadUtils.createArray(parsed);
-                } catch (e) {
-                    // Fallback: split by comma if JSON parse fails (nerdamer specific format)
-                    const elements = textResult.slice(1, -1).split(',').map((s: string) => s.trim());
-                    return PayloadUtils.createArray(elements);
+            // ─── Phase 1: Iteratively extract scalar assignments into scope ───
+            // e.g., "V=12" → scope["V"] = "12"
+            // Handles expressions like "R=4" or "4=R"
+            let remainingEqs = [...equations];
+            const scope: Record<string, string> = {};
+            let changed = true;
+
+            while (changed) {
+                changed = false;
+                const next: string[] = [];
+                for (const eq of remainingEqs) {
+                    if (typeof eq !== 'string') continue;
+                    const parts = eq.split('=').map(s => s.trim());
+                    if (parts.length === 2) {
+                        const [lhs, rhs] = parts;
+                        if (/^[a-zA-Z_]\w*$/.test(lhs) && !isNaN(Number(rhs))) {
+                            scope[lhs] = rhs; changed = true; continue;
+                        }
+                        if (/^[a-zA-Z_]\w*$/.test(rhs) && !isNaN(Number(lhs))) {
+                            scope[rhs] = lhs; changed = true; continue;
+                        }
+                    }
+                    next.push(eq);
                 }
+                remainingEqs = next;
             }
-            return PayloadUtils.createArray([textResult]);
-        } catch (e: any) { return PayloadUtils.createError(`Solve Failed: ${e.message}`); }
+
+        // ─── Phase 2: Substitute scope into remaining equations ──────────
+        const prepareExpr = (eq: string) => {
+            const trimmed = eq.trim();
+            if (!trimmed.includes('=')) return trimmed;
+            const [lhs, rhs] = trimmed.split('=').map(s => s.trim());
+            return `(${lhs}) - (${rhs})`;
+        };
+
+        // If targetVar is already in the scope, we're done immediately
+        if (targetVar && scope[targetVar] !== undefined) {
+            const val = Number(scope[targetVar]);
+            return !isNaN(val)
+                ? PayloadUtils.createArray([val])
+                : PayloadUtils.createArray([scope[targetVar]]);
+        }
+
+        // Substitute all known scope values into remaining equations
+        const substituted: string[] = remainingEqs.map(eq => {
+            let expr = prepareExpr(eq);
+            for (const [varName, value] of Object.entries(scope)) {
+                try { expr = nerd(expr).sub(varName, value).toString(); }
+                catch { /* ignore */ }
+            }
+            return expr;
+        });
+
+        // Also include the original standardized equations in case no substitution was needed
+        const standardized: string[] =
+            substituted.length > 0 ? substituted : equations.map(prepareExpr);
+
+        // ─── Phase 3: Collect variables, auto-detect target, solve ────────
+        const allVars = new Set<string>();
+        standardized.forEach(eq => {
+            try { nerd(eq).variables().forEach((v: string) => allVars.add(v)); }
+            catch { /* ignore */ }
+        });
+
+        if (!targetVar) {
+            const assignedConst = new Set<string>(Object.keys(scope));
+            const allVarsArr = Array.from(allVars);
+            const freeVars = allVarsArr.filter(v => !assignedConst.has(v));
+            targetVar = freeVars.length > 0 ? freeVars[0] : (allVarsArr[0] || 'x');
+        } else {
+            allVars.add(targetVar);
+        }
+
+        const varList = Array.from(allVars);
+
+        let resultObj: any;
+        if (standardized.length === 0) {
+            return PayloadUtils.createError('No solvable equations after substitution');
+        } else if (standardized.length === 1) {
+            resultObj = nerd(`solve(${standardized[0]}, ${targetVar})`);
+        } else {
+            const systemResults = nerd.solveEquations(standardized, varList);
+            if (Array.isArray(systemResults)) {
+                const match = systemResults.find((r: any) => Array.isArray(r) && r[0] === targetVar);
+                resultObj = match ? nerd(match[1]) : nerd('[]');
+            } else {
+                resultObj = nerd(systemResults);
+            }
+        }
+
+            if (!resultObj) return PayloadUtils.createError('No Result');
+            const textResult = String(resultObj);
+
+            // ─── Smart Result Formatter ─────────────────────────────────────
+            /**
+             * Converts a nerdamer result token to the best display value:
+             * - If it evaluates to an integer → keep as integer
+             * - If it's a simple fraction of large integers (rational approx) → convert to decimal
+             * - If it's a symbolic expression (contains vars/i) → keep as string
+             */
+            const formatToken = (tok: string): string | number => {
+                const trimmed = tok.trim();
+                if (!trimmed) return trimmed;
+
+                // Contains alphabetic chars (symbolic/complex) — keep as-is
+                if (/[a-zA-Z]/.test(trimmed)) return trimmed;
+
+                try {
+                    const num = Number(nerd(trimmed).evaluate().text('decimals'));
+                    if (isNaN(num) || !isFinite(num)) return trimmed;
+                    // If it's effectively an integer, return the integer
+                    if (Math.abs(num - Math.round(num)) < 1e-9) return Math.round(num);
+                    // Otherwise round to 8 significant figures
+                    return parseFloat(num.toPrecision(8));
+                } catch {
+                    return trimmed;
+                }
+            };
+
+            /**
+             * Deduplicate values that are numerically the same (within 1e-6),
+             * then sort by absolute value (solutions closest to 0 first),
+             * then cap at MAX_SOLUTIONS to suppress multi-period noise.
+             */
+            const MAX_SOLUTIONS = 6;
+            const dedupeAndSort = (tokens: (string | number)[]): (string | number)[] => {
+                const seen = new Set<number>();
+                const unique: (string | number)[] = [];
+                for (const t of tokens) {
+                    const n = typeof t === 'number' ? t : Number(t);
+                    if (isNaN(n)) { unique.push(t); continue; }
+                    const key = Math.round(n * 1e6);
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        unique.push(n);
+                    }
+                }
+                unique.sort((a, b) => Math.abs(Number(a)) - Math.abs(Number(b)));
+                return unique.slice(0, MAX_SOLUTIONS);
+            };
+
+            // Parse the result string into tokens
+            let tokens: (string | number)[] = [];
+            if (textResult.startsWith('[') && textResult.endsWith(']')) {
+                const content = textResult.slice(1, -1).trim();
+                if (!content) return PayloadUtils.createArray([]);
+                tokens = content.split(',').map(formatToken);
+            } else if (textResult) {
+                tokens = [formatToken(textResult)];
+            }
+
+            if (tokens.length === 0) return PayloadUtils.createArray([]);
+
+            // Only apply dedup/cap if we have strictly numerical solutions
+            const allNumeric = tokens.every(t => typeof t === 'number');
+            const finalTokens = allNumeric ? dedupeAndSort(tokens) : tokens;
+
+            return PayloadUtils.createArray(finalTokens);
+        } catch (e: any) { 
+            return PayloadUtils.createError(`Solve Failed: ${e.message}`); 
+        }
     },
 
 

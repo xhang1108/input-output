@@ -63,7 +63,14 @@ export class NodeRegistry {
         if (result && typeof result === 'object' && result.symbol === null) {
             const inputSymbols: Record<string, ASTNode> = {};
             for (const [key, p] of Object.entries(inputs)) {
-                if (p.symbol) {
+                if (Array.isArray(p)) {
+                    // Capsule input: Multiple payloads
+                    (inputSymbols as any)[key] = p.map(item => {
+                        if (item.symbol) return item.symbol;
+                        const val = PayloadUtils.unwrap(item);
+                        return PayloadUtils.createSymbol('Literal', { value: (typeof val === 'object' ? 'Object' : val) as string | number | boolean | undefined });
+                    });
+                } else if (p.symbol) {
                     inputSymbols[key] = p.symbol;
                 } else {
                     // Fallback for unconnected or raw inputs: Literal of their value
