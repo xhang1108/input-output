@@ -44,12 +44,17 @@ export const PayloadUtils = {
      * Helper to calculate Recursive Dimensions (Shape)
      */
     calculateDimensions(value: unknown): number[] {
-        if (!Array.isArray(value)) {
-            if (value && (value as any).isMatrix && (value as any).size) {
-                return (value as any).size();
-            }
-            return [];
+        if (!value) return [];
+        const h = value as any;
+        
+        // Match MathJS matrix structure
+        if (h.isMatrix || (h._data && h._size)) {
+            if (typeof h.size === 'function') return h.size();
+            if (Array.isArray(h._size)) return h._size;
         }
+
+        if (!Array.isArray(value)) return [];
+        
         const dims: number[] = [value.length];
         let curr = value[0];
         while (Array.isArray(curr)) {
@@ -63,8 +68,13 @@ export const PayloadUtils = {
      * Extracts the raw value from a payload.
      */
     unwrap(payload: NodePayload | number | unknown): unknown {
-        if (typeof payload === 'object' && payload !== null && 'value' in (payload as Record<string, unknown>)) {
-            return (payload as { value: unknown }).value;
+        if (typeof payload === 'object' && payload !== null) {
+            const p = payload as any;
+            // 1. Standard Payload unwrap
+            if ('value' in p && p.type) return p.value;
+            
+            // 2. MathJS Internal unwrap (if raw object leaked)
+            if (p._data && p._size) return p._data;
         }
         return payload;
     },
@@ -268,15 +278,17 @@ export const PayloadUtils = {
         }
 
         // Matrix -> Array (Recursive) or JSON
-        if (h.isMatrix && h.toArray) {
+        const m = h as any;
+        if ((m.isMatrix || m._data) && (m.toArray || Array.isArray(m._data))) {
+            const rawData = m.toArray ? m.toArray() : m._data;
             return {
                 mathjs: 'Matrix',
-                data: h.toArray().map((item: unknown) =>
+                data: rawData.map((item: unknown) =>
                     Array.isArray(item)
                         ? item.map((sub: unknown) => this.dehydrate(sub))
                         : this.dehydrate(item)
                 ),
-                type: h.type // 'DenseMatrix' or 'SparseMatrix'
+                type: m.type || 'DenseMatrix'
             };
         }
 
@@ -476,5 +488,50 @@ export const PayloadUtils = {
             meta: { ...payload.meta }
         };
     },
+
+    /**
+     * 🧠 Centralized Expression Extraction
+     * Converts a payload to a string suitable for Nerdamer/MathJS.
+     */
+    extractExprStr(payload: NodePayload | undefined): string | null {
+        if (!payload) return null;
+        const raw = this.unwrap(payload);
+        if (typeof raw === 'string') return raw;
+        if (typeof raw === 'number') return String(raw);
+        if (raw && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)) {
+            return String((raw as Record<string, unknown>).value);
+        }
+        return String(raw);
+    },
+
+    /**
+     * 🧩 Smart Numerical Deduplication
+     * Deduplicates values with an epsilon of 1e-6.
+     * Handles mixed numeric/string types.
+     */
+    deduplicateResults(tokens: (string | number)[], epsilon: number = 1e-6): (string | number)[] {
+        const seen = new Set<number>();
+        const unique: (string | number)[] = [];
+        const factor = 1 / epsilon;
+
+        for (const t of tokens) {
+            const n = typeof t === 'number' ? t : Number(t);
+            if (isNaN(n) || !isFinite(n)) {
+                // For non-numeric results, do a simple unique string check
+                if (!unique.some(u => String(u) === String(t))) {
+                    unique.push(t);
+                }
+                continue;
+            }
+
+            // Map number to an integer bucket based on epsilon
+            const key = Math.round(n * factor);
+            if (!seen.has(key)) {
+                seen.add(key);
+                unique.push(n);
+            }
+        }
+        return unique;
+    }
 };
 

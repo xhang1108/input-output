@@ -3,6 +3,7 @@
 import { Handle, HandleProps, useUpdateNodeInternals } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
+import { isGenericColor } from '../../utils/handleUtils';
 
 interface CustomHandleProps extends HandleProps {
     color?: string; // CSS variable or hex
@@ -33,11 +34,7 @@ export function NodeHandle({ className, color, id, nodeId, ...props }: CustomHan
         normalizedColor.includes('formula') ||
         normalizedColor.includes('eq');
 
-    const isWhite =
-        normalizedColor === 'var(--color-any)' ||
-        normalizedColor === 'white' ||
-        normalizedColor === '#ffffff' ||
-        normalizedColor === 'hsl(0, 0%, 100%)';
+    const isWhite = isGenericColor(normalizedColor);
 
     return (
         <Handle

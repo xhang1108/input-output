@@ -5,19 +5,7 @@ import { NodeEvaluator } from '../../../NodeRegistry';
 import { NerdamerService } from '../../../calculus/NerdamerService';
 import { RuntimeGuard } from '../../../calculus/RuntimeGuard';
 
-/**
- * Helper: Extract expression string from an input payload.
- */
-function extractExprStr(payload: NodePayload | undefined): string | null {
-    if (!payload) return null;
-    const raw = PayloadUtils.unwrap(payload);
-    if (typeof raw === 'string') return raw;
-    if (typeof raw === 'number') return String(raw);
-    if (raw && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)) {
-        return String((raw as Record<string, unknown>).value);
-    }
-    return String(raw);
-}
+
 
 export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'DT-01': (node, inputs) => {
@@ -71,7 +59,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         if (mode === 'Sort (Asc)') result.sort((a, b) => Number(a) - Number(b));
         else if (mode === 'Sort (Desc)') result.sort((a, b) => Number(b) - Number(a));
         else if (mode === 'Reverse') result.reverse();
-        else if (mode === 'Unique') result = [...new Set(result.map(x => String(x)))].map((x: any) => (isNaN(Number(x)) ? x : Number(x)));
+        else if (mode === 'Unique') result = PayloadUtils.deduplicateResults(result);
         else if (mode === 'Clean') result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
         return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
     },
@@ -185,7 +173,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-01': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', order = Number(data.order) || 1;
-        const exprStr = extractExprStr(inputs['expr']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -197,7 +185,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-02': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', mode = data.mode || 'indefinite', lower = data.lower || '', upper = data.upper || '';
-        const exprStr = extractExprStr(inputs['expr']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -395,28 +383,6 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 }
             };
 
-            /**
-             * Deduplicate values that are numerically the same (within 1e-6),
-             * then sort by absolute value (solutions closest to 0 first),
-             * then cap at MAX_SOLUTIONS to suppress multi-period noise.
-             */
-            const MAX_SOLUTIONS = 6;
-            const dedupeAndSort = (tokens: (string | number)[]): (string | number)[] => {
-                const seen = new Set<number>();
-                const unique: (string | number)[] = [];
-                for (const t of tokens) {
-                    const n = typeof t === 'number' ? t : Number(t);
-                    if (isNaN(n)) { unique.push(t); continue; }
-                    const key = Math.round(n * 1e6);
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        unique.push(n);
-                    }
-                }
-                unique.sort((a, b) => Math.abs(Number(a)) - Math.abs(Number(b)));
-                return unique.slice(0, MAX_SOLUTIONS);
-            };
-
             // Parse the result string into tokens
             let tokens: (string | number)[] = [];
             if (textResult.startsWith('[') && textResult.endsWith(']')) {
@@ -428,10 +394,11 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             }
 
             if (tokens.length === 0) return PayloadUtils.createArray([]);
-
-            // Only apply dedup/cap if we have strictly numerical solutions
-            const allNumeric = tokens.every(t => typeof t === 'number');
-            const finalTokens = allNumeric ? dedupeAndSort(tokens) : tokens;
+            
+            // Apply deduplication (epsilon-based) and sort by absolute value
+            const finalTokens = PayloadUtils.deduplicateResults(tokens)
+                .sort((a, b) => Math.abs(Number(a)) - Math.abs(Number(b)))
+                .slice(0, 6); // MAX_SOLUTIONS = 6
 
             return PayloadUtils.createArray(finalTokens);
         } catch (e: any) { 
@@ -445,7 +412,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const mode = data.mode || 'gradient', var1 = data.var1 || 'x', var2 = data.var2 || 'y';
-        const exprStr = extractExprStr(inputs['in_f']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['in_f']);
         if (!exprStr) return PayloadUtils.createError('No Function Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -454,13 +421,13 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 return PayloadUtils.createArray([dx, dy]);
             }
             if (mode === 'divergence') {
-                const p = extractExprStr(inputs['in_p']), q = extractExprStr(inputs['in_q']);
+                const p = PayloadUtils.extractExprStr(inputs['in_p']), q = PayloadUtils.extractExprStr(inputs['in_q']);
                 if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
                 const dp = svc.differentiate(p, var1).text(), dq = svc.differentiate(q, var2).text();
                 return PayloadUtils.createSymbolic(`(${dp})+(${dq})`);
             }
             if (mode === 'curl') {
-                const p = extractExprStr(inputs['in_p']), q = extractExprStr(inputs['in_q']);
+                const p = PayloadUtils.extractExprStr(inputs['in_p']), q = PayloadUtils.extractExprStr(inputs['in_q']);
                 if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
                 const dq_dx = svc.differentiate(q, var1).text(), dp_dy = svc.differentiate(p, var2).text();
                 return PayloadUtils.createSymbolic(`(${dq_dx})-(${dp_dy})`);
@@ -519,7 +486,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-03': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', approach = data.approach || '0', direction = data.direction || 'both';
-        const exprStr = extractExprStr(inputs['expr']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -550,7 +517,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const tEnd = Number(data.tEnd) || 1;
         const y0 = Number(data.y0) || 1;
         const stepSize = Number(data.stepSize) || 0.01;
-        const exprStr = extractExprStr(inputs['expr']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();

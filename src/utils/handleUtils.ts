@@ -131,6 +131,14 @@ export function getHandleColor(type: DataType | string): string {
 }
 
 /**
+ * Checks if a color token or string represents a "Generic/Any" handle.
+ */
+export function isGenericColor(color: string): boolean {
+    const c = color.toLowerCase();
+    return c === 'var(--color-any)' || c === 'white' || c === '#ffffff' || c === 'any';
+}
+
+/**
  * Specialized version for UI components that work with HandleConfig objects.
  */
 export function getHandleColorByConfig(config: HandleConfig): string {

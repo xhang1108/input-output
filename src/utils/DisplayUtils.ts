@@ -63,7 +63,12 @@ export const DisplayUtils = {
                 if (val.type === 'array') return this.formatValue(val.value, precision);
                 if (val.type === 'string') return String(val.value);
                 if (val.type === 'symbolic') return val.symbol || String(val.value);
-                // For complex objects in payloads, fall through to generic object formatter
+                
+                // 📦 Array/Matrix detection: Support both standard and internal MathJS objects
+                if (val.type === 'array') {
+                    const data = val.value?._data || val.value;
+                    return this.formatValue(data, precision);
+                }
             }
 
             // Live MathJS Objects (not dehydrated)
@@ -72,6 +77,9 @@ export const DisplayUtils = {
             if (val.isComplex) return `${this.formatValue(val.re, precision)}${val.im >= 0 ? '+' : ''}${this.formatValue(val.im, precision)}i`;
             if (val.isUnit) return `${val.value} ${this.formatUnit(val.formatUnits ? val.formatUnits() : val.unit || '')}`.trim();
             if (typeof val.toArray === 'function') return this.formatValue(val.toArray(), precision);
+            
+            // 🛡️ Internal MathJS Serialization Fallback
+            if (val._data && val._size) return this.formatValue(val._data, precision);
 
             // Handle MathJS specific dehydrated types
             if (val.mathjs === 'Complex' && val.re !== undefined && val.im !== undefined) {

@@ -8,15 +8,17 @@ import { useBrain } from '../context/BrainContext';
 import { BrainHelper } from '../engine/BrainHelper';
 import {
     getHandleVariant,
-    findNearestSlot
+    findNearestSlot,
+    getHandleColorByConfig
 } from '../utils/handleUtils';
+import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { MagneticSnapState } from './useHandleMagnet';
 
 type UseRelinkProps = {
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
     logAction: (action: string) => void;
     edgeType: string;
-    onSmartLinkSearch?: (params: { nodeId: string; handleId: string; handleType: 'source' | 'target'; position: { x: number; y: number } }) => void;
+    onSmartLinkSearch?: (params: { nodeId: string; handleId: string; handleType: 'source' | 'target'; handleColor: string; position: { x: number; y: number } }) => void;
 };
 
 export function useRelink({
@@ -364,6 +366,9 @@ export function useRelink({
         const wasRelinking = state.active;
 
         let { toNode, toHandle, isValid } = connectionState || {};
+        
+        // Log for debugging (visible in UI action log)
+        logAction(`onRelinkEnd: isValid=${isValid}, wasRelink=${wasRelinking}, startNode=${connectionStartRef.current?.nodeId}`);
 
         if (wasRelinking) {
             if (!toNode || !toHandle) {
@@ -396,6 +401,7 @@ export function useRelink({
                 onRelinkConnect(synthesizedConnection);
 
             } else if (!nativeConnectWillFire && !needsSyntheticConnection && connectionStartRef.current?.nodeId && onSmartLinkSearch) {
+                logAction(`Smart Link Triggered from ${connectionStartRef.current.nodeId}`);
                 let screenX, screenY;
                 if ('clientX' in event) {
                     screenX = (event as MouseEvent).clientX;
@@ -406,10 +412,22 @@ export function useRelink({
                     screenY = touch.clientY;
                 }
 
+                const startNode = brain.getNode(connectionStartRef.current.nodeId);
+                const startNodeDef = NODE_DEFINITIONS.find(d => d.id === startNode?.type);
+                const startHandleDef = (startNode?.data?.handles as any[])?.find(h => h.id === connectionStartRef.current?.handleId)
+                    || startNodeDef?.handles.find((h: any) => h.id === connectionStartRef.current?.handleId);
+
+                const handleColor = startHandleDef 
+                    ? (startHandleDef.dynamicColor && startNode?.data 
+                        ? getHandleColorByConfig({ ...startHandleDef, dataType: startHandleDef.dynamicColor(startNode.data) })
+                        : getHandleColorByConfig(startHandleDef)) 
+                    : 'var(--color-any)';
+
                 onSmartLinkSearch({
                     nodeId: connectionStartRef.current.nodeId,
                     handleId: connectionStartRef.current.handleId!,
                     handleType: connectionStartRef.current.handleType as 'source' | 'target',
+                    handleColor, // Pass the solved color
                     position: { x: screenX, y: screenY }
                 });
             }

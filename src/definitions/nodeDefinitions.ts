@@ -724,7 +724,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Base Converter',
         category: 'Transform',
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any' },
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'string' }
         ],
         defaultData: { base: 'HEX' },

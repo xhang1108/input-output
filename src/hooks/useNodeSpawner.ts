@@ -5,11 +5,13 @@ import { Node, Edge, addEdge } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { useCanvasProjection } from './useCanvasProjection';
+import { getHandleColorByConfig } from '../utils/handleUtils';
 
 export interface PendingConnection {
     nodeId: string;
     handleId: string | null;
     handleType: 'source' | 'target';
+    handleColor: string;
 }
 
 interface UseNodeSpawnerProps {
@@ -91,7 +93,12 @@ export function useNodeSpawner({
             const nodeDef = NODE_DEFINITIONS.find(d => d.id === type);
             if (nodeDef) {
                 const targetType = pendingConnection.handleType === 'source' ? 'target' : 'source';
-                const companionHandle = nodeDef.handles.find(h => h.type === targetType);
+                // Prioritize handles that match the color OR are "any" (white)
+                const companionHandle = nodeDef.handles.find(h => {
+                    if (h.type !== targetType) return false;
+                    const resolvedColor = getHandleColorByConfig(h);
+                    return resolvedColor === pendingConnection.handleColor || resolvedColor === 'var(--color-any)';
+                }) || nodeDef.handles.find(h => h.type === targetType); // Fallback to first compatible type if no color match
 
                 if (companionHandle) {
                     const newEdge: Edge = {

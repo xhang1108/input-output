@@ -373,7 +373,8 @@ export function Body({
             setPendingConnection({
                 nodeId: params.nodeId,
                 handleId: params.handleId,
-                handleType: params.handleType
+                handleType: params.handleType,
+                handleColor: params.handleColor
             });
 
             logAction(`Smart Search: from ${params.nodeId}`);
@@ -398,6 +399,11 @@ export function Body({
     // Guard: Prevent onConnectStart from interfering with native Reconnect
     const paletteGuardRef = useRef(false);
 
+    const closePalette = useCallback(() => {
+        setShowPalette(false);
+        setPendingConnection(null);
+    }, [setShowPalette, setPendingConnection]);
+
     // --- FEEL NERVES (Input Handling) ---
     const autoConfirm = useCallback((fn: (e: any) => void) => (e: any) => {
         if (mode !== 'IDLE') confirmGrab();
@@ -409,6 +415,7 @@ export function Body({
             // Creation & Layout
             'shift+a': autoConfirm((e) => {
                 e.preventDefault();
+                setPendingConnection(null);
                 setPalettePosition(mousePosRef.current);
                 setShowPalette(true);
                 logAction('Show Palette (Shift+A)');
@@ -542,7 +549,7 @@ export function Body({
             'enter': () => { confirmGrab(); logAction('Confirm (Enter)'); },
             'escape': () => {
                 cancelGrab();
-                setShowPalette(false);
+                closePalette();
                 setShowNPanel(false);
                 setNodes(nds => nds.map(n => ({ ...n, selected: false })));
                 logAction('Cancel/Deselect (Esc)');
@@ -770,7 +777,7 @@ export function Body({
                             onClose={() => setContextMenu(null)}
                             items={contextMenu.type === 'CANVAS'
                                 ? getCanvasMenuItems({
-                                    openPalette: (x, y) => { setPalettePosition({ x, y }); setShowPalette(true); },
+                                    openPalette: (x, y) => { setPendingConnection(null); setPalettePosition({ x, y }); setShowPalette(true); },
                                     resetView,
                                     pasteFromClipboard,
                                     selectAll: () => setNodes((nds: Node[]) => nds.map(n => ({ ...n, selected: true }))),
@@ -842,12 +849,13 @@ export function Body({
                             isOpen={showPalette}
                             position={palettePosition || { x: 0, y: 0 }}
                             onSelect={(type, opToken, data, isContinuous) => {
-                                spawnNode(type, opToken);
+                                spawnNode(type, opToken, data, isContinuous);
                                 if (!isContinuous) {
-                                    setShowPalette(false);
+                                    closePalette();
                                 }
                             }}
-                            onClose={() => setShowPalette(false)}
+                            onClose={closePalette}
+                            pendingConnection={pendingConnection}
                         />
                     </div>
                 )}

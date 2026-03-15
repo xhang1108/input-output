@@ -5,19 +5,7 @@ import { NodeEvaluator } from '../../../NodeRegistry';
 import { NerdamerService } from '../../../calculus/NerdamerService';
 import { RuntimeGuard } from '../../../calculus/RuntimeGuard';
 
-/**
- * Helper: Extract expression string from an input payload.
- */
-function extractExprStr(payload: NodePayload | undefined): string | null {
-    if (!payload) return null;
-    const raw = PayloadUtils.unwrap(payload);
-    if (typeof raw === 'string') return raw;
-    if (typeof raw === 'number') return String(raw);
-    if (raw && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)) {
-        return String((raw as Record<string, unknown>).value);
-    }
-    return String(raw);
-}
+
 
 /**
  * Seeded Random Number Generator (Mulberry32)

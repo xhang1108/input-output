@@ -3,13 +3,14 @@
 import { useMemo } from 'react';
 import { getDefinitionsByCategory } from '../../definitions/nodeDefinitions';
 import { CategorizedMenu, CategorizedMenuItem } from './CategorizedMenu';
+import { getHandleColorByConfig, isGenericColor } from '../../utils/handleUtils';
 
 interface NodePickerProps {
     isOpen: boolean;
     position?: { x: number, y: number };
     onClose: () => void;
     onSelect: (type: string, label: string, data?: unknown, isContinuous?: boolean) => void;
-    pendingConnection?: { nodeId: string; handleId: string | null; handleType: 'source' | 'target' } | null;
+    pendingConnection?: { nodeId: string; handleId: string | null; handleType: 'source' | 'target'; handleColor: string } | null;
 }
 
 // Transform NodeDefinitions → CategorizedMenuItem format
@@ -42,13 +43,31 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
         if (!pendingConnection) return ALL_MENU_ITEMS;
 
         const requiredHandleType = pendingConnection.handleType === 'source' ? 'target' : 'source';
+        const searchColor = (pendingConnection.handleColor || '').trim().toLowerCase();
 
-        return ALL_MENU_ITEMS.filter(item => {
-            // Check if node definition has a compatible handle
+        const filtered = ALL_MENU_ITEMS.filter(item => {
             const nodeHandles = (item.data as any)?.handles || [];
-            const hasCompatibleHandle = nodeHandles.some((h: any) => h.type === requiredHandleType);
-            return hasCompatibleHandle;
+            if (nodeHandles.length === 0) return false;
+
+            return nodeHandles.some((h: any) => {
+                if (h.type !== requiredHandleType) return false;
+                
+                const hColor = getHandleColorByConfig(h);
+
+                if (isGenericColor(searchColor)) {
+                    // Contextual Match:
+                    // 1. If dragging from an INPUT handle -> it can accept ANY output Node.
+                    if (pendingConnection.handleType === 'target') return true;
+                    // 2. If dragging from an OUTPUT handle -> only match other Any inputs to keep specialized nodes clean.
+                    return isGenericColor(hColor);
+                }
+                
+                // Specific handles match same color OR any
+                return hColor === searchColor || isGenericColor(hColor);
+            });
         });
+
+        return filtered;
     }, [pendingConnection]);
 
     const handleSelect = (item: CategorizedMenuItem, isContinuous: boolean) => {
@@ -62,7 +81,7 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
             position={position}
             onClose={onClose}
             onSelect={handleSelect}
-            placeholder="Add Node..."
+            placeholder={pendingConnection ? "Filtered Search..." : "Add Node..."}
             followZoom={false}
         />
     );
