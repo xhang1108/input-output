@@ -19,6 +19,19 @@ function extractExprStr(payload: NodePayload | undefined): string | null {
     return String(raw);
 }
 
+/**
+ * Seeded Random Number Generator (Mulberry32)
+ * Provides deterministic results for a given seed.
+ */
+function seededRandom(seed: number) {
+    return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+}
+
 export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-01': (node, inputs) => {
         const engine = InputOutputEngine.getInstance();
@@ -325,50 +338,66 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
 
 
-    'IN-11': (node, inputs) => {
-        const data = (node.data || {}) as any, mode = data.mode || 'Normal';
-        const n = Math.max(1, Math.min(100000, Math.floor(Number(PayloadUtils.unwrap(inputs['param_n']) ?? data.n ?? 100))));
-        const p1 = Number(PayloadUtils.unwrap(inputs['param_1']) ?? data.p1 ?? (mode === 'Normal' ? 0 : 1));
-        const p2 = Number(PayloadUtils.unwrap(inputs['param_2']) ?? data.p2 ?? (mode === 'Uniform' ? 10 : 1));
-        const samples = new Array(n);
-        try {
-            if (mode === 'Normal') {
-                for (let i = 0; i < n; i++) {
-                    let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random();
-                    samples[i] = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v) * p2 + p1;
-                }
-            } else if (mode === 'Uniform') {
-                const min = Math.min(p1, p2), max = Math.max(p1, p2);
-                for (let i = 0; i < n; i++) samples[i] = min + Math.random() * (max - min);
-            } else if (mode === 'Poisson') {
-                const L = Math.exp(-p1);
-                for (let i = 0; i < n; i++) {
-                    let p = 1.0, k = 0; do { k++; p *= Math.random(); } while (p > L);
-                    samples[i] = k - 1;
-                }
-            } else if (mode === 'Exponential') {
-                for (let i = 0; i < n; i++) {
-                    samples[i] = -Math.log(Math.random()) / p1;
-                }
-            }
-            return PayloadUtils.createArray(samples);
-        } catch { return PayloadUtils.createError('Distribution Failed'); }
-    },
-
-    // IN-10: Random generator (Moving logic here for easier registration)
-    'IN-10': (node) => {
+    // IN-10: Unified Random Node (Professional Stochastic Generator)
+    'IN-10': (node, inputs) => {
         const data = (node.data || {}) as Record<string, unknown>;
+        const distribution = (data.distribution as string || 'Uniform').toLowerCase();
+        const mode = (data.mode as string || 'float').toLowerCase(); // float, vector, matrix
+        const isFloat = data.isFloat !== false;
+        const seed = data.seed;
 
-        // --- Passive Evaluation Strategy (Phase 6 Fix) ---
+        // Sampling parameters
+        const getNum = (key: string, def: number) => {
+            const val = inputs[key] ? PayloadUtils.unwrap(inputs[key]) : data[key];
+            return val !== undefined ? Number(val) : def;
+        };
+
+        const rows = Math.max(1, Math.floor(getNum('rows', 3)));
+        const cols = Math.max(1, Math.floor(getNum('cols', 3)));
+        const length = Math.max(1, Math.floor(getNum('length', 3)));
+
+        // Initialize seeded random
+        const rng = seededRandom(Number(seed) || 0);
+
+        // Core Generator Logic
+        const sample = (): number => {
+            if (distribution === 'normal') {
+                const mean = getNum('mean', 0);
+                const stdDev = getNum('stdDev', 1);
+                let u = 0, v = 0;
+                while (u === 0) u = rng();
+                while (v === 0) v = rng();
+                const res = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v) * stdDev + mean;
+                return isFloat ? res : Math.floor(res);
+            } else if (distribution === 'poisson') {
+                const lambda = getNum('lambda', 1);
+                const L = Math.exp(-lambda);
+                let p = 1.0, k = 0;
+                do { k++; p *= rng(); } while (p > L);
+                return k - 1;
+            } else if (distribution === 'exponential') {
+                const lambda = getNum('lambda', 1);
+                const res = -Math.log(rng()) / lambda;
+                return isFloat ? res : Math.floor(res);
+            } else {
+                // Default: Uniform
+                const min = getNum('min', 0);
+                const max = getNum('max', 1);
+                const res = rng() * (max - min) + min;
+                return isFloat ? res : Math.floor(res);
+            }
+        };
+
+        // --- Passive Evaluation Strategy ---
         // We only generate a NEW value if the node's parameters change.
         const currentDataHash = JSON.stringify({
-            mode: data.mode,
-            min: data.min,
-            max: data.max,
-            isFloat: data.isFloat,
-            rows: data.rows,
-            cols: data.cols,
-            length: data.length
+            distribution, mode, isFloat, seed,
+            rows, cols, length,
+            params: {
+                min: getNum('min', 0), max: getNum('max', 1),
+                mean: getNum('mean', 0), stdDev: getNum('stdDev', 1),
+                lambda: getNum('lambda', 1)
+            }
         });
 
         const lastDataHash = (node as any)._lastDataHash;
@@ -377,28 +406,16 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         }
         (node as any)._lastDataHash = currentDataHash;
 
-        const mode = data.mode as string || 'float';
-        const isFloat = data.isFloat !== false;
-        const min = Number(data.min ?? 0);
-        const max = Number(data.max ?? 1);
-        const rows = Math.max(1, Math.floor(Number(data.rows ?? 3)));
-        const cols = Math.max(1, Math.floor(Number(data.cols ?? 3)));
-        const length = Math.max(1, Math.floor(Number(data.length ?? 3)));
-
-        const getRand = () => {
-            const r = Math.random() * (max - min) + min;
-            return isFloat ? r : Math.floor(r);
-        };
-
         try {
             if (mode === 'matrix') {
-                const mat = Array.from({ length: rows }, () => Array.from({ length: cols }, getRand));
+                const mat = Array.from({ length: rows }, () => Array.from({ length: cols }, sample));
                 return PayloadUtils.createArray(mat);
-            } else if (mode === 'vector') {
-                const vec = Array.from({ length: length }, getRand);
+            } else if (mode === 'vector' || mode === 'array') { // IN-11 used to return arrays
+                const count = mode === 'vector' ? length : getNum('param_n', 100);
+                const vec = Array.from({ length: count }, sample);
                 return PayloadUtils.createArray(vec);
             } else {
-                return PayloadUtils.createScalar(getRand());
+                return PayloadUtils.createScalar(sample());
             }
         } catch (e: any) {
             return PayloadUtils.createError(`Random Failed: ${e.message}`);

@@ -798,7 +798,7 @@ export class GraphCodec {
             if (opLower === 'abacus') return NODE_DEFINITIONS.find(d => d.id === 'IN-08');
             if (opLower === 'expression' || opLower === 'expr' || opLower === 'formula') return NODE_DEFINITIONS.find(d => d.id === 'IN-09');
             if (opLower === 'random' || opLower === 'rand' || opLower === 'noise') return NODE_DEFINITIONS.find(d => d.id === 'IN-10');
-            if (opLower === 'distribution' || opLower === 'dist') return NODE_DEFINITIONS.find(d => d.id === 'IN-11');
+            if (opLower === 'distribution' || opLower === 'dist') return NODE_DEFINITIONS.find(d => d.id === 'IN-10');
 
             if (opLower === 'res' || opLower === 'result') return NODE_DEFINITIONS.find(d => d.id === 'OT-01');
             if (opLower === 'status') return NODE_DEFINITIONS.find(d => d.id === 'OT-02');
@@ -900,7 +900,6 @@ export class GraphCodec {
             else if (node.type === 'IN-08') opCode = 'abacus';
             else if (node.type === 'IN-09') opCode = 'expr';
             else if (node.type === 'IN-10') opCode = 'rand';
-            else if (node.type === 'IN-11') opCode = 'dist';
             else if (node.type === 'OT-01') opCode = 'res';
             else if (node.type === 'OT-02') opCode = 'status';
             else if (node.type === 'OT-03') opCode = 'plot';

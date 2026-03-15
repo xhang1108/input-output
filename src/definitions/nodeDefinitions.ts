@@ -187,7 +187,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         id: 'IN-10',
         label: 'Random',
         category: 'Input',
-        aliases: ['rand', 'noise', 'white'],
+        aliases: ['rand', 'noise', 'white', 'gaussian', 'normal', 'uniform', 'probability', 'poisson', 'exponential'],
         handles: [
             {
                 id: 'out', type: 'source', variant: 'single', dataType: 'scalar',
@@ -199,53 +199,44 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: {
             type: 'random',
-            mode: 'float',
+            mode: 'scalar',
+            distribution: 'Uniform',
             isFloat: true,
             min: 0,
             max: 1,
+            mean: 0,
+            stdDev: 1,
+            lambda: 1,
             rows: 3,
             cols: 3,
-            length: 1,
+            length: 100,
             seed: Date.now()
         },
         params: [
             {
-                id: 'mode', label: 'Output Mode', type: 'select', options: [
-                    { label: 'Single Value', value: 'float' },
-                    { label: 'Array (1D)', value: 'vector' },
-                    { label: 'Array (2D)', value: 'matrix' }
-                ]
-            },
-            { id: 'isFloat', label: 'Is Float', type: 'boolean' },
-            { id: 'min', label: 'Min', type: 'number' },
-            { id: 'max', label: 'Max', type: 'number' },
-            { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1, hint: 'Array (2D) only', hidden: (d) => d.mode !== 'matrix' },
-            { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1, hint: 'Array (2D) only', hidden: (d) => d.mode !== 'matrix' },
-            { id: 'length', label: 'Length', type: 'number', min: 1, step: 1, hint: 'Array (1D) only', hidden: (d) => d.mode !== 'vector' }
-        ]
-    },
-    {
-        id: 'IN-11',
-        label: 'Distributions',
-        category: 'Input',
-        aliases: ['gaussian', 'normal', 'uniform', 'probability'],
-        handles: [
-            { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
-        ],
-        defaultData: { mode: 'Normal', n: 100, p1: 0, p2: 1 },
-        opTokens: ['NORMAL', 'UNIFORM', 'POISSON'],
-        params: [
-            {
-                id: 'mode', label: 'Distribution', type: 'select', options: [
-                    { label: 'Normal (Gaussian)', value: 'Normal' },
+                id: 'distribution', label: 'Distribution', type: 'select', options: [
                     { label: 'Uniform', value: 'Uniform' },
+                    { label: 'Normal (Gaussian)', value: 'Normal' },
                     { label: 'Poisson', value: 'Poisson' },
                     { label: 'Exponential', value: 'Exponential' }
                 ]
             },
-            { id: 'n', label: 'N', type: 'number', min: 1, step: 1, hint: 'Sample Count' },
-            { id: 'p1', label: 'P1', type: 'number', hint: 'Mean / Min / Lambda' },
-            { id: 'p2', label: 'P2', type: 'number', hint: 'StdDev / Max' }
+            {
+                id: 'mode', label: 'Output Mode', type: 'select', options: [
+                    { label: 'Scalar Value', value: 'scalar' },
+                    { label: 'Array (1D)', value: 'vector' },
+                    { label: 'Array (2D)', value: 'matrix' }
+                ]
+            },
+            { id: 'isFloat', label: 'Is Float', type: 'boolean', hidden: (d) => d.distribution === 'Poisson' },
+            { id: 'min', label: 'Min', type: 'number', hidden: (d) => d.distribution !== 'Uniform' },
+            { id: 'max', label: 'Max', type: 'number', hidden: (d) => d.distribution !== 'Uniform' },
+            { id: 'mean', label: 'Mean (μ)', type: 'number', hidden: (d) => d.distribution !== 'Normal' },
+            { id: 'stdDev', label: 'StdDev (σ)', type: 'number', min: 0, hidden: (d) => d.distribution !== 'Normal' },
+            { id: 'lambda', label: 'Lambda (λ)', type: 'number', min: 0.0001, hidden: (d) => d.distribution !== 'Poisson' && d.distribution !== 'Exponential' },
+            { id: 'length', label: 'Length', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'vector' },
+            { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'matrix' },
+            { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'matrix' }
         ]
     },
 

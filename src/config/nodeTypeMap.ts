@@ -46,7 +46,6 @@ import { IntegralNode } from '../components/nodes/IntegralNode';
 import { LimitNode } from '../components/nodes/LimitNode';
 import { ODESolverNode } from '../components/nodes/ODESolverNode';
 import { SmoothingNode } from '../components/nodes/SmoothingNode';
-import { DistributionsNode } from '../components/nodes/DistributionsNode';
 import { StatusNode } from '../components/nodes/StatusNode';
 
 export const nodeTypes = {
@@ -62,7 +61,6 @@ export const nodeTypes = {
 
     // ─── 2. Generators ──────────────────────────────────────
     'IN-10': RandomNode,
-    'IN-11': DistributionsNode,
 
     // ─── 3. Math ────────────────────────────────────────────
     'MA-01': GenericSelectorNode,

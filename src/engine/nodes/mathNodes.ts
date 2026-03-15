@@ -7,7 +7,6 @@ export function registerMathNodes() {
         // ─── 2. Generators ──────────────────────────────────────
         'IN-06', // Constant
         'IN-10', // Random
-        'IN-11', // Distributions
 
         // ─── 3. Math ────────────────────────────────────────────
         'MA-01', // Basic Math

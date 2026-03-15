@@ -109,24 +109,27 @@ A physical-computing inspired input for large integers.
 ```
 
 ## 10. Random (IN-10)
-Generate noise or random tensors.
+A high-performance stochastic generator that consolidates noise and distribution logic. It supports four major statistical models and three output architectures.
+
+### Supported Distributions
+*   **Uniform**: Standard range between `Min` and `Max`.
+*   **Normal (Gaussian)**: Bell-curve logic defined by `Mean` and `StdDev`.
+*   **Poisson**: Discrete event frequency defined by `Lambda`. (Floating Point is disabled as Poisson is strictly discrete).
+*   **Exponential**: Decay/Wait-time model defined by `Lambda`.
+
+### Output Modes
+*   **Scalar**: Single number output.
+*   **Vector**: 1D Array defined by `Length`.
+*   **Matrix**: 2D Array defined by `Rows` x `Cols`.
+
+> [!NOTE]
+> All random values are **deterministic**! They are governed by an internal `seed` that only changes when you click **Regenerate** or modify parameters. This ensures your graph results don't "jump" unexpectedly.
 
 ```playground
 {
   "nodeType": "IN-10",
-  "initialData": { "mode": "float", "label": "Random" },
-  "height": 200
-}
-```
-
-## 11. Distributions (IN-11)
-Generate statistical samples from Normal, Uniform, or Poisson distributions.
-
-```playground
-{
-  "nodeType": "IN-11",
-  "initialData": { "mode": "Normal", "n": 100, "label": "Gaussian" },
-  "height": 220
+  "initialData": { "mode": "scalar", "distribution": "Uniform", "label": "Stochastic Gen" },
+  "height": 335
 }
 ```
 

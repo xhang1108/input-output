@@ -1,25 +1,43 @@
 
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
-const RANDOM_MODES: CategorizedMenuItem[] = [
+const SHAPE_MODES: CategorizedMenuItem[] = [
     { id: 'scalar', label: 'Scalar Value', category: 'Dimensions', aliases: ['float', 'number'] },
     { id: 'vector', label: 'Vector (1D Array)', category: 'Dimensions', aliases: ['array', 'vector'] },
     { id: 'matrix', label: 'Matrix (2D Array)', category: 'Dimensions', aliases: ['matrix', 'grid'] },
 ];
 
+const DISTRIBUTION_MODES: CategorizedMenuItem[] = [
+    { id: 'Uniform', label: 'Uniform', category: 'Continuous', aliases: ['rect', 'uniform'] },
+    { id: 'Normal', label: 'Normal (Gaussian)', category: 'Continuous', aliases: ['gaussian', 'normal'] },
+    { id: 'Poisson', label: 'Poisson', category: 'Discrete', aliases: ['poisson', 'discrete'] },
+    { id: 'Exponential', label: 'Exponential', category: 'Continuous', aliases: ['exp', 'exponential'] },
+];
+
 export const RandomNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
-    const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const { updateNodeData } = useReactFlow();
 
-    const mode = data.mode as string || 'scalar';
+    // Two menus: Shape and Distribution
+    const shapeMenu = useNodeMenu();
+    const distMenu = useNodeMenu();
+
+    const mode = (data.mode as string) || 'scalar';
+    const distribution = (data.distribution as string) || 'Uniform';
     const isFloat = data.isFloat !== false;
+
+    // Helper to safely extract numbers from data (prevents {} errors)
+    const getVal = (val: any, def: number) => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') return parseFloat(val) || def;
+        return def;
+    };
 
     const handleChange = useCallback((key: string, value: unknown) => {
         updateNodeData(id, { [key]: value });
@@ -29,146 +47,217 @@ export const RandomNode = memo((props: NodeProps) => {
         });
     }, [id, updateNodeData, brain]);
 
-    const handleMenuSelect = useCallback((item: CategorizedMenuItem) => {
+    const handleShapeSelect = useCallback((item: CategorizedMenuItem) => {
         handleChange('mode', item.id);
-        closeMenu();
-    }, [handleChange, closeMenu]);
+        shapeMenu.closeMenu();
+    }, [handleChange, shapeMenu]);
+
+    const handleDistSelect = useCallback((item: CategorizedMenuItem) => {
+        handleChange('distribution', item.id);
+        distMenu.closeMenu();
+    }, [handleChange, distMenu]);
 
     const handleRegenerate = () => {
-        const trigger = Date.now();
-        handleChange('trigger', trigger);
+        // We use seed to trigger evaluation instead of trigger timestamp for consistency with engine
+        handleChange('seed', Date.now());
     };
 
-    const currentModeLabel = RANDOM_MODES.find(m => m.id === mode)?.label || mode;
+    const currentShapeLabel = SHAPE_MODES.find(m => m.id === mode)?.label || mode;
+    const currentDistLabel = DISTRIBUTION_MODES.find(m => m.id === distribution)?.label || distribution;
 
     return (
         <BaseNode {...props}>
-            <div className="flex flex-col gap-2 p-2 min-w-[140px]">
-                {/* Mode Selector */}
+            <div className="flex flex-col gap-2 p-2 min-w-[170px] h-[335px]">
+                {/* Distribution Selector */}
                 <div className="flex flex-col gap-1">
+                    <label className="text-[9px] text-zinc-500 uppercase font-black px-0.5">Distribution</label>
                     <button
                         className="nodrag w-full bg-zinc-900/50 border border-zinc-700/50 rounded-md px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group active:scale-95"
-                        onClick={handleTrigger}
+                        onClick={distMenu.handleTrigger}
                         onMouseDown={(e) => e.stopPropagation()}
                     >
-                        <span className="truncate font-medium group-hover:text-white lowercase">{currentModeLabel}</span>
+                        <span className="truncate font-medium group-hover:text-white">{currentDistLabel}</span>
                         <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
-
                     <CategorizedMenu
-                        isOpen={menuOpen}
-                        items={RANDOM_MODES}
-                        position={menuPos}
-                        trigger={trigger}
-                        onClose={closeMenu}
-                        onSelect={handleMenuSelect}
-                        placeholder="Search Mode..."
+                        isOpen={distMenu.menuOpen}
+                        items={DISTRIBUTION_MODES}
+                        position={distMenu.menuPos}
+                        trigger={distMenu.trigger}
+                        onClose={distMenu.closeMenu}
+                        onSelect={handleDistSelect}
+                        placeholder="Search Distribution..."
+                        width="44"
+                    />
+                </div>
+
+                {/* Shape Selector */}
+                <div className="flex flex-col gap-1">
+                    <label className="text-[9px] text-zinc-500 uppercase font-black px-0.5">Output Shape</label>
+                    <button
+                        className="nodrag w-full bg-zinc-900/50 border border-zinc-700/50 rounded-md px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group active:scale-95"
+                        onClick={shapeMenu.handleTrigger}
+                        onMouseDown={(e) => e.stopPropagation()}
+                    >
+                        <span className="truncate font-medium group-hover:text-white lowercase">{currentShapeLabel}</span>
+                        <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <CategorizedMenu
+                        isOpen={shapeMenu.menuOpen}
+                        items={SHAPE_MODES}
+                        position={shapeMenu.menuPos}
+                        trigger={shapeMenu.trigger}
+                        onClose={shapeMenu.closeMenu}
+                        onSelect={handleShapeSelect}
+                        placeholder="Search Shape..."
                         width="36"
                     />
                 </div>
 
-                {/* Float Toggle */}
-                <div className="flex gap-2 items-center bg-zinc-900/30 p-1.5 rounded-md border border-zinc-700/30">
-                    <input
-                        type="checkbox"
-                        className="cursor-pointer"
-                        checked={isFloat}
-                        onChange={(e) => handleChange('isFloat', e.target.checked)}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        id={`float-toggle-${id}`}
-                    />
-                    <label htmlFor={`float-toggle-${id}`} className="text-[10px] text-zinc-400 font-mono cursor-pointer select-none">
-                        Floating Point
-                    </label>
-                </div>
+                {/* Distribution Parameters Container (Stable Height) */}
+                <div className="h-[84px]">
+                    <div className="flex flex-col gap-2 bg-zinc-900/30 p-2 rounded-md border border-zinc-700/30 h-full">
+                        {distribution === 'Uniform' && (
+                            <div className="grid grid-cols-2 gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] text-zinc-500 uppercase font-black">Min</label>
+                                    <input
+                                        type="number"
+                                        className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors w-full"
+                                        value={getVal(data.min, 0)}
+                                        onChange={(e) => handleChange('min', parseFloat(e.target.value))}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        step="1"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] text-zinc-500 uppercase font-black">Max</label>
+                                    <input
+                                        type="number"
+                                        className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors w-full"
+                                        value={getVal(data.max, 1)}
+                                        onChange={(e) => handleChange('max', parseFloat(e.target.value))}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        step="1"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
-                {/* Range Inputs */}
-                <div className="grid grid-cols-2 gap-2">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-zinc-500 uppercase font-black px-0.5">Min</label>
-                        <input
-                            type="number"
-                            className="bg-zinc-900 border border-zinc-700/50 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors w-full"
-                            value={Number.isNaN(data.min) ? 0 : (data.min as number ?? 0)}
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                handleChange('min', Number.isNaN(val) ? 0 : val);
-                            }}
-                            onPointerDown={(e) => e.stopPropagation()}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-zinc-500 uppercase font-black px-0.5">Max</label>
-                        <input
-                            type="number"
-                            className="bg-zinc-900 border border-zinc-700/50 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors w-full"
-                            value={Number.isNaN(data.max) ? 1 : (data.max as number ?? 1)}
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                handleChange('max', Number.isNaN(val) ? 1 : val);
-                            }}
-                            onPointerDown={(e) => e.stopPropagation()}
-                        />
-                    </div>
-                </div>
+                        {distribution === 'Normal' && (
+                            <div className="grid grid-cols-2 gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] text-zinc-500 uppercase font-black">Mean (μ)</label>
+                                    <input
+                                        type="number"
+                                        className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors w-full"
+                                        value={getVal(data.mean, 0)}
+                                        onChange={(e) => handleChange('mean', parseFloat(e.target.value))}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        step="1"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] text-zinc-500 uppercase font-black">StdDev (σ)</label>
+                                    <input
+                                        type="number"
+                                        className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors w-full"
+                                        value={getVal(data.stdDev, 1)}
+                                        onChange={(e) => handleChange('stdDev', parseFloat(e.target.value))}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        min={0}
+                                        step="1"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
-                {/* Vector Settings */}
-                {mode === 'vector' && (
-                    <div className="flex flex-col gap-1 bg-zinc-900/50 p-1.5 rounded-md border border-zinc-700/50 animate-in fade-in slide-in-from-top-1">
-                        <label className="text-[9px] text-zinc-500 uppercase font-black">Length</label>
-                        <input
-                            type="number"
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50"
-                            value={Number.isNaN(data.length) ? 3 : (data.length as number ?? 3)}
-                            onChange={(e) => {
-                                const val = parseInt(e.target.value);
-                                handleChange('length', Number.isNaN(val) ? 3 : val);
-                            }}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            min={1}
-                        />
-                    </div>
-                )}
+                        {(distribution === 'Poisson' || distribution === 'Exponential') && (
+                            <div className="flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
+                                <label className="text-[9px] text-zinc-500 uppercase font-black">Lambda (λ)</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors"
+                                    value={getVal(data.lambda, 1)}
+                                    onChange={(e) => handleChange('lambda', parseFloat(e.target.value))}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    min="0"
+                                    step="1"
+                                />
+                            </div>
+                        )}
 
-                {/* Matrix Settings */}
-                {mode === 'matrix' && (
-                    <div className="grid grid-cols-2 gap-2 bg-zinc-900/50 p-1.5 rounded-md border border-zinc-700/50 animate-in fade-in slide-in-from-top-1">
-                        <div className="flex flex-col gap-1">
-                            <label className="text-[9px] text-zinc-500 uppercase font-black">Rows</label>
+                        {/* Float Toggle (Always rendered but hidden for Poisson to keep height stable) */}
+                        <div className={`flex gap-2 items-center mt-auto ${distribution === 'Poisson' ? 'invisible pointer-events-none' : ''}`}>
                             <input
-                                type="number"
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50"
-                                value={Number.isNaN(data.rows) ? 3 : (data.rows as number ?? 3)}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    handleChange('rows', Number.isNaN(val) ? 3 : val);
-                                }}
+                                type="checkbox"
+                                className="cursor-pointer"
+                                checked={isFloat}
+                                onChange={(e) => handleChange('isFloat', e.target.checked)}
                                 onPointerDown={(e) => e.stopPropagation()}
-                                min={1}
+                                id={`float-toggle-${id}`}
                             />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <label className="text-[9px] text-zinc-500 uppercase font-black">Cols</label>
-                            <input
-                                type="number"
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50"
-                                value={Number.isNaN(data.cols) ? 3 : (data.cols as number ?? 3)}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    handleChange('cols', Number.isNaN(val) ? 3 : val);
-                                }}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                min={1}
-                            />
+                            <label htmlFor={`float-toggle-${id}`} className="text-[10px] text-zinc-400 font-mono cursor-pointer select-none">
+                                Floating Point
+                            </label>
                         </div>
                     </div>
-                )}
+                </div>
+
+                {/* Shape Settings Container (Stable Height) */}
+                <div className="h-[60px]">
+                    {mode === 'vector' && (
+                        <div className="flex flex-col gap-1 bg-zinc-900/50 p-2 rounded-md border border-zinc-700/50 animate-in fade-in slide-in-from-top-1 duration-200 h-full">
+                            <label className="text-[9px] text-zinc-500 uppercase font-black">Length</label>
+                            <input
+                                type="number"
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors"
+                                value={getVal(data.length, 100)}
+                                onChange={(e) => handleChange('length', parseInt(e.target.value))}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                min={1}
+                                step="1"
+                            />
+                        </div>
+                    )}
+
+                    {mode === 'matrix' && (
+                        <div className="grid grid-cols-2 gap-2 bg-zinc-900/50 p-2 rounded-md border border-zinc-700/50 animate-in fade-in slide-in-from-top-1 duration-200 h-full">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[9px] text-zinc-500 uppercase font-black">Rows</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors"
+                                    value={getVal(data.rows, 3)}
+                                    onChange={(e) => handleChange('rows', parseInt(e.target.value))}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    min={1}
+                                    step="1"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[9px] text-zinc-500 uppercase font-black">Cols</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-blue-500/50 transition-colors"
+                                    value={getVal(data.cols, 3)}
+                                    onChange={(e) => handleChange('cols', parseInt(e.target.value))}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    min={1}
+                                    step="1"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Regenerate Button */}
                 <button
-                    className="mt-1 bg-zinc-100/10 hover:bg-zinc-100/20 active:bg-zinc-100/5 text-[10px] text-zinc-100 py-1.5 rounded border border-white/10 transition-all font-bold uppercase tracking-wider shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                    className="mt-auto mb-1 bg-zinc-100/10 hover:bg-zinc-100/20 active:bg-zinc-100/5 text-[10px] text-zinc-100 py-2 rounded border border-white/10 transition-all font-bold uppercase tracking-wider shadow-lg active:scale-95 flex items-center justify-center gap-2"
                     onClick={handleRegenerate}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
