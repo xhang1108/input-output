@@ -41,8 +41,11 @@ Pick a color and output it as a HEX string or an RGB/Vec3 vector.
 }
 ```
 
-## 4. String (IN-04)
+## 4.| `str` | IN-04 | String | `(S) out: string` — ⚠️ **LITERAL TEXT ONLY.** Does not evaluate formulas. |
 Inject a static text string into the calculation flow.
+
+> [!IMPORTANT]
+> This node is for **literal text only**. It does not evaluate mathematical expressions or formulas. For symbolic calculus or math strings, use the **Expression (IN-09)** node.
 
 ```playground
 {

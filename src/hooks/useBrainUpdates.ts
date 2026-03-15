@@ -41,9 +41,11 @@ export function useBrainUpdates(
                     const nextNodes = currentNodes.map(node => {
                         if (updates.has(node.id)) {
                             const rawPayload = updates.get(node.id);
-                            // FIX: Do NOT unwrap here. Pass full payload to UI so ResultNode gets metadata.
-                            const newValue = rawPayload; // Was: PayloadUtils.unwrap(rawPayload);
-
+                            // FIX: If it's an Input node, we often need the raw value specifically for the text box.
+                            // Result nodes need the full payload for metadata.
+                            const isInput = node.id.startsWith('IN-') || node.type?.startsWith('IN-');
+                            const newValue = isInput ? PayloadUtils.unwrap(rawPayload) : rawPayload;
+                            
                             if (node.data.value !== newValue) {
                                 changed = true;
                                 return {
@@ -85,6 +87,9 @@ export function useBrainUpdates(
                             unwrappedValue = existingNode.data.value as any;
                         }
 
+                        const isInput = logicNode.id.startsWith('IN-') || logicNode.type?.startsWith('IN-');
+                        const finalValue = isInput ? PayloadUtils.unwrap(unwrappedValue) : unwrappedValue;
+
                         // 1. Determine structural props (parentId and Origin)
                         const d = logicNode.data || {};
                         const { width: _dataWidth, height: _dataHeight, parentId: _dataParentId, ...displayData } = d;
@@ -98,7 +103,7 @@ export function useBrainUpdates(
                             ...displayData,
                             width,
                             height,
-                            value: unwrappedValue
+                            value: finalValue
                         };
 
                         const style: Record<string, any> = {};

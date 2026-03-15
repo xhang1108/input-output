@@ -31,11 +31,11 @@ export const InputNode = memo((props: NodeProps) => {
                         className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-blue-500 outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="Text..."
-                        value={String(PayloadUtils.unwrap(data.value) || '')}
+                        value={String(data.value ?? '')}
                         onChange={(e) => {
                             brain.applyTransaction({
-                                type: 'UPDATE_VALUE',
-                                payload: { id, value: PayloadUtils.createSymbolic(e.target.value) }
+                                type: 'UPDATE_NODE_DATA',
+                                payload: { id, data: { value: e.target.value } }
                             });
                         }}
                         onKeyDown={(e) => e.stopPropagation()}

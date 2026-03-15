@@ -7,12 +7,9 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     'IO-01': (node) => node.value || PayloadUtils.createScalar(0),
     'IO-02': (node) => node.value || PayloadUtils.createScalar(0),
     'IO-04': (node) => {
-        if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
-            return node.value as any;
-        }
-
         const data = (node.data || {}) as Record<string, unknown>;
-        return PayloadUtils.createString(String(data.value ?? ''));
+        const raw = String(data.value ?? '');
+        return PayloadUtils.createString(raw);
     },
     'IO-11': (node, inputs) => {
         return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
@@ -250,12 +247,14 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             let pts: any[] = [];
 
             try {
-                if (typeof parsed === 'string') {
+                if (p.type === DataType.Symbolic && typeof parsed === 'string') {
                     pts = PlottingUtils.generateSymbolicPoints(parsed, minX, maxX, pointsCount);
                     const validY = pts.filter((pt: any) => pt.y !== null);
                     if (pts.length > 0 && validY.length === 0) {
                         errors.push(`${seriesName}: All values are undefined/infinite.`);
                     }
+                } else if (p.type === DataType.String) {
+                    errors.push(`${seriesName}: Literal strings cannot be evaluated as functions.`);
                 } else {
                     if (Array.isArray(parsed) && Array.isArray(parsed[0]) && parsed[0].length > 5) {
                         errors.push(`${seriesName}: Dimension mismatch (${parsed[0].length} cols > 4).`);

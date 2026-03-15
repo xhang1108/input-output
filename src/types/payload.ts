@@ -34,6 +34,7 @@ export enum DataType {
     Boolean = 'boolean',
     Symbolic = 'symbolic', // For algebraic expressions, equations, etc.
     Color = 'color',       // HEX/HSL/RGBA visual types
+    Object = 'object',     // Structured data (Color results, metadata bundles)
     Error = 'error',       // Error states
     Any = 'any',           // Universal/Undetermined slot
 
