@@ -91,7 +91,6 @@ export function Body({
         showDebug, setShowDebug,
         edgeType, setEdgeType,
         layoutAlgorithm, setLayoutAlgorithm,
-        layoutDirection, setLayoutDirection,
         panOnScroll, setPanOnScroll,
         actionLog, logAction
     } = useAppStore();
@@ -151,7 +150,6 @@ export function Body({
         setNodes,
         setEdges,
         layoutAlgorithm,
-        layoutDirection,
         logAction
     );
 
@@ -736,7 +734,7 @@ export function Body({
                     minZoom={0.1}
                     maxZoom={4}
                 >
-                    {showGrid && <Background color="#555" gap={20} size={1} />}
+                    <Background color="#555" gap={20} size={1} />
                     {showDebug && <DebugOverlay mode={mode} />}
 
 
@@ -744,18 +742,12 @@ export function Body({
                     <SettingsPanel
                         isSnapping={manualSnap}
                         setSnapping={setManualSnap}
-                        showGrid={showGrid}
-                        setShowGrid={setShowGrid}
                         showDebug={showDebug}
                         setShowDebug={setShowDebug}
-                        showNPanel={showNPanel}
-                        setShowNPanel={setShowNPanel}
                         edgeType={edgeType}
                         setEdgeType={setEdgeType}
                         layoutAlgorithm={layoutAlgorithm}
                         setLayoutAlgorithm={setLayoutAlgorithm}
-                        layoutDirection={layoutDirection}
-                        setLayoutDirection={setLayoutDirection}
                         panOnScroll={panOnScroll}
                         setPanOnScroll={setPanOnScroll}
                         onReset={clearMemory}

@@ -15,7 +15,6 @@ interface AppState {
     showDebug: boolean;
     edgeType: string;
     layoutAlgorithm: LayoutAlgorithm;
-    layoutDirection: LayoutDirection;
     panOnScroll: boolean;
     saveStatus: 'IDLE' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR';
     mathPrecision: MathPrecision;
@@ -40,7 +39,6 @@ interface AppState {
     setShowDebug: (show: boolean | ((prev: boolean) => boolean)) => void;
     setEdgeType: (type: string | ((prev: string) => string)) => void;
     setLayoutAlgorithm: (algo: LayoutAlgorithm | ((prev: LayoutAlgorithm) => LayoutAlgorithm)) => void;
-    setLayoutDirection: (dir: LayoutDirection | ((prev: LayoutDirection) => LayoutDirection)) => void;
     setPanOnScroll: (enabled: boolean | ((prev: boolean) => boolean)) => void;
     setSaveStatus: (status: 'IDLE' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR') => void;
     setMathPrecision: (precision: MathPrecision) => void;
@@ -66,10 +64,9 @@ export const useAppStore = create<AppState>()(
                 showDebug: true,
                 edgeType: 'bezier',
                 layoutAlgorithm: 'layered',
-                layoutDirection: 'RIGHT',
                 panOnScroll: typeof navigator !== 'undefined' ? /Mac|iPad|iPhone/.test(navigator.platform) : false,
                 saveStatus: 'IDLE',
-                mathPrecision: 64,
+                mathPrecision: 16,
                 lastEvalMs: null,
                 lastImportMs: null,
                 uiRenderMs: null,
@@ -89,7 +86,6 @@ export const useAppStore = create<AppState>()(
                 setShowDebug: (show) => set((s) => ({ showDebug: typeof show === 'function' ? show(s.showDebug) : show })),
                 setEdgeType: (type) => set((s) => ({ edgeType: typeof type === 'function' ? type(s.edgeType) : type })),
                 setLayoutAlgorithm: (algo) => set((s) => ({ layoutAlgorithm: typeof algo === 'function' ? algo(s.layoutAlgorithm) : algo })),
-                setLayoutDirection: (dir) => set((s) => ({ layoutDirection: typeof dir === 'function' ? dir(s.layoutDirection) : dir })),
                 setPanOnScroll: (enabled) => set((s) => ({ panOnScroll: typeof enabled === 'function' ? enabled(s.panOnScroll) : enabled })),
                 setSaveStatus: (status) => set({ saveStatus: status }),
                 setMathPrecision: (mathPrecision) => set({ mathPrecision }),
@@ -108,7 +104,6 @@ export const useAppStore = create<AppState>()(
                     showDebug: state.showDebug,
                     edgeType: state.edgeType,
                     layoutAlgorithm: state.layoutAlgorithm,
-                    layoutDirection: state.layoutDirection,
                     panOnScroll: state.panOnScroll,
                     showNPanel: state.showNPanel,
                     mathPrecision: state.mathPrecision,
@@ -116,6 +111,7 @@ export const useAppStore = create<AppState>()(
                     menuLayout: state.menuLayout,
                 }),
             }
+
         )
     )
 );

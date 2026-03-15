@@ -10,7 +10,6 @@ export function useAutoLayout(
     setNodes: (nodes: Node[] | ((original: Node[]) => Node[])) => void,
     setEdges: (edges: Edge[] | ((original: Edge[]) => Edge[])) => void,
     layoutAlgorithm: LayoutAlgorithm,
-    layoutDirection: LayoutDirection,
     logAction: (msg: string) => void
 ) {
     const { fitView } = useReactFlow();
@@ -48,7 +47,7 @@ export function useAutoLayout(
 
         const layouted = await getLayoutedElements(nodesToLayout, edgesToLayout, {
             algorithm: layoutAlgorithm,
-            direction: layoutDirection
+            direction: 'RIGHT'
         });
 
         // Restore center for partial layout
@@ -79,7 +78,7 @@ export function useAutoLayout(
             setTimeout(() => fitView({ duration: 800 }), 50); // Global focus
             logAction('Layout Global (L)');
         }
-    }, [nodes, edges, setNodes, setEdges, layoutAlgorithm, layoutDirection, logAction, fitView]);
+    }, [nodes, edges, setNodes, setEdges, layoutAlgorithm, logAction, fitView]);
 
 
     // 2. Brain Event Listener (RE-LAYOUT)
@@ -101,7 +100,7 @@ export function useAutoLayout(
 
             const layouted = await getLayoutedElements(nodesToLayout, brainEdges as Edge[], {
                 algorithm: layoutAlgorithm,
-                direction: layoutDirection
+                direction: 'RIGHT'
             });
 
             setNodes([...layouted.nodes]);
@@ -113,7 +112,7 @@ export function useAutoLayout(
         return () => {
             cleanupLayout();
         };
-    }, [layoutAlgorithm, layoutDirection, setNodes, setEdges, logAction, fitView]);
+    }, [layoutAlgorithm, setNodes, setEdges, logAction, fitView]);
 
     return { handleAutoLayout };
 }

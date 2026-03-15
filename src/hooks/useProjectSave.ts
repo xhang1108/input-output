@@ -18,7 +18,6 @@ function restoreSettings(settings: Record<string, unknown>) {
     if (typeof settings.showDebug === 'boolean') store.setShowDebug(settings.showDebug);
     if (typeof settings.edgeType === 'string') store.setEdgeType(settings.edgeType);
     if (typeof settings.layoutAlgorithm === 'string') store.setLayoutAlgorithm(settings.layoutAlgorithm as any);
-    if (typeof settings.layoutDirection === 'string') store.setLayoutDirection(settings.layoutDirection as any);
 }
 
 export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev: any[]) => any[])) => void, existingVisibility?: 'private' | 'public') {

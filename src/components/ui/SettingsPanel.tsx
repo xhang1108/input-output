@@ -1,5 +1,5 @@
 import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, Upload, Download, FolderOpen, Layout } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Panel } from '@xyflow/react';
 import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
 import { AuthButton } from './AuthButton';
@@ -7,18 +7,12 @@ import { AuthButton } from './AuthButton';
 interface SettingsPanelProps {
     isSnapping: boolean;
     setSnapping: (enabled: boolean) => void;
-    showGrid: boolean;
-    setShowGrid: (visible: boolean) => void;
     showDebug: boolean;
     setShowDebug: (visible: boolean) => void;
-    showNPanel: boolean;
-    setShowNPanel: (visible: boolean) => void;
     edgeType: string;
     setEdgeType: (type: string) => void;
     layoutAlgorithm: LayoutAlgorithm;
     setLayoutAlgorithm: (type: LayoutAlgorithm) => void;
-    layoutDirection: LayoutDirection;
-    setLayoutDirection: (dir: LayoutDirection) => void;
     panOnScroll: boolean;
     setPanOnScroll: (enabled: boolean) => void;
     onReset: () => void;
@@ -33,12 +27,9 @@ import { GraphExportModal } from './GraphExportModal';
 
 export function SettingsPanel({
     isSnapping, setSnapping,
-    showGrid, setShowGrid,
     showDebug, setShowDebug,
-    showNPanel, setShowNPanel,
     edgeType, setEdgeType,
     layoutAlgorithm, setLayoutAlgorithm,
-    layoutDirection, setLayoutDirection,
     panOnScroll, setPanOnScroll,
     onReset,
     onBackToProjects
@@ -47,9 +38,27 @@ export function SettingsPanel({
     const [isOpen, setIsOpen] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    // Close on click outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
 
     return (
         <Panel position="top-right" className="flex flex-col items-end gap-2">
+            <div ref={panelRef} className="flex flex-col items-end gap-2">
             {/* Toggle Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -69,166 +78,92 @@ export function SettingsPanel({
                     {/* User Authentication */}
                     <AuthButton />
 
-                    <div className="h-px bg-zinc-800 my-1 pb-1" />
+                    <Divider />
 
                     {/* Snapping */}
                     <ToggleRow
                         label="Grid Snapping"
                         icon={<Magnet className="w-4 h-4" />}
                         active={isSnapping}
-                        onClick={() => { setSnapping(!isSnapping); setIsOpen(false); }}
+                        onClick={() => { setSnapping(!isSnapping); }}
                     />
 
-                    {/* Grid Visibility */}
-                    <ToggleRow
-                        label="Show Grid"
-                        icon={<Grid className="w-4 h-4" />}
-                        active={showGrid}
-                        onClick={() => { setShowGrid(!showGrid); setIsOpen(false); }}
-                    />
-
-                    <div className="h-px bg-zinc-800 my-1" />
+                    <Divider />
 
                     {/* Edge Type Selector */}
-                    <div className="px-3 py-2">
-                        <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Connection Style</div>
-                        <div className="grid grid-cols-2 gap-1.5">
-                            {['bezier', 'straight', 'step', 'smoothstep'].map(type => (
-                                <button
-                                    key={type}
-                                    onClick={() => { setEdgeType(type); setIsOpen(false); }}
-                                    className={`
-                                        text-xs py-1.5 px-2 rounded-md border text-center capitalize transition-colors
-                                        ${edgeType === type
-                                            ? 'bg-zinc-700 border-zinc-500 text-(--color-unit) font-medium'
-                                            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}
-                                    `}
-                                >
-                                    {type.replace('smooth', 'S-')}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <SegmentedControl
+                        label="Connection Style"
+                        value={edgeType}
+                        onChange={setEdgeType}
+                        options={[
+                            { value: 'bezier', label: 'Bezier' },
+                            { value: 'smoothstep', label: 'S-Step' }
+                        ]}
+                    />
 
-                    <div className="h-px bg-zinc-800 my-1" />
+                    <Divider />
 
                     {/* Layout Controls */}
-                    <div className="px-3 py-2">
-                        <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Auto Layout</div>
-
-                        {/* Algorithm Selector */}
-                        <div className="grid grid-cols-2 gap-1.5 mb-2">
-                            {(['layered', 'force', 'tree', 'radial'] as LayoutAlgorithm[]).map(algo => (
-                                <button
-                                    key={algo}
-                                    onClick={() => { setLayoutAlgorithm(algo); setIsOpen(false); }}
-                                    className={`
-                                        text-xs py-1.5 px-2 rounded-md border text-center capitalize transition-colors
-                                        ${layoutAlgorithm === algo
-                                            ? 'bg-zinc-700 border-zinc-500 text-(--color-unit) font-medium'
-                                            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}
-                                    `}
-                                >
-                                    {algo}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Direction Selector (Only for Layered and Tree) */}
-                        <div className="flex gap-1">
-                            {(['RIGHT', 'DOWN'] as LayoutDirection[]).map(dir => (
-                                <button
-                                    key={dir}
-                                    onClick={() => { setLayoutDirection(dir); setIsOpen(false); }}
-                                    disabled={layoutAlgorithm === 'force' || layoutAlgorithm === 'radial'}
-                                    className={`
-                                        flex-1 text-[10px] py-1 px-2 rounded-sm border text-center uppercase transition-colors
-                                        ${(layoutAlgorithm === 'force' || layoutAlgorithm === 'radial')
-                                            ? 'opacity-30 cursor-not-allowed bg-zinc-900 border-zinc-900 text-zinc-600'
-                                            : layoutDirection === dir
-                                                ? 'bg-zinc-700 border-zinc-500 text-(--color-unit)'
-                                                : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}
-                                    `}
-                                >
-                                    {dir}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Scroll to Pan */}
-                    <ToggleRow
-                        label="Scroll to Pan"
-                        icon={<Mouse className="w-4 h-4" />}
-                        active={panOnScroll}
-                        onClick={() => { setPanOnScroll(!panOnScroll); setIsOpen(false); }}
+                    <SegmentedControl
+                        label="Auto Layout"
+                        value={layoutAlgorithm}
+                        onChange={setLayoutAlgorithm}
+                        options={[
+                            { value: 'layered', label: 'Layered' },
+                            { value: 'tree', label: 'Tree' }
+                        ]}
                     />
 
-                    <div className="h-px bg-zinc-800 my-1" />
+                    <Divider />
+
+                    {/* Input Device Navigation Mode */}
+                    <SegmentedControl
+                        label="Input Device"
+                        value={panOnScroll}
+                        onChange={setPanOnScroll}
+                        options={[
+                            { value: true, label: 'Touchpad' },
+                            { value: false, label: 'Mouse' }
+                        ]}
+                    />
+
+                    <Divider />
 
                     {/* Precision Selector */}
-                    <div className="px-3 py-2">
-                        <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Scientific Precision</div>
-                        <div className="flex gap-1.5 overflow-hidden rounded-sm border border-zinc-800">
-                            {SUPPORTED_PRECISIONS.map(p => (
-                                <button
-                                    key={p}
-                                    onClick={() => { setMathPrecision(p); setIsOpen(false); }}
-                                    className={`
-                                        flex-1 text-[10px] py-1.5 transition-colors
-                                        ${mathPrecision === p
-                                            ? 'bg-zinc-700 text-(--color-unit) font-bold'
-                                            : 'bg-zinc-950 text-zinc-500 hover:bg-zinc-900'}
-                                    `}
-                                >
-                                    {p}B
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <SegmentedControl
+                        label="Scientific Precision"
+                        value={mathPrecision}
+                        onChange={setMathPrecision}
+                        options={SUPPORTED_PRECISIONS.map(p => ({
+                            value: p,
+                            label: `${p}B`
+                        }))}
+                    />
 
-                    <div className="h-px bg-zinc-800 my-1" />
+                    <Divider />
 
                     {/* Menu Layout */}
-                    <div className="px-3 py-2">
-                        <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">Menu Layout</div>
-                        <div className="flex gap-1.5 overflow-hidden rounded-sm border border-zinc-800 p-0.5 bg-zinc-950">
-                            {(['expanded', 'horizontal'] as const).map(layout => (
-                                <button
-                                    key={layout}
-                                    onClick={() => { setMenuLayout(layout); setIsOpen(false); }}
-                                    className={`
-                                        flex-1 text-[10px] py-1.5 px-2 rounded-xs transition-colors capitalize
-                                        ${menuLayout === layout
-                                            ? 'bg-zinc-800 text-(--color-unit) font-bold shadow-sm'
-                                            : 'text-zinc-500 hover:text-zinc-400 hover:bg-zinc-900'}
-                                    `}
-                                >
-                                    {layout}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="h-px bg-zinc-800 my-1" />
-
-                    {/* N Panel */}
-                    <ToggleRow
-                        label="N Panel"
-                        icon={<PanelRight className="w-4 h-4" />}
-                        active={showNPanel}
-                        onClick={() => { setShowNPanel(!showNPanel); setIsOpen(false); }}
+                    <SegmentedControl
+                        label="Menu Layout"
+                        value={menuLayout}
+                        onChange={setMenuLayout}
+                        options={[
+                            { value: 'expanded', label: 'Expanded' },
+                            { value: 'horizontal', label: 'Horizontal' }
+                        ]}
                     />
+
+                    <Divider />
 
                     {/* Debug Log */}
                     <ToggleRow
                         label="Debug Overlay"
                         icon={<Bug className="w-4 h-4" />}
                         active={showDebug}
-                        onClick={() => { setShowDebug(!showDebug); setIsOpen(false); }}
+                        onClick={() => { setShowDebug(!showDebug); }}
                     />
 
-                    <div className="h-px bg-zinc-800 my-1" />
+                    <Divider />
 
                     {/* Import */}
                     <button
@@ -258,7 +193,7 @@ export function SettingsPanel({
                         </div>
                     </button>
 
-                    {/* Projects (Back to Load Screen) */}
+                    {/* Dashboard (Back to Load Screen) */}
                     <button
                         onClick={() => {
                             setIsOpen(false);
@@ -267,10 +202,12 @@ export function SettingsPanel({
                         className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
                     >
                         <div className="flex items-center gap-3">
-                            <span className="text-zinc-500"><FolderOpen className="w-4 h-4" /></span>
-                            Projects
+                            <span className="text-zinc-500"><Layout className="w-4 h-4" /></span>
+                            Dashboard
                         </div>
                     </button>
+
+                    <Divider />
 
                     {/* Reset Canvas */}
                     <button
@@ -284,10 +221,49 @@ export function SettingsPanel({
                     </button>
                 </div>
             )}
+            </div>
 
             <GraphImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
             <GraphExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
         </Panel>
+    );
+}
+
+function Divider() {
+    return <div className="h-px bg-zinc-800/40 my-1" />;
+}
+
+function SegmentedControl<T>({
+    label,
+    value,
+    onChange,
+    options
+}: {
+    label: string,
+    value: T,
+    onChange: (val: T) => void,
+    options: { value: T, label: string }[]
+}) {
+    return (
+        <div className="px-3 py-2">
+            <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">{label}</div>
+            <div className="flex gap-1 overflow-hidden rounded-xl border border-zinc-800 p-1 bg-zinc-950">
+                {options.map((opt, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => onChange(opt.value)}
+                        className={`
+                            flex-1 text-[10px] py-1.5 px-2 rounded-lg transition-all capitalize
+                            ${value === opt.value
+                                ? 'bg-zinc-800 text-(--color-unit) font-bold shadow-sm'
+                                : 'text-zinc-500 hover:text-zinc-400 hover:bg-zinc-900'}
+                        `}
+                    >
+                        {opt.label}
+                    </button>
+                ))}
+            </div>
+        </div>
     );
 }
 
