@@ -5,6 +5,8 @@ import { Search } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
 import { useAppStore } from '../../store/useStore';
 
+import { CATEGORY_PRIORITY } from '../../constants/categories';
+
 export interface CategorizedMenuItem {
     id: string;
     label: string;
@@ -61,15 +63,13 @@ export function CategorizedMenu({
         setMounted(true);
     }, []);
 
-    // Flatten and filter items based on search
-    const filteredItems = useMemo(() => {
-        const searchLower = search.toLowerCase();
-        return items.filter(item =>
-            item.label.toLowerCase().includes(searchLower) ||
-            item.id.toLowerCase().includes(searchLower) ||
-            item.aliases?.some(alias => alias.toLowerCase().includes(searchLower))
-        );
-    }, [items, search]);
+    // Type for hierarchical grouping
+    interface CategoryGroup {
+        name: string;
+        fullName: string;
+        items: CategorizedMenuItem[];
+        subCategories: Record<string, CategoryGroup>;
+    }
 
     // Reset selection when search changes
     useEffect(() => {
@@ -83,20 +83,21 @@ export function CategorizedMenu({
         }
     }, [isOpen]);
 
+    // 1. Initial filter based on search
+    const baseFilteredItems = useMemo(() => {
+        const searchLower = search.toLowerCase();
+        return items.filter(item =>
+            item.label.toLowerCase().includes(searchLower) ||
+            item.id.toLowerCase().includes(searchLower) ||
+            item.aliases?.some(alias => alias.toLowerCase().includes(searchLower))
+        );
+    }, [items, search]);
 
-    // Type for hierarchical grouping
-    interface CategoryGroup {
-        name: string;
-        fullName: string;
-        items: CategorizedMenuItem[];
-        subCategories: Record<string, CategoryGroup>;
-    }
-
-    // group items by category for rendering (Hierarchical)
+    // 2. Hierarchical grouping (Hierarchical)
     const hierarchicalGroups = useMemo(() => {
         const root: Record<string, CategoryGroup> = {};
 
-        filteredItems.forEach(item => {
+        baseFilteredItems.forEach(item => {
             const category = item.category || 'General';
             const parts = category.split('.');
             let current = root;
@@ -121,14 +122,15 @@ export function CategorizedMenu({
         });
 
         return root;
-    }, [filteredItems]);
+    }, [baseFilteredItems]);
 
-    // Flatten hierarchical groups for the horizontal layout, grouped by ROOT category
-    const sortedCategories = useMemo(() => {
+    // 3. Final flattened visual order and categories
+    const { sortedCategories, visuallyOrderedItems } = useMemo(() => {
         const rootGroups: { rootName: string; subgroups: { displayName: string; items: CategorizedMenuItem[]; depth: number; fullName: string }[] }[] = [];
+        const orderedItems: CategorizedMenuItem[] = [];
 
-        // Manual order for root categories to ensure 'Input' is first
-        const rootPriority = ['Input', 'Output', 'Generators', 'Math', 'Calculus', 'Data & Structures', 'Transform', 'Logic & Flow', 'Utility'];
+        // Use centralized order for root categories
+        const rootPriority = CATEGORY_PRIORITY;
 
         const traverse = (groups: Record<string, CategoryGroup>, depth: number, rootTarget: { displayName: string; items: CategorizedMenuItem[]; depth: number; fullName: string }[]) => {
             const sortedKeys = Object.keys(groups).sort();
@@ -142,12 +144,13 @@ export function CategorizedMenu({
                         items: group.items,
                         depth
                     });
+                    orderedItems.push(...group.items);
                 }
                 traverse(group.subCategories, depth + 1, rootTarget);
             });
         };
 
-        // 1. Process root categories
+        // Process root categories
         const rootKeys = Object.keys(hierarchicalGroups);
         const orderedRootKeys = [
             ...rootPriority.filter(k => rootKeys.includes(k)),
@@ -166,6 +169,7 @@ export function CategorizedMenu({
                     items: group.items,
                     depth: 0
                 });
+                orderedItems.push(...group.items);
             }
 
             // Traverse children and collect into the SAME root group
@@ -179,8 +183,10 @@ export function CategorizedMenu({
             }
         });
 
-        return rootGroups;
+        return { sortedCategories: rootGroups, visuallyOrderedItems: orderedItems };
     }, [hierarchicalGroups]);
+
+    const filteredItems = visuallyOrderedItems;
 
     // Handle viewport boundaries for smart positioning
     const menuRef = useRef<HTMLDivElement>(null);

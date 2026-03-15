@@ -1008,6 +1008,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     }
 ];
 
+import { sortCategories } from '../constants/categories';
+
 // Helper: Get definitions grouped by category (for menu rendering)
 export function getDefinitionsByCategory(): { category: string; items: NodeDefinition[] }[] {
     const map = new Map<string, NodeDefinition[]>();
@@ -1015,5 +1017,7 @@ export function getDefinitionsByCategory(): { category: string; items: NodeDefin
         if (!map.has(def.category)) map.set(def.category, []);
         map.get(def.category)!.push(def);
     }
-    return Array.from(map.entries()).map(([category, items]) => ({ category, items }));
+    
+    const results = Array.from(map.entries()).map(([category, items]) => ({ category, items }));
+    return sortCategories(results, (item) => item.category);
 }
