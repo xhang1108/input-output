@@ -1047,10 +1047,31 @@ export class Brain {
         // 1. Add Nodes
         graph.nodes.forEach(n => {
             let nodeData = n.data || {};
-            if (!nodeData.handles) {
-                const def = NODE_DEFINITIONS.find(d => d.id === n.type);
-                if (def && def.handles) {
-                    nodeData = { ...nodeData, handles: def.handles };
+            const definition = NODE_DEFINITIONS.find(d => d.id === n.type);
+
+            if (definition) {
+                // Node Data Reconciliation: Sync with current code base definition
+                
+                // 1.1 Handles Sync: Prioritize definition's handles to ensure new IO ports appear
+                if (definition.handles) {
+                    nodeData = { ...nodeData, handles: definition.handles };
+                }
+
+                // 1.2 Parameters Sync: Backfill missing default parameters from definition
+                if (definition.defaultData) {
+                    for (const [key, value] of Object.entries(definition.defaultData)) {
+                        // We only fill if the key is MISSING in saved data.
+                        // This preserves user-set values (like Slider's current value) while adding new structural keys.
+                        if (nodeData[key] === undefined) {
+                            nodeData[key] = value;
+                        }
+                    }
+                }
+            } else {
+                // Fallback for custom/legacy handles if no definition found
+                if (!nodeData.handles) {
+                    // This case is unlikely given the workflow, but kept for robustness
+                    console.warn(`[Brain] No definition found for node type: ${n.type}. Using saved handles.`);
                 }
             }
 
