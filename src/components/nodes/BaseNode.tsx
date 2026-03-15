@@ -97,7 +97,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             return { ...h, variant: handleVariants[h.id] };
         }
         return h;
-    });
+    }).filter(h => !h.hidden || !h.hidden(data));
 
     const leftHandles = allHandles.filter(h => resolveHandlePosition(h) === Position.Left);
     const rightHandles = allHandles.filter(h => resolveHandlePosition(h) === Position.Right);
@@ -128,6 +128,47 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
         definition?.minHeight || 60,
         Math.max(calculateSideHeight(leftHandles), calculateSideHeight(rightHandles)) + NODE_LAYOUT.headerH
     );
+
+    const allEdges = useEdges();
+
+    // ─── Phase 4.3: Edge Cleanup (Ghost Link Prevention) ────────────────
+    // When a handle becomes hidden (e.g. POW -> SQRT), we MUST explicitly 
+    // disconnect any existing edges to that handle in the engine.
+    useEffect(() => {
+        const activeTargetHandleIds = new Set(leftHandles.map(h => h.id));
+        const activeSourceHandleIds = new Set(rightHandles.map(h => h.id));
+
+        targetConnections.forEach(conn => {
+            if (conn.targetHandle && !activeTargetHandleIds.has(conn.targetHandle)) {
+                // Find the actual edge by matching the connection metadata
+                const edge = allEdges.find(e => 
+                    e.target === id && 
+                    e.targetHandle === conn.targetHandle && 
+                    e.source === conn.source && 
+                    e.sourceHandle === conn.sourceHandle
+                );
+                if (edge) {
+                    console.log(`[BaseNode] Auto-cleanup: Disconnecting hidden target handle ${conn.targetHandle} on node ${id}`);
+                    brain.applyTransaction({ type: 'DISCONNECT', payload: edge.id });
+                }
+            }
+        });
+
+        sourceConnections.forEach(conn => {
+            if (conn.sourceHandle && !activeSourceHandleIds.has(conn.sourceHandle)) {
+                const edge = allEdges.find(e => 
+                    e.source === id && 
+                    e.sourceHandle === conn.sourceHandle && 
+                    e.target === conn.target && 
+                    e.targetHandle === conn.targetHandle
+                );
+                if (edge) {
+                    console.log(`[BaseNode] Auto-cleanup: Disconnecting hidden source handle ${conn.sourceHandle} on node ${id}`);
+                    brain.applyTransaction({ type: 'DISCONNECT', payload: edge.id });
+                }
+            }
+        });
+    }, [allHandles, id, brain, targetConnections, sourceConnections, leftHandles, rightHandles, allEdges]);
 
     /**
      * Calculate Y position for a specific handle or fallback to first.

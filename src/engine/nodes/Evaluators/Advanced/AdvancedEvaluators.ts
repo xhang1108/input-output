@@ -316,7 +316,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const a = getNum('in_a'), b = getNum('in_b');
         let area = 0, perimeter = 0;
         if (shape === 'Circle') { area = Math.PI * a * a; perimeter = 2 * Math.PI * a; }
-        else if (shape === 'Rectangle') { area = a * b; perimeter = 2 * (a + b); }
+        else if (shape === 'Quad') { area = a * b; perimeter = 2 * (a + b); }
         else if (shape === 'Triangle') { area = 0.5 * a * b; perimeter = a + b + Math.sqrt(a * a + b * b); }
         return {
             type: DataType.Array,

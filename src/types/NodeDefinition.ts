@@ -14,6 +14,7 @@ export interface HandleConfig {
     y?: number | string;        // Optional manual Y position (percent or absolute px)
     dynamicColor?: (data: any) => HandleDataType; // [0.11.4] Dynamic override based on node data
     color?: string;             // [0.11.5] Explicit CSS color override (e.g. 'var(--color-any)')
+    hidden?: (data: any) => boolean; // [1.3.0] Dynamic hide based on node data
 }
 
 /**

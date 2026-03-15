@@ -95,7 +95,9 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 case 'MUL': result = m.multiply(procA, procB); break;
                 case 'DIV': result = m.divide(procA, procB); break;
                 case 'POW': result = m.pow(procA, procB); break;
-                case 'SQRT': result = m.sqrt(procA); break;
+                case 'SQRT': 
+                    result = (inputs['in_b'] && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA); 
+                    break;
                 case 'ABS': result = m.abs(procA); break;
                 default: result = m.add(procA, procB);
             }

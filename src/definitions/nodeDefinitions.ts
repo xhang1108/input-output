@@ -276,7 +276,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Advanced Math',
         category: 'Math',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'Input' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'In A' },
+            { 
+                id: 'in_b', 
+                type: 'target', 
+                variant: 'single', 
+                dataType: 'scalar', 
+                label: 'In B',
+                hidden: (d) => ['ABS', 'NEG', 'SIGN'].includes(d.op as string)
+            },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'POW', label: 'Power' },
@@ -743,7 +751,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Geometry',
         category: 'Transform',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'Radius' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'In A' },
+            { 
+                id: 'in_b', 
+                type: 'target', 
+                variant: 'single', 
+                dataType: 'scalar', 
+                label: 'In B',
+                hidden: (d) => d.shape === 'Circle'
+            },
             { id: 'area', type: 'source', variant: 'single', dataType: 'scalar', label: 'Area' },
             { id: 'perimeter', type: 'source', variant: 'single', dataType: 'scalar', label: 'Perim' }
         ],
