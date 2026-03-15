@@ -10,10 +10,10 @@ describe('Linear Algebra & Array Nodes', () => {
         initializeNodes();
     });
 
-    test('AD-01 (MatrixTools): QR Decomposition Multi-Output', async () => {
+    test('DT-07 (MatrixTools): QR Decomposition Multi-Output', async () => {
         const node = {
             id: 'n1',
-            type: 'AD-01',
+            type: 'DT-07',
             data: { op: 'QR' } as any,
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
             isInDirtyChain: false,
@@ -30,7 +30,7 @@ describe('Linear Algebra & Array Nodes', () => {
 
         const result = await NodeRegistry.evaluate(node as any, inputs);
 
-        expect(result.type).toBe(DataType.Object);
+        expect(result.type).toBe(DataType.Array);
         // multi-output should contain 'Q' and 'R' keys
         const val = result.value as any;
         expect(val.Q).toBeDefined();
@@ -39,10 +39,10 @@ describe('Linear Algebra & Array Nodes', () => {
         expect(val.R.type).toBe(DataType.Array);
     });
 
-    test('DA-06 (ArrayExtract): Extract scalar from array', async () => {
+    test('DT-02 (ArrayExtract): Extract scalar from array', async () => {
         const node = {
             id: 'n2',
-            type: 'DA-06',
+            type: 'DT-02',
             data: {},
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
             isInDirtyChain: false,
@@ -51,7 +51,7 @@ describe('Linear Algebra & Array Nodes', () => {
 
         const inputs = {
             in: PayloadUtils.createArray([10, 20, 30] as any),
-            index: PayloadUtils.createScalar(1) // 0-based in JS API (mathjs matrix index subset is 0-based)
+            index: PayloadUtils.createScalar(2) // 1-based (2nd element is 20)
         };
 
         const result = await NodeRegistry.evaluate(node as any, inputs);
@@ -59,10 +59,33 @@ describe('Linear Algebra & Array Nodes', () => {
         expect(result.value).toBe(20);
     });
 
-    test('DA-07 (ArrayBuilder): Combine scalars to array', async () => {
+    test('DT-02 (ArrayExtract): Extract from 2D Matrix', async () => {
+        const node = {
+            id: 'n2-2d',
+            type: 'DT-02',
+            data: { indexMode: '2D' },
+            value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            in: PayloadUtils.createArray([
+                [11, 12],
+                [21, 22]
+            ] as any),
+            index: PayloadUtils.createArray([2, 1] as any) // Row 2, Col 1 -> 21
+        };
+
+        const result = await NodeRegistry.evaluate(node as any, inputs);
+        expect(result.type).toBe(DataType.Scalar);
+        expect(result.value).toBe(21);
+    });
+
+    test('DT-01 (ArrayBuilder): Combine scalars to array', async () => {
         const node = {
             id: 'n3',
-            type: 'DA-07',
+            type: 'DT-01',
             data: { axis: 0, count: 3 } as any,
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
             isInDirtyChain: false,
@@ -84,10 +107,10 @@ describe('Linear Algebra & Array Nodes', () => {
         // In mathjs dehydrated format, it will be { mathjs: 'Matrix', data: [...] } if it's a MathJS obj
         // Or it will just be a plain array if it dehydrates to standard JS array (PayloadUtils unwraps arrays)
     });
-    test('DA-07 (ArrayBuilder): Combine scalars to array using single Capsule Handle', async () => {
+    test('DT-01 (ArrayBuilder): Combine scalars to array using single Capsule Handle', async () => {
         const node = {
             id: 'n4',
-            type: 'DA-07',
+            type: 'DT-01',
             data: { axis: 0 } as any, // No count needed anymore
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
             isInDirtyChain: false,

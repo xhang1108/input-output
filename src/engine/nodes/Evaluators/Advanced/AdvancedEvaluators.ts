@@ -38,12 +38,94 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'DT-02': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const index = Number(data.index || 0);
+        const mode = data.indexMode || '1D';
+        
         const inPayload = inputs['in'];
-        if (!inPayload) return PayloadUtils.createError('No Input');
-        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
-        const arr = (hydrated && typeof hydrated === 'object' && 'toArray' in hydrated ? (hydrated as any).toArray() : Array.isArray(hydrated) ? hydrated : [hydrated]).flat(Infinity);
-        return PayloadUtils.createScalar(PayloadUtils.dehydrate(arr[index] ?? 0));
+        const indexPayload = inputs['index'];
+        
+        if (!inPayload) return PayloadUtils.createError('No Input Vector/Matrix');
+        
+        try {
+            const arr = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
+            const idxRaw = indexPayload ? PayloadUtils.hydrate(PayloadUtils.unwrap(indexPayload), math) : 0;
+            
+            let result: any;
+            
+            // Helper to get raw numeric values from hydrate result (handles mathjs objects)
+            const getNumeric = (val: any): number => {
+                if (val === null || val === undefined) return 0;
+                if (typeof val === 'number') return val;
+                if (val.isBigNumber) return val.toNumber();
+                if (typeof val === 'string') return parseFloat(val) || 0;
+                return 0;
+            };
+
+            if (mode === '1D') {
+                // 1D: Flat index extraction (1-based from user perspective)
+                let flatIdxRaw = 0;
+                if (Array.isArray(idxRaw)) flatIdxRaw = getNumeric(idxRaw[0]);
+                else if (idxRaw && typeof idxRaw === 'object' && idxRaw.isMatrix) flatIdxRaw = getNumeric(idxRaw.get([0]));
+                else flatIdxRaw = getNumeric(idxRaw);
+
+                // Convert 1-based to 0-based
+                const flatIdx = flatIdxRaw - 1;
+
+                if (arr && typeof arr === 'object' && arr.isMatrix) {
+                    const size = arr.size();
+                    if (size.length === 1) {
+                        result = math.subset(arr, math.index(flatIdx));
+                    } else if (size.length === 2) {
+                        if (size[0] === 1) result = math.subset(arr, math.index(0, flatIdx));
+                        else if (size[1] === 1) result = math.subset(arr, math.index(flatIdx, 0));
+                        else result = math.subset(arr, math.index(flatIdx));
+                    } else {
+                        result = math.subset(arr, math.index(flatIdx));
+                    }
+                } else {
+                    const flatArr = Array.isArray(arr) ? arr : [arr];
+                    result = flatArr[flatIdx] ?? 0;
+                }
+            } else {
+                // 2D: [row, col] extraction (1-based from user perspective)
+                let rRaw = 0, cRaw = 0;
+                if (Array.isArray(idxRaw)) {
+                    rRaw = getNumeric(idxRaw[0]);
+                    cRaw = getNumeric(idxRaw[1]);
+                } else if (idxRaw && typeof idxRaw === 'object' && idxRaw.isMatrix) {
+                    const data = idxRaw.toArray().flat(Infinity);
+                    rRaw = getNumeric(data[0]);
+                    cRaw = getNumeric(data[1]);
+                } else {
+                    rRaw = getNumeric(idxRaw);
+                }
+
+                // Convert 1-based to 0-based
+                const r = rRaw - 1;
+                const c = cRaw - 1;
+                
+                if (arr && typeof arr === 'object' && arr.isMatrix) {
+                    result = math.subset(arr, math.index(r, c));
+                } else if (Array.isArray(arr)) {
+                    result = (arr[r] && Array.isArray(arr[r])) ? arr[r][c] : 0;
+                } else {
+                    result = 0;
+                }
+            }
+            
+            // Auto-unwrap 1x1 matrix results
+            if (result && typeof result === 'object' && result.isMatrix) {
+                const size = result.size();
+                if (size.every((s: number) => s === 1)) {
+                    result = result.get(size.map(() => 0));
+                }
+            }
+
+            return (Array.isArray(result) || (result && typeof result === 'object' && result.isMatrix)) 
+                ? PayloadUtils.createArray(PayloadUtils.dehydrate(result)) 
+                : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+        } catch (e: any) {
+            return PayloadUtils.createError(`Extract Failed: ${e.message}`);
+        }
     },
 
     // DT-03: List Utility

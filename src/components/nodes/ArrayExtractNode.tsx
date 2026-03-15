@@ -13,12 +13,29 @@ export const ArrayExtractNode = memo((props: NodeProps) => {
     const { data } = props;
     const indexMode = (data.indexMode as string) || '1D';
 
-    // Dynamic: 2D mode changes the index handle label to (r,c)
-    const handles = useMemo<any[]>(() => [
-        { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'array', label: 'Matrix' },
-        { id: 'index', type: 'target', position: Position.Left, variant: 'single', dataType: 'array', label: indexMode === '2D' ? 'Idx (r,c)' : 'Idx' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: INDEX_MODE_OUTPUT[indexMode] ?? 'scalar' }
-    ], [indexMode]);
+    // Dynamic handles based on indexMode
+    const handles = useMemo<any[]>(() => {
+        const is2D = indexMode === '2D';
+        return [
+            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'array', label: 'Matrix' },
+            { 
+                id: 'index', 
+                type: 'target', 
+                position: Position.Left, 
+                variant: 'single', 
+                // 1D extraction uses scalar (gray), 2D uses array (purple) for [r,c]
+                dataType: is2D ? 'array' : 'scalar', 
+                label: is2D ? 'Idx (r,c)' : 'Idx' 
+            },
+            { 
+                id: 'out', 
+                type: 'source', 
+                position: Position.Right, 
+                variant: 'single', 
+                dataType: INDEX_MODE_OUTPUT[indexMode] ?? 'scalar' 
+            }
+        ];
+    }, [indexMode]);
 
     const nodeData = { ...data, handles };
 
