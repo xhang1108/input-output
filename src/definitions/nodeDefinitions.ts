@@ -298,7 +298,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Math',
         handles: [
             { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'x' },
-            { id: 'base', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Base' },
+            { 
+                id: 'base', 
+                type: 'target', 
+                position: Position.Left, 
+                variant: 'single', 
+                dataType: 'scalar', 
+                label: 'Base',
+                hidden: (d) => d.op !== 'LOGN'
+            },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'LN' },
@@ -308,7 +316,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                 id: 'op', label: 'Mode', type: 'select', options: [
                     { label: 'Natural Log (ln)', value: 'LN', category: 'Logarithms' },
                     { label: 'Log Base 10 (log₁₀)', value: 'LOG10', category: 'Logarithms' },
-                    { label: 'Log Base 2 (log₂)', value: 'LOG2', category: 'Logarithms' },
                     { label: 'Log Base N (logₙ)', value: 'LOGN', category: 'Logarithms' }
                 ]
             }

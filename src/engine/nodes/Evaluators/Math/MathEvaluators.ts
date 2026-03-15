@@ -146,22 +146,6 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed`); }
     },
-    'MA-03': (node) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as any;
-        const label = data.val || 'pi';
-        let value = math[label] ?? (label === 'Infinity' ? Infinity : 0);
-        const precision = data.precision;
-        if (precision !== undefined && precision !== -1) {
-            value = math.round(value, precision);
-        }
-        return {
-            type: DataType.Scalar,
-            value: PayloadUtils.dehydrate(value),
-            symbol: null,
-            meta: {}
-        };
-    },
     'MA-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
@@ -304,7 +288,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
         } catch (e) { return PayloadUtils.createError('Trig Failed'); }
     },
-    'MA-16': (node, inputs) => {
+    'MA-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
@@ -313,7 +297,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         try {
             let result;
             if (op === 'LOG10') result = math.log10(val);
-            else if (op === 'LOG_N') result = math.log(val, inputs['base'] ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['base']), math) : 10);
+            else if (op === 'LOGN') result = math.log(val, inputs['base'] ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['base']), math) : 10);
             else result = math.log(val);
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
         } catch (e) { return PayloadUtils.createError('Log Failed'); }

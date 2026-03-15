@@ -18,7 +18,6 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
         });
     },
     'MA-02': (node, inputs) => MathSymbolizers['MA-01'](node, inputs),
-    'MA-03': (node) => PayloadUtils.createSymbol('Identifier', { name: ((node.data || {}) as any).val || 'pi' }),
     'MA-05': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'ROUND';
@@ -50,11 +49,11 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
         if (op !== 'IS_PRIME') args.push(inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 }));
         return PayloadUtils.createSymbol('FunctionCall', { name: funcMap[op] || 'gcd', args });
     },
-    'MA-16': (node, inputs) => {
+    'MA-03': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'LN';
         if (op === 'LOG10') return PayloadUtils.createSymbol('FunctionCall', { name: 'log10', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
-        if (op === 'LOG_N') return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 }), inputs['base'] || PayloadUtils.createSymbol('Literal', { value: 10 })] });
+        if (op === 'LOGN') return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 }), inputs['base'] || PayloadUtils.createSymbol('Literal', { value: 10 })] });
         return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
     'MA-04': (node, inputs) => {
