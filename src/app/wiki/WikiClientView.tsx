@@ -249,55 +249,77 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
         }
     }, [activeSection.id, activeSection.items.length]);
 
+    // 💡 Robust Scroll Tracking: IntersectionObserver for Sidebar Highlighting
     useEffect(() => {
         const scroller = scrollerRef.current;
         if (!scroller) return;
 
-        // Callback for IntersectionObserver
+        // Use a ref to track which items are currently in view
+        const intersectingItems = new Map<string, IntersectionObserverEntry>();
+
         const handleIntersection = (entries: IntersectionObserverEntry[]) => {
             if (isNavigatingRef.current) return;
 
-            // We only care about entries that are intersecting
-            // Sort by top position to find the one closest to our "trigger zone"
-            const visibleEntries = entries
-                .filter(entry => entry.isIntersecting)
-                .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-
-            if (visibleEntries.length > 0) {
-                // The first entry is the one highest up in the viewport
-                const closestId = (visibleEntries[0].target as HTMLElement).dataset.wikiItem;
-
-                if (closestId) {
-                    const section = sections.find(s => s.items.some(i => i.id === closestId));
-                    if (section && section.id !== activeSectionId) {
-                        setActiveSectionId(section.id);
-                    }
-                    if (closestId !== activeItemId) {
-                        setActiveItemId(closestId);
-                    }
+            // Update our set of currently intersecting items
+            entries.forEach(entry => {
+                const id = (entry.target as HTMLElement).dataset.wikiItem;
+                if (!id) return;
+                if (entry.isIntersecting) {
+                    intersectingItems.set(id, entry);
+                } else {
+                    intersectingItems.delete(id);
                 }
+            });
+
+            if (intersectingItems.size === 0) return;
+
+            // Find the most "active" item: 
+            // We want the one whose top is closest to our 100px trigger point
+            const itemsArray = Array.from(intersectingItems.values());
+            itemsArray.sort((a, b) => {
+                const aTop = a.boundingClientRect.top;
+                const bTop = b.boundingClientRect.top;
+                return Math.abs(aTop - 100) - Math.abs(bTop - 100);
+            });
+
+            const bestMatch = itemsArray[0];
+            const closestId = (bestMatch.target as HTMLElement).dataset.wikiItem;
+
+            if (closestId && closestId !== activeItemId) {
+                // Find section and update active states
+                const section = sections.find(s => s.items.some(i => i.id === closestId));
+                if (section && section.id !== activeSectionId) setActiveSectionId(section.id);
+                setActiveItemId(closestId);
             }
         };
 
-        // Root margin: -100px from top means we start looking 100px down.
-        // -80% bottom means we ignore everything in the bottom 80% of the screen.
-        // This forces the "active" item to be the one entering/occupying the top 20% area.
-        const observerOptions = {
+        // rootMargin: -100px from top means the detection zone starts 100px down.
+        // We look at the top 40% of the screen.
+        const observer = new IntersectionObserver(handleIntersection, {
             root: scroller,
-            rootMargin: '-100px 0px -80% 0px',
-            threshold: [0, 0.1, 0.5, 1.0]
+            rootMargin: '-100px 0px -60% 0px',
+            threshold: [0, 0.1, 0.5]
+        });
+
+        // Observe elements that are already rendered
+        const observeTargets = () => {
+            const items = scroller.querySelectorAll('[data-wiki-item]');
+            items.forEach(item => observer.observe(item));
         };
+        
+        observeTargets();
 
-        const observer = new IntersectionObserver(handleIntersection, observerOptions);
-
-        // Observe all wiki items
-        const items = scroller.querySelectorAll('[data-wiki-item]');
-        items.forEach(item => observer.observe(item));
+        // MutationObserver to catch items being progressively loaded
+        const mutationObserver = new MutationObserver(() => {
+            observeTargets();
+        });
+        mutationObserver.observe(scroller, { childList: true, subtree: true });
 
         return () => {
             observer.disconnect();
+            mutationObserver.disconnect();
         };
-    }, [activeItemId, activeSectionId, sections, activeSection.id]);
+    }, [sections, activeSection.id, activeItemId, activeSectionId]);
 
     if (!activeSection) return null;
 

@@ -9,7 +9,10 @@ icon: Layers
 Organization and manipulation of multi-dimensional tensors.
 
 ## 1. Array Builder (DT-01)
-Capsule node that accepts multiple inputs to build or concatenate arrays.
+Node that accepts multiple inputs to build or concatenate arrays.
+
+- **Input**: One or more data values to stack.
+- **Output**: The generated array or matrix.
 
 ```playground
 {
@@ -22,6 +25,9 @@ Capsule node that accepts multiple inputs to build or concatenate arrays.
 ## 2. Array Extract (DT-02)
 Extract specific elements via 1D or 2D indexing.
 
+- **Inputs**: in (Array), Idx (Scalar/Vector)
+- **Output**: The extracted element.
+
 ```playground
 {
   "nodeType": "DT-02",
@@ -32,6 +38,9 @@ Extract specific elements via 1D or 2D indexing.
 
 ## 3. List Utility (DT-03)
 Sort, reverse, or deduplicate 1D lists.
+
+- **Input**: The input array.
+- **Output**: The processed array.
 
 ```playground
 {
@@ -44,6 +53,9 @@ Sort, reverse, or deduplicate 1D lists.
 ## 4. Set Operations (DT-04)
 Boolean set logic: Union, Intersection, and Difference.
 
+- **Inputs**: A, B
+- **Output**: The resulting set array.
+
 ```playground
 {
   "nodeType": "DT-04",
@@ -54,6 +66,12 @@ Boolean set logic: Union, Intersection, and Difference.
 
 ## 5. Array Geometry (DT-05)
 Vector operations: Dot Product, Cross Product, Norm, and Distance.
+
+- **Inputs**: 
+  - **A**: First vector array.
+  - **B**: Second vector array (if applicable).
+- **Outputs**: 
+  - **out**: The calculated metric (scalar or vector).
 
 ```playground
 {
@@ -66,6 +84,11 @@ Vector operations: Dot Product, Cross Product, Norm, and Distance.
 ## 6. Array Split (DT-06)
 Transform between arrays and discrete scalar channels.
 
+- **Inputs**: 
+  - **in**: The input array (or scalars in Combine mode).
+- **Outputs**: 
+  - **X, Y, Z, W**: Discrete scalar channels.
+
 ```playground
 {
   "nodeType": "DT-06",
@@ -76,6 +99,9 @@ Transform between arrays and discrete scalar channels.
 
 ## 7. Linear Algebra (DT-07)
 Matrix operations: Inverse, Determinant, Transpose, and Trace.
+
+- **Input**: The input matrix.
+- **Output**: The resulting matrix or scalar.
 
 ```playground
 {

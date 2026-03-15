@@ -11,6 +11,8 @@ Input nodes are the "Senses" of your calculation. They provide the initial data 
 ## 1. Number Input (IN-01)
 The simplest input node. Type a number or use the scroll wheel to increment/decrement.
 
+- **Output**: The numeric value entered.
+
 ```playground
 {
   "nodeType": "IN-01",
@@ -21,6 +23,8 @@ The simplest input node. Type a number or use the scroll wheel to increment/decr
 
 ## 2. Slider (IN-02)
 Use the Slider for continuous real-time modulation. Perfect for tuning physical parameters or color values.
+
+- **Output**: The current value of the slider.
 
 ```playground
 {
@@ -33,6 +37,11 @@ Use the Slider for continuous real-time modulation. Perfect for tuning physical 
 ## 3. Color (IN-03)
 Pick a color and output it as a HEX string or an RGB/Vec3 vector.
 
+- **Outputs**: 
+  - **HEX**: The color as a hex string (e.g., #3b82f6).
+  - **RGB**: The color as an array of [R, G, B] (0-255).
+  - **Vec3**: The color as an array of [R, G, B] (0.0-1.0).
+
 ```playground
 {
   "nodeType": "IN-03",
@@ -41,11 +50,11 @@ Pick a color and output it as a HEX string or an RGB/Vec3 vector.
 }
 ```
 
-## 4.| `str` | IN-04 | String | `(S) out: string` — ⚠️ **LITERAL TEXT ONLY.** Does not evaluate formulas. |
+## 4. String (IN-04)
 Inject a static text string into the calculation flow.
 
-> [!IMPORTANT]
-> This node is for **literal text only**. It does not evaluate mathematical expressions or formulas. For symbolic calculus or math strings, use the **Expression (IN-09)** node.
+- **Output**: The literal text string.
+
 
 ```playground
 {
@@ -58,6 +67,8 @@ Inject a static text string into the calculation flow.
 ## 5. Button (IN-05)
 A simple boolean trigger. Supports **Sticky (toggle)** and **Momentary (hold)** modes.
 
+- **Output**: A boolean value (true/false).
+
 ```playground
 {
   "nodeType": "IN-05",
@@ -68,6 +79,8 @@ A simple boolean trigger. Supports **Sticky (toggle)** and **Momentary (hold)** 
 
 ## 6. Constant (IN-06)
 Provide mathematical constants like pi, e, phi, and tau.
+
+- **Output**: The numeric value of the selected constant.
 
 ```playground
 {
@@ -80,6 +93,8 @@ Provide mathematical constants like pi, e, phi, and tau.
 ## 7. Array Input (IN-07)
 Define 2D data structures. Matrices are represented in IOGL using JSON bracket notation.
 
+- **Output**: The defined array or matrix.
+
 ```playground
 {
   "nodeType": "IN-07",
@@ -90,6 +105,8 @@ Define 2D data structures. Matrices are represented in IOGL using JSON bracket n
 
 ## 8. Abacus (IN-08)
 A physical-computing inspired input for large integers.
+
+- **Output**: The numeric value represented by the abacus beads.
 
 ```playground
 {
@@ -102,6 +119,8 @@ A physical-computing inspired input for large integers.
 
 ## 9. Expression (IN-09)
 **Symbolic only.** Provides a static string for Calculus nodes. It has NO input handles.
+
+- **Output**: The symbolic expression string.
 
 ```playground
 {
@@ -125,9 +144,6 @@ A high-performance stochastic generator that consolidates noise and distribution
 *   **Vector**: 1D Array defined by `Length`.
 *   **Matrix**: 2D Array defined by `Rows` x `Cols`.
 
-> [!NOTE]
-> All random values are **deterministic**! They are governed by an internal `seed` that only changes when you click **Regenerate** or modify parameters. This ensures your graph results don't "jump" unexpectedly.
-
 ```playground
 {
   "nodeType": "IN-10",
@@ -136,26 +152,3 @@ A high-performance stochastic generator that consolidates noise and distribution
 }
 ```
 
----
-
-## Interactive Example: Slider Modulation
-Inject this example to see a Slider modulate a multiplication circuit:
-
-```iogl-example
-{
-  "label": "Slider Circuit",
-  "iogl": {
-    "nodes": [
-      { "id": "slider-1", "type": "IN-02", "position": { "x": 0, "y": 0 }, "data": { "value": 0.5, "min": 0, "max": 1, "step": 0.01, "label": "Control" } },
-      { "id": "in-1", "type": "IN-01", "position": { "x": 0, "y": 150 }, "data": { "value": 100, "label": "Base" } },
-      { "id": "math-1", "type": "MA-01", "position": { "x": 300, "y": 75 }, "data": { "op": "MUL", "label": "Scaled" } },
-      { "id": "res-1", "type": "OT-01", "position": { "x": 600, "y": 75 }, "data": { "label": "Result" } }
-    ],
-    "edges": [
-      { "id": "e1", "source": "slider-1", "target": "math-1", "targetHandle": "in_a" },
-      { "id": "e2", "source": "in-1", "target": "math-1", "targetHandle": "in_b" },
-      { "id": "e3", "source": "math-1", "target": "res-1", "targetHandle": "in" }
-    ]
-  }
-}
-```

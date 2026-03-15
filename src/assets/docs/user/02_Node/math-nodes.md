@@ -11,6 +11,9 @@ The Math category contains the fundamental arithmetic operators of the I/O Syste
 ## 1. Basic Math (MA-01)
 Multi-purpose arithmetic operator for addition, subtraction, multiplication, and division.
 
+- **Inputs**: A, B
+- **Output**: Result
+
 ```playground
 {
   "nodeType": "MA-01",
@@ -20,7 +23,12 @@ Multi-purpose arithmetic operator for addition, subtraction, multiplication, and
 ```
 
 ## 2. Advanced Math (MA-02)
-Specialized for exponential growth and extraction. Supports operations like **Power** ($x^n$) and **Square Root** ($\sqrt{x}$).
+Specialized for exponential growth and extraction. Supports operations like **Power** (x^n) and **Square Root** (sqrt(x)).
+
+- **Inputs**: 
+  - **A**: The base value.
+  - **B**: The exponent (Power) or root index (Root).
+- **Output**: The calculated value.
 
 ```playground
 {
@@ -31,7 +39,12 @@ Specialized for exponential growth and extraction. Supports operations like **Po
 ```
 
 ## 3. Logarithm (MA-03)
-Calculates Natural Log ($\ln$), $\log_{10}$, $\log_2$, or Log base $n$.
+Calculates Natural Log (ln), log10, log2, or Log base n.
+
+- **Inputs**: 
+  - **x**: The value to calculate the logarithm for.
+  - **Base**: The base of the logarithm (Log base n mode).
+- **Output**: The calculated logarithm.
 
 ```playground
 {
@@ -42,7 +55,10 @@ Calculates Natural Log ($\ln$), $\log_{10}$, $\log_2$, or Log base $n$.
 ```
 
 ## 4. Trigonometry (MA-04)
-Circular and hyperbolic functions like Sine, Cosine, and Tangent.
+Calculates circular and hyperbolic functions like Sine, Cosine, and Tangent.
+
+- **Input**: The numeric value to calculate.
+- **Output**: The calculated trigonometric result.
 
 ```playground
 {
@@ -55,6 +71,9 @@ Circular and hyperbolic functions like Sine, Cosine, and Tangent.
 ## 5. Round / Precision (MA-05)
 Standard math rounding tools: `Round`, `Floor`, `Ceiling`, and `Truncate`.
 
+- **Input**: The numeric value to round.
+- **Output**: The rounded value based on the specified precision.
+
 ```playground
 {
   "nodeType": "MA-05",
@@ -65,6 +84,13 @@ Standard math rounding tools: `Round`, `Floor`, `Ceiling`, and `Truncate`.
 
 ## 6. Fraction (MA-06)
 Decomposes a floating point number into its integer and fractional parts.
+
+- **Input**: The numeric value to decompose.
+- **Outputs**: 
+  - **int**: The integer part.
+  - **n**: The numerator of the fraction.
+  - **d**: The denominator (always simplified).
+  - **Text**: Human-readable fraction string.
 
 ```playground
 {
@@ -77,6 +103,11 @@ Decomposes a floating point number into its integer and fractional parts.
 ## 7. Divisibility & Primes (MA-07)
 Includes `GCD`, `LCM`, `Modulo`, and a primality test.
 
+- **Inputs**: 
+  - **A**: First integer.
+  - **B**: Second integer.
+- **Output**: The result of the selected operation (e.g., GCD value or true/false for Prime test).
+
 ```playground
 {
   "nodeType": "MA-07",
@@ -86,7 +117,12 @@ Includes `GCD`, `LCM`, `Modulo`, and a primality test.
 ```
 
 ## 8. Combinatorics (MA-08)
-Calculates Combinations $C(n,r)$, Permutations $P(n,r)$, and Factorials $n!$.
+Calculates Combinations C(n, r), Permutations P(n, r), and Factorials n!.
+
+- **Inputs**: 
+  - **n**: Total items.
+  - **r**: Selection size.
+- **Output**: The calculated count.
 
 ```playground
 {

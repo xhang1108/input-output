@@ -11,7 +11,6 @@ interface MarkdownRendererProps {
 
 import { NodeDemo } from './NodeDemo';
 import { CircuitDemo } from './CircuitDemo';
-import { SpawnerButton } from './SpawnerButton';
 import { DynamicSectionHeader } from './DynamicSectionHeader';
 
 interface MarkdownRendererProps {
@@ -82,25 +81,6 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                     }
                 }
 
-                if (!inline && language === 'iogl-example') {
-                    try {
-                        const payload = JSON.parse(String(children).replace(/\n$/, ''));
-                        return (
-                            <div className="not-prose inline-block mt-4 mb-8">
-                                <SpawnerButton
-                                    label={payload.label}
-                                    iogl={payload.iogl}
-                                />
-                            </div>
-                        );
-                    } catch (e) {
-                        return (
-                            <div className="p-4 border border-orange-900/30 rounded-xl bg-orange-900/10 text-orange-400 text-xs font-mono">
-                                [Example Error]: Invalid IOGL example configuration
-                            </div>
-                        );
-                    }
-                }
 
                 if (!inline && language === 'iogl-circuit') {
                     try {

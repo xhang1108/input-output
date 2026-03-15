@@ -28,27 +28,6 @@ When you modify the graph, the **Brain** performs a partial synthesis:
 
 ---
 
-## Try an Example
-See IOGL in action by injecting this basic math circuit into your canvas:
-
-```iogl-example
-{
-  "label": "Basic Addition Circuit",
-  "iogl": {
-    "nodes": [
-      { "id": "input-1", "type": "IN-01", "position": { "x": 0, "y": 0 }, "data": { "value": 10, "label": "A" } },
-      { "id": "input-2", "type": "IN-01", "position": { "x": 0, "y": 150 }, "data": { "value": 20, "label": "B" } },
-      { "id": "math-1", "type": "MA-01", "position": { "x": 300, "y": 75 }, "data": { "op": "add", "label": "Sum" } },
-      { "id": "result-1", "type": "OT-01", "position": { "x": 600, "y": 75 }, "data": { "label": "Output" } }
-    ],
-    "edges": [
-      { "id": "e1", "source": "input-1", "target": "math-1", "targetHandle": "in-0" },
-      { "id": "e2", "source": "input-2", "target": "math-1", "targetHandle": "in-1" },
-      { "id": "e3", "source": "math-1", "target": "result-1", "targetHandle": "in-0" }
-    ]
-  }
-}
-```
 
 > [!IMPORTANT]
 > IOGL is the "Single Source of Truth". If you right-click a node and select **View Specs**, you are navigating the metadata defined within this protocol.

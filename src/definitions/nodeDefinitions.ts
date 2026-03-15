@@ -268,11 +268,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Math',
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'In A' },
-            { 
-                id: 'in_b', 
-                type: 'target', 
-                variant: 'single', 
-                dataType: 'scalar', 
+            {
+                id: 'in_b',
+                type: 'target',
+                variant: 'single',
+                dataType: 'scalar',
                 label: 'In B',
                 hidden: (d) => ['ABS', 'NEG', 'SIGN'].includes(d.op as string)
             },
@@ -746,11 +746,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Transform',
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar', label: 'In A' },
-            { 
-                id: 'in_b', 
-                type: 'target', 
-                variant: 'single', 
-                dataType: 'scalar', 
+            {
+                id: 'in_b',
+                type: 'target',
+                variant: 'single',
+                dataType: 'scalar',
                 label: 'In B',
                 hidden: (d) => d.shape === 'Circle'
             },
@@ -1017,7 +1017,7 @@ export function getDefinitionsByCategory(): { category: string; items: NodeDefin
         if (!map.has(def.category)) map.set(def.category, []);
         map.get(def.category)!.push(def);
     }
-    
+
     const results = Array.from(map.entries()).map(([category, items]) => ({ category, items }));
     return sortCategories(results, (item) => item.category);
 }
