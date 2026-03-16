@@ -9,7 +9,10 @@
  *   <NodeOpSelect nodeId={id} defId={type} paramId="op" data={data} />
  */
 
+'use client';
+
 import { memo, useCallback } from 'react';
+import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { useNodeParam } from '../../hooks/useNodeParam';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
@@ -24,6 +27,11 @@ interface NodeOpSelectProps {
     width?: string;
     /** Optional additional data to merge into the Brain transaction. */
     extraData?: (value: string) => Record<string, unknown>;
+    onSelect?: (item: CategorizedMenuItem) => void;
+    showSearch?: boolean;
+    showCategories?: boolean;
+    /** Optional dynamic options to override static ones from definitions. */
+    overrideOptions?: CategorizedMenuItem[];
 }
 
 export const NodeOpSelect = memo(({
@@ -35,14 +43,37 @@ export const NodeOpSelect = memo(({
     placeholder,
     width = '48',
     extraData,
+    onSelect,
+    showSearch = false,
+    showCategories = false,
+    overrideOptions,
 }: NodeOpSelectProps) => {
+    const brain = useBrain();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
-    const { options, currentLabel, dispatch } = useNodeParam(nodeId, defId, paramId, data);
+    const { options: staticOptions, currentValue, currentLabel: staticLabel, dispatch } = useNodeParam(nodeId, defId, paramId, data);
+
+    const options = overrideOptions || staticOptions;
+    
+    // Determine the label to show in the trigger button
+    const currentLabel = overrideOptions 
+        ? (overrideOptions.find(opt => opt.id === currentValue)?.label || String(currentValue || placeholder || 'Select...'))
+        : staticLabel;
 
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
-        dispatch(item.id, extraData?.(item.id));
+        brain.applyTransaction({
+            type: 'UPDATE_NODE_DATA',
+            payload: {
+                id: nodeId,
+                data: { [paramId]: item.id }
+            }
+        });
+
+        if (onSelect) {
+            onSelect(item);
+        }
+
         closeMenu();
-    }, [dispatch, closeMenu, extraData]);
+    }, [nodeId, paramId, brain, closeMenu, onSelect]);
 
     return (
         <div className="flex flex-col gap-1.5 p-1 min-w-[120px]">
@@ -52,7 +83,7 @@ export const NodeOpSelect = memo(({
                 </label>
             )}
             <button
-                className="nodrag w-full bg-zinc-900/50 border border-zinc-700/50 rounded-(--radius-sm) px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group shadow-sm active:scale-95"
+                className="nodrag w-full bg-zinc-900 border border-zinc-700/50 rounded-[10px] px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-50 transition-all flex items-center justify-between group active:scale-95"
                 onClick={handleTrigger}
                 onMouseDown={(e) => e.stopPropagation()}
             >
@@ -71,6 +102,9 @@ export const NodeOpSelect = memo(({
                 onSelect={handleSelect}
                 placeholder={placeholder ?? 'Search...'}
                 width={width}
+                selectedId={currentValue}
+                showSearch={showSearch}
+                showCategories={showCategories}
             />
         </div>
     );

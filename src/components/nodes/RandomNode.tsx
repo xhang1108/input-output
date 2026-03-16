@@ -3,30 +3,13 @@ import React, { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
-import { useNodeMenu } from '../../hooks/useNodeMenu';
-import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
-
-const SHAPE_MODES: CategorizedMenuItem[] = [
-    { id: 'scalar', label: 'Scalar Value', category: 'Dimensions', aliases: ['float', 'number'] },
-    { id: 'vector', label: 'Vector (1D Array)', category: 'Dimensions', aliases: ['array', 'vector'] },
-    { id: 'matrix', label: 'Matrix (2D Array)', category: 'Dimensions', aliases: ['matrix', 'grid'] },
-];
-
-const DISTRIBUTION_MODES: CategorizedMenuItem[] = [
-    { id: 'Uniform', label: 'Uniform', category: 'Continuous', aliases: ['rect', 'uniform'] },
-    { id: 'Normal', label: 'Normal (Gaussian)', category: 'Continuous', aliases: ['gaussian', 'normal'] },
-    { id: 'Poisson', label: 'Poisson', category: 'Discrete', aliases: ['poisson', 'discrete'] },
-    { id: 'Exponential', label: 'Exponential', category: 'Continuous', aliases: ['exp', 'exponential'] },
-];
+import { NodeOpSelect } from './NodeOpSelect';
 
 export const RandomNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
     const { updateNodeData } = useReactFlow();
 
-    // Two menus: Shape and Distribution
-    const shapeMenu = useNodeMenu();
-    const distMenu = useNodeMenu();
 
     const mode = (data.mode as string) || 'scalar';
     const distribution = (data.distribution as string) || 'Uniform';
@@ -47,74 +30,35 @@ export const RandomNode = memo((props: NodeProps) => {
         });
     }, [id, updateNodeData, brain]);
 
-    const handleShapeSelect = useCallback((item: CategorizedMenuItem) => {
-        handleChange('mode', item.id);
-        shapeMenu.closeMenu();
-    }, [handleChange, shapeMenu]);
-
-    const handleDistSelect = useCallback((item: CategorizedMenuItem) => {
-        handleChange('distribution', item.id);
-        distMenu.closeMenu();
-    }, [handleChange, distMenu]);
 
     const handleRegenerate = () => {
         // We use seed to trigger evaluation instead of trigger timestamp for consistency with engine
         handleChange('seed', Date.now());
     };
 
-    const currentShapeLabel = SHAPE_MODES.find(m => m.id === mode)?.label || mode;
-    const currentDistLabel = DISTRIBUTION_MODES.find(m => m.id === distribution)?.label || distribution;
 
     return (
         <BaseNode {...props}>
             <div className="flex flex-col gap-2 p-2 min-w-[170px] h-[335px]">
                 {/* Distribution Selector */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-zinc-500 uppercase font-black px-0.5">Distribution</label>
-                    <button
-                        className="nodrag w-full bg-zinc-900/50 border border-zinc-700/50 rounded-md px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group active:scale-95"
-                        onClick={distMenu.handleTrigger}
-                        onMouseDown={(e) => e.stopPropagation()}
-                    >
-                        <span className="truncate font-medium group-hover:text-white">{currentDistLabel}</span>
-                        <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <CategorizedMenu
-                        isOpen={distMenu.menuOpen}
-                        items={DISTRIBUTION_MODES}
-                        position={distMenu.menuPos}
-                        trigger={distMenu.trigger}
-                        onClose={distMenu.closeMenu}
-                        onSelect={handleDistSelect}
-                        placeholder="Search Distribution..."
-                        width="44"
+                <div className="flex flex-col">
+                    <NodeOpSelect 
+                        nodeId={id} 
+                        defId="IN-10" 
+                        paramId="distribution" 
+                        data={data} 
+                        label="Distribution"
                     />
                 </div>
 
                 {/* Shape Selector */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-zinc-500 uppercase font-black px-0.5">Output Shape</label>
-                    <button
-                        className="nodrag w-full bg-zinc-900/50 border border-zinc-700/50 rounded-md px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group active:scale-95"
-                        onClick={shapeMenu.handleTrigger}
-                        onMouseDown={(e) => e.stopPropagation()}
-                    >
-                        <span className="truncate font-medium group-hover:text-white lowercase">{currentShapeLabel}</span>
-                        <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <CategorizedMenu
-                        isOpen={shapeMenu.menuOpen}
-                        items={SHAPE_MODES}
-                        position={shapeMenu.menuPos}
-                        trigger={shapeMenu.trigger}
-                        onClose={shapeMenu.closeMenu}
-                        onSelect={handleShapeSelect}
-                        placeholder="Search Shape..."
-                        width="36"
+                <div className="flex flex-col border-t border-zinc-800/30 pt-1">
+                    <NodeOpSelect 
+                        nodeId={id} 
+                        defId="IN-10" 
+                        paramId="mode" 
+                        data={data} 
+                        label="Output Mode"
                     />
                 </div>
 

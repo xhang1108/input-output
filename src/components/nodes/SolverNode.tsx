@@ -2,14 +2,13 @@
 import { memo, useMemo, useState, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow, useNodes, useNodeConnections, Position } from '@xyflow/react';
-import { PayloadUtils } from '../../utils/PayloadUtils';
-import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { HandleConfig } from '../../types/NodeDefinition';
-import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
+import { PayloadUtils } from '../../utils/PayloadUtils';
+import { NodeOpSelect } from './NodeOpSelect';
+import { CategorizedMenuItem } from '../ui/CategorizedMenu';
 
 export const SolverNode = memo((props: NodeProps) => {
     const { id, data } = props;
-    const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const { updateNodeData } = useReactFlow();
 
     // Explicitly define handles to ensure 'symbolic' (Orange) color and avoid stale session data
@@ -31,9 +30,17 @@ export const SolverNode = memo((props: NodeProps) => {
             const matches = text.match(/\b[a-zA-Z_]\w*\b/g);
             if (!matches) return;
 
-            const blacklist = new Set(['sin', 'cos', 'tan', 'log', 'ln', 'e', 'pi', 'abs', 'sqrt', 'solve', 'integrate', 'derivative']);
+            const blacklist = new Set([
+                'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh',
+                'log', 'ln', 'log10', 'exp', 'pow', 'sqrt', 'abs',
+                'e', 'pi', 'i', 'phi', 'tau', 'inf', 'NaN',
+                'true', 'false', 'null', 'undefined',
+                'det', 'inv', 'dot', 'cross', 'transpose', 'adj', 'rank',
+                'diff', 'limit', 'gcd', 'lcm', 'gamma', 'factorial',
+                'solve', 'integrate', 'derivative', 'round', 'floor', 'ceil'
+            ]);
             matches.forEach(m => {
-                if (!blacklist.has(m) && m !== '0' && m !== '1') {
+                if (!blacklist.has(m)) {
                     vars.add(m);
                 }
             });
@@ -64,73 +71,47 @@ export const SolverNode = memo((props: NodeProps) => {
 
     const variable = (data.variable as string) || '';
 
-    const menuItems = useMemo(() => {
-        const items: CategorizedMenuItem[] = [
-            { id: '', label: 'Auto (Detected)', category: 'Automatic' }
+    // Map extracted variables to menu items
+    const detectedOptions: CategorizedMenuItem[] = useMemo(() => {
+        const baseOptions: CategorizedMenuItem[] = [
+            { id: '', label: 'Auto (First found)', category: 'Automatic' }
         ];
+        
+        const varOptions = variables.map(v => ({
+            id: v,
+            label: v,
+            category: 'Detected Variables'
+        }));
 
-        variables.forEach(v => {
-            items.push({ id: v, label: v, category: 'Detected Variables' });
-        });
-
-        if (variable && !variables.includes(variable) && variable !== '') {
-            items.push({ id: variable, label: `${variable} (Custom)`, category: 'Manual Entry' });
-        }
-
-        return items;
-    }, [variables, variable]);
-
-    const handleSelect = useCallback((item: CategorizedMenuItem) => {
-        updateNodeData(id, { variable: item.id });
-        closeMenu();
-    }, [id, updateNodeData]);
-
-    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        updateNodeData(id, { variable: e.target.value });
-    };
-
-    const currentLabel = variable === '' ? 'Auto' : variable;
+        return [...baseOptions, ...varOptions];
+    }, [variables]);
 
     return (
         <BaseNode {...props} data={nodeData}>
-            <div className="flex flex-col gap-2 p-2 relative items-center justify-center min-w-[120px]">
+            <div className="flex flex-col gap-2 p-2 relative items-center justify-center min-w-[130px]">
                 <div className="text-[11px] font-bold text-zinc-300 tracking-widest uppercase mb-1">
                     Solver
                 </div>
 
-                <div className="w-full flex flex-col gap-1.5">
-                    <div className="text-[9px] text-zinc-500 uppercase tracking-wider pl-1 font-semibold">Solve For</div>
-                    {variables.length > 0 ? (
-                        <button
-                            className="nodrag w-full bg-zinc-900 border border-zinc-700/50 rounded-lg px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group shadow-sm"
-                            onClick={handleTrigger}
-                            onMouseDown={(e) => e.stopPropagation()}
-                        >
-                            <span className="truncate font-mono">{currentLabel}</span>
-                            <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 Transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                    ) : (
-                        <input
-                            className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-2 py-1.5 rounded-lg text-xs w-full text-center focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
-                            value={variable}
-                            onChange={handleInput}
-                            placeholder="Type variable..."
-                        />
+                <div className="w-full flex flex-col pt-2 border-t border-zinc-800/50">
+                    <NodeOpSelect 
+                        nodeId={id} 
+                        defId="CL-04" 
+                        paramId="variable" 
+                        data={data} 
+                        label="Solve For"
+                        placeholder="Auto"
+                        overrideOptions={detectedOptions}
+                        width="36"
+                    />
+                    
+                    {/* Fallback info when no variables are found */}
+                    {variables.length === 0 && (
+                        <div className="mt-1 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-[9px] text-amber-200/70 text-center animate-in fade-in slide-in-from-top-1">
+                            Connect Eq to see vars
+                        </div>
                     )}
                 </div>
-
-                <CategorizedMenu
-                    isOpen={menuOpen}
-                    items={menuItems}
-                    position={menuPos}
-                    trigger={trigger}
-                    onClose={closeMenu}
-                    onSelect={handleSelect}
-                    placeholder="Select Variable..."
-                    width="32"
-                />
             </div>
         </BaseNode>
     );

@@ -83,6 +83,8 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
             onSelect={handleSelect}
             placeholder={pendingConnection ? "Filtered Search..." : "Add Node..."}
             followZoom={false}
+            showCategories={true}
+            showSearch={true}
         />
     );
 }

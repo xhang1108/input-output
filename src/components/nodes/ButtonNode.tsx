@@ -1,31 +1,20 @@
 
-import { memo, useCallback, useState } from 'react';
+'use client';
+
+import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { useNodeMenu } from '../../hooks/useNodeMenu';
-import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
-
-const MODE_ITEMS: CategorizedMenuItem[] = [
-    { id: 'sticky', label: 'Sticky (Toggle)', category: 'Interaction' },
-    { id: 'momentary', label: 'Momentary (Push)', category: 'Interaction' },
-];
+import { NodeOpSelect } from './NodeOpSelect';
 
 export const ButtonNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
-    const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
 
     const isActive = !!PayloadUtils.unwrap(data.value);
     const mode = (data as any).mode || 'sticky';
     const isSticky = mode !== 'momentary';
-
-    const handles = [
-        { id: 'out', type: 'source', position: 'right', variant: 'single', dataType: 'boolean' }
-    ];
-
-    const nodeData = { ...data, handles };
 
     const toggleActive = useCallback(() => {
         brain.applyTransaction({
@@ -42,31 +31,18 @@ export const ButtonNode = memo((props: NodeProps) => {
         });
     }, [id, isSticky, brain]);
 
-    const handleSelect = useCallback((item: CategorizedMenuItem) => {
-        brain.applyTransaction({
-            type: 'UPDATE_NODE_DATA',
-            payload: { id, data: { mode: item.id, value: false } }
-        });
-        closeMenu();
-    }, [id, closeMenu, brain]);
-
-    const currentModeLabel = isSticky ? 'Sticky' : 'Momentary';
-
     return (
-        <BaseNode {...props} data={nodeData}>
+        <BaseNode {...props}>
             <div className="flex flex-col items-center gap-4 p-3 min-w-[120px]">
-                <div className="flex justify-between items-center w-full gap-2">
-                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold shrink-0">Mode</label>
-                    <button
-                        className="nodrag flex-1 bg-transparent text-[8px] text-zinc-500 border border-zinc-700/50 rounded-xs px-1 py-0.5 outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold flex items-center justify-between group"
-                        onClick={handleTrigger}
-                        onMouseDown={(e) => e.stopPropagation()}
-                    >
-                        <span>{currentModeLabel}</span>
-                        <svg className="w-2 h-2 text-zinc-600 group-hover:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
+                <div className="flex justify-between items-center w-full gap-2 -mt-1">
+                    <NodeOpSelect
+                        nodeId={id}
+                        defId="IN-05"
+                        paramId="mode"
+                        data={data}
+                        label="Mode"
+                        width="32"
+                    />
                 </div>
 
                 <div className="relative">
@@ -114,17 +90,6 @@ export const ButtonNode = memo((props: NodeProps) => {
                         {isActive ? 'Active' : 'Standby'}
                     </span>
                 </div>
-
-                <CategorizedMenu
-                    isOpen={menuOpen}
-                    items={MODE_ITEMS}
-                    position={menuPos}
-                    trigger={trigger}
-                    onClose={closeMenu}
-                    onSelect={handleSelect}
-                    placeholder="Select Mode..."
-                    width="32"
-                />
             </div>
         </BaseNode>
     );

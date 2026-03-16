@@ -124,6 +124,20 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                     { label: 'φ (Golden Ratio)', value: 'phi', category: 'Mathematical' },
                     { label: 'τ (Tau)', value: 'tau', category: 'Mathematical' }
                 ]
+            },
+            {
+                id: 'precision', label: 'Accuracy', type: 'select', options: [
+                    { id: '-1', label: 'High Prec.', category: 'Accuracy' },
+                    { id: '0', label: '0 d.p.', category: 'Decimal Places' },
+                    { id: '1', label: '1 d.p.', category: 'Decimal Places' },
+                    { id: '2', label: '2 d.p.', category: 'Decimal Places' },
+                    { id: '3', label: '3 d.p.', category: 'Decimal Places' },
+                    { id: '4', label: '4 d.p.', category: 'Decimal Places' },
+                    { id: '5', label: '5 d.p.', category: 'Decimal Places' },
+                    { id: '6', label: '6 d.p.', category: 'Decimal Places' },
+                    { id: '8', label: '8 d.p.', category: 'Decimal Places' },
+                    { id: '10', label: '10 d.p.', category: 'Decimal Places' },
+                ]
             }
         ]
     },
@@ -366,7 +380,20 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                     { label: 'Truncate', value: 'TRUNC', category: 'Rounding' }
                 ]
             },
-            { id: 'precision', label: 'Decimal Places', type: 'number', min: 0, max: 15, step: 1 }
+            {
+                id: 'precision', label: 'Decimal Places', type: 'select', options: [
+                    { id: '-1', label: 'High Prec.', category: 'Accuracy' },
+                    { id: '0', label: '0 d.p.', category: 'Decimal Places' },
+                    { id: '1', label: '1 d.p.', category: 'Decimal Places' },
+                    { id: '2', label: '2 d.p.', category: 'Decimal Places' },
+                    { id: '3', label: '3 d.p.', category: 'Decimal Places' },
+                    { id: '4', label: '4 d.p.', category: 'Decimal Places' },
+                    { id: '5', label: '5 d.p.', category: 'Decimal Places' },
+                    { id: '6', label: '6 d.p.', category: 'Decimal Places' },
+                    { id: '8', label: '8 d.p.', category: 'Decimal Places' },
+                    { id: '10', label: '10 d.p.', category: 'Decimal Places' },
+                ]
+            }
         ]
     },
     {
@@ -438,7 +465,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         defaultData: { variable: 'x', order: 1 },
         aliases: ['d/dx', 'grad', 'nabla', 'curl', 'div', 'diff', 'derivative'],
         params: [
-            { id: 'variable', label: 'Variable', type: 'string', hint: 'Differentiate with respect to (e.g. x, t)' },
+            {
+                id: 'variable', label: 'Variable', type: 'select', options: [
+                    { label: 'x', value: 'x' },
+                    { label: 'y', value: 'y' },
+                    { label: 'z', value: 'z' },
+                    { label: 't', value: 't' },
+                    { label: 'θ (Theta)', value: 'theta' }
+                ]
+            },
             { id: 'order', label: 'Order', type: 'number', min: 1, max: 5, step: 1, hint: '1=first, 2=second derivative' }
         ]
     },

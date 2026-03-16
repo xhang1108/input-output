@@ -1,3 +1,5 @@
+'use client';
+
 import { memo, useState, useMemo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
@@ -7,9 +9,7 @@ import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
 import { Copy, Check, ChevronDown } from 'lucide-react';
 import { DataType } from '../../types/payload';
-import { useNodeMenu } from '../../hooks/useNodeMenu';
-import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
-
+import { NodeOpSelect } from './NodeOpSelect';
 import { ScalarView } from './views/ScalarView';
 import { GridView } from './views/GridView';
 import { ColorView } from './views/ColorView';
@@ -18,29 +18,9 @@ import { LatexView } from './views/LatexView';
 
 export type ResultViewMode = 'auto' | 'text' | 'grid' | 'color' | 'formula' | 'latex';
 
-const VIEW_MODE_ITEMS: CategorizedMenuItem[] = [
-    { id: 'auto', label: 'Auto', category: 'General' },
-    { id: 'text', label: 'Text', category: 'Display' },
-    { id: 'grid', label: 'Grid', category: 'Display' },
-    { id: 'color', label: 'Color', category: 'Display' },
-    { id: 'formula', label: 'Formula', category: 'Symbolic' },
-    { id: 'latex', label: 'LaTeX', category: 'Symbolic' },
-];
-
-const PRECISION_ITEMS: CategorizedMenuItem[] = [
-    { id: '-1', label: 'Auto', category: 'Precision' },
-    ...[0, 1, 2, 3, 4, 5, 6, 8, 10].map(p => ({
-        id: String(p),
-        label: `${p} d.p.`,
-        category: 'Precision'
-    })),
-];
-
 export const ResultNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
-    const viewMenu = useNodeMenu();
-    const precMenu = useNodeMenu();
 
     const nodeData = data;
     const value = data.value;
@@ -122,81 +102,22 @@ export const ResultNode = memo((props: NodeProps) => {
         }
     }, [isError, errorStr, effectiveMode, matrixData, rawValue, formulaStr]);
 
-    const handlePrecisionSelect = useCallback((item: CategorizedMenuItem) => {
-        brain.applyTransaction({
-            type: 'UPDATE_NODE_DATA',
-            payload: { id, data: { precision: parseInt(item.id) } }
-        });
-        precMenu.closeMenu();
-    }, [id, precMenu, brain]);
-
-    const handleViewModeSelect = useCallback((item: CategorizedMenuItem) => {
-        brain.applyTransaction({
-            type: 'UPDATE_NODE_DATA',
-            payload: { id, data: { viewMode: item.id as ResultViewMode } }
-        });
-        viewMenu.closeMenu();
-    }, [id, viewMenu, brain]);
-
-    const handleDepthChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-        brain.applyTransaction({
-            type: 'UPDATE_NODE_DATA',
-            payload: { id, data: { depth: e.target.value } }
-        });
-    }, [id, brain]);
-
-    const currentModeLabel = VIEW_MODE_ITEMS.find(v => v.id === viewMode)?.label || viewMode;
-    const currentPrecLabel = precision === -1 ? 'Auto' : `${precision} d.p.`;
 
     return (
         <BaseNode {...props} data={nodeData}>
             <div className="p-3 flex flex-col gap-2 min-w-[140px] max-w-[500px]">
-                <div className="flex justify-between items-center gap-2">
-                    <div className="flex items-center gap-1 overflow-hidden">
-                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold shrink-0">Result</label>
-                        {payload?.symbol && effectiveMode !== 'formula' && (
-                            <button
-                                onClick={() => handleViewModeSelect({ id: 'formula' } as any)}
-                                className="text-[8px] bg-math/20 text-math px-1 rounded-sm hover:bg-math/40 transition-colors"
-                                title="Has Formula Trace"
-                            >
-                                ƒx
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                            className="nodrag bg-transparent text-[9px] text-zinc-500 border border-zinc-700/50 rounded-xs px-1.5 py-0.5 outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold flex items-center gap-1"
-                            onClick={viewMenu.handleTrigger}
-                            onMouseDown={(e) => e.stopPropagation()}
-                        >
-                            {currentModeLabel}
-                            <ChevronDown size={8} />
-                        </button>
-
-                        {effectiveMode !== 'formula' && effectiveMode !== 'latex' && effectiveMode !== 'color' && (
-                            <button
-                                className="nodrag bg-transparent text-[9px] text-zinc-500 border border-zinc-700/50 rounded-xs px-1.5 py-0.5 outline-none cursor-pointer hover:bg-zinc-800 transition-colors uppercase font-bold flex items-center gap-1"
-                                onClick={precMenu.handleTrigger}
-                                onMouseDown={(e) => e.stopPropagation()}
-                            >
-                                {currentPrecLabel}
-                                <ChevronDown size={8} />
-                            </button>
-                        )}
-
-                        <button
-                            onClick={copyToClipboard}
-                            className={`nodrag p-1 rounded-sm hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
-                            title="Copy Value"
-                        >
-                            {copied ? <Check size={12} /> : <Copy size={12} />}
-                        </button>
-                    </div>
+                <div className="flex justify-between items-center bg-zinc-800/20 px-2 py-1 -mx-3 -mt-3 mb-1 border-b border-zinc-800/40 shrink-0">
+                    <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Result Info</span>
+                    <button
+                        onClick={copyToClipboard}
+                        className={`nodrag p-1 rounded-sm hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
+                        title="Copy Value"
+                    >
+                        {copied ? <Check size={12} /> : <Copy size={12} />}
+                    </button>
                 </div>
 
-                <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-lg bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
+                <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-[10px] bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
                     {isError ? (
                         <div className="font-mono break-all whitespace-pre-wrap text-red-500 text-sm py-2 px-3">{errorStr}</div>
                     ) : !payload ? (
@@ -205,34 +126,34 @@ export const ResultNode = memo((props: NodeProps) => {
                         <>
                             {effectiveMode === 'text' && <ScalarView rawValue={rawValue} precision={precision} unitStr={unitStr} dataTypeColor={dataTypeColor} isError={isError} />}
                             {effectiveMode === 'grid' && <GridView grid={matrixData} precision={precision} />}
-                            {effectiveMode === 'color' && <ColorView payload={payload} depth={depth} onDepthChange={handleDepthChange} />}
+                            {effectiveMode === 'color' && <ColorView payload={payload} depth={depth} onDepthChange={(e) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { depth: e.target.value } } })} />}
                             {effectiveMode === 'formula' && <FormulaView formula={formulaStr} />}
                             {effectiveMode === 'latex' && <LatexView formula={formulaStr} />}
                         </>
                     )}
                 </div>
-
-                <CategorizedMenu
-                    isOpen={viewMenu.menuOpen}
-                    items={VIEW_MODE_ITEMS}
-                    position={viewMenu.menuPos}
-                    trigger={viewMenu.trigger}
-                    onClose={viewMenu.closeMenu}
-                    onSelect={handleViewModeSelect}
-                    placeholder="Select View..."
-                    width="28"
-                />
-
-                <CategorizedMenu
-                    isOpen={precMenu.menuOpen}
-                    items={PRECISION_ITEMS}
-                    position={precMenu.menuPos}
-                    trigger={precMenu.trigger}
-                    onClose={precMenu.closeMenu}
-                    onSelect={handlePrecisionSelect}
-                    placeholder="Set Precision..."
-                    width="28"
-                />
+                <div className="flex flex-col gap-2 pt-1 border-t border-zinc-800/30">
+                    <div className="grid grid-cols-2 gap-2">
+                        <NodeOpSelect 
+                            nodeId={id} 
+                            defId="OT-01" 
+                            paramId="viewMode" 
+                            data={data} 
+                            label="View Mode"
+                            width="36"
+                        />
+                        {effectiveMode !== 'formula' && effectiveMode !== 'latex' && effectiveMode !== 'color' && (
+                            <NodeOpSelect 
+                                nodeId={id} 
+                                defId="OT-01" 
+                                paramId="precision" 
+                                data={data} 
+                                label="Precision"
+                                width="36"
+                            />
+                        )}
+                    </div>
+                </div>
             </div>
         </BaseNode>
     );

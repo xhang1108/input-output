@@ -26,7 +26,6 @@ export const LogicNode = memo((props: NodeProps) => {
                 paramId="op"
                 data={props.data as Record<string, unknown>}
                 label="Operation"
-                placeholder="Search Operation..."
                 width="48"
                 extraData={computeExtra}
             />

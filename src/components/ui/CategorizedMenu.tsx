@@ -29,6 +29,9 @@ interface CategorizedMenuProps {
     maxHeight?: string;
     followZoom?: boolean;
     yOffset?: number;
+    showCategories?: boolean;
+    showSearch?: boolean;
+    selectedId?: string;
 }
 
 /**
@@ -46,11 +49,15 @@ export function CategorizedMenu({
     width = "36",
     maxHeight = "500px",
     followZoom = true,
-    yOffset = 6
+    yOffset = 6,
+    showCategories = false,
+    showSearch = false,
+    selectedId
 }: CategorizedMenuProps) {
     const [search, setSearch] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [mounted, setMounted] = useState(false);
+    const [isPositioned, setIsPositioned] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -71,17 +78,6 @@ export function CategorizedMenu({
         subCategories: Record<string, CategoryGroup>;
     }
 
-    // Reset selection when search changes
-    useEffect(() => {
-        setSelectedIndex(0);
-    }, [search]);
-
-    // Focus input on open
-    useEffect(() => {
-        if (isOpen) {
-            setTimeout(() => inputRef.current?.focus(), 50);
-        }
-    }, [isOpen]);
 
     // 1. Initial filter based on search
     const baseFilteredItems = useMemo(() => {
@@ -126,6 +122,11 @@ export function CategorizedMenu({
 
     // 3. Final flattened visual order and categories
     const { sortedCategories, visuallyOrderedItems } = useMemo(() => {
+        // If categories are hidden, preserve raw input order exactly
+        if (!showCategories) {
+            return { sortedCategories: [], visuallyOrderedItems: baseFilteredItems };
+        }
+
         const rootGroups: { rootName: string; subgroups: { displayName: string; items: CategorizedMenuItem[]; depth: number; fullName: string }[] }[] = [];
         const orderedItems: CategorizedMenuItem[] = [];
 
@@ -188,6 +189,25 @@ export function CategorizedMenu({
 
     const filteredItems = visuallyOrderedItems;
 
+    // Reset selection when search changes or menu opens
+    useEffect(() => {
+        if (!search && selectedId) {
+            const index = visuallyOrderedItems.findIndex(item => item.id === selectedId);
+            if (index !== -1) {
+                setSelectedIndex(index);
+                return;
+            }
+        }
+        setSelectedIndex(0);
+    }, [search, selectedId, visuallyOrderedItems, isOpen]);
+
+    // Focus input on open
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => inputRef.current?.focus(), 50);
+        }
+    }, [isOpen]);
+
     // Handle viewport boundaries for smart positioning
     const menuRef = useRef<HTMLDivElement>(null);
     const [flipState, setFlipState] = useState({ x: false, y: false });
@@ -225,22 +245,28 @@ export function CategorizedMenu({
             const shouldFlipY = y + scaledHeight > viewportHeight;
             const finalY = shouldFlipY ? Math.max(0, flipY - menuRawHeight) : y;
 
-            // 2. Position X (Always start at mouse, but cap width if no space on right)
-            // Instead of flipping X, we limit the element's maxWidth so it stays on screen
-            const availableWidth = viewportWidth - x - 20; // 20px padding from edge
-            const minPossibleWidth = 200; // Minimum usable width
+            // 2. Position X (Flip left if no space on right)
+            const menuRawWidth = menuEl.offsetWidth;
+            const scaledWidth = menuRawWidth * currentZoom;
+            const shouldFlipX = x + scaledWidth > viewportWidth - 20;
+            
+            // If flipping X, align the right edge of the menu with the right edge of the trigger (if exists)
+            const finalX = shouldFlipX 
+                ? Math.max(10, x + (trigger ? trigger.offsetWidth : 0) - menuRawWidth) 
+                : x;
 
-            menuEl.style.left = `${x}px`;
+            menuEl.style.left = `${finalX}px`;
             menuEl.style.top = `${finalY}px`;
             menuEl.style.transform = `scale(${currentZoom})`;
-            menuEl.style.transformOrigin = `${shouldFlipY ? 'bottom' : 'top'} left`;
-            menuEl.style.maxWidth = `min(95vw, ${Math.max(minPossibleWidth, availableWidth / currentZoom)}px)`;
+            menuEl.style.transformOrigin = `${shouldFlipY ? 'bottom' : 'top'} ${shouldFlipX ? 'right' : 'left'}`;
             
-            // First draw: position is set but it's still hidden. 
-            // Second draw: it becomes visible, matching the CSS animation start.
-            if (menuEl.style.visibility === 'hidden') {
+            // Once positioned, flag it so we can start the entrance animation
+            if (!isPositioned && menuRawWidth > 0) {
+                // Double rAF to ensure layout is flushed before showing
                 requestAnimationFrame(() => {
-                    menuEl.style.visibility = 'visible';
+                    requestAnimationFrame(() => {
+                        setIsPositioned(true);
+                    });
                 });
             }
 
@@ -326,30 +352,33 @@ export function CategorizedMenu({
             />
             <div
                 ref={menuRef}
-                className="fixed z-10000 bg-[#141416]/95 border border-[#27272a] shadow-2xl rounded-lg overflow-visible flex flex-col animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 ease-out"
+                className={`fixed z-10000 bg-[#141416] border border-zinc-800 rounded-[14px] flex flex-col p-1 transition-opacity duration-75 ${
+                    isPositioned ? 'animate-in fade-in duration-200 ease-out opacity-100' : 'opacity-0'
+                }`}
                 style={{
-                    visibility: 'hidden',
                     maxHeight: maxHeight,
                     maxWidth: '95vw',
-                    width: menuLayout === 'horizontal' ? 'auto' : '11rem',
+                    width: menuLayout === 'horizontal' ? 'auto' : (width.startsWith('w-') ? undefined : `${parseInt(width) * 4}px`),
                 }}
                 onClick={e => e.stopPropagation()}
                 onContextMenu={e => e.preventDefault()}
             >
                 {/* Search Input */}
-                <div className="p-1 px-1.5 border-b border-white/5">
-                    <div className="flex items-center px-2 py-1 bg-black/40 rounded border border-white/5 focus-within:border-white/20 transition-colors">
-                        <Search className="w-3 h-3 text-zinc-500 mr-2" />
-                        <input
-                            ref={inputRef}
-                            className="bg-transparent text-[10px] text-zinc-200 outline-none w-full placeholder-zinc-700 font-medium"
-                            placeholder={placeholder}
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                        />
+                {showSearch && (
+                    <div className="p-1 border-b border-white/5 mb-1">
+                        <div className="flex items-center px-2 py-1 bg-black rounded-sm border border-white/5 focus-within:border-white/20 transition-colors">
+                            <Search className="w-3 h-3 text-zinc-500 mr-2" />
+                            <input
+                                ref={inputRef}
+                                className="bg-transparent text-[10px] text-zinc-200 outline-none w-full placeholder-zinc-700 font-medium"
+                                placeholder={placeholder}
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                            />
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Items Container */}
                 <div
@@ -358,11 +387,19 @@ export function CategorizedMenu({
                         ? 'flex flex-row overflow-y-hidden pt-1'
                         : 'flex flex-col overflow-x-hidden pt-0'
                         }`}
-                    style={{ maxHeight: `calc(${maxHeight} - 60px)` }}
+                    style={{ maxHeight: `calc(${maxHeight} - ${showSearch ? '60px' : '40px'})` }}
                 >
                     {filteredItems.length === 0 ? (
                         <div className="px-4 py-8 text-zinc-500 text-[10px] text-center italic w-full">
                             No results found
+                        </div>
+                    ) : !showCategories ? (
+                        <div className="flex flex-col gap-0.5 pt-1">
+                            {filteredItems.map((item) => {
+                                const globalIndex = filteredItems.indexOf(item);
+                                const isSelected = globalIndex === selectedIndex;
+                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} inputRef={inputRef} />;
+                            })}
                         </div>
                     ) : menuLayout === 'horizontal' ? (
                         sortedCategories.map((root) => (
@@ -423,11 +460,6 @@ export function CategorizedMenu({
                     )}
                 </div>
 
-                {/* Footer / Hint */}
-                <div className="px-2 py-0.5 text-[8px] text-zinc-600 bg-black/40 border-t border-white/5 flex justify-between uppercase tracking-tighter rounded-b-[calc(var(--radius-lg)-1px)]">
-                    <span>↑↓ Navigate</span>
-                    <span>Ctrl+Enter Multi</span>
-                </div>
             </div>
         </>,
         document.body
@@ -450,8 +482,8 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
         <button
             key={`${item.category}-${item.id}-${item.label}`}
             data-selected={isSelected}
-            className={`min-w-[120px] text-left px-2 py-1 text-[10px] flex items-center justify-between group transition-colors relative rounded ${isSelected
-                ? 'bg-blue-600 text-white'
+            className={`min-w-[120px] text-left px-3 py-1.5 text-[11px] font-medium flex items-center justify-between group transition-all relative rounded-[10px] ${isSelected
+                ? 'bg-blue-600 text-white shadow-none'
                 : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
                 }`}
             onClick={(e) => {
@@ -470,10 +502,6 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
                 {item.icon && <span className={isSelected ? 'opacity-100' : 'opacity-40'}>{item.icon}</span>}
                 <span className="truncate">{item.label}</span>
             </div>
-            <span className={`text-[7px] uppercase px-1 rounded-[1px] font-mono tracking-tighter ${isSelected ? 'bg-white/20 text-white' : 'text-zinc-600 group-hover:text-zinc-500'
-                }`}>
-                {item.id}
-            </span>
         </button>
     );
 }
