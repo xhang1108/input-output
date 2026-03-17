@@ -114,6 +114,14 @@ export const DOC_REGISTRY: DocEntry[] = [
     ]
   },
   {
+    "id": "Update_Log",
+    "modes": [
+      "shared",
+      "user",
+      "developer"
+    ]
+  },
+  {
     "id": "utility-nodes",
     "modes": [
       "user"
@@ -123,20 +131,40 @@ export const DOC_REGISTRY: DocEntry[] = [
 export const NODE_DOC_MAP: Record<string, string> = {
   "CL-01": "calculus-nodes",
   "CL-02": "calculus-nodes",
+  "CL-03": "calculus-nodes",
   "CL-04": "calculus-nodes",
+  "CL-05": "calculus-nodes",
   "DT-01": "data-nodes",
   "DT-02": "data-nodes",
+  "DT-03": "data-nodes",
+  "DT-04": "data-nodes",
   "DT-05": "data-nodes",
+  "DT-06": "data-nodes",
+  "DT-07": "data-nodes",
   "IN-01": "input-nodes",
   "IN-02": "input-nodes",
+  "IN-03": "input-nodes",
+  "IN-04": "input-nodes",
+  "IN-05": "input-nodes",
+  "IN-06": "input-nodes",
   "IN-07": "input-nodes",
+  "IN-08": "input-nodes",
+  "IN-09": "input-nodes",
+  "IN-10": "input-nodes",
   "LG-01": "logic-nodes",
   "LG-02": "logic-nodes",
+  "LG-03": "logic-nodes",
   "MA-01": "math-nodes",
   "MA-02": "math-nodes",
+  "MA-03": "math-nodes",
+  "MA-04": "math-nodes",
+  "MA-05": "math-nodes",
+  "MA-06": "math-nodes",
+  "MA-07": "math-nodes",
+  "MA-08": "math-nodes",
   "OT-01": "output-nodes",
-  "OT-03": "output-nodes",
   "OT-02": "output-nodes",
+  "OT-03": "output-nodes",
   "OT-04": "output-nodes",
   "TR-01": "transform-nodes",
   "TR-02": "transform-nodes",

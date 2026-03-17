@@ -46,6 +46,14 @@ function scanDocs(dir: string, registry: Map<string, DocEntry>, currentMode: str
 
 scanDocs(DOCS_PATH, registryMap, '');
 
+// Ensure 'shared' docs are properly linked to both 'user' and 'developer' modes in docRegistry
+registryMap.forEach((entry, id) => {
+    if (entry.modes.includes('shared')) {
+        if (!entry.modes.includes('user')) entry.modes.push('user');
+        if (!entry.modes.includes('developer')) entry.modes.push('developer');
+    }
+});
+
 const registryArray = Array.from(registryMap.values()).sort((a, b) => a.id.localeCompare(b.id));
 
 const content = `// This file is auto-generated. Do not edit manually.

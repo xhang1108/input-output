@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     keywords: ["Node-based Calculator", "Visual Calculation", "Mathematical Logic", "Free Tools", "Input-Output", "Graph-based Math"],
     authors: [{ name: "Input-Output Team" }],
     creator: "Input-Output",
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
     openGraph: {
         type: "website",
         locale: "zh_TW",

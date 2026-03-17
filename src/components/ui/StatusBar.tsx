@@ -1,3 +1,5 @@
+'use client';
+
 import { useStore, Panel } from '@xyflow/react';
 import { useAppStore } from '../../store/useStore';
 import Link from 'next/link';

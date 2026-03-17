@@ -72,55 +72,68 @@ function extractMainTitle(content: string, fallback: string): string {
  */
 export function getWikiData(mode: string): DocSection[] {
     const modePath = path.join(DOCS_PATH, mode);
+    const sharedPath = path.join(DOCS_PATH, 'shared');
 
-    if (!fs.existsSync(modePath)) {
-        return [];
-    }
+    const getSectionsFromPath = (basePath: string) => {
+        if (!fs.existsSync(basePath)) return [];
+        const entries = fs.readdirSync(basePath, { withFileTypes: true });
+        return entries
+            .filter(entry => entry.isDirectory())
+            .map(dir => {
+                const sectionPath = path.join(basePath, dir.name);
+                const files = fs.readdirSync(sectionPath);
 
-    const entries = fs.readdirSync(modePath, { withFileTypes: true });
+                const items = files
+                    .filter(file => file.endsWith('.md'))
+                    .map(file => {
+                        const filePath = path.join(sectionPath, file);
+                        const fileContent = fs.readFileSync(filePath, 'utf8');
+                        const { data, content } = matter(fileContent);
 
-    const sections: DocSection[] = entries
-        .filter(entry => entry.isDirectory())
-        .map(dir => {
-            const sectionPath = path.join(modePath, dir.name);
-            const files = fs.readdirSync(sectionPath);
+                        const toc = extractHeadings(content);
+                        const title = extractMainTitle(content, (data as DocMetadata).title || file.replace('.md', ''));
 
-            const items = files
-                .filter(file => file.endsWith('.md'))
-                .map(file => {
-                    const filePath = path.join(sectionPath, file);
-                    const fileContent = fs.readFileSync(filePath, 'utf8');
-                    const { data, content } = matter(fileContent);
+                        const docItem = {
+                            id: file.replace('.md', ''),
+                            metadata: { ...data, title } as DocMetadata,
+                            content,
+                            toc
+                        };
+                        
+                        // Sanitize: Force serialization to plain object to avoid Set/non-plain objects from gray-matter
+                        return JSON.parse(JSON.stringify(docItem));
+                    })
+                    .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0));
 
-                    const toc = extractHeadings(content);
-                    const title = extractMainTitle(content, (data as DocMetadata).title || file.replace('.md', ''));
+                const cleanTitle = dir.name.replace(/^\d+_/, '').replace(/-/g, ' ');
 
-                    return {
-                        id: file.replace('.md', ''),
-                        metadata: { ...data, title } as DocMetadata,
-                        content,
-                        toc
-                    };
-                })
-                .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0));
+                return {
+                    id: dir.name.toLowerCase(),
+                    title: cleanTitle,
+                    items
+                };
+            });
+    };
 
-            // Clean title: "01_Physics" -> "Physics"
-            const cleanTitle = dir.name.replace(/^\d+_/, '').replace(/-/g, ' ');
+    const modeSections = getSectionsFromPath(modePath);
+    const sharedSections = getSectionsFromPath(sharedPath);
 
-            return {
-                id: dir.name.toLowerCase(),
-                title: cleanTitle,
-                items
-            };
-        });
+    // Merge sections, giving priority to mode sections if IDs collide (though they shouldn't by convention)
+    const combinedMap = new Map<string, DocSection>();
+    sharedSections.forEach(s => combinedMap.set(s.id, s));
+    modeSections.forEach(s => combinedMap.set(s.id, s));
 
-    // Sort sections by folder prefix "01_", "02_", etc.
-    return sections.sort((a, b) => {
+    const combinedSections = Array.from(combinedMap.values());
+
+    // Sort sections by folder prefix "00_", "01_", etc.
+    return combinedSections.sort((a, b) => {
         const aMatch = a.id.match(/^(\d+)_/);
         const bMatch = b.id.match(/^(\d+)_/);
-        if (aMatch && bMatch) {
-            return parseInt(aMatch[1]) - parseInt(bMatch[1]);
-        }
+        
+        const aNum = aMatch ? parseInt(aMatch[1]) : 999;
+        const bNum = bMatch ? parseInt(bMatch[1]) : 999;
+        
+        if (aNum !== bNum) return aNum - bNum;
         return a.id.localeCompare(b.id);
     });
 }

@@ -17,6 +17,7 @@ export default function WikiPage() {
   const userSections = getWikiData('user');
   const developerSections = getWikiData('developer');
 
+
   return (
     <WikiClientView
       initialUserSections={userSections}

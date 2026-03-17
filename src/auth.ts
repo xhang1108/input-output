@@ -102,13 +102,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 console.warn("Auth: Session Callback - No user ID found in session, token, or user object!");
             }
 
-            return {
+            return JSON.parse(JSON.stringify({
                 ...session,
                 user: {
                     ...session.user,
                     id: userId,
                 }
-            };
+            }));
         },
     },
     debug: true,
