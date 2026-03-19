@@ -1,0 +1,52 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .key-text { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; fill: #ffffff; }
+    .key-desc { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; fill: #e4e4e7; text-transform: uppercase; letter-spacing: 0.08em; }
+    
+    .mouse-stroke { stroke: #3f3f46; stroke-width: 1.2; }
+    .mouse-divider { stroke: #3f3f46; stroke-width: 1; opacity: 0.3; }
+    
+    .row-desc { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 401; fill: #a1a1aa; font-style: italic; }
+    .kbd-bg { stroke: #3f3f46; stroke-width: 1; }
+    .kbd-text { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 800; fill: #ffffff; text-transform: uppercase; }
+  </style>
+
+  <g transform="translate(60, 10)">
+    <!-- PURE OUTLINE MOUSE -->
+    <rect x="0" y="0" width="100" height="140" rx="45" class="mouse-stroke" />
+    
+    <!-- Dividing Lines -->
+    <path d="M0 55 H100" class="mouse-divider" />
+    <path d="M50 0 V55" class="mouse-divider" />
+
+    <!-- LEFT CLICK LABEL -->
+    <g transform="translate(-15, 30)">
+      <text x="0" y="0" text-anchor="end" class="key-text">LMB</text>
+      <text x="0" y="11" text-anchor="end" class="key-desc">Select</text>
+    </g>
+
+    <!-- MIDDLE CLICK / WHEEL -->
+    <rect x="45" y="15" width="10" height="22" rx="5" class="mouse-stroke" />
+    
+    <!-- RIGHT CLICK LABEL -->
+    <g transform="translate(115, 30)">
+      <text x="0" y="0" text-anchor="start" class="key-text">RMB</text>
+      <text x="0" y="11" text-anchor="start" class="key-desc">Menu</text>
+    </g>
+
+    <!-- MMB LABEL -->
+    <g transform="translate(50, 165)">
+      <text x="0" y="0" text-anchor="middle" class="key-text">MMB</text>
+      <text x="0" y="10" text-anchor="middle" class="key-desc">Pan &amp; Zoom</text>
+    </g>
+
+    <!-- VISUAL COMBINATION -->
+    <g transform="translate(-50, 225)">
+      <rect width="46" height="20" rx="3" class="kbd-bg" />
+      <text x="23" y="14" text-anchor="middle" class="kbd-text">SHIFT</text>
+      <text x="56" y="14" class="kbd-text" style="opacity: 0.5;">+</text>
+      <text x="73" y="14" class="kbd-text">LMB</text>
+      <text x="105" y="14" class="row-desc">Box select elements.</text>
+    </g>
+  </g>
+</svg>

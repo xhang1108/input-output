@@ -38,6 +38,11 @@ body {
 }
 
 @theme inline {
+  --color-primary: #FF8C00;
+  --color-secondary: #B0B0B0;
+  --color-accent: var(--color-primary);
+
+  --radius-sm: calc(var(--radius) - 4px);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -114,18 +119,19 @@ body {
   --sidebar-foreground: oklch(0.145 0 0);
 
   /* ── Data Type Color Tokens (§0.1.2) ── */
-  --color-scalar:   hsl(0, 0%, 45%);      /* Neut. Gray    – Float (Blender) */
-  --color-matrix:   hsl(258, 65%, 65%);   /* Lavender      – Vector (Blender) */
-  --color-symbolic: hsl(30, 100%, 55%);   /* Orange        – Logic/AST    */
+  --color-scalar:   hsl(0, 0%, 45%);     
+  --color-matrix:   #FF8C00;   
+  --color-symbolic: #FF8C00;  
   --color-formula:  var(--color-symbolic);
   --color-ast:      var(--color-symbolic);
   --color-eq:       var(--color-symbolic);
   --color-expression: var(--color-symbolic);
-  --color-string:   hsl(204, 100%, 68%);  /* Sky Blue      – String (Blender) */
-  --color-boolean:  hsl(324, 90%, 75%);   /* Soft Pink     – Boolean (Blender) */
-  --color-unit:     hsl(135, 75%, 60%);   /* Light Green   – Unit/SI      */
-  --color-color:    hsl(50, 100%, 55%);   /* Yellow        – Color/Visual */
-  --color-any:      hsl(0, 0%, 100%);     /* White         - Universal    */
+  --color-string:   #B0B0B0;  
+  --color-boolean:  #B0B0B0;  
+  --color-unit:     #B0B0B0;  
+  --color-error:    #ef4444;    
+  --color-color:    #FF8C00;   
+  --color-any:      #ffffff;    
   --glow-any:      0 0 8px hsla(0, 0%, 100%, 0.4);
   --glow-scalar:   0 0 4px hsla(0, 0%, 45%, 0.2);
 }

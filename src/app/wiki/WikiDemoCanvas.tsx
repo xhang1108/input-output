@@ -22,14 +22,14 @@ interface WikiDemoCanvasProps {
 export const WikiDemoCanvas: React.FC<WikiDemoCanvasProps> = ({ children, height = 160 }) => {
     return (
         <div 
-            className="not-prose relative mt-2 mb-8 w-full overflow-hidden transition-[height] duration-300 ease-in-out" 
+            className="not-prose relative mt-2 mb-8 w-full overflow-hidden transition-[height] duration-300 ease-in-out bg-transparent! border-none! shadow-none!" 
             style={{ 
                 height: `${height}px`,
             }}
         >
             {/* ROOT REM SCALING ISOLATION */}
             <div 
-                className="absolute inset-0 z-10 react-flow-sandbox" 
+                className="absolute inset-0 z-10 react-flow-sandbox bg-transparent! border-none! shadow-none!" 
                 style={{ 
                     fontSize: '16px', 
                     lineHeight: '1.5',

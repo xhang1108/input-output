@@ -23,6 +23,7 @@ export interface DocContent {
 
 export interface DocSection {
     id: string;
+    slug: string;
     title: string;
     items: DocContent[];
 }
@@ -42,7 +43,7 @@ function extractHeadings(content: string): TOCItem[] {
         const rawTitle = match[2].trim();
         // Remove anchor notation like (IO-01) if present
         const title = rawTitle.replace(/\s*\([A-Z0-9-]+\)$/, '').trim();
-        
+
         // Generate ID consistent with MarkdownRenderer's logic
         const anchorMatch = rawTitle.match(/\(([A-Z0-9-]{3,10})\)/);
         const id = anchorMatch ? anchorMatch[1] : title.toLowerCase()
@@ -99,16 +100,18 @@ export function getWikiData(mode: string): DocSection[] {
                             content,
                             toc
                         };
-                        
+
                         // Sanitize: Force serialization to plain object to avoid Set/non-plain objects from gray-matter
                         return JSON.parse(JSON.stringify(docItem));
                     })
                     .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0));
 
                 const cleanTitle = dir.name.replace(/^\d+_/, '').replace(/-/g, ' ');
+                const slug = dir.name.replace(/^\d+_/, '').toLowerCase();
 
                 return {
                     id: dir.name.toLowerCase(),
+                    slug,
                     title: cleanTitle,
                     items
                 };
@@ -129,10 +132,10 @@ export function getWikiData(mode: string): DocSection[] {
     return combinedSections.sort((a, b) => {
         const aMatch = a.id.match(/^(\d+)_/);
         const bMatch = b.id.match(/^(\d+)_/);
-        
+
         const aNum = aMatch ? parseInt(aMatch[1]) : 999;
         const bNum = bMatch ? parseInt(bMatch[1]) : 999;
-        
+
         if (aNum !== bNum) return aNum - bNum;
         return a.id.localeCompare(b.id);
     });

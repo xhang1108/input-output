@@ -1,0 +1,38 @@
+<svg width="600" height="140" viewBox="0 0 600 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <style>
+    .row-desc { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; fill: #a1a1aa; font-style: italic; }
+    .key-bg { fill: #18181b; stroke: #3f3f46; stroke-width: 1.5; }
+    .key-text { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; fill: #ffffff; text-transform: uppercase; }
+    .key-desc { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; fill: #e4e4e7; text-transform: uppercase; letter-spacing: 0.05em; }
+    .accent-orange { fill: #f59e0b; fill-opacity: 0.1; stroke: #fbbf24; }
+  </style>
+
+  <g transform="translate(10, 0)">
+    <g transform="translate(0, 0)">
+      <rect width="60" height="50" rx="8" class="key-bg" />
+      <text x="30" y="22" text-anchor="middle" class="key-text">G</text>
+      <text x="30" y="40" text-anchor="middle" class="key-desc">Grab</text>
+      <g transform="translate(70, 0)">
+        <rect width="60" height="50" rx="8" class="key-bg" />
+        <text x="30" y="22" text-anchor="middle" class="key-text">R</text>
+        <text x="30" y="40" text-anchor="middle" class="key-desc">Rotate</text>
+      </g>
+      <g transform="translate(140, 0)">
+        <rect width="60" height="50" rx="8" class="key-bg" />
+        <text x="30" y="22" text-anchor="middle" class="key-text">S</text>
+        <text x="30" y="40" text-anchor="middle" class="key-desc">Scale</text>
+      </g>
+    </g>
+    <g transform="translate(0, 75)" class="row-desc">
+      <text y="0">G: Move nodes freely in the workspace.</text>
+      <text y="20">R: Rotate nodes or connections.</text>
+      <text y="40">S: Rescale nodes or containers.</text>
+    </g>
+  </g>
+</svg>

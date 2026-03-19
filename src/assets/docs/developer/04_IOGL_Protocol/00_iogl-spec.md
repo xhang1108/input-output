@@ -1,6 +1,6 @@
 ---
 title: IOGL Protocol
-order: 4
+order: 0
 icon: Layers
 ---
 

@@ -1,0 +1,27 @@
+<svg width="800" height="200" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .type-title { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+    .type-desc { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; fill: #e4e4e7; }
+    .port-bg { fill: #121212; stroke-width: 2.5; }
+    .divider { stroke: #3f3f46; stroke-width: 1; opacity: 0.2; }
+  </style>
+
+  <g transform="translate(40, 10)">
+    <!-- CIRCLE -->
+    <g transform="translate(0, 0)">
+      <circle cx="20" cy="20" r="11" class="port-bg" stroke="#71717a" />
+      <circle cx="20" cy="20" r="4" fill="#71717a" />
+      <text x="50" y="15" class="type-title" fill="#e4e4e7">Circle (Single Slot)</text>
+      <text x="50" y="32" class="type-desc">Standard node port. Supports one incoming connection.</text>
+    </g>
+    <path d="M0 65 H720" class="divider" />
+    
+    <!-- CAPSULE -->
+    <g transform="translate(0, 85)">
+      <rect x="10" y="8" width="20" height="24" rx="10" class="port-bg" stroke="#71717a" />
+      <rect x="16" y="14" width="8" height="12" rx="4" fill="#71717a" />
+      <text x="50" y="15" class="type-title" fill="#e4e4e7">Capsule (Multi-Link)</text>
+      <text x="50" y="32" class="type-desc">Aggregator port. Supports multiple stacked connections.</text>
+    </g>
+  </g>
+</svg>

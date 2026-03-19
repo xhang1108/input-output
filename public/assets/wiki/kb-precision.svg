@@ -1,0 +1,42 @@
+<svg width="600" height="160" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <style>
+    .row-desc { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; fill: #a1a1aa; font-style: italic; }
+    .key-bg { fill: #18181b; stroke: #3f3f46; stroke-width: 1.5; }
+    .key-text { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; fill: #ffffff; text-transform: uppercase; }
+    .key-desc { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; fill: #e4e4e7; text-transform: uppercase; letter-spacing: 0.05em; }
+  </style>
+
+  <g transform="translate(10, 0)">
+    <g transform="translate(0, 0)">
+      <rect width="60" height="50" rx="8" class="key-bg" />
+      <text x="30" y="22" text-anchor="middle" class="key-text">X</text>
+      <text x="30" y="40" text-anchor="middle" class="key-desc">X-Lock</text>
+      <g transform="translate(70, 0)">
+        <rect width="60" height="50" rx="8" class="key-bg" />
+        <text x="30" y="22" text-anchor="middle" class="key-text">Y</text>
+        <text x="30" y="40" text-anchor="middle" class="key-desc">Y-Lock</text>
+      </g>
+      <g transform="translate(140, 0)">
+        <rect width="80" height="50" rx="8" class="key-bg" />
+        <text x="40" y="22" text-anchor="middle" class="key-text">0-9</text>
+        <text x="40" y="40" text-anchor="middle" class="key-desc">Numeric</text>
+      </g>
+      <g transform="translate(230, 0)">
+        <rect width="100" height="50" rx="8" class="key-bg" />
+        <text x="50" y="22" text-anchor="middle" class="key-text">ENTER</text>
+        <text x="50" y="40" text-anchor="middle" class="key-desc">Confirm</text>
+      </g>
+    </g>
+    <g transform="translate(0, 75)" class="row-desc">
+      <text y="0">X/Y: Constraint transformation to a specific axis.</text>
+      <text y="20">0-9: Input precise numerical values for current operation.</text>
+      <text y="40">ENTER: Complete current action and apply changes.</text>
+    </g>
+  </g>
+</svg>

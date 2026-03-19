@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useEffect, useState } from 'react';
-import { ReactFlow, ReactFlowProvider, Background, Node, Edge, useNodesState } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, Node, Edge, useNodesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { nodeTypes } from '@/config/nodeTypeMap';
 import { NODE_DEFINITIONS } from '@/definitions/nodeDefinitions';

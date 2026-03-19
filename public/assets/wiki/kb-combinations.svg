@@ -1,0 +1,41 @@
+<svg width="600" height="160" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <style>
+    .row-desc { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; fill: #a1a1aa; font-style: italic; }
+    .key-bg { fill: #18181b; stroke: #3f3f46; stroke-width: 1.5; }
+    .key-text { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; fill: #ffffff; text-transform: uppercase; }
+    .key-desc { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; fill: #e4e4e7; text-transform: uppercase; letter-spacing: 0.05em; }
+  </style>
+
+  <g transform="translate(10, 0)">
+    <g transform="translate(0, 0)">
+      <rect width="100" height="50" rx="8" class="key-bg" />
+      <text x="50" y="22" text-anchor="middle" class="key-text">CTRL+C</text>
+      <text x="50" y="40" text-anchor="middle" class="key-desc">Copy</text>
+      <g transform="translate(110, 0)">
+        <rect width="100" height="50" rx="8" class="key-bg" />
+        <text x="50" y="22" text-anchor="middle" class="key-text">CTRL+V</text>
+        <text x="50" y="40" text-anchor="middle" class="key-desc">Paste</text>
+      </g>
+      <g transform="translate(220, 0)">
+        <rect width="100" height="50" rx="8" class="key-bg" />
+        <text x="50" y="22" text-anchor="middle" class="key-text">CTRL+Z</text>
+        <text x="50" y="40" text-anchor="middle" class="key-desc">Undo</text>
+      </g>
+      <g transform="translate(330, 0)">
+        <rect width="100" height="50" rx="8" class="key-bg" />
+        <text x="50" y="22" text-anchor="middle" class="key-text">CTRL+S</text>
+        <text x="50" y="40" text-anchor="middle" class="key-desc">Save</text>
+      </g>
+    </g>
+    <g transform="translate(0, 75)" class="row-desc">
+      <text y="0">CTRL+C/V: Standard clipboard copy and paste.</text>
+      <text y="20">CTRL+Z: Revert last action. CTRL+S: Persistent save.</text>
+    </g>
+  </g>
+</svg>

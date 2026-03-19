@@ -1,0 +1,52 @@
+<svg width="600" height="180" viewBox="0 0 600 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <style>
+    .row-desc { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; fill: #a1a1aa; font-style: italic; }
+    .key-bg { fill: #18181b; stroke: #3f3f46; stroke-width: 1.5; }
+    .key-text { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; fill: #ffffff; text-transform: uppercase; }
+    .key-desc { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; fill: #e4e4e7; text-transform: uppercase; letter-spacing: 0.05em; }
+  </style>
+
+  <g transform="translate(10, 0)">
+    <g transform="translate(0, 0)">
+      <rect width="60" height="50" rx="8" class="key-bg" />
+      <text x="30" y="22" text-anchor="middle" class="key-text">A</text>
+      <text x="30" y="40" text-anchor="middle" class="key-desc">All</text>
+      <g transform="translate(70, 0)">
+        <rect width="60" height="50" rx="8" class="key-bg" />
+        <text x="30" y="22" text-anchor="middle" class="key-text">N</text>
+        <text x="30" y="40" text-anchor="middle" class="key-desc">Panel</text>
+      </g>
+      <g transform="translate(140, 0)">
+        <rect width="60" height="50" rx="8" class="key-bg" />
+        <text x="30" y="22" text-anchor="middle" class="key-text">L</text>
+        <text x="30" y="40" text-anchor="middle" class="key-desc">Layout</text>
+      </g>
+      <g transform="translate(210, 0)">
+        <rect width="60" height="50" rx="8" class="key-bg" />
+        <text x="30" y="22" text-anchor="middle" class="key-text">F</text>
+        <text x="30" y="40" text-anchor="middle" class="key-desc">Focus</text>
+      </g>
+      <g transform="translate(280, 0)">
+        <rect width="60" height="50" rx="8" class="key-bg" />
+        <text x="30" y="22" text-anchor="middle" class="key-text">M</text>
+        <text x="30" y="40" text-anchor="middle" class="key-desc">Mute</text>
+      </g>
+      <g transform="translate(350, 0)">
+        <rect width="70" height="50" rx="8" class="key-bg" />
+        <text x="35" y="22" text-anchor="middle" class="key-text">ESC</text>
+        <text x="35" y="40" text-anchor="middle" class="key-desc">Cancel</text>
+      </g>
+    </g>
+    <g transform="translate(0, 75)" class="row-desc">
+      <text y="0">A: Select all nodes. N: Open properties panel.</text>
+      <text y="20">L: Auto-layout nodes. F: Frame selection.</text>
+      <text y="40">M: Bypass node. ESC: Deselect or cancel current operation.</text>
+    </g>
+  </g>
+</svg>

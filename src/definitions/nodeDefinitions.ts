@@ -127,16 +127,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             },
             {
                 id: 'precision', label: 'Accuracy', type: 'select', options: [
-                    { id: '-1', label: 'High Prec.', category: 'Accuracy' },
-                    { id: '0', label: '0 d.p.', category: 'Decimal Places' },
-                    { id: '1', label: '1 d.p.', category: 'Decimal Places' },
-                    { id: '2', label: '2 d.p.', category: 'Decimal Places' },
-                    { id: '3', label: '3 d.p.', category: 'Decimal Places' },
-                    { id: '4', label: '4 d.p.', category: 'Decimal Places' },
-                    { id: '5', label: '5 d.p.', category: 'Decimal Places' },
-                    { id: '6', label: '6 d.p.', category: 'Decimal Places' },
-                    { id: '8', label: '8 d.p.', category: 'Decimal Places' },
-                    { id: '10', label: '10 d.p.', category: 'Decimal Places' },
+                    { value: '-1', label: 'High Prec.', category: 'Accuracy' },
+                    { value: '0', label: '0 d.p.', category: 'Decimal Places' },
+                    { value: '1', label: '1 d.p.', category: 'Decimal Places' },
+                    { value: '2', label: '2 d.p.', category: 'Decimal Places' },
+                    { value: '3', label: '3 d.p.', category: 'Decimal Places' },
+                    { value: '4', label: '4 d.p.', category: 'Decimal Places' },
+                    { value: '5', label: '5 d.p.', category: 'Decimal Places' },
+                    { value: '6', label: '6 d.p.', category: 'Decimal Places' },
+                    { value: '8', label: '8 d.p.', category: 'Decimal Places' },
+                    { value: '10', label: '10 d.p.', category: 'Decimal Places' },
                 ]
             }
         ]
@@ -311,7 +311,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Logarithm',
         category: 'Math',
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'x' },
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'x' },
             { 
                 id: 'base', 
                 type: 'target', 
@@ -340,7 +340,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Trigonometry',
         category: 'Math',
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Angle' },
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Angle' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'SIN' },
@@ -382,16 +382,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             },
             {
                 id: 'precision', label: 'Decimal Places', type: 'select', options: [
-                    { id: '-1', label: 'High Prec.', category: 'Accuracy' },
-                    { id: '0', label: '0 d.p.', category: 'Decimal Places' },
-                    { id: '1', label: '1 d.p.', category: 'Decimal Places' },
-                    { id: '2', label: '2 d.p.', category: 'Decimal Places' },
-                    { id: '3', label: '3 d.p.', category: 'Decimal Places' },
-                    { id: '4', label: '4 d.p.', category: 'Decimal Places' },
-                    { id: '5', label: '5 d.p.', category: 'Decimal Places' },
-                    { id: '6', label: '6 d.p.', category: 'Decimal Places' },
-                    { id: '8', label: '8 d.p.', category: 'Decimal Places' },
-                    { id: '10', label: '10 d.p.', category: 'Decimal Places' },
+                    { value: '-1', label: 'High Prec.', category: 'Accuracy' },
+                    { value: '0', label: '0 d.p.', category: 'Decimal Places' },
+                    { value: '1', label: '1 d.p.', category: 'Decimal Places' },
+                    { value: '2', label: '2 d.p.', category: 'Decimal Places' },
+                    { value: '3', label: '3 d.p.', category: 'Decimal Places' },
+                    { value: '4', label: '4 d.p.', category: 'Decimal Places' },
+                    { value: '5', label: '5 d.p.', category: 'Decimal Places' },
+                    { value: '6', label: '6 d.p.', category: 'Decimal Places' },
+                    { value: '8', label: '8 d.p.', category: 'Decimal Places' },
+                    { value: '10', label: '10 d.p.', category: 'Decimal Places' },
                 ]
             }
         ]
@@ -526,7 +526,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Equation Solver',
         category: 'Calculus',
         handles: [
-            { id: 'in', type: 'target', variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
+            { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
         ],
         defaultData: { op: 'SOLVE', variable: 'x' },
@@ -540,7 +540,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'ODE Solver',
         category: 'Calculus',
         handles: [
-            { id: 'expr', type: 'target', variant: 'single', dataType: 'symbolic', label: "f(t,y)" },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'symbolic', label: "f(t,y)" },
             { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { method: 'RK4', t0: 0, tEnd: 10, y0: 1, stepSize: 0.01 },
@@ -565,7 +565,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Array Builder',
         category: 'Data & Structures',
         handles: [
-            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'In' },
+            { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'any', label: 'In' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { axis: 0 },
@@ -591,7 +591,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Array Extract',
         category: 'Data & Structures',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'array' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'index', type: 'target', variant: 'single', dataType: 'scalar', label: 'Idx' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'any' }
         ],
@@ -611,7 +611,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'List Utility',
         category: 'Data & Structures',
         handles: [
-            { id: 'data', type: 'target', variant: 'single', dataType: 'array' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { mode: 'Sort (Asc)' },
@@ -633,8 +633,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Set Operations',
         category: 'Data & Structures',
         handles: [
-            { id: 'a', type: 'target', variant: 'single', dataType: 'array', label: 'A' },
-            { id: 'b', type: 'target', variant: 'single', dataType: 'array', label: 'B' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array', label: 'A' },
+            { id: 'in_b', type: 'target', variant: 'single', dataType: 'array', label: 'B' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { mode: 'Union' },
@@ -678,7 +678,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Array Split',
         category: 'Data & Structures',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'array' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'x', type: 'source', variant: 'single', dataType: 'scalar', label: 'X' },
             { id: 'y', type: 'source', variant: 'single', dataType: 'scalar', label: 'Y' },
             { id: 'z', type: 'source', variant: 'single', dataType: 'scalar', label: 'Z' },
@@ -701,7 +701,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Array Calculus',
         category: 'Data & Structures',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'array' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'any' }
         ],
         defaultData: { op: 'INV' },
@@ -728,7 +728,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Unit',
         category: 'Transform',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'scalar' },
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'unit' }
         ],
         defaultData: { type: 'unit', unit: 'm', customUnit: '' },
@@ -934,7 +934,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Result',
         category: 'Output',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'any' }
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'any' }
         ],
         defaultData: { type: 'result', viewMode: 'auto' },
         params: [
@@ -969,7 +969,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Status',
         category: 'Output',
         handles: [
-            { id: 'in', type: 'target', variant: 'single', dataType: 'boolean' }
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'boolean' }
         ],
         defaultData: { state: 'void' }
     },
@@ -978,7 +978,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Graph Plot',
         category: 'Output',
         handles: [
-            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any' }
+            { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'any' }
         ],
         defaultData: { minX: -10, maxX: 10, points: 100 },
         aliases: ['plot', 'graph', 'chart', 'visualization'],
@@ -993,7 +993,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Debug',
         category: 'Output',
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' }
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' }
         ],
         defaultData: { type: 'debug' }
     },
@@ -1042,7 +1042,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Reroute',
         category: 'Utility',
         handles: [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' },
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'any', label: '' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'any', label: '' }
         ],
         defaultData: { type: 'reroute' },

@@ -66,7 +66,7 @@ export const DOC_REGISTRY: DocEntry[] = [
     ]
   },
   {
-    "id": "interaction-physics",
+    "id": "interaction-control",
     "modes": [
       "user"
     ]

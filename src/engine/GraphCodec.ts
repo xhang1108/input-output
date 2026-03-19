@@ -1009,11 +1009,23 @@ export class GraphCodec {
             const targetAlias = idToAlias.get(edge.target) || edge.target;
 
             let targetHandle = edge.targetHandle || 'in';
-            // Normalize handles back to aliases (in_a -> a)
-            if (targetHandle === 'in_a') targetHandle = 'a';
-            else if (targetHandle === 'in_b') targetHandle = 'b';
-            else if (targetHandle.startsWith('in_') && targetHandle.length === 4) {
-                targetHandle = targetHandle.slice(3);
+            // Standardize handles for export (Prioritize in_a/in_b over aliases for consistency)
+            if (targetHandle === 'a') targetHandle = 'in_a';
+            else if (targetHandle === 'b') targetHandle = 'in_b';
+            else if (targetHandle.length === 1 && ['x', 'y', 'z', 'w'].includes(targetHandle)) {
+                targetHandle = `in_` + targetHandle;
+            }
+
+            let targetHandleText = `:${targetHandle}`;
+
+            // Implicit Mode Optimization: If target has ONLY one handle and it's 'in', skip the suffix
+            const targetNode = graph.nodes.find(n => n.id === edge.target);
+            if (targetNode) {
+                const def = NODE_DEFINITIONS.find(d => d.id === targetNode.type);
+                const targetHandles = def?.handles.filter(h => h.type === 'target') || [];
+                if (targetHandles.length === 1 && targetHandles[0].id === 'in' && targetHandle === 'in') {
+                    targetHandleText = '';
+                }
             }
 
             let sourceHandleStr = '';
@@ -1021,7 +1033,7 @@ export class GraphCodec {
                 sourceHandleStr = `:${edge.sourceHandle}`;
             }
 
-            iogl += `${sourceAlias}${sourceHandleStr} -- ${targetAlias}:${targetHandle}\n`;
+            iogl += `${sourceAlias}${sourceHandleStr} -- ${targetAlias}${targetHandleText}\n`;
         }
 
         return iogl;
