@@ -12,6 +12,7 @@ import { SystemHeader } from '@/components/ui/SystemHeader';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { getDocInfo } from '@/config/docRegistry';
 import { useRouter } from 'next/navigation';
+import { Footer } from '@/components/ui/Footer';
 
 type WikiMode = 'user' | 'developer';
 
@@ -450,6 +451,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                     </div>
                 </main>
             </div>
+            <Footer />
         </div>
     );
 };

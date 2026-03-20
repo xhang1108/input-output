@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ProjectLoadScreen } from '@/components/ui/ProjectLoadScreen';
 import { VisualClock } from '@/components/VisualClock';
 import { SystemHeader } from '@/components/ui/SystemHeader';
+import { Footer } from '@/components/ui/Footer';
 
 export default function Dashboard() {
     const router = useRouter();
@@ -42,6 +43,7 @@ export default function Dashboard() {
                     onNewProject={handleNewProject}
                 />
             </div>
+            <Footer />
         </div>
     );
 }
