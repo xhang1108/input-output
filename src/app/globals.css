@@ -43,7 +43,6 @@ body {
   --color-accent: var(--color-primary);
 
   --radius-sm: calc(var(--radius) - 4px);
-  --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
@@ -55,35 +54,58 @@ body {
   --color-foreground: var(--foreground);
 
   /* ── Data Type Color Tokens (§0.1.2) ── */
-  --color-scalar:   hsl(0, 0%, 45%);      /* Neut. Gray    – Float (Blender) */
-  --color-matrix:   hsl(258, 65%, 65%);   /* Lavender      – Vector (Blender) */
-  --color-vector:   hsl(220, 100%, 50%);  /* Dark Blue     – Vectors      */
-  --color-symbolic: hsl(30, 100%, 55%);   /* Orange        – Equation/Logic */
-  --color-formula:  var(--color-symbolic);
-  --color-ast:      var(--color-symbolic);
-  --color-eq:       var(--color-symbolic);
+  --color-scalar:     hsl(0, 0%, 45%);
+  --color-scalar-rgb: 115, 115, 115;
+  
+  --color-matrix:     hsl(258, 65%, 65%);
+  --color-matrix-rgb: 158, 107, 224;
+
+  --color-symbolic:   hsl(30, 100%, 55%);
+  --color-symbolic-rgb: 255, 149, 26;
+
+  --color-formula:    var(--color-symbolic);
+  --color-ast:        var(--color-symbolic);
+  --color-eq:         var(--color-symbolic);
   --color-expression: var(--color-symbolic);
-  --color-string:   hsl(204, 100%, 78%);  /* Sky Blue     – String (Blender) */
-  --color-boolean:  hsl(324, 90%, 75%);  /* Soft Pink    – Boolean (Blender) */
-  --color-unit:     hsl(195, 85%, 48%);  /* Cyan          – Unit/SI      */
-  --color-error:    hsl(0, 72%, 55%);    /* Red           – Error State  */
-  --color-color:    hsl(50, 100%, 55%);   /* Yellow        – Color/Visual */
-  --color-object:   hsl(30, 100%, 55%);   /* Orange        - Objects      */
-  --color-any:      hsl(0, 0%, 100%);    /* White         - Universal    */
-  --glow-any:      0 0 8px hsla(0, 0%, 100%, 0.4);
-  --glow-scalar:   0 0 4px hsla(0, 0%, 45%, 0.2);
+  
+  --color-string:     hsl(204, 100%, 78%);
+  --color-boolean:    hsl(324, 90%, 75%);
+  --color-unit:       hsl(195, 85%, 48%);
+  
+  --color-error:      hsl(0, 72%, 55%);
+  --color-error-rgb:  229, 62, 62;
+  
+  --color-color:      hsl(50, 100%, 55%);
+  --color-any:        hsl(0, 0%, 100%);
+  --color-any-rgb:    255, 255, 255;
+
+  --glow-any:         0 0 8px rgba(var(--color-any-rgb), 0.4);
+  --glow-scalar:      0 0 4px rgba(var(--color-scalar-rgb), 0.2);
 
   /* ── Node Category Tokens ── */
-  --color-input:   hsl(38, 92%, 55%);   /* Match scalar input */
-  --color-output:  hsl(160, 84%, 45%);  /* Match vector/result */
-  --color-math:    hsl(217, 91%, 60%);  /* Match matrix/compute */
-  --color-logic:   hsl(270, 60%, 62%);  /* Match symbolic/logic */
+  --color-math:       hsl(217, 91%, 60%);  /* Match matrix/compute */
 
-  /* ── Surface Tokens (Node Chrome) ── */
-  --node-bg:          hsl(240, 6%, 10%);
-  --node-bg-header:   hsl(240, 5%, 14%);
-  --node-border:      hsl(240, 4%, 22%);
-  --node-border-hover: hsl(240, 4%, 34%);
+
+  /* ── Interaction & Semantic Tokens ── */
+  --color-cloud:      hsl(217, 91%, 60%);  /* Interaction / Sync blue */
+  --color-text-cloud: var(--color-cloud);
+  --color-focus:      var(--color-cloud);
+  --color-selection:  hsla(217, 91%, 60%, 0.3);
+  
+  --color-warning:    hsl(38, 92%, 55%);   /* Amber - Pending/Alert */
+  --color-success:    hsl(142, 69%, 58%);  /* Emerald - Success/Tip */
+  --color-danger:     hsl(0, 84%, 60%);    /* Red - Error/Destructive */
+
+  /* ── Surface Tokens (App Chrome) ── */
+  --color-surface-base:  hsl(240, 6%, 10%);   /* Zinc 900 - Background */
+  --color-surface-dim:   hsl(240, 10%, 4%);    /* Zinc 950 - Darker */
+  --color-surface-light: hsl(240, 5%, 15%);    /* Zinc 800 - Highlight */
+  --color-border-dim:    hsl(240, 5%, 20%);    /* Zinc 800 - Subtle border */
+  
+  --node-bg:            var(--color-surface-base);
+  --node-bg-header:     var(--color-surface-light);
+  --node-border:        hsl(240, 4%, 22%);
+  --node-border-hover:  hsl(240, 4%, 34%);
   --node-border-selected: hsl(0, 0%, 70%);
 
   /* System */
@@ -98,17 +120,21 @@ body {
   /* Handles */
   --handle-size-sm: 12px;
   --handle-size-lg: 24px;
+
+  /* Text Semantic Tokens */
+  --text-muted:    var(--zinc-500);
+  --text-dim:      var(--zinc-400);
 }
 
-/* Brute-force override for symbolic handles (§0.1.2) */
+/* Decoupled Handle Overrides */
 [data-handle-type="symbolic"],
 .handle-symbolic {
-    background-color: #fb923c !important;
+    background-color: var(--color-symbolic) !important;
 }
 
 [data-handle-type="any"],
 .handle-any {
-    background-color: #ffffff !important;
+    background-color: var(--color-any) !important;
 }
 
 :root {
@@ -117,23 +143,6 @@ body {
   --foreground: oklch(0.145 0 0);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-
-  /* ── Data Type Color Tokens (§0.1.2) ── */
-  --color-scalar:   hsl(0, 0%, 45%);     
-  --color-matrix:   #FF8C00;   
-  --color-symbolic: #FF8C00;  
-  --color-formula:  var(--color-symbolic);
-  --color-ast:      var(--color-symbolic);
-  --color-eq:       var(--color-symbolic);
-  --color-expression: var(--color-symbolic);
-  --color-string:   #B0B0B0;  
-  --color-boolean:  #B0B0B0;  
-  --color-unit:     #B0B0B0;  
-  --color-error:    #ef4444;    
-  --color-color:    #FF8C00;   
-  --color-any:      #ffffff;    
-  --glow-any:      0 0 8px hsla(0, 0%, 100%, 0.4);
-  --glow-scalar:   0 0 4px hsla(0, 0%, 45%, 0.2);
 }
 
 .dark {

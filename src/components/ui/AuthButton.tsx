@@ -51,7 +51,7 @@ export function AuthButton() {
             onClick={() => signIn("google")}
             className="flex items-center gap-2 px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all text-zinc-400 bg-zinc-900/50 border border-zinc-800 hover:bg-zinc-800 hover:text-white cursor-pointer group shadow-sm"
         >
-            <LogIn className="w-3.5 h-3.5 text-zinc-500 group-hover:text-blue-400 transition-colors" />
+            <LogIn className="w-3.5 h-3.5 text-zinc-500 group-hover:text-primary transition-colors" />
             <span>Sign in with Google</span>
         </button>
     );

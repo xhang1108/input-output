@@ -28,7 +28,7 @@ export const InputNode = memo((props: NodeProps) => {
                 {data.type === 'string' ? (
                     <input
                         type="text"
-                        className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-blue-500 outline-none"
+                        className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-focus outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="Text..."
                         value={String(data.value ?? '')}
@@ -44,7 +44,7 @@ export const InputNode = memo((props: NodeProps) => {
                 ) : (
                     <input
                         type="number"
-                        className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-blue-500 outline-none"
+                        className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-focus outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="0.0"
                         value={displayValue}

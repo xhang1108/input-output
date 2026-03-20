@@ -20,8 +20,8 @@ function FieldWrapper({ label, hint, children }: { label: string; hint?: string;
     );
 }
 
-const inputCls = "w-full bg-zinc-900 border border-zinc-700/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-blue-500/80 outline-none transition-colors font-mono";
-const selectCls = "w-full bg-zinc-900 border border-zinc-700/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-blue-500/80 outline-none transition-colors cursor-pointer";
+const inputCls = "w-full bg-surface-base border border-border-dim/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors font-mono";
+const selectCls = "w-full bg-surface-base border border-border-dim/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors cursor-pointer";
 
 type FieldProps = { param: NodeParameter; value: unknown; nodeId: string; onChange: (id: string, v: unknown) => void };
 
@@ -107,8 +107,8 @@ function BooleanField({ param, value, onChange }: FieldProps) {
             <button
                 onClick={() => onChange(param.id, !bool)}
                 className={`w-full py-1.5 rounded text-xs font-medium transition-colors border ${bool
-                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
-                    : 'bg-zinc-900 border-zinc-700 text-zinc-500'
+                    ? 'bg-cloud/20 border-cloud/50 text-cloud'
+                    : 'bg-surface-base border-border-dim text-zinc-500'
                     }`}
             >
                 {bool ? '✓ ON' : 'OFF'}
@@ -140,7 +140,7 @@ function SelectField({ param, value, onChange }: FieldProps) {
 function ColorField({ param, value, nodeId, onChange }: FieldProps) {
     const toColor = (v: unknown) => {
         const unwrapped = PayloadUtils.unwrap(v);
-        return typeof unwrapped === 'string' && unwrapped.startsWith('#') ? unwrapped : '#3b82f6';
+        return typeof unwrapped === 'string' && unwrapped.startsWith('#') ? unwrapped : '#FF8C00';
     };
     const [local, setLocal] = useState(() => toColor(value));
     const isFocused = useRef(false);
@@ -163,7 +163,7 @@ function ColorField({ param, value, nodeId, onChange }: FieldProps) {
                     onFocus={() => { isFocused.current = true; }}
                     onBlur={() => { isFocused.current = false; }}
                     onMouseDown={e => e.stopPropagation()}
-                    className="w-8 h-7 rounded border border-zinc-700 cursor-pointer bg-zinc-900 p-0.5"
+                    className="w-8 h-7 rounded border border-border-dim cursor-pointer bg-surface-base p-0.5"
                 />
                 <span className="text-xs font-mono text-zinc-400 uppercase">{local}</span>
             </div>
@@ -214,8 +214,8 @@ function SettingsSection({
     onDataChange: (key: string, value: unknown) => void;
 }) {
     return (
-        <div className="space-y-3 p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-            <h3 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Node Settings</h3>
+        <div className="space-y-3 p-3 bg-cloud/5 border border-cloud/20 rounded-lg">
+            <h3 className="text-[10px] font-bold text-text-cloud uppercase tracking-widest">Node Settings</h3>
             <div className="space-y-3">
                 {params.map(param => {
                     if (param.hidden?.(nodeData)) return null;
@@ -299,16 +299,16 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
     const labelVal = typeof nodeData.label === 'string' ? nodeData.label : '';
 
     return (
-        <div className="absolute top-0 right-0 h-full w-80 bg-zinc-950 border-l border-zinc-800 z-40 animate-in slide-in-from-right duration-200">
+        <div className="absolute top-0 right-0 h-full w-80 bg-surface-dim border-l border-surface-light z-40 animate-in slide-in-from-right duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-surface-light bg-surface-base/50">
                 <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm">
                     <Cpu className="w-4 h-4" />
                     N PANEL
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-1 hover:bg-zinc-800 rounded-sm text-zinc-400 hover:text-white transition-colors"
+                    className="p-1 hover:bg-surface-light rounded-sm text-zinc-400 hover:text-white transition-colors"
                 >
                     <X className="w-4 h-4" />
                 </button>

@@ -30,7 +30,7 @@ export function NodeHandle({ className, color, id, nodeId, ...props }: CustomHan
     const isSymbolic =
         (nodeId || '').includes('CL-04') ||
         normalizedColor.includes('symbolic') ||
-        normalizedColor === '#fb923c' ||
+        normalizedColor === 'var(--color-symbolic)' ||
         normalizedColor.includes('formula') ||
         normalizedColor.includes('eq');
 
@@ -49,7 +49,7 @@ export function NodeHandle({ className, color, id, nodeId, ...props }: CustomHan
             )}
             style={{
                 // Base background color, overridden by [data-handle-type] in CSS if symbolic
-                backgroundColor: isPending ? 'transparent' : (isSymbolic ? '#fb923c' : (isWhite ? '#ffffff' : (color || 'var(--color-scalar)'))),
+                backgroundColor: isPending ? 'transparent' : (isSymbolic ? 'var(--color-symbolic)' : (isWhite ? 'var(--color-any)' : (color || 'var(--color-scalar)'))),
                 ...props.style
             }}
             {...props}

@@ -720,7 +720,7 @@ export function Body({
                         step: ConnectionLineType.Step,
                         smoothstep: ConnectionLineType.SmoothStep,
                     }[edgeType as 'bezier' | 'straight' | 'step' | 'smoothstep'] || ConnectionLineType.Bezier}
-                    connectionLineStyle={{ stroke: '#71717a', strokeWidth: 2 }}
+                    connectionLineStyle={{ stroke: 'var(--zinc-500)', strokeWidth: 2 }}
                     edgeTypes={edgeTypes}
                     defaultEdgeOptions={{
                         type: 'magnetic',

@@ -31,14 +31,14 @@ export const ColorNode = memo((props: NodeProps) => {
     // If unwrapped is an object with hex/rgb/vec3, extract hex; otherwise use as string
     const displayColor = (colorObj && typeof colorObj.hex === 'string')
         ? colorObj.hex
-        : (typeof unwrapped === 'string' ? unwrapped : '#3b82f6');
+        : (typeof unwrapped === 'string' ? unwrapped : 'var(--color-primary)');
 
     if (colorObj && Array.isArray(colorObj.vec3)) {
         const v3 = colorObj.vec3 as number[];
         [rNorm, gNorm, bNorm] = [v3[0] || 0, v3[1] || 0, v3[2] || 0];
     } else {
         // Fallback for legacy/hex-only state
-        const hex = displayColor.startsWith('#') ? displayColor : '#000000';
+        const hex = displayColor.startsWith('#') ? displayColor : 'var(--color-primary)';
         rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
         gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
         bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
@@ -98,7 +98,7 @@ export const ColorNode = memo((props: NodeProps) => {
                 </div>
 
                 {/* Color Picker (Visual coarse control) */}
-                <div className="relative h-12 rounded-lg overflow-hidden border border-zinc-800 focus-within:border-blue-500/50 transition-colors bg-zinc-950/50 mb-2">
+                <div className="relative h-12 rounded-lg overflow-hidden border border-zinc-800 focus-within:border-cloud/50 transition-colors bg-zinc-950/50 mb-2">
                     <input
                         type="color"
                         className="nodrag absolute inset-0 w-full h-full cursor-pointer bg-transparent border-0 p-0 scale-[1.5]"
@@ -160,11 +160,11 @@ export const ColorNode = memo((props: NodeProps) => {
 
                 {/* Depth Control */}
                 <div className="flex flex-col border-t border-zinc-800/50 mt-1">
-                    <NodeOpSelect 
-                        nodeId={id} 
-                        defId="IN-03" 
-                        paramId="depth" 
-                        data={data} 
+                    <NodeOpSelect
+                        nodeId={id}
+                        defId="IN-03"
+                        paramId="depth"
+                        data={data}
                         label="Bit Depth"
                         width="40"
                     />
@@ -201,7 +201,7 @@ const FloatInput = ({ value, onChange, min = 0, max = 1, step = 0.01, decimals =
     return (
         <input
             type="number"
-            className="w-full bg-zinc-900 border border-zinc-800 rounded text-[9px] text-center text-zinc-500 py-1 focus:border-blue-500 focus:outline-none nodrag"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded text-[9px] text-center text-zinc-500 py-1 focus:border-focus focus:outline-none nodrag"
             value={localStr}
             step={step}
             min={min}

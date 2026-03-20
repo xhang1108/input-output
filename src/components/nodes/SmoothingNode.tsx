@@ -23,7 +23,7 @@ export const SmoothingNode = memo((props: NodeProps) => {
                     <label className="text-[9px] text-zinc-500 uppercase font-bold text-right pr-2">Window</label>
                     <input
                         type="number"
-                        className="nodrag w-16 border border-zinc-700/50 rounded px-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none transition-colors"
+                        className="nodrag w-16 border border-zinc-700/50 rounded px-1 text-xs text-zinc-300 focus:border-focus/50 outline-none transition-colors"
                         style={{ background: 'var(--node-bg-header)' }}
                         value={windowMode}
                         onChange={(e) => updateData({ windowMode: Number(e.target.value) })}

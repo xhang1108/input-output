@@ -41,7 +41,7 @@ export const NodeExpression = memo((props: NodeProps) => {
             <div className="flex flex-col gap-2 p-1 min-w-[200px]">
                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Expression string</label>
                 <textarea
-                    className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:border-blue-500 outline-none resize-none font-mono"
+                    className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:border-focus outline-none resize-none font-mono"
                     style={{ background: 'var(--node-bg)', minHeight: '60px' }}
                     value={code}
                     onChange={handleChange}

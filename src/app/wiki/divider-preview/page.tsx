@@ -14,8 +14,8 @@ const DividerPreview = () => {
                     <h2 className="text-white text-2xl font-bold uppercase tracking-tight flex items-center gap-6">
                         <span className="shrink-0">{title}</span>
                         <div className="h-px bg-white/5 flex-1 relative overflow-hidden">
-                            <motion.div 
-                                className="absolute inset-0 bg-blue-500/30 w-1/4"
+                            <motion.div
+                                className="absolute inset-0 bg-cloud/30 w-1/4"
                                 animate={{ left: ["-25%", "100%"] }}
                                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                             />
@@ -41,8 +41,8 @@ const DividerPreview = () => {
             name: 'Spinal Blueprint',
             render: (title: string) => (
                 <div className="relative pl-8 mt-24">
-                    <div className="absolute left-0 top-0 bottom-0 w-px bg-linear-to-b from-blue-500/50 via-white/5 to-transparent" />
-                    <div className="absolute left-[-4px] top-2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                    <div className="absolute left-0 top-0 bottom-0 w-px bg-linear-to-b from-cloud/50 via-white/5 to-transparent" />
+                    <div className="absolute left-[-4px] top-2 w-2 h-2 rounded-full bg-cloud shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
                     <h2 className="text-white text-2xl font-bold tracking-widest uppercase">{title}</h2>
                 </div>
             )
@@ -54,7 +54,7 @@ const DividerPreview = () => {
                 <div className="mt-24 flex flex-col gap-4">
                     <div className="flex gap-2">
                         {[...Array(8)].map((_, i) => (
-                            <div key={i} className={`h-1 w-8 rounded-full ${i === 3 ? 'bg-blue-500' : 'bg-white/5'}`} />
+                            <div key={i} className={`h-1 w-8 rounded-full ${i === 3 ? 'bg-cloud' : 'bg-white/5'}`} />
                         ))}
                     </div>
                     <h2 className="text-white text-4xl font-extrabold uppercase tracking-tighter">{title}</h2>
@@ -65,8 +65,8 @@ const DividerPreview = () => {
             id: 'S05',
             name: 'Terminal System Prompt',
             render: (title: string) => (
-                <div className="bg-white/5 p-6 border-l-4 border-blue-500 rounded-r-lg mt-24">
-                    <div className="text-[10px] font-mono text-blue-400 mb-2 animate-pulse">{">>>"} INITIALIZING_MODULE...</div>
+                <div className="bg-white/5 p-6 border-l-4 border-cloud rounded-r-lg mt-24">
+                    <div className="text-[10px] font-mono text-text-cloud mb-2 animate-pulse">{">>>"} INITIALIZING_MODULE...</div>
                     <h2 className="text-white font-mono text-xl font-bold uppercase tracking-tighter">
                         [ SYSTEM::{title.replace(/\s/g, '_')} ]
                     </h2>
@@ -78,7 +78,7 @@ const DividerPreview = () => {
             name: 'Glassmorphism Frost',
             render: (title: string) => (
                 <div className="relative py-12 px-8 -mx-8 bg-white/2 backdrop-blur-sm border-y border-white/5 mt-24">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50" />
+                    <div className="absolute top-0 left-0 w-1 h-full bg-cloud/50" />
                     <h2 className="text-white text-3xl font-light tracking-[0.2em] uppercase">{title}</h2>
                 </div>
             )
@@ -101,7 +101,7 @@ const DividerPreview = () => {
             name: 'Minimalist Zen Gap',
             render: (title: string) => (
                 <div className="flex flex-col items-center justify-center py-32 border-t border-white/5 mt-24">
-                    <div className="w-10 h-10 flex items-center justify-center border border-white/10 rounded-full mb-8 text-blue-500">
+                    <div className="w-10 h-10 flex items-center justify-center border border-white/10 rounded-full mb-8 text-cloud">
                         <Plus size={16} />
                     </div>
                     <h2 className="text-white text-5xl font-thin tracking-tighter uppercase text-center max-w-lg">
@@ -122,7 +122,7 @@ const DividerPreview = () => {
             <div className="max-w-4xl space-y-40">
                 {styles.map(style => (
                     <section key={style.id} className="relative">
-                        <div className="absolute -top-10 left-0 text-[10px] font-bold text-blue-500/50 uppercase tracking-widest">
+                        <div className="absolute -top-10 left-0 text-[10px] font-bold text-cloud/50 uppercase tracking-widest">
                             {style.id}: {style.name}
                         </div>
                         {style.render("Module Nomenclature")}

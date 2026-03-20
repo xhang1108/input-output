@@ -193,8 +193,8 @@ export const ResizeHandle = memo(({
             <div
                 className={cn(
                     "absolute w-5 h-5 z-50 flex transition-colors rounded-br-md",
-                    "text-zinc-500 hover:text-blue-400 group-hover:opacity-100 opacity-0",
-                    isResizing && "text-blue-500 opacity-100",
+                    "text-zinc-500 hover:text-primary group-hover:opacity-100 opacity-0",
+                    isResizing && "text-primary opacity-100",
                     style.class,
                     className
                 )}

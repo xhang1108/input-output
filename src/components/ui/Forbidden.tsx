@@ -10,10 +10,10 @@ export function Forbidden({ onBack }: ForbiddenProps) {
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white p-6 relative overflow-hidden">
             {/* Background Decorative Elements */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-danger/5 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-cloud/5 rounded-full blur-[100px] pointer-events-none" />
 
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
@@ -21,26 +21,26 @@ export function Forbidden({ onBack }: ForbiddenProps) {
             >
                 {/* Shield Icon with animation */}
                 <div className="relative">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.3 }}
                         className="w-24 h-24 bg-zinc-900/50 border border-zinc-800 rounded-3xl flex items-center justify-center relative shadow-2xl overflow-hidden group"
                     >
-                        <div className="absolute inset-0 bg-linear-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <ShieldAlert className="w-10 h-10 text-red-500/80" />
+                        <div className="absolute inset-0 bg-linear-to-br from-danger/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ShieldAlert className="w-10 h-10 text-danger/80" />
                     </motion.div>
-                    
-                    <motion.div 
+
+                    <motion.div
                         animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
                         transition={{ duration: 3, repeat: Infinity }}
-                        className="absolute -inset-4 bg-red-500/10 rounded-full blur-xl -z-10"
+                        className="absolute -inset-4 bg-danger/10 rounded-full blur-xl -z-10"
                     />
                 </div>
 
                 <div className="space-y-3">
                     <h1 className="text-4xl font-black tracking-tighter uppercase">403 Forbidden</h1>
-                    <div className="h-1 w-12 bg-red-500 mx-auto rounded-full" />
+                    <div className="h-1 w-12 bg-danger mx-auto rounded-full" />
                     <p className="text-zinc-500 text-sm font-medium leading-relaxed">
                         This project is strictly private. You don't have the clearance to view its neural architecture.
                     </p>
@@ -48,7 +48,7 @@ export function Forbidden({ onBack }: ForbiddenProps) {
 
                 <div className="w-full pt-4 flex flex-col gap-3">
                     {onBack && (
-                        <button 
+                        <button
                             onClick={onBack}
                             className="flex items-center justify-center gap-2 w-full py-3.5 bg-white text-black rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-zinc-200 transition-all active:scale-[0.98] shadow-xl group"
                         >
@@ -56,8 +56,8 @@ export function Forbidden({ onBack }: ForbiddenProps) {
                             Back to Dashboard
                         </button>
                     )}
-                    
-                    <button 
+
+                    <button
                         onClick={() => window.location.reload()}
                         className="flex items-center justify-center gap-2 w-full py-3.5 bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-zinc-800 hover:text-white transition-all active:scale-[0.98]"
                     >

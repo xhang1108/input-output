@@ -32,14 +32,14 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
     const currentHints = hints[mode] || hints.IDLE;
 
     const content = (
-        <div className={`w-full bg-zinc-950 border-t border-zinc-800 text-zinc-400 text-[10px] py-1 px-4 flex justify-between items-center select-none ${isStandalone ? 'fixed bottom-0 left-0 right-0 z-50' : ''}`}>
+        <div className={`w-full bg-surface-dim border-t border-surface-light text-zinc-400 text-[10px] py-1 px-4 flex justify-between items-center select-none ${isStandalone ? 'fixed bottom-0 left-0 right-0 z-50' : ''}`}>
             {/* Left: Hints */}
             <div className="flex gap-4">
                 <span className="font-bold text-zinc-200 uppercase tracking-wider mr-2">{mode}</span>
 
                 {/* Transform Value Display */}
                 {transformValue && (
-                    <span className="text-white bg-zinc-800 px-2 rounded-sm font-mono">
+                    <span className="text-white bg-surface-light px-2 rounded-sm font-mono">
                         {transformValue}
                     </span>
                 )}
@@ -55,17 +55,17 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
             <div className="flex gap-4 items-center">
                 {/* Save Status Indicator */}
                 <span className={`transition-all duration-300 flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm ${
-                    saveStatus === 'SAVING' ? 'text-blue-400 bg-blue-400/10' :
-                    saveStatus === 'PENDING_SYNC' ? 'text-amber-500 bg-amber-500/10' :
-                    saveStatus === 'CLOUD_SYNCED' ? 'text-green-400 bg-green-400/10 border border-green-500/20' :
-                    saveStatus === 'SAVED' ? 'text-green-400 bg-green-400/10' :
+                    saveStatus === 'SAVING' ? 'text-primary bg-primary/10' :
+                    saveStatus === 'PENDING_SYNC' ? 'text-warning bg-warning/10' :
+                    saveStatus === 'CLOUD_SYNCED' ? 'text-success bg-success/10 border border-success/20' :
+                    saveStatus === 'SAVED' ? 'text-success bg-success/10' :
                     'text-zinc-600'
                 }`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${
-                        saveStatus === 'SAVING' ? 'bg-blue-400 animate-pulse' :
-                        saveStatus === 'PENDING_SYNC' ? 'bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]' :
-                        saveStatus === 'CLOUD_SYNCED' || saveStatus === 'SAVED' ? 'bg-green-400' :
-                        'bg-zinc-700'
+                        saveStatus === 'SAVING' ? 'bg-primary animate-pulse' :
+                        saveStatus === 'PENDING_SYNC' ? 'bg-warning shadow-[0_0_5px_hsla(38,92%,55%,0.5)]' :
+                        saveStatus === 'CLOUD_SYNCED' || saveStatus === 'SAVED' ? 'bg-success' :
+                        'bg-border-dim'
                     }`} />
                     <span className="text-[9px] font-medium tracking-tight">
                         {saveStatus === 'SAVING' ? 'SYNCING...' : 
@@ -75,17 +75,17 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
                     </span>
                 </span>
 
-                <div className="w-px h-3 bg-zinc-800 mx-1" />
+                <div className="w-px h-3 bg-surface-light mx-1" />
 
                 <div className="flex gap-2.5 items-center mr-2">
                     <span className="text-zinc-500 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-border-dim" />
                         Prec: <span className="text-zinc-300 font-mono">{mathPrecision}B</span>
                     </span>
                     {lastEvalMs !== null && (
                         <span className="text-zinc-500 font-mono flex items-center gap-1">
                             <span className="text-[9px] text-zinc-600">solve:</span>
-                            <span className={lastEvalMs > 50 ? 'text-orange-400' : 'text-zinc-300'}>
+                            <span className={lastEvalMs > 50 ? 'text-warning' : 'text-zinc-300'}>
                                 {lastEvalMs}ms
                             </span>
                         </span>
@@ -93,28 +93,28 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
                     {uiRenderMs !== null && (
                         <span className="text-zinc-500 font-mono flex items-center gap-1">
                             <span className="text-[9px] text-zinc-600 ml-1">render:</span>
-                            <span className={uiRenderMs > 40 ? 'text-red-500' : uiRenderMs > 20 ? 'text-orange-400' : 'text-green-500'}>
+                            <span className={uiRenderMs > 40 ? 'text-danger' : uiRenderMs > 20 ? 'text-warning' : 'text-success'}>
                                 {uiRenderMs}ms
                             </span>
                         </span>
                     )}
                     {isFastMode && (
-                        <span className="text-amber-500 font-bold px-1.5 py-0.5 bg-amber-500/10 rounded-sm border border-amber-500/20 ml-1">
+                        <span className="text-warning font-bold px-1.5 py-0.5 bg-warning/10 rounded-sm border border-warning/20 ml-1">
                             FAST MODE
                         </span>
                     )}
                 </div>
 
-                <div className="w-px h-3 bg-zinc-800 mx-1" />
+                <div className="w-px h-3 border-l border-surface-light mx-1" />
 
                 <Link
                     href="/wiki"
-                    className="text-blue-500/80 hover:text-blue-400 font-bold tracking-widest transition-colors px-1"
+                    className="text-primary/80 hover:text-primary font-bold tracking-widest transition-colors px-1"
                 >
                     [WIKI / HELP]
                 </Link>
 
-                <div className="w-px h-3 bg-zinc-800 mx-1" />
+                <div className="w-px h-3 bg-surface-light mx-1" />
 
                 <span>Nodes: {nodeCount}</span>
                 {selectionCount > 0 && <span className="text-zinc-200">Selected: {selectionCount}</span>}

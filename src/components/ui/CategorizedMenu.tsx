@@ -352,7 +352,7 @@ export function CategorizedMenu({
             />
             <div
                 ref={menuRef}
-                className={`fixed z-10000 bg-[#141416] border border-zinc-800 rounded-[14px] flex flex-col p-1 transition-opacity duration-75 ${
+                className={`fixed z-10000 bg-surface-dim border border-surface-light rounded-[14px] flex flex-col p-1 transition-opacity duration-75 ${
                     isPositioned ? 'animate-in fade-in duration-200 ease-out opacity-100' : 'opacity-0'
                 }`}
                 style={{
@@ -365,8 +365,8 @@ export function CategorizedMenu({
             >
                 {/* Search Input */}
                 {showSearch && (
-                    <div className="p-1 border-b border-white/5 mb-1">
-                        <div className="flex items-center px-2 py-1 bg-black rounded-sm border border-white/5 focus-within:border-white/20 transition-colors">
+                    <div className="p-1 border-b border-surface-light/30 mb-1">
+                        <div className="flex items-center px-2 py-1 bg-surface-base rounded-sm border border-surface-light/50 focus-within:border-primary/40 transition-colors">
                             <Search className="w-3 h-3 text-zinc-500 mr-2" />
                             <input
                                 ref={inputRef}
@@ -404,15 +404,15 @@ export function CategorizedMenu({
                     ) : menuLayout === 'horizontal' ? (
                         sortedCategories.map((root) => (
                             <div key={root.rootName} className="flex flex-col flex-nowrap gap-x-0.5 content-start pr-2 last:pr-0 whitespace-nowrap">
-                                <div className="sticky top-0 z-10 w-full bg-[#141416]">
-                                    <div className="px-2 py-1.5 text-[8px] uppercase tracking-[0.15em] font-black text-blue-500/80 border-b border-white/5">
+                                <div className="sticky top-0 z-10 w-full bg-surface-dim">
+                                    <div className="px-2 py-1.5 text-[8px] uppercase tracking-[0.15em] font-black text-primary/80 border-b border-surface-light/30">
                                         {root.rootName}
                                     </div>
                                 </div>
                                 {root.subgroups.map((category) => (
                                     <div key={category.fullName} className="flex flex-col">
                                         {category.depth > 0 && (
-                                            <div className={`sticky left-0 z-10 bg-[#141416] ${category.depth > 0 ? 'pt-2 border-t border-white/5' : ''}`}>
+                                            <div className={`sticky left-0 z-10 bg-surface-dim ${category.depth > 0 ? 'pt-2 border-t border-white/5' : ''}`}>
                                                 <div className="px-2 py-1 text-[7px] uppercase tracking-widest font-bold text-zinc-500 flex items-center gap-2 mb-0.5 border-b border-white/5">
                                                     <div className="w-1 h-1 bg-zinc-700 rounded-full" />
                                                     {category.displayName}
@@ -433,8 +433,8 @@ export function CategorizedMenu({
                     ) : (
                         sortedCategories.map((root) => (
                             <div key={root.rootName} className="flex flex-col pb-2 mb-2 last:pb-0 last:mb-0">
-                                <div className="sticky top-0 z-10 w-full bg-[#141416]">
-                                    <div className="px-2 py-1.5 text-[8px] uppercase tracking-[0.15em] font-black text-blue-500/80 border-b border-white/5">
+                                <div className="sticky top-0 z-10 w-full bg-surface-dim">
+                                    <div className="px-2 py-1.5 text-[8px] uppercase tracking-[0.15em] font-black text-primary/80 border-b border-surface-light/30">
                                         {root.rootName}
                                     </div>
                                 </div>
@@ -442,7 +442,7 @@ export function CategorizedMenu({
                                     <div key={category.fullName} className="flex flex-col mb-1 last:mb-0">
                                         {category.depth > 0 && (
                                             <div className="px-2 py-1 text-[7px] uppercase tracking-widest font-bold text-zinc-500 flex items-center gap-2 mb-0.5">
-                                                <div className="w-1 h-1 bg-zinc-700 rounded-full" />
+                                                <div className="w-1 h-1 bg-border-dim rounded-full" />
                                                 {category.displayName}
                                             </div>
                                         )}
@@ -483,8 +483,8 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
             key={`${item.category}-${item.id}-${item.label}`}
             data-selected={isSelected}
             className={`min-w-[120px] text-left px-3 py-1.5 text-[11px] font-medium flex items-center justify-between group transition-all relative rounded-[10px] ${isSelected
-                ? 'bg-blue-600 text-white shadow-none'
-                : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
+                ? 'bg-primary text-white shadow-none'
+                : 'text-zinc-400 hover:bg-surface-light hover:text-zinc-200'
                 }`}
             onClick={(e) => {
                 const isContinuous = e.ctrlKey || e.metaKey || e.shiftKey;

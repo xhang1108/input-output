@@ -84,7 +84,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                     const type = calloutMatch[1].toUpperCase();
                     const colors: any = {
                         TIP: 'border-emerald-500/60',
-                        NOTE: 'border-blue-500/60',
+                        NOTE: 'border-cloud/60',
                         IMPORTANT: 'border-indigo-500/60',
                         WARNING: 'border-amber-500/60',
                         CAUTION: 'border-rose-500/60',
@@ -143,7 +143,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                         );
                     } catch (e) {
                         return (
-                            <div className="p-4 border border-blue-900/30 rounded-xl bg-blue-900/10 text-blue-400 text-xs font-mono">
+                            <div className="p-4 border border-cloud/30 rounded-xl bg-cloud/10 text-text-cloud text-xs font-mono">
                                 [Circuit Error]: Invalid IOGL circuit configuration
                             </div>
                         );
@@ -214,10 +214,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
       prose-table:w-full prose-table:text-[11px] prose-table:border-collapse prose-table:mb-12
       prose-th:border prose-th:border-white/10 prose-th:p-3 prose-th:bg-white/5 prose-th:text-left prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
       prose-td:border prose-td:border-white/10 prose-td:p-3 prose-td:text-zinc-500
-      prose-code:bg-white/5 prose-code:text-blue-400 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-sm prose-code:font-mono prose-code:text-[10px]
+      prose-code:bg-white/5 prose-code:text-text-cloud prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-sm prose-code:font-mono prose-code:text-[10px]
       prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-white/10 prose-pre:p-6 prose-pre:rounded-xl prose-pre:whitespace-pre-wrap prose-pre:break-words prose-pre:max-w-full prose-pre:shadow-2xl
       prose-strong:text-zinc-200 prose-strong:font-bold
-      selection:bg-blue-500/30
+      selection:bg-selection
     ">
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}

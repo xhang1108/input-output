@@ -72,7 +72,7 @@ export const ColorView: React.FC<ColorViewProps> = memo(({ payload, depth, onDep
                 <div className="flex items-center justify-between px-1 pt-2 border-t border-zinc-800/50 mt-1">
                     <label className="text-[9px] text-zinc-500 font-bold uppercase">Depth</label>
                     <select
-                        className="h-4 text-[8px] bg-zinc-900 border border-zinc-700 rounded-(--radius-sm) px-1 focus:outline-none focus:border-blue-500 text-zinc-300"
+                        className="h-4 text-[8px] bg-zinc-900 border border-zinc-700 rounded-(--radius-sm) px-1 focus:outline-none focus:border-focus text-zinc-300"
                         value={depth}
                         onChange={onDepthChange}
                         onMouseDown={(e) => e.stopPropagation()}

@@ -74,62 +74,61 @@ function SaveSlotCard({
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className={`group relative flex flex-col border transition-all duration-300 rounded-2xl overflow-hidden
-                       ${meta.syncStatus === 'pending' 
-                        ? 'border-amber-500/50 from-amber-900/10 to-amber-900/5 shadow-[0_0_20px_-3px_rgba(245,158,11,0.15)]' 
-                        : isCloud ? 'border-zinc-900 from-blue-900/10 to-blue-900/5 shadow-[0_0_15px_-3px_rgba(59,130,246,0.1)]' : 'border-zinc-900 from-zinc-900/50 to-zinc-900/30'}
-                       ${loading ? 'opacity-70 pointer-events-none' : 'hover:border-zinc-700 hover:shadow-xl hover:-translate-y-1 cursor-pointer'} 
+                       ${meta.syncStatus === 'pending'
+                    ? 'border-warning/50 from-warning/10 to-warning/5 shadow-[0_0_20px_-3px_hsla(38,92%,55%,0.15)]'
+                    : isCloud ? 'border-surface-dim from-cloud/10 to-cloud/5 shadow-[0_0_15px_-3px_hsla(217,91%,60%,0.1)]' : 'border-surface-dim from-surface-base/50 to-surface-base/30'}
+                       ${loading ? 'opacity-70 pointer-events-none' : 'hover:border-surface-light hover:shadow-xl hover:-translate-y-1 cursor-pointer'} 
                        ${isTransferring ? 'animate-pulse' : ''}`}
             whileTap={{ scale: 0.97, opacity: 0.8 }}
             onClick={() => !loading && onOpen()}
         >
             {/* ── Type Badge ── */}
-            <div className={`absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border ${
-                meta.syncStatus === 'pending'
-                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                    : isCloud
-                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                        : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'}`}>
+            <div className={`absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border ${meta.syncStatus === 'pending'
+                ? 'bg-warning/10 text-warning border-warning/20'
+                : isCloud
+                    ? 'bg-cloud/10 text-text-cloud border-cloud/20'
+                    : 'bg-surface-light/80 text-text-muted border-border-dim'}`}>
                 {isTransferring ? (
                     <div className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
                 ) : (
                     meta.syncStatus === 'pending' ? <AlertTriangle className="w-2.5 h-2.5" /> :
-                    isCloud ? <Cloud className="w-2.5 h-2.5" /> : <HardDrive className="w-2.5 h-2.5" />
+                        isCloud ? <Cloud className="w-2.5 h-2.5" /> : <HardDrive className="w-2.5 h-2.5" />
                 )}
                 {isTransferring ? 'Syncing...' : (meta.syncStatus === 'pending' ? 'Pending' : isCloud ? 'Cloud' : 'Local')}
             </div>
 
             {/* Visual Header / Thumbnail */}
             <div className={`aspect-16/10 relative flex items-center justify-center overflow-hidden
-                           ${isCloud ? 'bg-blue-500/5' : 'bg-zinc-800/20'}`}>
-                
+                           ${isCloud ? 'bg-cloud/5' : 'bg-surface-light/20'}`}>
+
                 {loading ? (
                     <div className="flex flex-col items-center gap-2">
-                         <div className="w-8 h-8 border-2 border-unit border-t-transparent rounded-full animate-spin" />
-                         <span className="text-[10px] uppercase tracking-widest text-unit font-bold">Opening</span>
+                        <div className="w-8 h-8 border-2 border-unit border-t-transparent rounded-full animate-spin" />
+                        <span className="text-[10px] uppercase tracking-widest text-unit font-bold">Opening</span>
                     </div>
                 ) : (
                     <div className="flex items-center gap-3">
                         <div className="flex flex-col items-center">
-                            <span className={`text-3xl font-bold ${meta.syncStatus === 'pending' ? 'text-amber-500/70' : isCloud ? 'text-blue-400/70' : 'text-zinc-500'}`}>{meta.nodeCount}</span>
-                            <span className={`text-[10px] uppercase tracking-wider ${meta.syncStatus === 'pending' ? 'text-amber-500/50' : isCloud ? 'text-blue-500/50' : 'text-zinc-600'}`}>nodes</span>
+                            <span className={`text-3xl font-bold ${meta.syncStatus === 'pending' ? 'text-warning/70' : isCloud ? 'text-text-cloud/70' : 'text-text-muted'}`}>{meta.nodeCount}</span>
+                            <span className={`text-[10px] uppercase tracking-wider ${meta.syncStatus === 'pending' ? 'text-warning/50' : isCloud ? 'text-cloud/50' : 'text-zinc-600'}`}>nodes</span>
                         </div>
-                        <div className={`w-px h-10 ${meta.syncStatus === 'pending' ? 'bg-amber-901/30' : isCloud ? 'bg-blue-900/30' : 'bg-zinc-800'}`} />
+                        <div className={`w-px h-10 ${meta.syncStatus === 'pending' ? 'bg-warning/30' : isCloud ? 'bg-cloud/30' : 'bg-surface-light'}`} />
                         <div className="flex flex-col items-center">
-                            <span className={`text-3xl font-bold ${meta.syncStatus === 'pending' ? 'text-amber-500/70' : isCloud ? 'text-blue-400/70' : 'text-zinc-500'}`}>{meta.edgeCount}</span>
-                            <span className={`text-[10px] uppercase tracking-wider ${meta.syncStatus === 'pending' ? 'text-amber-500/50' : isCloud ? 'text-blue-500/50' : 'text-zinc-600'}`}>edges</span>
+                            <span className={`text-3xl font-bold ${meta.syncStatus === 'pending' ? 'text-warning/70' : isCloud ? 'text-text-cloud/70' : 'text-text-muted'}`}>{meta.edgeCount}</span>
+                            <span className={`text-[10px] uppercase tracking-wider ${meta.syncStatus === 'pending' ? 'text-warning/50' : isCloud ? 'text-cloud/50' : 'text-zinc-600'}`}>edges</span>
                         </div>
                     </div>
                 )}
-                
+
                 {/* Decorative corner dots */}
-                <div className={`absolute top-3 right-3 w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-blue-500/20' : 'bg-zinc-800'}`} />
-                <div className={`absolute bottom-3 left-3 w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-blue-500/20' : 'bg-zinc-800'}`} />
-                <div className={`absolute bottom-3 right-3 w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-blue-500/20' : 'bg-zinc-800'}`} />
+                <div className={`absolute top-3 right-3 w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-cloud/20' : 'bg-surface-light'}`} />
+                <div className={`absolute bottom-3 left-3 w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-cloud/20' : 'bg-surface-light'}`} />
+                <div className={`absolute bottom-3 right-3 w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-cloud/20' : 'bg-surface-light'}`} />
 
                 {/* Dynamic Status Badge (Pending Sync) */}
                 {isCloud && !loading && meta.syncStatus === 'pending' && (
                     <div className="absolute top-2 right-2 animate-in fade-in zoom-in duration-300">
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[9px] font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-warning/20 text-warning border border-warning/30 text-[9px] font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
                             <AlertTriangle className="w-2.5 h-2.5" />
                             Pending Sync
                         </div>
@@ -147,7 +146,7 @@ function SaveSlotCard({
                                 autoFocus
                                 value={nameInput}
                                 onChange={e => setNameInput(e.target.value)}
-                                onKeyDown={e => { 
+                                onKeyDown={e => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
                                         submitRename();
@@ -157,25 +156,25 @@ function SaveSlotCard({
                                         setIsRenaming(false);
                                     }
                                 }}
-                                className="flex-1 min-w-0 bg-zinc-800 border border-zinc-600 rounded-sm px-2 py-0.5 text-sm text-zinc-100
+                                className="flex-1 min-w-0 bg-surface-light border border-border-dim rounded-sm px-2 py-0.5 text-sm text-zinc-100
                                            outline-none focus:border-unit"
                             />
                             <div className="flex items-center gap-0.5">
-                                <button onClick={submitRename} className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors">
+                                <button onClick={submitRename} className="p-1 text-success hover:text-success/80 transition-colors">
                                     <Check className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => setIsRenaming(false)} className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors">
+                                <button onClick={() => setIsRenaming(false)} className="p-1 text-text-muted hover:text-zinc-300 transition-colors">
                                     <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>
                     ) : (
-                        <span className={`text-sm font-semibold truncate flex-1 ${meta.syncStatus === 'pending' ? 'text-amber-400' : 'text-zinc-200'}`}>{meta.name}</span>
+                        <span className={`text-sm font-semibold truncate flex-1 ${meta.syncStatus === 'pending' ? 'text-warning' : 'text-zinc-200'}`}>{meta.name}</span>
                     )}
                 </div>
 
                 {/* Meta Row */}
-                <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+                <div className="flex items-center gap-3 text-[11px] text-text-muted">
                     <span className="flex items-center gap-1 ml-auto">
                         <Clock className="w-3 h-3" /> {timeAgo(meta.updatedAt)}
                     </span>
@@ -190,7 +189,7 @@ function SaveSlotCard({
                     {isCloud ? (
                         <button
                             onClick={() => onTransfer(false)}
-                            className="p-1.5 rounded-sm text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-sm text-text-muted hover:text-success hover:bg-success/10 transition-colors cursor-pointer"
                             title="Make Local Only"
                         >
                             <ArrowDownToLine className="w-3.5 h-3.5" />
@@ -199,7 +198,7 @@ function SaveSlotCard({
                         canSyncToCloud && (
                             <button
                                 onClick={() => onTransfer(true)}
-                                className="p-1.5 rounded-sm text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-sm text-text-muted hover:text-text-cloud hover:bg-cloud/10 transition-colors cursor-pointer"
                                 title="Sync to Cloud"
                             >
                                 <Cloud className="w-3.5 h-3.5" />
@@ -209,23 +208,23 @@ function SaveSlotCard({
 
                     <button
                         onClick={() => { setNameInput(meta.name); setIsRenaming(true); }}
-                        className="p-1.5 rounded-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-sm text-text-muted hover:text-zinc-300 hover:bg-surface-light transition-colors cursor-pointer"
                         title="Rename"
                     >
                         <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <div className="relative ml-auto flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                         {confirmDelete ? (
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 p-1 bg-zinc-900 border border-zinc-800 rounded-md shadow-2xl flex items-center gap-1.5 animate-in zoom-in-95 fade-in duration-150">
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 p-1 bg-surface-base border border-border-dim rounded-md shadow-2xl flex items-center gap-1.5 animate-in zoom-in-95 fade-in duration-150">
                                 <button
                                     onClick={onDelete}
-                                    className="text-[9px] px-2 py-1 rounded-[4px] bg-red-500/20 text-red-400 hover:bg-red-500/30 font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                    className="text-[9px] px-2 py-1 rounded-[4px] bg-danger/20 text-danger hover:bg-danger/30 font-bold uppercase tracking-wider transition-colors cursor-pointer"
                                 >
                                     Confirm
                                 </button>
                                 <button
                                     onClick={() => setConfirmDelete(false)}
-                                    className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                                    className="p-1 text-text-muted hover:text-zinc-300 transition-colors cursor-pointer"
                                 >
                                     <X className="w-3.5 h-3.5" />
                                 </button>
@@ -233,15 +232,15 @@ function SaveSlotCard({
                         ) : (
                             <>
                                 {isCloud && (
-                                    <SharePopover 
-                                        projectId={meta.id} 
+                                    <SharePopover
+                                        projectId={meta.id}
                                         visibility={meta.visibility || 'private'}
                                         onVisibilityChange={onVisibilityChange}
                                     />
                                 )}
                                 <button
                                     onClick={() => setConfirmDelete(true)}
-                                    className="p-1.5 rounded-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                    className="p-1.5 rounded-sm text-text-muted hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
                                     title="Delete"
                                 >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -267,15 +266,15 @@ function NewProjectCard({ onClick, isCloud = false, disabled = false, descriptio
             onClick={() => !disabled && !loading && onClick()}
             className={`flex flex-col items-center justify-center border-2 border-dashed
                        rounded-2xl min-h-[220px] transition-all duration-200 group
-                       ${(disabled || loading) ? 'opacity-40 cursor-not-allowed border-zinc-800' : 'cursor-pointer'}
-                       ${isCloud 
-                          ? 'bg-blue-900/5 border-blue-900/30 hover:border-blue-500/50 hover:bg-blue-900/10 shadow-[0_0_15px_-3px_rgba(59,130,246,0.05)]' 
-                          : 'bg-zinc-900/30 border-zinc-800 hover:border-unit/50 hover:bg-zinc-900/50'}`}
+                       ${(disabled || loading) ? 'opacity-40 cursor-not-allowed border-border-dim' : 'cursor-pointer'}
+                       ${isCloud
+                    ? 'bg-cloud/5 border-cloud/30 hover:border-cloud/50 hover:bg-cloud/10 shadow-[0_0_15px_-3px_hsla(217,91%,60%,0.05)]'
+                    : 'bg-surface-base/30 border-surface-light hover:border-unit/50 hover:bg-surface-base/50'}`}
         >
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors duration-200
-                          ${isCloud 
-                             ? 'bg-blue-900/20 text-blue-500 group-hover:bg-blue-500/20' 
-                             : 'bg-zinc-800 text-zinc-500 group-hover:bg-unit/20 group-hover:text-unit'}`}>
+                          ${isCloud
+                    ? 'bg-cloud/20 text-text-cloud group-hover:bg-cloud/20'
+                    : 'bg-surface-light text-text-muted group-hover:bg-unit/20 group-hover:text-unit'}`}>
                 {loading ? (
                     <div className="w-6 h-6 border-2 border-unit border-t-transparent rounded-full animate-spin" />
                 ) : (
@@ -283,7 +282,7 @@ function NewProjectCard({ onClick, isCloud = false, disabled = false, descriptio
                 )}
             </div>
             <div className="flex flex-col items-center text-center px-4">
-                <span className={`text-sm font-bold uppercase tracking-widest ${isCloud ? 'text-blue-400' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
+                <span className={`text-sm font-bold uppercase tracking-widest ${isCloud ? 'text-text-cloud' : 'text-text-dim group-hover:text-zinc-200'}`}>
                     {loading ? 'Initialising...' : 'New Project'}
                 </span>
                 <span className="text-[10px] text-zinc-600 mt-1">
@@ -338,7 +337,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
 
                 const canonical = getCanonicalId(decodedId);
                 return {
-                    id: `cloud:${canonical}`, 
+                    id: `cloud:${canonical}`,
                     name: g.title,
                     createdAt: new Date(g.createdAt).getTime(),
                     updatedAt: new Date(g.updatedAt).getTime(),
@@ -374,7 +373,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
             try {
                 const apiId = getCanonicalId(id);
                 const res = await fetch(`/api/graphs/${apiId}`, { method: 'DELETE' });
-                
+
                 // If it's 404, it means it's already gone from the server, so we consider it a success
                 if (!res.ok && res.status !== 404) {
                     throw new Error("Failed to delete cloud graph");
@@ -383,7 +382,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                 // IMPORTANT: Always purge the local backup/cache too to prevent it from "re-appearing"
                 // due to the unified merge logic in ProjectLoadScreen.
                 SaveManager.delete(id);
-                
+
                 loadCloudGraphs();
                 refreshLocal(); // Refresh local list to reflect the deletion of the backup
             } catch (e) {
@@ -417,7 +416,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                     loadCloudGraphs();
                     throw new Error("Failed to update cloud graph");
                 }
-                
+
                 // If title changed, we might want to sync with local storage if it's cached
                 const originalMeta = cloudSlots.find(s => s.id === id);
                 if (originalMeta?.name !== name) {
@@ -436,7 +435,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
 
     const handleTransfer = async (id: string, toCloud: boolean) => {
         const canonicalId = getCanonicalId(id);
-        
+
         if (toCloud && !session) {
             toast.error("Please sign in to sync to cloud");
             return;
@@ -448,7 +447,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
         try {
             // Data Lookup: Try Cloud-prefixed first, then Canonical
             let rawData = SaveManager.getRawData(`cloud:${canonicalId}`) || SaveManager.getRawData(canonicalId);
-            
+
             const meta = SaveManager.getMeta(id) || SaveManager.getMeta(canonicalId);
             const title = meta?.name || "Untitled Project";
 
@@ -487,7 +486,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                 }
                 // SUCCESS: Cloud is confirmed
                 loadCloudGraphs(); // Refresh dashboard list
-                
+
                 // CRITICAL: Use correct storage ID with prefix
                 const actualId = getCanonicalId(id); // Ensure we have the canonical ID for the local meta
                 const storageId = `cloud:${actualId}`;
@@ -506,14 +505,14 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
             }
 
             const newId = toCloud ? `cloud:${canonicalId}` : canonicalId;
-            
+
             // If data was missing locally but fetched from cloud, store it temporarily so transferSlot works
             if (!SaveManager.getRawData(id) && !SaveManager.getRawData(`cloud:${canonicalId}`)) {
                 SaveManager.putRawData(id, rawData);
             }
 
             SaveManager.transferSlot(id, newId, meta || undefined);
-            
+
             toast.success(toCloud ? "Synced to cloud" : "Transferred to local", {
                 description: toCloud ? "Project state has been backed up on the server." : "Project removed from cloud, stored locally."
             });
@@ -546,7 +545,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
 
     slots.forEach(s => {
         const isCloudPrefix = s.id.startsWith('cloud:');
-        
+
         // Hide cloud projects from local list when logged out
         if (!session && isCloudPrefix) return;
 
@@ -559,7 +558,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
         const cid = getCanonicalId(s.id);
         const existing = projectMap.get(cid);
         // Prioritize cloud status, but keep meta if cloud one is empty-ish
-        projectMap.set(cid, { 
+        projectMap.set(cid, {
             ...(existing || s),
             id: s.id,
             isCloud: true,
@@ -599,28 +598,28 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
         <div className="flex-1 flex flex-col overflow-auto bg-black relative">
             {/* Sync Status Floating Indicator */}
             {isLoadingCloud && (
-                <div className="absolute top-6 right-8 flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full z-20">
-                    <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Syncing Cloud</span>
+                <div className="absolute top-6 right-8 flex items-center gap-2 px-3 py-1.5 bg-cloud/10 border border-cloud/20 rounded-full z-20">
+                    <div className="w-3 h-3 border-2 border-text-cloud border-t-transparent rounded-full animate-spin" />
+                    <span className="text-[10px] font-bold text-text-cloud uppercase tracking-widest">Syncing Cloud</span>
                 </div>
             )}
 
             <main className="flex-1 px-8 py-20">
                 <AutoSyncManager allProjects={allProjects} session={session} refreshLocal={refreshLocal} />
                 <div className="max-w-6xl mx-auto space-y-12">
-                    
+
                     {/* Header Section */}
                     <div className="flex flex-col items-center text-center space-y-2">
                         <h1 className="text-3xl font-black tracking-tighter text-white">DASHBOARD</h1>
-                        <p className="text-zinc-500 text-sm max-w-md">Manage your local and cloud-synced projects in one place.</p>
+                        <p className="text-text-muted text-sm max-w-md">Manage your local and cloud-synced projects in one place.</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {/* New Project Options */}
                         <div className="grid grid-cols-1 gap-4 lg:contents">
-                            <NewProjectCard 
-                                onClick={handleNewProjectLogic} 
-                                isCloud={canCreateCloud} 
+                            <NewProjectCard
+                                onClick={handleNewProjectLogic}
+                                isCloud={canCreateCloud}
                                 loading={loadingId === 'new-project'}
                                 description={canCreateCloud ? "Auto-synced to Cloud" : (session ? "Cloud limit reached" : "Sign in for Cloud storage")}
                             />
@@ -634,7 +633,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                                 const isLoading = loadingId === meta.id;
                                 // Visually override cloud status if in transition
                                 const isCloud = meta.isCloud;
-                                
+
                                 return (
                                     <SaveSlotCard
                                         key={cid}
@@ -659,11 +658,11 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
 
                     {allProjects.length === 0 && !isLoadingCloud && (
                         <div className="py-20 text-center space-y-4">
-                            <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mx-auto border border-zinc-800">
+                            <div className="w-16 h-16 bg-surface-base rounded-full flex items-center justify-center mx-auto border border-border-dim">
                                 <Box className="w-8 h-8 text-zinc-700" />
                             </div>
                             <div className="space-y-1">
-                                <h3 className="text-zinc-400 font-medium">No projects yet</h3>
+                                <h3 className="text-text-dim font-medium">No projects yet</h3>
                                 <p className="text-sm text-zinc-600">Start by creating a local or cloud-synced project above.</p>
                             </div>
                         </div>
@@ -687,7 +686,7 @@ function AutoSyncManager({ allProjects, session, refreshLocal }: { allProjects: 
         // Debounce to prevent rapid fire
         const timer = setTimeout(() => {
             console.log(`[AutoSync] Found ${pendingCloud.length} projects pending sync. Retrying...`);
-            
+
             pendingCloud.forEach(async (p) => {
                 try {
                     const rawData = SaveManager.getRawData(p.id);
@@ -727,14 +726,14 @@ function AutoSyncManager({ allProjects, session, refreshLocal }: { allProjects: 
                         toast.success(`Synced "${p.name}" to Cloud ☁️`);
                     } else {
                         const err = await res.json().catch(() => ({ error: 'Sync failed' }));
-                        
+
                         if (err.error?.includes('Graph limit reached')) {
                             toast.error('Cloud Space Full (10/10)', {
                                 description: `Background sync failed for "${p.name}". Please free up some cloud space.`,
                                 duration: 8000
                             });
                         }
-                        
+
                         console.warn(`[AutoSync] Failed to sync ${p.id}:`, err.error);
                     }
                 } catch (e) {

@@ -90,25 +90,25 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
             onClick={onClose}
         >
             <div
-                className="bg-zinc-900 border border-zinc-700 rounded-(--radius-xl) w-[500px] max-w-[90vw] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+                className="bg-surface-base border border-border-dim rounded-xl w-[500px] max-w-[90vw] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+                <div className="px-4 py-3 border-b border-surface-light flex items-center justify-between bg-surface-base/50">
                     <div className="flex items-center gap-2 text-zinc-100 font-medium text-sm">
                         <Upload className="w-4 h-4 text-(--color-unit)" />
                         Import
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-1 rounded-(--radius-sm) hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        className="p-1 rounded-sm hover:bg-surface-light text-zinc-500 hover:text-zinc-300 transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
                 {/* Mode Selector Tabs */}
-                <div className="flex p-1 bg-zinc-950 border-b border-zinc-800">
+                <div className="flex p-1 bg-surface-dim border-b border-surface-light">
                     {(['IOGL', 'LaTeX'] as ImportMode[]).map(m => (
                         <button
                             key={m}
@@ -119,10 +119,10 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                                 setDiagnostics([]);
                             }}
                             className={`
-                                flex-1 flex items-center justify-center gap-2 py-1.5 rounded-(--radius-lg) text-xs font-bold transition-all
+                                flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-xs font-bold transition-all
                                 ${mode === m
-                                    ? 'bg-zinc-800 text-zinc-100'
-                                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'}
+                                    ? 'bg-surface-light text-zinc-100'
+                                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-surface-base'}
                             `}
                         >
                             {m === 'IOGL' ? <FileText className="w-3.5 h-3.5" /> : <CalcIcon className="w-3.5 h-3.5" />}
@@ -139,7 +139,7 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                         </label>
                         <textarea
                             ref={textareaRef}
-                            className="w-full h-64 bg-zinc-950 border border-zinc-800 rounded-(--radius-lg) p-3 text-xs font-mono text-zinc-300 outline-none focus:border-zinc-600 resize-none placeholder-zinc-700"
+                            className="w-full h-64 bg-surface-dim border border-surface-light rounded-lg p-3 text-xs font-mono text-zinc-300 outline-none focus:border-zinc-600 resize-none placeholder-zinc-700"
                             placeholder={mode === 'IOGL' ? '# Node definitions...' : 'e.g. x^2 + 2x + 1'}
                             value={input}
                             onChange={e => setInput(e.target.value)}
@@ -152,13 +152,13 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                         <button
                             onClick={() => setShouldClear(!shouldClear)}
                             className={`
-                                flex items-center gap-2 px-2 py-1.5 rounded-(--radius-sm) border text-[10px] font-bold uppercase tracking-tight transition-colors
+                                flex items-center gap-2 px-2 py-1.5 rounded-sm border text-[10px] font-bold uppercase tracking-tight transition-colors
                                 ${shouldClear
-                                    ? 'bg-red-900/20 border-red-800 text-red-300'
-                                    : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-600'}
+                                    ? 'bg-danger/20 border-danger/50 text-danger'
+                                    : 'bg-surface-base border-border-dim text-zinc-500 hover:border-zinc-600'}
                             `}
                         >
-                            <div className={`w-3 h-3 rounded-sm border flex items-center justify-center ${shouldClear ? 'bg-red-500 border-red-500 text-white' : 'border-zinc-700'}`}>
+                            <div className={`w-3 h-3 rounded-sm border flex items-center justify-center ${shouldClear ? 'bg-danger border-danger text-white' : 'border-border-dim'}`}>
                                 {shouldClear && <Check className="w-2.5 h-2.5" />}
                             </div>
                             Clear canvas before import
@@ -167,20 +167,20 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
 
                     {/* Status / Error */}
                     {error && (
-                        <div className="text-xs text-red-400 bg-red-950/30 border border-red-900/50 p-2 rounded-(--radius-sm)">
+                        <div className="text-xs text-danger bg-danger/5 border border-danger/10 p-2 rounded-sm text-center">
                             {error}
                         </div>
                     )}
 
                     {isProcessing && progress && progress.total > 0 && (
                         <div className="flex flex-col gap-1 w-full mt-2">
-                            <div className="flex justify-between text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">
+                            <div className="flex justify-between text-[10px] text-warning font-bold uppercase tracking-wider mb-1">
                                 <span>Injecting & Rendering...</span>
                                 <span>{Math.round((progress.current / progress.total) * 100)}%</span>
                             </div>
-                            <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                            <div className="h-1.5 w-full bg-surface-base rounded-full overflow-hidden border border-surface-light">
                                 <div
-                                    className="h-full bg-amber-500 transition-all duration-300 ease-out rounded-full"
+                                    className="h-full bg-warning transition-all duration-300 ease-out rounded-full"
                                     style={{ width: `${Math.max(5, (progress.current / progress.total) * 100)}%` }}
                                 />
                             </div>
@@ -188,13 +188,13 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                     )}
 
                     {isProcessing && progress && progress.total > 200 && (
-                        <div className="text-[10px] text-amber-400/60 bg-amber-900/10 border border-amber-900/20 p-2 rounded-(--radius-sm) mt-2 italic">
+                        <div className="text-[10px] text-warning/60 bg-warning/5 border border-warning/10 rounded-sm mt-2 italic text-center">
                             Large graph detected. Auto-layout skipped to maintain performance.
                         </div>
                     )}
 
                     {success && (
-                        <div className="text-xs text-green-400 bg-green-950/30 border border-green-900/50 p-2 rounded flex items-center gap-2">
+                        <div className="text-xs text-success bg-success/10 border border-success/20 p-2 rounded flex items-center gap-2">
                             <Check className="w-3 h-3" />
                             Successfully imported!
                         </div>
@@ -203,18 +203,18 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                     {diagnostics.length > 0 && (
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center justify-between px-1">
-                                <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Warnings</div>
+                                <div className="text-[10px] font-bold text-warning uppercase tracking-widest">Warnings</div>
                                 <button
                                     onClick={handleCopyDiagnostics}
-                                    className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 hover:text-amber-500 transition-colors group"
+                                    className="flex items-center gap-1.5 text-[10px] font-bold text-warning/60 hover:text-warning transition-colors group"
                                 >
                                     {copied ? 'COPIED!' : 'COPY'}
                                 </button>
                             </div>
-                            <div className="max-h-32 overflow-y-auto bg-amber-950/20 border border-amber-900/30 rounded-(--radius-sm) p-2 flex flex-col gap-1.5 custom-scrollbar">
+                            <div className="max-h-32 overflow-y-auto bg-warning/5 border border-warning/10 rounded-sm p-2 flex flex-col gap-1.5 custom-scrollbar">
                                 {diagnostics.map((d, i) => (
-                                    <div key={i} className="text-[11px] text-amber-200/80 leading-relaxed flex gap-2">
-                                        <span className="text-amber-500 shrink-0">•</span>
+                                    <div key={i} className="text-[11px] text-warning/70 leading-relaxed flex gap-2">
+                                        <span className="text-warning shrink-0">•</span>
                                         {d}
                                     </div>
                                 ))}
@@ -224,17 +224,17 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                 </div>
 
                 {/* Footer */}
-                <div className="p-3 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-2">
+                <div className="p-3 border-t border-surface-light bg-surface-base/50 flex justify-end gap-2">
                     <button
                         onClick={onClose}
-                        className="px-3 py-1.5 rounded-(--radius-lg) text-xs font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:bg-surface-light hover:text-zinc-200 transition-colors"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleImport}
                         disabled={!input.trim() || isProcessing}
-                        className="px-4 py-1.5 rounded-(--radius-lg) text-xs font-bold bg-zinc-100 text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                        className="px-4 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                     >
                         {isProcessing ? 'Processing...' : (
                             <>

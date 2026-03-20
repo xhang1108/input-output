@@ -64,7 +64,7 @@ export function SettingsPanel({
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
                     p-2 rounded-lg border shadow-lg transition-all duration-200
-                    ${isOpen ? 'bg-zinc-800 border-zinc-600 text-zinc-100' : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}
+                    ${isOpen ? 'bg-surface-light border-border-dim text-zinc-100' : 'bg-surface-base/80 border-surface-light text-zinc-400 hover:text-zinc-200 hover:bg-surface-light'}
                 `}
                 title="Settings"
             >
@@ -73,7 +73,7 @@ export function SettingsPanel({
 
             {/* Menu Panel */}
             {isOpen && (
-                <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                <div className="bg-surface-base border border-border-dim rounded-xl shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2 fade-in duration-200">
 
                     {/* User Authentication */}
                     <AuthButton />
@@ -171,7 +171,7 @@ export function SettingsPanel({
                             setIsOpen(false);
                             setShowImportModal(true);
                         }}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-surface-light/50 hover:text-zinc-300"
                     >
                         <div className="flex items-center gap-3">
                             <span className="text-zinc-500"><Upload className="w-4 h-4" /></span>
@@ -185,7 +185,7 @@ export function SettingsPanel({
                             setIsOpen(false);
                             setShowExportModal(true);
                         }}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-surface-light/50 hover:text-zinc-300"
                     >
                         <div className="flex items-center gap-3">
                             <span className="text-zinc-500"><Download className="w-4 h-4" /></span>
@@ -199,7 +199,7 @@ export function SettingsPanel({
                             setIsOpen(false);
                             onBackToProjects();
                         }}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-zinc-400 hover:bg-surface-light/50 hover:text-zinc-300"
                     >
                         <div className="flex items-center gap-3">
                             <span className="text-zinc-500"><Layout className="w-4 h-4" /></span>
@@ -212,10 +212,10 @@ export function SettingsPanel({
                     {/* Reset Canvas */}
                     <button
                         onClick={onReset}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-danger hover:bg-danger/10 hover:text-danger/80"
                     >
                         <div className="flex items-center gap-3">
-                            <span className="text-red-500/70"><Settings className="w-4 h-4" /></span>
+                            <span className="text-danger/70"><Settings className="w-4 h-4" /></span>
                             Reset Canvas
                         </div>
                     </button>
@@ -230,7 +230,7 @@ export function SettingsPanel({
 }
 
 function Divider() {
-    return <div className="h-px bg-zinc-800/40 my-1" />;
+    return <div className="h-px bg-surface-light/40 my-1" />;
 }
 
 function SegmentedControl<T>({
@@ -247,7 +247,7 @@ function SegmentedControl<T>({
     return (
         <div className="px-3 py-2">
             <div className="text-xs text-zinc-500 font-bold mb-2 uppercase tracking-wider">{label}</div>
-            <div className="flex gap-1 overflow-hidden rounded-xl border border-zinc-800 p-1 bg-zinc-950">
+            <div className="flex gap-1 overflow-hidden rounded-xl border border-border-dim p-1 bg-surface-dim">
                 {options.map((opt, idx) => (
                     <button
                         key={idx}
@@ -255,8 +255,8 @@ function SegmentedControl<T>({
                         className={`
                             flex-1 text-[10px] py-1.5 px-2 rounded-lg transition-all capitalize
                             ${value === opt.value
-                                ? 'bg-zinc-800 text-(--color-unit) font-bold shadow-sm'
-                                : 'text-zinc-500 hover:text-zinc-400 hover:bg-zinc-900'}
+                                ? 'bg-surface-light text-(--color-unit) font-bold shadow-sm'
+                                : 'text-zinc-500 hover:text-zinc-400 hover:bg-surface-base'}
                         `}
                     >
                         {opt.label}
@@ -273,7 +273,7 @@ function ToggleRow({ label, icon, active, onClick }: { label: string, icon: Reac
             onClick={onClick}
             className={`
                 flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full
-                ${active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'}
+                ${active ? 'bg-surface-light text-zinc-100' : 'text-zinc-400 hover:bg-surface-light/50 hover:text-zinc-300'}
             `}
         >
             <div className="flex items-center gap-3">

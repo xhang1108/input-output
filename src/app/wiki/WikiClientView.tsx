@@ -132,7 +132,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
     const router = useRouter();
 
     const sections = useMemo(() => (mode === 'user' ? initialUserSections : initialDeveloperSections), [mode, initialUserSections, initialDeveloperSections]);
-    
+
     // Automatically switch mode based on URL if not already set correctly
     useEffect(() => {
         const pathParts = window.location.pathname.split('/').filter(Boolean);
@@ -376,7 +376,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
     if (!activeSection) return null;
 
     return (
-        <div className="h-screen flex flex-col bg-[#121212] text-zinc-400 font-sans selection:bg-blue-500/30">
+        <div className="h-screen flex flex-col bg-[#121212] text-zinc-400 font-sans selection:bg-selection">
             <div className="fixed inset-0 pointer-events-none"
                 style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0)', backgroundSize: '20px 20px' }} />
 

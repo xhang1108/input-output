@@ -45,7 +45,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Var 1</label>
                         <input
                             type="text"
-                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
+                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
                             value={var1}
                             onChange={(e) => updateData({ var1: e.target.value })}
                         />
@@ -54,7 +54,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Var 2</label>
                         <input
                             type="text"
-                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
+                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
                             value={var2}
                             onChange={(e) => updateData({ var2: e.target.value })}
                         />
@@ -66,7 +66,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Min</label>
                         <input
                             type="number"
-                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
+                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
                             value={min}
                             onChange={(e) => updateData({ min: Number(e.target.value) })}
                         />
@@ -75,7 +75,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Max</label>
                         <input
                             type="number"
-                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-blue-500/50 outline-none w-full"
+                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
                             value={max}
                             onChange={(e) => updateData({ max: Number(e.target.value) })}
                         />
