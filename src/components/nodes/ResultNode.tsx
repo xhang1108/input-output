@@ -3,11 +3,12 @@
 import { memo, useState, useMemo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
+import { cn } from '@/lib/utils';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { FormulaRenderer } from '../../utils/FormulaRenderer';
 import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
-import { Copy, Check, ChevronDown } from 'lucide-react';
+import { Copy, Check, ChevronDown, Hash, Variable } from 'lucide-react';
 import { DataType } from '../../types/payload';
 import { NodeOpSelect } from './NodeOpSelect';
 import { ScalarView } from './views/ScalarView';
@@ -33,6 +34,7 @@ export const ResultNode = memo((props: NodeProps) => {
     const unitStr = payload?.meta?.unit || (data.unit as string | undefined);
     const viewMode = (data.viewMode as ResultViewMode) || 'auto';
     const depth = (data.depth as string) || '8bit';
+    const expandSymbols = (data.expandSymbols as boolean) !== false; // Default to true
 
     const [copied, setCopied] = useState(false);
 
@@ -68,7 +70,9 @@ export const ResultNode = memo((props: NodeProps) => {
     let formulaStr = '';
     if ((effectiveMode === 'formula' || effectiveMode === 'latex') && payload) {
         if (payload.symbol) {
-            formulaStr = (effectiveMode === 'latex') ? FormulaRenderer.render(payload.symbol) : PayloadUtils.stringifySymbol(payload.symbol);
+            formulaStr = (effectiveMode === 'latex') 
+                ? FormulaRenderer.render(payload.symbol, { expandSymbols }) 
+                : PayloadUtils.stringifySymbol(payload.symbol, { expandSymbols });
         } else if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) && (rawValue as any).latex) {
             formulaStr = PayloadUtils.unwrap((rawValue as any).latex) as string;
         } else {
@@ -108,13 +112,30 @@ export const ResultNode = memo((props: NodeProps) => {
             <div className="p-3 flex flex-col gap-2 min-w-[140px] max-w-[500px]">
                 <div className="flex justify-between items-center bg-zinc-800/20 px-2 py-1 -mx-3 -mt-3 mb-1 border-b border-zinc-800/40 shrink-0">
                     <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Result Info</span>
-                    <button
-                        onClick={copyToClipboard}
-                        className={`nodrag p-1 rounded-sm hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
-                        title="Copy Value"
-                    >
-                        {copied ? <Check size={12} /> : <Copy size={12} />}
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {(effectiveMode === 'formula' || effectiveMode === 'latex') && (
+                            <button
+                                onClick={() => brain.applyTransaction({ 
+                                    type: 'UPDATE_NODE_DATA', 
+                                    payload: { id, data: { expandSymbols: !expandSymbols } } 
+                                })}
+                                className={cn(
+                                    "nodrag p-1 rounded-sm transition-colors",
+                                    expandSymbols ? "text-primary bg-primary/10" : "text-zinc-500 hover:bg-zinc-800"
+                                )}
+                                title={expandSymbols ? "Showing Values (5+5)" : "Showing Symbols (x+y)"}
+                            >
+                                {expandSymbols ? <Hash size={12} /> : <Variable size={12} />}
+                            </button>
+                        )}
+                        <button
+                            onClick={copyToClipboard}
+                            className={`nodrag p-1 rounded-sm hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
+                            title="Copy Value"
+                        >
+                            {copied ? <Check size={12} /> : <Copy size={12} />}
+                        </button>
+                    </div>
                 </div>
 
                 <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-[10px] bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>

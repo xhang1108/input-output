@@ -44,4 +44,23 @@ describe('FormulaRenderer (AST to LaTeX)', () => {
         });
         expect(FormulaRenderer.render(template)).toBe('\\text{Result: }100');
     });
+
+    it('should handle expandSymbols option', () => {
+        const id = PayloadUtils.createSymbol('Identifier', { name: 'x', value: 5 });
+        
+        // Default (no expand)
+        expect(FormulaRenderer.render(id)).toBe('x');
+        
+        // Expand enabled
+        expect(FormulaRenderer.render(id, { expandSymbols: true })).toBe('5');
+
+        const nested = PayloadUtils.createSymbol('BinaryExpression', {
+            operator: 'ADD',
+            left: PayloadUtils.createSymbol('Identifier', { name: 'a', value: 10 }),
+            right: PayloadUtils.createSymbol('Identifier', { name: 'b', value: 20 })
+        });
+        
+        expect(FormulaRenderer.render(nested)).toBe('a + b');
+        expect(FormulaRenderer.render(nested, { expandSymbols: true })).toBe('10 + 20');
+    });
 });

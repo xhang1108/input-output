@@ -440,19 +440,23 @@ export const PayloadUtils = {
      * 🔠 Stringify Symbol: AST -> Formula String
      * Recursively converts an AST node into a human-readable formula.
      */
-    stringifySymbol(node: ASTNode | null): string {
+    stringifySymbol(node: ASTNode | null, options: { expandSymbols?: boolean } = {}): string {
         if (!node) return '';
 
         switch (node.type) {
             case 'Literal':
                 return String(node.value);
             case 'Identifier':
+                // Expand if requested and value exists
+                if (options.expandSymbols && node.value !== undefined && node.value !== null) {
+                    return String(node.value);
+                }
                 return node.name || String(node.value);
             case 'UnaryExpression':
-                return `${node.operator}${this.stringifySymbol(node.argument!)}`;
+                return `${node.operator}${this.stringifySymbol(node.argument!, options)}`;
             case 'BinaryExpression': {
-                const left = this.stringifySymbol(node.left!);
-                const right = this.stringifySymbol(node.right!);
+                const left = this.stringifySymbol(node.left!, options);
+                const right = this.stringifySymbol(node.right!, options);
 
                 const opMap: Record<string, string> = {
                     ADD: '+', SUB: '-', MUL: '*', DIV: '/',
@@ -464,13 +468,13 @@ export const PayloadUtils = {
                 return `(${left} ${op} ${right})`;
             }
             case 'ConditionalExpression': {
-                const test = this.stringifySymbol(node.test!);
-                const cons = this.stringifySymbol(node.consequent!);
-                const alt = this.stringifySymbol(node.alternate!);
+                const test = this.stringifySymbol(node.test!, options);
+                const cons = this.stringifySymbol(node.consequent!, options);
+                const alt = this.stringifySymbol(node.alternate!, options);
                 return `(${test} ? ${cons} : ${alt})`;
             }
             case 'FunctionCall':
-                return `${node.name}(${node.args?.map(a => this.stringifySymbol(a)).join(', ')})`;
+                return `${node.name}(${node.args?.map(a => this.stringifySymbol(a, options)).join(', ')})`;
             default:
                 return '';
         }

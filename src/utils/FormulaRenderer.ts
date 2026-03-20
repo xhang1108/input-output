@@ -6,22 +6,26 @@ import { ASTNode } from '../types/payload';
  * Converts a symbolic ASTNode into a LaTeX string.
  */
 export class FormulaRenderer {
-    public static render(node: ASTNode | null): string {
+    public static render(node: ASTNode | null, options: { expandSymbols?: boolean } = {}): string {
         if (!node) return '';
 
         switch (node.type) {
             case 'Literal':
                 return this.renderLiteral(node.value);
             case 'Identifier':
+                // Expand if requested and value exists
+                if (options.expandSymbols && node.value !== undefined && node.value !== null) {
+                    return this.renderLiteral(node.value);
+                }
                 return node.name || this.renderLiteral(node.value);
             case 'BinaryExpression':
-                return this.renderBinary(node.operator!, node.left!, node.right!);
+                return this.renderBinary(node.operator!, node.left!, node.right!, options);
             case 'UnaryExpression':
-                return this.renderUnary(node.operator!, node.argument!);
+                return this.renderUnary(node.operator!, node.argument!, options);
             case 'FunctionCall':
-                return this.renderFunction(node.name!, node.args || []);
+                return this.renderFunction(node.name!, node.args || [], options);
             case 'TemplateLiteral':
-                return this.renderTemplate(node.parts || []);
+                return this.renderTemplate(node.parts || [], options);
             default:
                 return '';
         }
@@ -35,9 +39,9 @@ export class FormulaRenderer {
         return String(val);
     }
 
-    private static renderBinary(op: string, left: ASTNode, right: ASTNode): string {
-        const l = this.render(left);
-        const r = this.render(right);
+    private static renderBinary(op: string, left: ASTNode, right: ASTNode, options: { expandSymbols?: boolean }): string {
+        const l = this.render(left, options);
+        const r = this.render(right, options);
 
         switch (op) {
             case 'ADD': return `${l} + ${r}`;
@@ -50,8 +54,8 @@ export class FormulaRenderer {
         }
     }
 
-    private static renderUnary(op: string, arg: ASTNode): string {
-        const a = this.render(arg);
+    private static renderUnary(op: string, arg: ASTNode, options: { expandSymbols?: boolean }): string {
+        const a = this.render(arg, options);
         switch (op) {
             case 'NEG': return `-${a}`;
             case 'SQRT': return `\\sqrt{${a}}`;
@@ -59,8 +63,8 @@ export class FormulaRenderer {
         }
     }
 
-    private static renderFunction(name: string, args: ASTNode[]): string {
-        const renderedArgs = args.map(arg => this.render(arg));
+    private static renderFunction(name: string, args: ASTNode[], options: { expandSymbols?: boolean }): string {
+        const renderedArgs = args.map(arg => this.render(arg, options));
 
         // Handle special LaTeX functions
         const lowerName = name.toLowerCase();
@@ -80,12 +84,12 @@ export class FormulaRenderer {
         return `\\text{${name}}(${renderedArgs.join(', ')})`;
     }
 
-    private static renderTemplate(parts: (string | ASTNode)[]): string {
+    private static renderTemplate(parts: (string | ASTNode)[], options: { expandSymbols?: boolean }): string {
         return parts.map(part => {
             if (typeof part === 'string') {
                 return `\\text{${part}}`;
             }
-            return this.render(part);
+            return this.render(part, options);
         }).join('');
     }
 }
