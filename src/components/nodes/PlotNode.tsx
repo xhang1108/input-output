@@ -67,17 +67,17 @@ export const PlotNode = memo((props: NodeProps) => {
                     x: {
                         field: 'x', type: 'quantitative',
                         bin: { step: binStep },
-                        axis: { title: 'X', titleColor: 'var(--zinc-500)', labelColor: 'var(--zinc-600)', gridColor: 'var(--zinc-800)' }
+                        axis: { title: 'X', titleColor: 'var(--color-zinc-500)', labelColor: 'var(--color-zinc-600)', gridColor: 'var(--color-zinc-800)' }
                     },
                     y: {
                         field: 'y', type: 'quantitative',
                         bin: { step: binStep },
-                        axis: { title: 'Y', titleColor: 'var(--zinc-500)', labelColor: 'var(--zinc-600)', gridColor: 'var(--zinc-800)' }
+                        axis: { title: 'Y', titleColor: 'var(--color-zinc-500)', labelColor: 'var(--color-zinc-600)', gridColor: 'var(--color-zinc-800)' }
                     },
                     color: {
                         field: 'z', type: 'quantitative', aggregate: 'mean',
                         scale: { scheme: 'viridis' },
-                        legend: { title: 'Z', labelColor: 'var(--zinc-400)', titleColor: 'var(--zinc-400)' }
+                        legend: { title: 'Z', labelColor: 'var(--color-zinc-400)', titleColor: 'var(--color-zinc-400)' }
                     }
                 },
                 config: { view: { stroke: 'transparent' } }
@@ -94,9 +94,9 @@ export const PlotNode = memo((props: NodeProps) => {
                 data: { values: plotData.table },
                 mark: { type: 'bar', opacity: 0.8 },
                 encoding: {
-                    x: { field: 'y', type: 'quantitative', bin: { maxbins: 40 }, axis: { title: 'Value', titleColor: 'var(--zinc-500)', labelColor: 'var(--zinc-600)', grid: false } },
-                    y: { aggregate: 'count', type: 'quantitative', axis: { title: 'Count', titleColor: 'var(--zinc-500)', labelColor: 'var(--zinc-600)', gridColor: 'var(--zinc-800)' } },
-                    color: seriesNames.length > 1 ? { field: 'series', type: 'nominal', scale: { range: ['#b084e9', '#34d399', '#38bdf8', '#fbbf24', '#f87171'] }, legend: { title: null, labelColor: 'var(--zinc-400)', orient: 'top', direction: 'horizontal' } } : { value: '#b084e9' }
+                    x: { field: 'y', type: 'quantitative', bin: { maxbins: 40 }, axis: { title: 'Value', titleColor: 'var(--color-zinc-500)', labelColor: 'var(--color-zinc-600)', grid: false } },
+                    y: { aggregate: 'count', type: 'quantitative', axis: { title: 'Count', titleColor: 'var(--color-zinc-500)', labelColor: 'var(--color-zinc-600)', gridColor: 'var(--color-zinc-800)' } },
+                    color: seriesNames.length > 1 ? { field: 'series', type: 'nominal', scale: { range: ['#b084e9', '#34d399', '#38bdf8', '#fbbf24', '#f87171'] }, legend: { title: null, labelColor: 'var(--color-zinc-400)', orient: 'top', direction: 'horizontal' } } : { value: '#b084e9' }
                 },
                 config: { view: { stroke: 'transparent' } }
             };
@@ -158,12 +158,12 @@ export const PlotNode = memo((props: NodeProps) => {
                     type: 'quantitative',
                     scale: { domain: xDomain },
                     axis: {
-                        labelColor: 'var(--zinc-600)',
+                        labelColor: 'var(--color-zinc-600)',
                         labelFont: 'Roboto Mono',
                         labelFontSize: 9,
                         gridColor: {
-                            condition: { test: 'datum.value === 0', value: 'var(--zinc-500)' },
-                            value: 'var(--zinc-800)'
+                            condition: { test: 'datum.value === 0', value: 'var(--color-zinc-500)' },
+                            value: 'var(--color-zinc-800)'
                         },
                         gridWidth: {
                             condition: { test: 'datum.value === 0', value: 1.5 },
@@ -171,7 +171,7 @@ export const PlotNode = memo((props: NodeProps) => {
                         },
                         grid: true,
                         domain: true,
-                        domainColor: 'var(--zinc-500)',
+                        domainColor: 'var(--color-zinc-500)',
                         tickAmount: 5,
                         title: null
                     }
@@ -206,8 +206,8 @@ export const PlotNode = memo((props: NodeProps) => {
                                 labelFont: 'Roboto Mono',
                                 labelFontSize: 9,
                                 gridColor: {
-                                    condition: { test: 'datum.value === 0', value: 'var(--zinc-500)' },
-                                    value: 'var(--zinc-800)'
+                                    condition: { test: 'datum.value === 0', value: 'var(--color-zinc-500)' },
+                                    value: 'var(--color-zinc-800)'
                                 },
                                 gridWidth: {
                                     condition: { test: 'datum.value === 0', value: 1.5 },
@@ -215,7 +215,7 @@ export const PlotNode = memo((props: NodeProps) => {
                                 },
                                 grid: true,
                                 domain: true,
-                                domainColor: 'var(--zinc-500)',
+                                domainColor: 'var(--color-zinc-500)',
                                 tickAmount: 5,
                                 title: series1,
                                 titleColor: '#b084e9',
@@ -239,7 +239,7 @@ export const PlotNode = memo((props: NodeProps) => {
                                 labelFontSize: 9,
                                 grid: false,
                                 domain: true,
-                                domainColor: 'var(--zinc-500)',
+                                domainColor: 'var(--color-zinc-500)',
                                 tickAmount: 5,
                                 title: series2,
                                 titleColor: '#34d399',
@@ -277,12 +277,12 @@ export const PlotNode = memo((props: NodeProps) => {
                     type: 'quantitative',
                     scale: { domain: xDomain },
                     axis: {
-                        labelColor: 'var(--zinc-600)',
+                        labelColor: 'var(--color-zinc-600)',
                         labelFont: 'Roboto Mono',
                         labelFontSize: 9,
                         gridColor: {
-                            condition: { test: 'datum.value === 0', value: 'var(--zinc-500)' },
-                            value: 'var(--zinc-800)'
+                            condition: { test: 'datum.value === 0', value: 'var(--color-zinc-500)' },
+                            value: 'var(--color-zinc-800)'
                         },
                         gridWidth: {
                             condition: { test: 'datum.value === 0', value: 1.5 },
@@ -290,7 +290,7 @@ export const PlotNode = memo((props: NodeProps) => {
                         },
                         grid: true,
                         domain: true,
-                        domainColor: 'var(--zinc-500)',
+                        domainColor: 'var(--color-zinc-500)',
                         tickAmount: 5,
                         title: null
                     }
@@ -302,12 +302,12 @@ export const PlotNode = memo((props: NodeProps) => {
                         ? { domain: [data.minY, data.maxY] }
                         : undefined,
                     axis: {
-                        labelColor: 'var(--zinc-600)',
+                        labelColor: 'var(--color-zinc-600)',
                         labelFont: 'Roboto Mono',
                         labelFontSize: 9,
                         gridColor: {
-                            condition: { test: 'datum.value === 0', value: 'var(--zinc-500)' },
-                            value: 'var(--zinc-800)'
+                            condition: { test: 'datum.value === 0', value: 'var(--color-zinc-500)' },
+                            value: 'var(--color-zinc-800)'
                         },
                         gridWidth: {
                             condition: { test: 'datum.value === 0', value: 1.5 },
@@ -315,7 +315,7 @@ export const PlotNode = memo((props: NodeProps) => {
                         },
                         grid: true,
                         domain: true,
-                        domainColor: 'var(--zinc-500)',
+                        domainColor: 'var(--color-zinc-500)',
                         tickAmount: 5,
                         title: null
                     }
@@ -341,7 +341,7 @@ export const PlotNode = memo((props: NodeProps) => {
                 view: { stroke: 'transparent' },
                 legend: {
                     title: null,
-                    labelColor: 'var(--zinc-400)',
+                    labelColor: 'var(--color-zinc-400)',
                     labelFont: 'Inter',
                     labelFontSize: 9,
                     orient: 'top',

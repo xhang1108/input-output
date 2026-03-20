@@ -122,8 +122,8 @@ body {
   --handle-size-lg: 24px;
 
   /* Text Semantic Tokens */
-  --text-muted:    var(--zinc-500);
-  --text-dim:      var(--zinc-400);
+  --text-muted:    var(--color-zinc-500);
+  --text-dim:      var(--color-zinc-400);
 }
 
 /* Decoupled Handle Overrides */
