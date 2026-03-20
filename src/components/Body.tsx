@@ -24,6 +24,10 @@ import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
 import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
 import { useEar } from '../nerves/useEar';
 import { useHand } from '../nerves/useHand';
+import { useKnife } from './useKnife';
+import { COMMAND_REGISTRY, getEarShortcuts, Platform } from '../config/shortcuts';
+
+type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 import { useEye } from '../nerves/useEye';
 import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { useRelink } from '../hooks/useRelink';
@@ -408,27 +412,29 @@ export function Body({
         fn(e);
     }, [mode, confirmGrab]);
 
+    const platform: Platform = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'win';
+
     useEar({
-        shortcuts: {
+        shortcuts: getEarShortcuts(platform, {
             // Creation & Layout
-            'shift+a': autoConfirm((e) => {
+            'palette:open': autoConfirm((e: any) => {
                 e.preventDefault();
                 setPendingConnection(null);
                 setPalettePosition(mousePosRef.current);
                 setShowPalette(true);
                 logAction('Show Palette (Shift+A)');
             }),
-            'alt+s': autoConfirm((e) => {
+            'nodes:swap-inputs': autoConfirm((e) => {
                 if (isReadOnly) return;
                 e.preventDefault();
                 swapConnections();
                 logAction('Swap Inputs (Alt+S)');
             }),
-            'l': autoConfirm(() => {
+            'layout:auto': autoConfirm(() => {
                 if (isReadOnly) return;
                 handleAutoLayout();
             }),
-            '.': (e) => {
+            'canvas:focus-selected': (e) => {
                 if (mode === 'GRABBING' || mode === 'SCALING' || mode === 'ROTATING') {
                     handleTypeNum('.');
                 } else {
@@ -439,22 +445,22 @@ export function Body({
             },
 
             // Transform Commands
-            'g': autoConfirm((e) => {
+            'transform:grab': autoConfirm((e) => {
                 if (isReadOnly) return;
                 startGrab(mousePosRef.current, e.altKey, undefined, true);
                 logAction('Start Grab (G)');
             }),
-            's': autoConfirm((e) => {
+            'transform:scale': autoConfirm((e) => {
                 if (isReadOnly) return;
                 startScale(mousePosRef.current);
                 logAction('Start Scale (S)');
             }),
-            'r': autoConfirm((e) => {
+            'transform:rotate': autoConfirm((e) => {
                 if (isReadOnly) return;
                 startRotate(mousePosRef.current);
                 logAction('Start Rotate (R)');
             }),
-            'shift+d': autoConfirm((e) => {
+            'nodes:duplicate': autoConfirm((e) => {
                 if (isReadOnly) return;
                 e.preventDefault();
                 const duplicated = duplicateSelected();
@@ -463,7 +469,7 @@ export function Body({
                     logAction('Duplicate Selected (Shift+D)');
                 }
             }),
-            'f': (e) => {
+            'nodes:bundle': (e: any) => {
                 if (mode === 'IDLE') {
                     if (isReadOnly) return;
                     e.preventDefault();
@@ -473,7 +479,7 @@ export function Body({
             },
 
             // Node Operations
-            'delete': () => {
+            'nodes:delete': () => {
                 if (isReadOnly) return;
                 const active = document.activeElement?.tagName;
                 if (active !== 'INPUT' && active !== 'TEXTAREA') {
@@ -482,7 +488,7 @@ export function Body({
                     logAction('Delete Selected');
                 }
             },
-            'x': () => {
+            'nodes:delete-alt': () => {
                 const active = document.activeElement?.tagName;
                 if (active === 'INPUT' || active === 'TEXTAREA') return;
 
@@ -496,17 +502,19 @@ export function Body({
                 }
             },
 
-            'a': autoConfirm((e) => {
-                if (!e.shiftKey && !e.ctrlKey) {
+            'selection:all': autoConfirm((e) => {
+                if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
                     setNodes(nds => nds.map(n => ({ ...n, selected: true })));
                     logAction('Select All (A)');
                 }
             }),
-            'n': (e) => {
+
+            'system:toggle-n-panel': (e: any) => {
                 e.preventDefault();
                 setShowNPanel((prev: boolean) => !prev);
                 logAction('Toggle N Panel (N)');
             },
+
             'm': autoConfirm(() => {
                 const active = document.activeElement?.tagName;
                 if (active === 'INPUT' || active === 'TEXTAREA') return;
@@ -526,26 +534,19 @@ export function Body({
             'y': () => { if (mode === 'GRABBING' || mode === 'SCALING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
 
             // Clipboard
-            'ctrl+c': autoConfirm(() => { copyToClipboard(); logAction('Copy (Ctrl+C)'); }),
-            'cmd+c': autoConfirm(() => { copyToClipboard(); logAction('Copy (Cmd+C)'); }),
-            'ctrl+v': autoConfirm(() => {
+            'clipboard:copy': autoConfirm(() => { copyToClipboard(); logAction('Copy'); }),
+            'clipboard:paste': autoConfirm(() => {
                 if (isReadOnly) return;
                 pasteFromClipboard(project(mousePosRef.current));
-                logAction('Paste (Ctrl+V)');
-            }),
-            'cmd+v': autoConfirm(() => {
-                if (isReadOnly) return;
-                pasteFromClipboard(project(mousePosRef.current));
-                logAction('Paste (Cmd+V)');
+                logAction('Paste');
             }),
 
             // Save
-            'ctrl+s': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project (Ctrl+S)'); }),
-            'cmd+s': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project (Cmd+S)'); }),
+            'system:save': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project'); }),
 
             // Confirmation & Navigation
-            'enter': () => { confirmGrab(); logAction('Confirm (Enter)'); },
-            'escape': () => {
+            'system:confirm': () => { confirmGrab(); logAction('Confirm (Enter)'); },
+            'system:cancel': () => {
                 cancelGrab();
                 closePalette();
                 setShowNPanel(false);
@@ -553,7 +554,7 @@ export function Body({
                 logAction('Cancel/Deselect (Esc)');
             },
 
-            // Numeric Inputs for Transform
+            // Numeric Inputs for Transform (keep as literal keys for now as they are many)
             '0': () => handleTypeNum('0'),
             '1': () => handleTypeNum('1'),
             '2': () => handleTypeNum('2'),
@@ -579,7 +580,7 @@ export function Body({
                     }
                 }
             },
-        },
+        }),
         deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, bundleSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
     });
 
