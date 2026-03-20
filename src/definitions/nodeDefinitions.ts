@@ -60,7 +60,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: {
             type: 'color',
-            value: { type: 'string', value: '#3b82f6', symbol: null, meta: {} }
+            value: { 
+                type: 'color', 
+                value: {
+                    hex: '#3b82f6',
+                    rgb: [59, 130, 246],
+                    vec3: [0.231, 0.510, 0.965]
+                }, 
+                symbol: null, 
+                meta: { role: 'color' } 
+            }
         },
         params: [
             {

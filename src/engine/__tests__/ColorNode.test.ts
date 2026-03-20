@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Brain } from '../Brain';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { DataType } from '../../types/payload';
 
 describe('Color Node Evaluator', () => {
     let brain: Brain;
@@ -13,13 +14,14 @@ describe('Color Node Evaluator', () => {
     it('should correctly parse a hex string into RGB and Vec3', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'Color1', type: 'IO-18', position: { x: 0, y: 0 }, data: { value: '#ff0000' } }
+                { id: 'Color1', type: 'IN-03', position: { x: 0, y: 0 }, data: { value: '#ff0000' } }
             ],
             edges: []
         });
 
         const result = await brain.getValue('Color1');
-        expect(result.value).toEqual({
+        expect(result.type).toBe(DataType.Color);
+        expect(PayloadUtils.unwrap(result)).toEqual({
             hex: '#ff0000',
             rgb: [255, 0, 0],
             vec3: [1, 0, 0]
@@ -29,7 +31,7 @@ describe('Color Node Evaluator', () => {
     it('should be robust when receiving its own output object (idempotency)', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'Color1', type: 'IO-18', position: { x: 0, y: 0 }, data: { value: '#00ff00' } }
+                { id: 'Color1', type: 'IN-03', position: { x: 0, y: 0 }, data: { value: '#00ff00' } }
             ],
             edges: []
         });
@@ -45,15 +47,16 @@ describe('Color Node Evaluator', () => {
         }
 
         const secondResult = await brain.getValue('Color1');
-        expect(secondResult.type).toBe('object');
-        expect((secondResult.value as any).hex).toBe('#00ff00');
-        expect((secondResult.value as any).rgb).toEqual([0, 255, 0]);
+        expect(secondResult.type).toBe(DataType.Color);
+        const secondVal = PayloadUtils.unwrap(secondResult) as any;
+        expect(secondVal.hex).toBe('#00ff00');
+        expect(secondVal.rgb).toEqual([0, 255, 0]);
     });
 
     it('should handle missing # prefix gracefully', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'Color1', type: 'IO-18', position: { x: 0, y: 0 }, data: { value: '0000ff' } }
+                { id: 'Color1', type: 'IN-03', position: { x: 0, y: 0 }, data: { value: '0000ff' } }
             ],
             edges: []
         });
@@ -66,7 +69,7 @@ describe('Color Node Evaluator', () => {
     it('should handle non-string input fallback', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'Color1', type: 'IO-18', position: { x: 0, y: 0 }, data: { value: 123456 } }
+                { id: 'Color1', type: 'IN-03', position: { x: 0, y: 0 }, data: { value: 123456 } }
             ],
             edges: []
         });
@@ -79,7 +82,7 @@ describe('Color Node Evaluator', () => {
     it('should allow MUL operations on Color results (Vec3)', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'Color1', type: 'IO-18', position: { x: 0, y: 0 }, data: { value: '#ff0000' } }, // Vec3: [1, 0, 0]
+                { id: 'Color1', type: 'IN-03', position: { x: 0, y: 0 }, data: { value: '#ff0000' } }, // Vec3: [1, 0, 0]
                 { id: 'Math1', type: 'MA-01', position: { x: 100, y: 0 }, data: { op: 'MUL' } },
             ],
             edges: []
@@ -88,7 +91,7 @@ describe('Color Node Evaluator', () => {
         // Use initialValue!
         brain.applyTransaction({
             type: 'ADD_NODE',
-            payload: { id: 'Scalar1', type: 'IO-01', position: { x: 0, y: 0 }, initialValue: 0.5 }
+            payload: { id: 'Scalar1', type: 'IN-01', position: { x: 0, y: 0 }, initialValue: 0.5 }
         });
 
         // Connect Color.vec3 -> Math.a
@@ -105,22 +108,36 @@ describe('Color Node Evaluator', () => {
 
         const result = await brain.getValue('Math1');
 
-        if (result.type === 'error') {
+        if (result.type === DataType.Error) {
             console.error('Math MUL Error:', result.meta.error);
         }
 
-        expect(result.type).toBe('matrix'); // Output provided by MathNode
+        expect(result.type).toBe(DataType.Array); // Output provided by MathNode (Vector)
+        
+        const unwrapped = PayloadUtils.unwrap(result);
+        const getRawArray = (v: any) => {
+            if (Array.isArray(v)) return v;
+            if (v && v.mathjs === 'Matrix' && Array.isArray(v.data)) return v.data;
+            if (v && typeof v.toArray === 'function') return v.toArray();
+            return v;
+        };
+        const resArray = getRawArray(unwrapped);
+
+        const getVal = (v: any) => {
+            if (v && typeof v === 'object' && v.mathjs === 'BigNumber') return Number(v.value);
+            return Number(v);
+        };
+
         // [1, 0, 0] * 0.5 = [0.5, 0, 0]
-        const resArray = result.value as number[];
-        expect(resArray[0]).toBeCloseTo(0.5);
-        expect(resArray[1]).toBeCloseTo(0);
-        expect(resArray[2]).toBeCloseTo(0);
+        expect(getVal(resArray[0])).toBeCloseTo(0.5);
+        expect(getVal(resArray[1])).toBeCloseTo(0);
+        expect(getVal(resArray[2])).toBeCloseTo(0);
     });
 
     it('should allow ADD operations between Color (Vec3) and Scalar (Broadcasting)', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'Color2', type: 'IO-18', position: { x: 0, y: 0 }, data: { value: '#ff0000' } }, // Vec3: [1, 0, 0]
+                { id: 'Color2', type: 'IN-03', position: { x: 0, y: 0 }, data: { value: '#ff0000' } }, // Vec3: [1, 0, 0]
                 { id: 'Math2', type: 'MA-01', position: { x: 100, y: 0 }, data: { op: 'ADD' } },
             ],
             edges: []
@@ -128,7 +145,7 @@ describe('Color Node Evaluator', () => {
 
         brain.applyTransaction({
             type: 'ADD_NODE',
-            payload: { id: 'Scalar2', type: 'IO-01', position: { x: 50, y: 50 }, initialValue: 0.1 }
+            payload: { id: 'Scalar2', type: 'IN-01', position: { x: 50, y: 50 }, initialValue: 0.1 }
         });
 
         // Connect Color.vec3 -> Math.a
@@ -144,18 +161,33 @@ describe('Color Node Evaluator', () => {
         });
 
         const result = await brain.getValue('Math2');
-        if (result.type === 'error') {
+        if (result.type === DataType.Error) {
             console.error('Math ADD Error:', result.meta.error);
         }
 
-        // Strict Mode might fail here if not relaxed.
         // Expect [1, 0, 0] + 0.1 = [1.1, 0.1, 0.1]
         // If Strict Mode fails, expect error
-        if (result.type === 'error') {
+        if (result.type === DataType.Error) {
             expect(result.meta.error).toContain('Strict Mode');
         } else {
-            expect(result.type).toBe('matrix');
-            expect((result.value as any)[0]).toBeCloseTo(1.1);
+            expect(result.type).toBe(DataType.Array);
+            
+            const unwrapped = PayloadUtils.unwrap(result);
+            const getRawArray = (v: any) => {
+                if (Array.isArray(v)) return v;
+                if (v && v.mathjs === 'Matrix' && Array.isArray(v.data)) return v.data;
+                if (v && typeof v.toArray === 'function') return v.toArray();
+                return v;
+            };
+            const resArray = getRawArray(unwrapped);
+            const getVal = (v: any) => {
+                if (v && typeof v === 'object' && v.mathjs === 'BigNumber') return Number(v.value);
+                return Number(v);
+            };
+
+            expect(getVal(resArray[0])).toBeCloseTo(1.1);
+            expect(getVal(resArray[1])).toBeCloseTo(0.1);
+            expect(getVal(resArray[2])).toBeCloseTo(0.1);
         }
     });
 });

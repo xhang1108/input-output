@@ -80,7 +80,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const bOut = Math.round(bNorm * scaler);
 
         return {
-            type: DataType.Array,
+            type: DataType.Color,
             value: {
                 hex: hex,
                 rgb: [rOut, gOut, bOut],
@@ -90,6 +90,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             meta: {
                 role: 'color',
                 handleMeta: {
+                    hex: { role: 'color', unit: 'string' },
                     rgb: { role: 'color', unit: 'rgb' },
                     vec3: { role: 'color', unit: 'vec3' }
                 }

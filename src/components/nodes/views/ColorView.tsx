@@ -12,13 +12,27 @@ export const ColorView: React.FC<ColorViewProps> = memo(({ payload, depth, onDep
     // Unwrap the payload
     const unwrapped = PayloadUtils.unwrap(payload);
 
-    // Extract display values (fallback to defaults if parsing failed or no input)
-    const colorObject = (unwrapped && typeof unwrapped === 'object' && !Array.isArray(unwrapped) && 'hex' in unwrapped)
-        ? unwrapped as { hex: string; vec3?: number[] }
-        : null;
+    // Helper to parse hex to normalized [0,1] RGB
+    const parseHexToVec3 = (h: string): number[] => {
+        const clean = h.replace('#', '');
+        if (clean.length !== 6) return [0, 0, 0];
+        return [
+            parseInt(clean.slice(0, 2), 16) / 255,
+            parseInt(clean.slice(2, 4), 16) / 255,
+            parseInt(clean.slice(4, 6), 16) / 255
+        ];
+    };
 
-    const hex = colorObject?.hex || '#000000';
-    const vec3 = colorObject?.vec3 || [0, 0, 0];
+    // Extract display values (fallback to defaults if parsing failed or no input)
+    const raw = unwrapped;
+    const colorObject = (raw && typeof raw === 'object' && !Array.isArray(raw) && 'hex' in (raw as object))
+        ? raw as { hex: string; vec3?: number[] }
+        : (typeof raw === 'string' && raw.startsWith('#'))
+            ? { hex: raw, vec3: parseHexToVec3(raw) }
+            : null;
+
+    const hex = colorObject?.hex || (typeof raw === 'string' && raw.length > 0 ? (raw.startsWith('#') ? raw : `#${raw}`) : '#000000');
+    const vec3 = colorObject?.vec3 || (hex.startsWith('#') ? parseHexToVec3(hex) : [0, 0, 0]);
 
     // Display values (Integer space)
     const maxRange = depth === '10bit' ? 1023 : depth === '12bit' ? 4095 : 255;
@@ -32,7 +46,7 @@ export const ColorView: React.FC<ColorViewProps> = memo(({ payload, depth, onDep
         <div className="flex flex-col gap-2 p-1 w-[160px]">
             {/* Color Display (Visual) */}
             <div
-                className="relative h-12 rounded-(--radius-lg) overflow-hidden border border-zinc-800 transition-colors bg-zinc-950/50 mb-2"
+                className="relative h-12 rounded-lg overflow-hidden border border-zinc-800 transition-colors bg-zinc-950/50 mb-2"
                 style={{ backgroundColor: hex }}
             />
 
@@ -44,7 +58,7 @@ export const ColorView: React.FC<ColorViewProps> = memo(({ payload, depth, onDep
                         <input
                             type="number"
                             readOnly
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-(--radius-sm) text-[9px] text-center text-zinc-500 py-1 focus:outline-none cursor-default nodrag"
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-sm text-[9px] text-center text-zinc-500 py-1 focus:outline-none cursor-default nodrag"
                             value={[rVal, gVal, bVal][idx]}
                         />
                     </div>
@@ -72,7 +86,7 @@ export const ColorView: React.FC<ColorViewProps> = memo(({ payload, depth, onDep
                 <div className="flex items-center justify-between px-1 pt-2 border-t border-zinc-800/50 mt-1">
                     <label className="text-[9px] text-zinc-500 font-bold uppercase">Depth</label>
                     <select
-                        className="h-4 text-[8px] bg-zinc-900 border border-zinc-700 rounded-(--radius-sm) px-1 focus:outline-none focus:border-focus text-zinc-300"
+                        className="h-4 text-[8px] bg-zinc-900 border border-zinc-700 rounded-sm px-1 focus:outline-none focus:border-focus text-zinc-300"
                         value={depth}
                         onChange={onDepthChange}
                         onMouseDown={(e) => e.stopPropagation()}

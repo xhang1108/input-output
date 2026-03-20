@@ -45,9 +45,9 @@ export const ResultNode = memo((props: NodeProps) => {
     let effectiveMode: 'text' | 'grid' | 'color' | 'formula' | 'latex' = 'text';
 
     if (viewMode === 'auto') {
-        if (payload?.type === DataType.Array || payload?.type === DataType.Matrix) effectiveMode = 'grid';
+        if (payload?.type === DataType.Color || payload?.meta?.role === 'color' || (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) && 'hex' in (rawValue as object))) effectiveMode = 'color';
+        else if (payload?.type === DataType.Array || payload?.type === DataType.Matrix) effectiveMode = 'grid';
         else if (payload?.type === DataType.Symbolic) effectiveMode = 'formula';
-        else if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) && 'hex' in (rawValue as object)) effectiveMode = 'color';
         else effectiveMode = 'text';
     } else {
         effectiveMode = viewMode;
