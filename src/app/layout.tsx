@@ -19,23 +19,15 @@ export const metadata: Metadata = {
         siteName: "Input-Output",
         title: "Input-Output | Node-based Calculator",
         description: "A free, node-based calculator that visualizes the calculation process. Explore math like never before.",
-        images: [
-            {
-                url: "/og-image.png",
-                width: 1200,
-                height: 630,
-                alt: "I/O System Blueprint Interface",
-            },
-        ],
     },
     twitter: {
         card: "summary_large_image",
         title: "Input-Output | Node-based Calculator",
         description: "A free, node-based calculator that visualizes the calculation process. Build and connect your logic.",
-        images: ["/og-image.png"],
     },
     icons: {
         icon: "/favicon.ico",
+        shortcut: "/logo.webp",
         apple: "/apple-icon.png",
     },
 };

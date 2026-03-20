@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, LayoutGrid, Terminal } from 'lucide-react';
+import { ArrowLeft, BookOpen } from 'lucide-react';
 import { AuthButton } from './AuthButton';
 
 type WikiMode = 'user' | 'developer';
@@ -72,7 +72,7 @@ export function SystemHeader({
                     <div className="h-4 w-px bg-white/10" />
 
                     <div className="flex items-center gap-3">
-                        {isDashboard ? <Terminal className="w-4 h-4 text-primary" /> : <BookOpen className="w-4 h-4 text-primary" />}
+                        <img src="/logo.webp" alt="Logo" className="w-6 h-6 object-contain" />
                         <div className="flex flex-col">
                             <span className="text-sm font-bold tracking-[0.3em] text-white uppercase italic leading-none">{title}</span>
                             {subtitle && <span className="text-[8px] text-text-muted font-mono tracking-widest uppercase mt-1">{subtitle}</span>}

@@ -102,9 +102,22 @@ function SaveSlotCard({
                            ${isCloud ? 'bg-cloud/5' : 'bg-surface-light/20'}`}>
 
                 {loading ? (
-                    <div className="flex flex-col items-center gap-2">
-                        <div className="w-8 h-8 border-2 border-unit border-t-transparent rounded-full animate-spin" />
-                        <span className="text-[10px] uppercase tracking-widest text-unit font-bold">Opening</span>
+                    <div className="flex flex-col items-center gap-3">
+                        <motion.img 
+                            src="/logo.webp" 
+                            alt="Loading" 
+                            className="w-10 h-10 object-contain"
+                            animate={{ 
+                                scale: [1, 1.15, 1],
+                                opacity: [0.7, 1, 0.7]
+                            }}
+                            transition={{ 
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                            }}
+                        />
+                        <span className="text-[10px] uppercase tracking-widest text-unit font-bold animate-pulse">Initialising</span>
                     </div>
                 ) : (
                     <div className="flex items-center gap-3">
@@ -276,7 +289,20 @@ function NewProjectCard({ onClick, isCloud = false, disabled = false, descriptio
                     ? 'bg-cloud/20 text-text-cloud group-hover:bg-cloud/20'
                     : 'bg-surface-light text-text-muted group-hover:bg-unit/20 group-hover:text-unit'}`}>
                 {loading ? (
-                    <div className="w-6 h-6 border-2 border-unit border-t-transparent rounded-full animate-spin" />
+                    <motion.img 
+                        src="/logo.webp" 
+                        alt="Loading" 
+                        className="w-8 h-8 object-contain"
+                        animate={{ 
+                            scale: [1, 1.1, 1],
+                            opacity: [0.5, 1, 0.5]
+                        }}
+                        transition={{ 
+                            duration: 1.5,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }}
+                    />
                 ) : (
                     isCloud ? <Cloud className="w-6 h-6" /> : <Plus className="w-6 h-6" />
                 )}
@@ -596,10 +622,15 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
 
     return (
         <div className="flex-1 flex flex-col overflow-auto bg-black relative">
-            {/* Sync Status Floating Indicator */}
             {isLoadingCloud && (
                 <div className="absolute top-6 right-8 flex items-center gap-2 px-3 py-1.5 bg-cloud/10 border border-cloud/20 rounded-full z-20">
-                    <div className="w-3 h-3 border-2 border-text-cloud border-t-transparent rounded-full animate-spin" />
+                    <motion.img 
+                        src="/logo.webp" 
+                        alt="Syncing" 
+                        className="w-3 h-3 object-contain"
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                    />
                     <span className="text-[10px] font-bold text-text-cloud uppercase tracking-widest">Syncing Cloud</span>
                 </div>
             )}
