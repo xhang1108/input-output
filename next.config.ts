@@ -13,8 +13,7 @@ const nextConfig: NextConfig = {
     'canvas'
   ],
 
-  // Standalone output is required for Next.js full-stack features (API routes, Auth)
-  output: 'standalone',
+  // Standalone output is not required for Vercel
 
   // Optimization: Disable source maps to save memory during the bundling phase
   productionBrowserSourceMaps: false,

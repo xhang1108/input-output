@@ -1,17 +1,17 @@
-import { integer, sqliteTable, text, primaryKey } from "drizzle-orm/sqlite-core";
+import { integer, pgTable, text, primaryKey, timestamp } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
-export const users = sqliteTable("user", {
+export const users = pgTable("user", {
     id: text("id")
         .primaryKey()
         .$defaultFn(() => crypto.randomUUID()),
     name: text("name"),
     email: text("email").unique(),
-    emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
+    emailVerified: timestamp("emailVerified", { mode: "date" }),
     image: text("image"),
 });
 
-export const accounts = sqliteTable(
+export const accounts = pgTable(
     "account",
     {
         userId: text("userId")
@@ -35,20 +35,20 @@ export const accounts = sqliteTable(
     ]
 );
 
-export const sessions = sqliteTable("session", {
+export const sessions = pgTable("session", {
     sessionToken: text("sessionToken").primaryKey(),
     userId: text("userId")
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
-    expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
 });
 
-export const verificationTokens = sqliteTable(
+export const verificationTokens = pgTable(
     "verificationToken",
     {
         identifier: text("identifier").notNull(),
         token: text("token").notNull(),
-        expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+        expires: timestamp("expires", { mode: "date" }).notNull(),
     },
     (vt) => [
         primaryKey({ columns: [vt.identifier, vt.token] }),
@@ -56,7 +56,7 @@ export const verificationTokens = sqliteTable(
 );
 
 // Our custom Graph table
-export const graphs = sqliteTable("graph", {
+export const graphs = pgTable("graph", {
     id: text("id").primaryKey(), // We will use UUIDv7 generated from the client/server
     userId: text("userId")
         .notNull()
@@ -66,6 +66,6 @@ export const graphs = sqliteTable("graph", {
     visibility: text("visibility").default("private"), // 'private' or 'public'
     nodeCount: integer("nodeCount").default(0),
     edgeCount: integer("edgeCount").default(0),
-    createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
-    updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull(),
 });

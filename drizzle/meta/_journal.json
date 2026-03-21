@@ -1,26 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1773126840373,
-      "tag": "0000_yellow_hellion",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1773361589794,
-      "tag": "0001_great_namorita",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1773384614868,
-      "tag": "0002_mysterious_tarot",
+      "version": "7",
+      "when": 1774080518975,
+      "tag": "0000_needy_microchip",
       "breakpoints": true
     }
   ]
