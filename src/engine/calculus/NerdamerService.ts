@@ -1,14 +1,10 @@
+import nerdamer from 'nerdamer';
+import 'nerdamer/all';
+import { InputOutputEngineInterface } from '../interfaces/InputOutputEngineInterface';
+import { MATH_CONFIG } from '../mathConfig';
+
 /**
  * 🧮 NerdamerService: Symbolic Math Engine Facade
- *
- * Provides a unified interface to Nerdamer for all calculus nodes.
- * Implements LRU cache for compiled JS functions and terminal-only
- * simplification to avoid mid-pipeline performance degradation.
- *
- * Design principles:
- * - Slider updates NEVER trigger symbolic re-computation
- * - Simplification is terminal-only (display layer, not logic layer)
- * - LRU cache prevents memory leaks from formula variants
  */
 
 // LRU Cache implementation for compiled math functions
@@ -56,12 +52,14 @@ export class NerdamerService {
     private compiledFnCache: LRUCache<string, Function>;
 
     private constructor() {
-        // Phase 4.1: Externalize nerdamer to CDN for client-side to bypass build timeouts
-        if (typeof window !== 'undefined' && (window as any).nerdamer) {
-            this.nerdamer = (window as any).nerdamer;
+        // 💡 Pattern: Context-Aware Loading
+        const globalNerd = (typeof self !== 'undefined' && (self as any).nerdamer) || (typeof window !== 'undefined' && (window as any).nerdamer);
+        
+        if (globalNerd) {
+            this.nerdamer = globalNerd;
         } else {
-            // Server-side / Build-time: Use eval('require') to hide from bundler
-            this.nerdamer = eval('require')('nerdamer/all');
+            // Server-side / Node / Standard Bundled Client
+            this.nerdamer = nerdamer;
         }
         this.compiledFnCache = new LRUCache(256);
     }

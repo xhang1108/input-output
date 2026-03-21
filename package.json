@@ -63,7 +63,6 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260310.1",
     "@tailwindcss/postcss": "^4",
     "@types/katex": "^0.16.8",
     "@types/mathjs": "^9.4.1",

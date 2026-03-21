@@ -1,5 +1,4 @@
-// Phase 4.1: Externalize mathjs to CDN for client-side to bypass build timeouts
-// We no longer statically import mathjs to prevent it from being bundled.
+import * as math from 'mathjs';
 import { InputOutputEngineInterface } from './interfaces/InputOutputEngineInterface';
 import { MATH_CONFIG } from './mathConfig';
 
@@ -8,14 +7,15 @@ export class InputOutputEngine implements InputOutputEngineInterface {
     private math: any;
 
     private constructor() {
-        // Phase 4.1: Externalize mathjs to CDN for client-side to bypass build timeouts
-        if (typeof window !== 'undefined' && (window as any).math) {
-            this.math = (window as any).math;
+        // 💡 Pattern: Context-Aware Loading
+        // 1. Check for global math instance (Worker CDN / Browser CDN)
+        const globalMath = (typeof self !== 'undefined' && (self as any).math) || (typeof window !== 'undefined' && (window as any).math);
+        
+        if (globalMath && typeof globalMath.create === 'function') {
+            this.math = globalMath;
         } else {
-            // Server-side / Build-time: Use eval('require') to hide from bundler
-            // This ensures mathjs is never scanned during client-side bundling
-            const m = eval('require')('mathjs');
-            this.math = m.create(m.all, MATH_CONFIG);
+            // 2. Fallback to imported math (Node.js / Standard Bundled Client)
+            this.math = math.create(math.all, MATH_CONFIG);
         }
     }
 

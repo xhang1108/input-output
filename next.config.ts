@@ -3,7 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Turbopack disabled for production builds due to timeout issues.
   
-  // Phase 4.1: Externalize heavy libraries to CDN to bypass 20-minute build timeouts.
+  // Externalize heavy libraries to avoid bundling them into serverless functions.
+  // This keeps the cold start fast and the deployment manageable.
   serverExternalPackages: [
     'elkjs', 
     'mathjs',
@@ -14,7 +15,6 @@ const nextConfig: NextConfig = {
   ],
 
   // Standalone output is not required for Vercel
-
   // Optimization: Disable source maps to save memory during the bundling phase
   productionBrowserSourceMaps: false,
 
@@ -22,22 +22,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Note: 'transpilePackages' has been removed for packages that are already in 'serverExternalPackages'.
-  // transpilePackages: [],
-
-  /* 
-   * Externalization is managed through code-level conditional loading (window vs eval('require')).
-   * We use the Webpack block as a fallback for stability when not using Turbopack.
-   */
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.externals = [...(config.externals || []), {
-        mathjs: 'math',
-        nerdamer: 'nerdamer'
-      }];
-    }
-    return config;
-  }
+  // Note: No custom webpack or Turbopack config needed for standard Vercel deployment.
 };
 
 export default nextConfig;
