@@ -31,17 +31,13 @@ export async function generateStaticParams() {
   params.push({ slug: ['user'] }); 
   params.push({ slug: ['developer'] }); 
   
-  // Deep paths
+  // Section paths (This is what the UI actually navigates to)
   userSections.forEach(section => {
-    section.items.forEach(doc => {
-      params.push({ slug: ['user', doc.id] });
-    });
+    params.push({ slug: ['user', section.slug] });
   });
   
   developerSections.forEach(section => {
-    section.items.forEach(doc => {
-      params.push({ slug: ['developer', doc.id] });
-    });
+    params.push({ slug: ['developer', section.slug] });
   });
 
   return params;

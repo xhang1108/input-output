@@ -14,7 +14,6 @@ const nextConfig: NextConfig = {
     'canvas'
   ],
 
-  // Standalone output is not required for Vercel
   // Optimization: Disable source maps to save memory during the bundling phase
   productionBrowserSourceMaps: false,
 
@@ -22,7 +21,20 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Note: No custom webpack or Turbopack config needed for standard Vercel deployment.
+  async redirects() {
+    return [
+      {
+        source: '/user',
+        destination: '/wiki/user',
+        permanent: true,
+      },
+      {
+        source: '/developer',
+        destination: '/wiki/developer',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
