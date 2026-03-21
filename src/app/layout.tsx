@@ -1,6 +1,7 @@
 import "./globals.css";
 import { AppProviders } from "@/components/AppProviders";
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 
 export const metadata: Metadata = {
     title: {
@@ -53,6 +54,9 @@ export default function RootLayout({
                 suppressHydrationWarning
             >
                 <AppProviders>{children}</AppProviders>
+                {/* Externalized heavy libraries to bypass Cloudflare build timeouts */}
+                <Script src="https://unpkg.com/mathjs@14.2.1/lib/browser/math.js" strategy="beforeInteractive" />
+                <Script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js" strategy="afterInteractive" />
             </body>
         </html>
     );

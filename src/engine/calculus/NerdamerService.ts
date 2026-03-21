@@ -56,8 +56,13 @@ export class NerdamerService {
     private compiledFnCache: LRUCache<string, Function>;
 
     private constructor() {
-        // Dynamic require to avoid bundler issues
-        this.nerdamer = require('nerdamer/all');
+        // Phase 4.1: Externalize nerdamer to CDN for client-side to bypass build timeouts
+        if (typeof window !== 'undefined' && (window as any).nerdamer) {
+            this.nerdamer = (window as any).nerdamer;
+        } else {
+            // Server-side / Build-time: Use eval('require') to hide from bundler
+            this.nerdamer = eval('require')('nerdamer/all');
+        }
         this.compiledFnCache = new LRUCache(256);
     }
 

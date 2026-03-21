@@ -1,7 +1,5 @@
-import {
-    create,
-    all,
-} from 'mathjs';
+// Phase 4.1: Externalize mathjs to CDN for client-side to bypass build timeouts
+// We no longer statically import mathjs to prevent it from being bundled.
 import { InputOutputEngineInterface } from './interfaces/InputOutputEngineInterface';
 import { MATH_CONFIG } from './mathConfig';
 
@@ -10,8 +8,15 @@ export class InputOutputEngine implements InputOutputEngineInterface {
     private math: any;
 
     private constructor() {
-        // Use shared MATH_CONFIG to guarantee parity with Web Worker
-        this.math = create(all, MATH_CONFIG);
+        // Phase 4.1: Externalize mathjs to CDN for client-side to bypass build timeouts
+        if (typeof window !== 'undefined' && (window as any).math) {
+            this.math = (window as any).math;
+        } else {
+            // Server-side / Build-time: Use eval('require') to hide from bundler
+            // This ensures mathjs is never scanned during client-side bundling
+            const m = eval('require')('mathjs');
+            this.math = m.create(m.all, MATH_CONFIG);
+        }
     }
 
     public static getInstance(): InputOutputEngine {
