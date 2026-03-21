@@ -8,8 +8,18 @@ interface MarkdownRendererProps {
     content: string;
 }
 
-import { NodeDemo } from './NodeDemo';
-import { CircuitDemo } from './CircuitDemo';
+import dynamic from 'next/dynamic';
+
+const NodeDemo = dynamic(() => import('./NodeDemo').then(m => m.NodeDemo), { 
+    ssr: false,
+    loading: () => <div className="w-full h-24 animate-pulse bg-white/5 rounded-xl border border-white/5" />
+});
+
+const CircuitDemo = dynamic(() => import('./CircuitDemo').then(m => m.CircuitDemo), { 
+    ssr: false,
+    loading: () => <div className="w-full h-32 animate-pulse bg-white/5 rounded-xl border border-white/5" />
+});
+
 import { DynamicSectionHeader } from './DynamicSectionHeader';
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
