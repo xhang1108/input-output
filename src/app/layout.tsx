@@ -2,6 +2,9 @@ import "./globals.css";
 import { AppProviders } from "@/components/AppProviders";
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 export const metadata: Metadata = {
     title: {
@@ -13,6 +16,9 @@ export const metadata: Metadata = {
     authors: [{ name: "Input-Output Team" }],
     creator: "Input-Output",
     metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.input-output.cc'),
+    alternates: {
+        canonical: '/',
+    },
     openGraph: {
         type: "website",
         locale: "zh_TW",
@@ -54,6 +60,9 @@ export default function RootLayout({
                 suppressHydrationWarning
             >
                 <AppProviders>{children}</AppProviders>
+                <SpeedInsights />
+                <Analytics />
+                {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />}
                 {/* Externalized heavy libraries to bypass Cloudflare build timeouts */}
                 <Script src="https://unpkg.com/mathjs@14.2.1/lib/browser/math.js" strategy="beforeInteractive" />
                 <Script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js" strategy="afterInteractive" />
