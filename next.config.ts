@@ -1,34 +1,31 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Phase 4.1: Turbopack handles Workers natively; we fall back to Webpack for production to avoid bundling timeouts
+  // Acknowledge Turbopack per the CLI's suggestion for Next.js 16+
+  turbopack: {},
+  
+  // Mark heavy modules as external to avoid OOM during bundling
   serverExternalPackages: [
     'elkjs', 
     'drizzle-orm', 
-    '@auth/drizzle-adapter', 
-    'better-sqlite3', 
-    'uuid',
     'mathjs',
     'nerdamer',
     'vega',
     'vega-lite',
     'canvas'
   ],
-  transpilePackages: ['mathjs', 'nerdamer', 'elkjs', 'vega', 'vega-lite'],
+
+  // Standalone output is more reliable for Cloudflare/Serverless environments
+  output: 'standalone',
+
+  // Optimization: Disable source maps to save memory
   productionBrowserSourceMaps: false,
+
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  webpack: (config) => {
-    // Enable native Web Worker support (webpack 5 production builds)
-    if (config.output) {
-      config.output.workerChunkLoading = 'import';
-    }
-    return config;
-  },
+
+  // Note: 'eslint' key is intentionally omitted as it was reported as unrecognized in the build logs.
 };
 
 export default nextConfig;
