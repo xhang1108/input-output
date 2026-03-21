@@ -7,7 +7,7 @@ export const metadata: Metadata = {
         default: "Input-Output | Node-based Calculator",
         template: "%s | Input-Output",
     },
-    description: "Input-Output is a free, node-based calculator that visualizes the calculation process. Build, connect, and explore mathematical logic with an intuitive graphical interface.",
+    description: "A free, node-based calculator that visualizes the calculation process. Build and connect your logic.",
     keywords: ["Node-based Calculator", "Visual Calculation", "Mathematical Logic", "Free Tools", "Input-Output", "Graph-based Math"],
     authors: [{ name: "Input-Output Team" }],
     creator: "Input-Output",
@@ -15,10 +15,10 @@ export const metadata: Metadata = {
     openGraph: {
         type: "website",
         locale: "zh_TW",
-        url: "https://io.singularity.com", // Placeholder, will be relevant if deployed
+        url: "https://input-output.cc",
         siteName: "Input-Output",
         title: "Input-Output | Node-based Calculator",
-        description: "A free, node-based calculator that visualizes the calculation process. Explore math like never before.",
+        description: "A free, node-based calculator that visualizes the calculation process. Build and connect your logic.",
     },
     twitter: {
         card: "summary_large_image",

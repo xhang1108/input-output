@@ -7,9 +7,9 @@ export const Footer: React.FC = () => {
         <footer className="w-full border-t border-white/5 bg-black/20 backdrop-blur-sm px-12 py-2">
             <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-medium tracking-widest uppercase text-zinc-500">
                 {/* LEFT: Website */}
-                <a 
-                    href="https://www.nobaggage2rome.com" 
-                    target="_blank" 
+                <a
+                    href="https://www.nobaggage2rome.com"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-primary transition-colors duration-200"
                 >
@@ -25,7 +25,7 @@ export const Footer: React.FC = () => {
                 </div>
 
                 {/* RIGHT: Email */}
-                <a 
+                <a
                     href="mailto:contact@nobaggage2rome.com"
                     className="hover:text-primary transition-colors duration-200"
                 >

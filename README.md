@@ -1,85 +1,52 @@
-# 🧠 input-output
+# <img src="./public/logo.webp" height="48" align="center" style="margin-right: 12px;" /> input-output
 
-**input-output** is a high-performance, node-based visual calculator designed for complex calculation workflows. Built with a robust **React/Next.js** architecture using **React Flow**, input-output provides a seamless and intuitive way to design, visualize, and execute mathematical logic.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/Version-1.0.0-green)](https://github.com/xhang1108/input-output)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Donate-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/nobaggage2rome)
+[![Website](https://img.shields.io/badge/Website-nobaggage2rome-red)](https://www.nobaggage2rome.com)
 
-## ✨ Key Features
+**A free, node-based calculator that visualizes the calculation process. Build and connect your logic.**
 
-- **Node-Based Interface:** Design calculations visually by connecting nodes.
-- **Fine-Grained Reactivity:** Experience instant updates across the entire graph as you change inputs.
-- **Specialized Node Types:**
-  - **Input Nodes:** Provide raw values or variables.
-  - **Math Nodes:** Perform Arithmetic operations (Add, Sub, Mul, Div).
-  - **Logic Nodes:** Perform boolean operations (AND, OR, XOR, NAND).
-  - **Comparison Nodes:** Compare values (>, <, =, ≠) with visual LED feedback.
-  - **Unary Nodes:** Handle single-input operations (e.g., Negate, Sin, Cos).
-  - **Slider Nodes:** Interactive real-time value adjustment.
-  - **Output Nodes:** Visualize results with real-time tracking.
-- **High-Precision Engine:** Powered by `mathjs` BigNumber and frame-level caching for O(N) performance.
-- **Auto-Layout:** Instant organization of complex graphs using Elk.js.
-- **Premium UI:** A sleek, dark-themed interface optimized for both desktop and mobile.
-- **Fluid Interactions:** Blender-style edge detachment (drag from input to disconnect) and auto-snap.
-- **Persistence System:**
-  - **Auto-Save:** Sessions are cached using `useMouth` (LocalStorage).
-  - **Manual Controls:** Save, Load, and Reset directly from the UI panel.
-  - **Export:** Download graph state as JSON for backup or sharing.
-- **Mobile Optimizations:** Built-in virtual keyboard avoidance and touch-friendly controls.
+### [www.input-output.cc](https://www.input-output.cc)
+Some scummy domain registrars snatched the domain I wanted. I urge everyone to stop searching on those dirt-cheap domain sites.
 
-## 🛠️ Tech Stack
+## Core Capabilities
 
-- **Framework:** [Next.js](https://nextjs.org/) (React)
-- **Graph Engine:** [@xyflow/react](https://reactflow.dev/) (React Flow)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **Icons:** [Lucide React](https://lucide.dev/)
-- **State Management:** React-based dependency tracking for the calculation engine.
-- **Utilities:** [Sonner](https://sonner.emilkowal.ski/) (Toasts), [Nanoid](https://github.com/ai/nanoid) (IDs), [MathJS](https://mathjs.org/) (Symbolic Math)
+- **Unified Engine**: Single interface for `mathjs`, `nerdamer`, `vega-lite`, and `elkjs`.
+- **Vega-Lite Plotting**: High-performance dynamic data visualization.
+- **Precise Math**: Minimalist handling of arbitrary precision and complex logic.
+- **IOGL Protocol**: Markdown-like text format for graph serialization.
+- **AI-Scribe**: IOGL node generation via the `iogl-scribe` skill.
 
-## 🔄 System Architecture
+## Dependencies
 
-input-output adopts a unique "Body Metaphor" for its codebase naming convention:
+| Module | Libraries Used |
+| :--- | :--- |
+| **Logic & UI** | `React 19`, `Next.js 16`, `Tailwind CSS 4`, `Framer Motion` |
+| **Graph Engine** | `@xyflow/react`, `Elk.js` |
+| **Math & Symbols** | `MathJS`, `Nerdamer`, `KaTeX`, `tex-math-parser` |
+| **Data Viz** | `Vega`, `Vega-Lite`, `React-Vega` |
+| **State & Sync** | `Zustand`, `LZ‑String`, `Nanoid` |
+| **Infrastructure** | `Drizzle ORM`, `Next-Auth`, `Radix UI` |
 
-- **🧠 Brain** (`src/engine/Brain.ts`): The core computational engine.
-- **⚡ Nerves** (`src/nerves/`): Custom hooks connecting the Brain to the Body (e.g., `useHand` for interactions, `useEye` for viewport).
-- **🧍 Body** (`src/components/Body.tsx`): The main React Flow canvas.
+## Getting Started
 
-> [!TIP]
-> **For Developers:**
-> Deep linguistic details, the "Black Magic" of the engine, and the atomic design philosophy are documented in [DEVELOPMENT.md](./DEVELOPMENT.md).
-
-## 🚀 Getting Started
-
-First, install the dependencies:
-
+### Installation
 ```bash
 npm install
 ```
 
-Then, run the development server:
-
+### Development
 ```bash
 npm run dev
 ```
+Open [http://localhost:3000](http://localhost:3000) to access the local environment.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-### Testing
-
-Run the test suite with:
-
+### Quality Control
 ```bash
-npm test
-# or for a single run
-npm run test:run
+npm run test       # Continuous testing
+npm run test:run   # Single pass
 ```
 
-## 🔮 Future Roadmap
-
-- [x] **Advanced Math:** Support for trigonometry, powers, and roots (Math Nodes).
-- [x] **Persistence:** Local storage auto-save and manual controls.
-- [x] **Export:** Save your graphs as JSON.
-- [x] **Logic Gates:** Integration of `if/else` and comparison operators.
-- [x] **Auto Layout:** Intelligent graph organization (Elk.js).
-- [ ] **Export Options:** Save graphs as high-resolution images (PNG/SVG).
-- [ ] **Cloud Sync:** Multi-device synchronization.
-
----
-Built with ❤️ by the input-output Team.
+Built by the **input-output** Team.
+© 2026. All rights Reserved.
