@@ -1,4 +1,4 @@
-import { MathNode } from 'mathjs';
+import type { MathNode } from 'mathjs';
 
 /**
  * 💡 MathCompileCache: Centralized String-to-Code Optimization

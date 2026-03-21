@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Acknowledge Turbopack per the CLI's suggestion for Next.js 16+
-  turbopack: {},
+  // Turbopack disabled for production builds due to timeout issues.
   
   // Phase 4.1: Externalize heavy libraries to CDN to bypass 20-minute build timeouts.
   serverExternalPackages: [
@@ -29,9 +28,18 @@ const nextConfig: NextConfig = {
   // transpilePackages: [],
 
   /* 
-   * NOTE: Custom 'webpack' block has been removed to resolve TurbopackInternalError in Next.js 16.
-   * Externalization is now handled via code-level conditional loading (window vs eval('require')).
+   * Externalization is managed through code-level conditional loading (window vs eval('require')).
+   * We use the Webpack block as a fallback for stability when not using Turbopack.
    */
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.externals = [...(config.externals || []), {
+        mathjs: 'math',
+        nerdamer: 'nerdamer'
+      }];
+    }
+    return config;
+  }
 };
 
 export default nextConfig;
