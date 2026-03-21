@@ -20,6 +20,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+export async function generateStaticParams() {
+  const userSections = getWikiData('user');
+  const developerSections = getWikiData('developer');
+  
+  const params: { slug: string[] }[] = [];
+  
+  // Base paths
+  params.push({ slug: [] }); 
+  params.push({ slug: ['user'] }); 
+  params.push({ slug: ['developer'] }); 
+  
+  // Deep paths
+  userSections.forEach(section => {
+    section.items.forEach(doc => {
+      params.push({ slug: ['user', doc.id] });
+    });
+  });
+  
+  developerSections.forEach(section => {
+    section.items.forEach(doc => {
+      params.push({ slug: ['developer', doc.id] });
+    });
+  });
+
+  return params;
+}
+
+export const dynamicParams = false;
+
 export default async function WikiPage({ params }: PageProps) {
   const { slug } = await params;
   const mode = slug?.[0] || 'user';

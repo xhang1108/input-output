@@ -6,7 +6,6 @@ const nextConfig: NextConfig = {
   // Phase 4.1: Externalize heavy libraries to CDN to bypass 20-minute build timeouts.
   serverExternalPackages: [
     'elkjs', 
-    'drizzle-orm', 
     'mathjs',
     'nerdamer',
     'vega',

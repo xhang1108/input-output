@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { requireAuth } from "@/auth";
 import { getGraphById, updateGraph, deleteGraph } from "@/db/queries";
 import { NextRequest, NextResponse } from "next/server";

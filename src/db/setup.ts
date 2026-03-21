@@ -19,10 +19,12 @@ export function getDb() {
     if (process.env.NODE_ENV === "development") {
         if (!localDbCache) {
             // console.warn("⚠️ D1 Binding 'DB' not found. Falling back to local SQLite (.wrangler/state/v3/d1).");
-            const Database = require('better-sqlite3');
-            const { drizzle: drizzleSqlite } = require('drizzle-orm/better-sqlite3');
-            const fs = require('fs');
-            const path = require('path');
+            // Stealth require to hide Node.js modules from Edge runtime bundler
+            const _req = eval('require');
+            const Database = _req('better-sqlite3');
+            const { drizzle: drizzleSqlite } = _req('drizzle-orm/better-sqlite3');
+            const fs = _req('fs');
+            const path = _req('path');
             
             const v3Dir = path.resolve('.wrangler/state/v3/d1/miniflare-D1DatabaseObject');
             let sqliteFile = '';
