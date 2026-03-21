@@ -11,11 +11,11 @@ export const metadata: Metadata = {
     keywords: ["Node-based Calculator", "Visual Calculation", "Mathematical Logic", "Free Tools", "Input-Output", "Graph-based Math"],
     authors: [{ name: "Input-Output Team" }],
     creator: "Input-Output",
-    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.input-output.cc'),
     openGraph: {
         type: "website",
         locale: "zh_TW",
-        url: "https://input-output.cc",
+        url: "https://www.input-output.cc",
         siteName: "Input-Output",
         title: "Input-Output | Node-based Calculator",
         description: "A free, node-based calculator that visualizes the calculation process. Build and connect your logic.",

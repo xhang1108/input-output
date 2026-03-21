@@ -176,6 +176,9 @@ export class Brain {
     private startHeartbeat() {
         if (this.heartbeatInterval) return;
 
+        // SSR/Build Guard: Never start heartbeats in Node.js environment during build
+        if (typeof window === 'undefined') return;
+
         this.heartbeatInterval = setInterval(async () => {
             // 1. Global Visual Tick
             const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -208,6 +211,7 @@ export class Brain {
             }
         }, this.HEARTBEAT_MS);
     }
+
 
     /** Force reset the heartbeat (Testing only) */
     public resetHeartbeat() {

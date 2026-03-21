@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: '/api/',
         },
-        sitemap: 'https://input-output.dev/sitemap.xml',
+        sitemap: 'https://www.input-output.cc/sitemap.xml',
     };
 }
