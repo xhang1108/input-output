@@ -3,7 +3,13 @@ import { NodeProps, Position } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
-import { VegaEmbed } from 'react-vega';
+import dynamic from 'next/dynamic';
+
+// Next.js SSR guard: Prevent C++ native canvas addon from crashing OpenNext edge/worker bundles
+const VegaEmbed = dynamic(
+    () => import('react-vega').then((mod) => mod.VegaEmbed),
+    { ssr: false }
+);
 
 export const PlotNode = memo((props: NodeProps) => {
     const { data, id } = props;
