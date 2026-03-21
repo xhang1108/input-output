@@ -14,8 +14,8 @@ const nextConfig: NextConfig = {
     'canvas'
   ],
 
-  // Standalone output is more reliable for Cloudflare/Serverless environments
-  output: 'standalone',
+  // Use Static Export for optimal compatibility with Cloudflare Pages
+  output: 'export',
 
   // Optimization: Disable source maps to save memory during the bundling phase
   productionBrowserSourceMaps: false,
