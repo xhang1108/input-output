@@ -14,8 +14,8 @@ const nextConfig: NextConfig = {
     'canvas'
   ],
 
-  // Use Static Export for optimal compatibility with Cloudflare Pages
-  output: 'export',
+  // Standalone output is required for Next.js full-stack features (API routes, Auth)
+  output: 'standalone',
 
   // Optimization: Disable source maps to save memory during the bundling phase
   productionBrowserSourceMaps: false,
