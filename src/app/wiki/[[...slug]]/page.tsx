@@ -59,6 +59,7 @@ export default async function WikiPage({ params }: PageProps) {
       initialUserSections={userSections}
       initialDeveloperSections={developerSections}
       initialSlug={initialSlug}
+      initialMode={mode as any}
     />
   );
 }

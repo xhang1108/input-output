@@ -70,7 +70,7 @@ const WikiSidebar = React.memo(({
     onNavigate: (sectionId: string, itemId?: string, anchorId?: string) => void
 }) => {
     return (
-        <aside className="w-72 shrink-0 hidden lg:block sticky top-20 self-start max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar border-r border-white/5 pr-6 py-4">
+        <aside className="w-72 shrink-0 hidden lg:block sticky top-14 self-start max-h-[calc(100vh-56px)] overflow-y-auto no-scrollbar border-r border-white/5 pr-6 py-4">
             <div className="mb-10 p-4 border border-white/5 bg-white/2 bg-linear-to-br from-white/3 to-transparent rounded-xl">
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1.5">
@@ -161,19 +161,9 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
     const isNavigatingRef = useRef(false);
     const router = useRouter();
 
-    // Automatically switch mode based on URL if not already set correctly
-    useEffect(() => {
-        const pathParts = window.location.pathname.split('/').filter(Boolean);
-        // Path should be /wiki/[mode]/[slug]
-        if (pathParts[0] === 'wiki') {
-            const pathMode = pathParts[1] as WikiMode;
-            if (pathMode === 'user' || pathMode === 'developer') {
-                if (pathMode !== mode) {
-                    setMode(pathMode);
-                }
-            }
-        }
-    }, [mode]);
+    // Mode is now passed as a prop from the server-side page.tsx, so we don't need to sync it here.
+    // This prevents a double-render on every initial page load.
+
 
     const activeSection = useMemo(() => sections.find((s: WikiDocSection) => s.id === activeSectionId) || sections[0], [sections, activeSectionId]);
 
@@ -227,16 +217,19 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                     const el = document.getElementById(scrollTargetId!);
                     if (el) {
                         el.scrollIntoView({ behavior: 'auto', block: 'start' });
-                        setTimeout(() => { isNavigatingRef.current = false; }, 400);
-                    } else if (attempts < 20) {
+                        // Keep isNavigating true for a bit longer to let observer stabilize
+                        setTimeout(() => { isNavigatingRef.current = false; }, 600);
+                    } else if (attempts < 30) {
                         attempts++;
-                        setTimeout(tryInstantScroll, 30);
+                        setTimeout(tryInstantScroll, 40);
                     } else {
                         isNavigatingRef.current = false;
                     }
                 };
-                setTimeout(tryInstantScroll, 50);
+                setTimeout(tryInstantScroll, 100);
             } else {
+                // If no item, we just wanted the section. useLayoutEffect will reset to top.
+                // We keep isNavigating true so useLayoutEffect knows to reset scroll.
                 setTimeout(() => { isNavigatingRef.current = false; }, 400);
             }
         } else {
@@ -253,12 +246,14 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                 const el = document.getElementById(scrollTargetId);
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Keep true during smooth scroll animation
                     setTimeout(() => { isNavigatingRef.current = false; }, 1000);
                 } else {
+                    // Item might be rendering via progressive loader, try once more or give up
                     isNavigatingRef.current = false;
                 }
             };
-            setTimeout(performSmooth, 50);
+            setTimeout(performSmooth, 100);
         }
     }, [activeSectionId, sections, router]);
 
@@ -288,20 +283,19 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
         if (!activeSection.id) return;
 
         // 1. Conditional Scroll Reset: Only reset if navigation was manually triggered (click)
-        // If isNavigatingRef is false, it means the section changed due to SCROLLING, so don't reset.
-        if (isNavigatingRef.current && scrollerRef.current) {
+        // AND we are NOT going to a specific item (which would handle its own scrolling).
+        if (isNavigatingRef.current && scrollerRef.current && !activeItemId) {
             scrollerRef.current.scrollTop = 0;
         }
 
-        // 2. Progressive Loading Reset: Start with a small count to ensure fast first paint
-        // This solves the lag issue on heavy "Node" pages by not mounting 30+ items at once.
-        setVisibleItemsCount(6);
+        // 2. Progressive Loading Reset: Start with a small count if just scrolling or switching sections.
+        // If we are navigating to a specific item, handleNavigate already set a high enough count.
+        if (!isNavigatingRef.current) {
+            setVisibleItemsCount(6);
+        }
 
-        // 3. Clear any existing navigation flags after a safety timeout
-        const timer = setTimeout(() => {
-            isNavigatingRef.current = false;
-        }, 150);
-        return () => clearTimeout(timer);
+        // 3. We DON'T clear isNavigatingRef here immediately, 
+        // as handleNavigate's timeouts need to finish their scroll first.
     }, [activeSection.id]);
 
     // 🚀 Progressive Loader: Incrementally load more items to fill the section without hanging the UI thread

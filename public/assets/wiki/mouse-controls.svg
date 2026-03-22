@@ -6,7 +6,7 @@
     .mouse-stroke { stroke: #3f3f46; stroke-width: 1.2; }
     .mouse-divider { stroke: #3f3f46; stroke-width: 1; opacity: 0.3; }
     
-    .row-desc { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 401; fill: #a1a1aa; font-style: italic; }
+    .row-desc { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 401; fill: #a1a1aa; }
     .kbd-bg { stroke: #3f3f46; stroke-width: 1; }
     .kbd-text { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 800; fill: #ffffff; text-transform: uppercase; }
   </style>
