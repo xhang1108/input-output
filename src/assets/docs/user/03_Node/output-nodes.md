@@ -17,7 +17,7 @@ Primary display node for any data type (Scalar, Array, Symbolic).
 ```playground
 {
   "nodeType": "OT-01",
-  "initialData": { "label": "Final Result" }
+  "initialData": { }
 }
 ```
 
@@ -30,13 +30,12 @@ Boolean indicator for monitoring thresholds or conditions.
 ```playground
 {
   "nodeType": "OT-02",
-  "initialData": { "label": "Pipeline Status" },
-  "height": 140
+  "initialData": { }
 }
 ```
 
 ## 3. Graph Plot (OT-03)
-A high-performance visualization terminal that renders mathematical data into interactive charts.
+A visualization terminal that renders mathematical data into interactive charts.
 
 - **Input**: The data to visualize. Supported formats:
   - **Symbolic Functions**: Strings like `sin(x)` or `y = x^2`.
@@ -49,9 +48,8 @@ A high-performance visualization terminal that renders mathematical data into in
 ```playground
 {
   "nodeType": "OT-03",
-  "initialData": { "label": "Plotter", "minX": -10, "maxX": 10, "points": 100 },
-  "width": 300,
-  "height": 260
+  "initialData": { "minX": -10, "maxX": 10, "points": 100 },
+  "width": 300
 }
 ```
 
@@ -64,7 +62,6 @@ Technical terminal for raw JSON payload inspection.
 ```playground
 {
   "nodeType": "OT-04",
-  "initialData": { "label": "JSON Debug" },
-  "height": 200
+  "initialData": { }
 }
 ```

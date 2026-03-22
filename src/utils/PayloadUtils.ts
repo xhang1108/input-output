@@ -509,33 +509,33 @@ export const PayloadUtils = {
     },
 
     /**
-     * 🧩 Smart Numerical Deduplication
-     * Deduplicates values with an epsilon of 1e-6.
-     * Handles mixed numeric/string types.
+     * 👁️ Extracts a view-friendly value for UI presentation.
+     * Handles specialized node types like Color and raw Input.
+     * Centralizing this prevents duplication in Wiki and Canvas components.
      */
-    deduplicateResults(tokens: (string | number)[], epsilon: number = 1e-6): (string | number)[] {
-        const seen = new Set<number>();
-        const unique: (string | number)[] = [];
-        const factor = 1 / epsilon;
-
-        for (const t of tokens) {
-            const n = typeof t === 'number' ? t : Number(t);
-            if (isNaN(n) || !isFinite(n)) {
-                // For non-numeric results, do a simple unique string check
-                if (!unique.some(u => String(u) === String(t))) {
-                    unique.push(t);
-                }
-                continue;
+    normalizeForDisplay(nodeType: string, payload: any): any {
+        const unwrapped = this.unwrap(payload);
+        
+        // Color Normalization (HEX extraction)
+        if (nodeType === 'IN-03' || nodeType === 'IN-COLOR') {
+            const colorObj = (typeof unwrapped === 'object' && unwrapped !== null) ? unwrapped as any : null;
+            let displayColor = (colorObj && typeof colorObj.hex === 'string')
+                ? colorObj.hex
+                : (typeof unwrapped === 'string' ? unwrapped : '#3b82f6');
+            
+            // Fallback for non-hex results
+            if (typeof displayColor !== 'string' || !displayColor.startsWith('#')) {
+                return '#3b82f6';
             }
-
-            // Map number to an integer bucket based on epsilon
-            const key = Math.round(n * factor);
-            if (!seen.has(key)) {
-                seen.add(key);
-                unique.push(n);
-            }
+            return displayColor;
         }
-        return unique;
+
+        // Generic Input Normalization (Unwrap raw values)
+        if (nodeType.startsWith('IN-') || nodeType === 'input') {
+            return unwrapped;
+        }
+
+        return payload; // Default: Return the full payload (e.g. for ResultNode views)
     }
 };
 

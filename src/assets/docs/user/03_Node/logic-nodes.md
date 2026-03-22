@@ -17,8 +17,7 @@ The primary binary operator. It supports `AND`, `OR`, `XOR`, `NOR`, `NAND`, and 
 ```playground
 {
   "nodeType": "LG-01",
-  "initialData": { "op": "AND", "label": "AND Gate" },
-  "height": 220
+  "initialData": { "op": "AND" }
 }
 ```
 
@@ -31,8 +30,7 @@ Standard "if-then-else" logic. It selects between two inputs based on a boolean 
 ```playground
 {
   "nodeType": "LG-02",
-  "initialData": { "label": "Switch" },
-  "height": 200
+  "initialData": { }
 }
 ```
 
@@ -47,10 +45,8 @@ Routes a single data stream into one of two output channels based on a condition
 ```playground
 {
   "nodeType": "LG-03",
-  "initialData": { "label": "Router" },
-  "height": 200
+  "initialData": { }
 }
 ```
 
-> [!CAUTION]
-> Avoid **Logical Cycles**. Connecting a node back to one of its upstream parents will trigger a `CIRCULAR_DEPENDENCY` error in the engine.
+

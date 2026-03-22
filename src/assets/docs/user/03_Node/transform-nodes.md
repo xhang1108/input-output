@@ -9,7 +9,7 @@ icon: BarChart2
 The Transform and Analysis category provides advanced mathematical tools for geometry, vector spaces, signal processing, and statistics. 
 
 ## 1. Unit Converter (TR-01)
-Automatically converts a raw, dimensionless scalar into a typed physical unit representation. It supports standard SI and Imperial units as well as custom strings (e.g., `m/s`, `N*m`, `Pascal`).
+Automatically converts a raw, dimensionless scalar into a typed physical unit representation. In this calculator, the unit becomes a small symbol in the bottom right corner and is not treated as a string. You can create any custom symbol.
 
 - **Input**: The numeric scalar value to convert.
 - **Output**: The value with the attached unit representation.
@@ -22,7 +22,7 @@ Automatically converts a raw, dimensionless scalar into a typed physical unit re
 ```playground
 {
   "nodeType": "TR-01",
-  "initialData": { "unit": "km", "label": "Distance" }
+  "initialData": { "unit": "km" }
 }
 ```
 
@@ -39,6 +39,12 @@ Transforms floating-point or integer decimal values into strings formatted under
 - Octal (8)
 - Duodecimal (12)
 
+```playground
+{
+  "nodeType": "TR-02"
+}
+```
+
 ## 3. Geometry (TR-03)
 Calculates core Euclidean metrics for standard planar shapes from a single input radius/dimension.
 
@@ -50,6 +56,12 @@ Calculates core Euclidean metrics for standard planar shapes from a single input
   - **Perim**: Calculated perimeter or circumference.
 
 **Parameters**: `Circle`, `Rectangle / Square` (Quad), `Triangle`. Outputs both **Area** and **Perimeter** separately.
+
+```playground
+{
+  "nodeType": "TR-03"
+}
+```
 
 ## 4. Vector Field (TR-04)
 Evaluates a multi-variable function (e.g., f(x, y)) to generate either a gradient tensor or a direct vector field tensor for Plotting or advanced geometry operations.
@@ -63,16 +75,28 @@ Evaluates a multi-variable function (e.g., f(x, y)) to generate either a gradien
 - **Range X / Y**: Box bounding conditions.
 - **Density**: Lattice resolution. 
 
+```playground
+{
+  "nodeType": "TR-04"
+}
+```
+
 ## 5. Signal Smoothing (TR-05)
 Implements a rolling window average to flatten noise over an incoming one-dimensional array or time-series vector. Best paired with Random `IN-10` uniform distributions to visualize signal damping.
 
 - **Input**: The array of noisy data.
 - **Output**: The smoothed array.
 
-## 6. Statistics (TR-06)
-Reduces a one-dimensional array or matrix dataset down to its statistical essence.
+```playground
+{
+  "nodeType": "TR-05"
+}
+```
 
-- **Input**: The input array or matrix.
+## 6. Statistics (TR-06)
+Reduces a one-dimensional Array or multi-dimensional Array dataset down to its statistical essence.
+
+- **Input**: The input Array.
 - **Output**: The calculated statistical value.
 
 | Operation | Equation / Logic |
@@ -87,7 +111,6 @@ Reduces a one-dimensional array or matrix dataset down to its statistical essenc
 ```playground
 {
   "nodeType": "TR-06",
-  "initialData": { "op": "Mean", "label": "Stats Engine" },
-  "height": 220
+  "initialData": { "op": "Mean" }
 }
 ```

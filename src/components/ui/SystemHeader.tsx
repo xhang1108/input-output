@@ -30,8 +30,8 @@ export function SystemHeader({
     isLoading = false,
 }: SystemHeaderProps) {
     return (
-        <header className="sticky top-0 z-50 border-b border-white/5 bg-black/20 backdrop-blur-sm">
-            <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+        <header className="sticky top-0 z-50 border-b border-surface-base bg-surface-dim">
+            <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between relative">
                 <div className="flex items-center gap-6">
                     {!isDashboard ? (
                         onDashboardClick ? (
@@ -75,13 +75,18 @@ export function SystemHeader({
                         <img src="/logo.webp" alt="Logo" className="w-6 h-6 object-contain" />
                         <div className="flex flex-col">
                             <span className="text-sm font-bold tracking-[0.3em] text-white uppercase italic leading-none">{title}</span>
-                            {subtitle && <span className="text-[8px] text-text-muted font-mono tracking-widest uppercase mt-1">{subtitle}</span>}
+                            {subtitle && (
+                                <div className="flex items-center gap-2 mt-1.5">
+                                    <div className="w-1 h-1 rounded-full bg-green-500/60 animate-pulse" />
+                                    <span className="text-[9px] text-text-muted font-mono tracking-widest uppercase">{subtitle}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {showModeSwitcher && onModeChange && (
-                    <div className="flex bg-surface-dim border border-surface-light p-1 rounded-lg">
+                    <div className="absolute left-1/2 -translate-x-1/2 flex bg-surface-dim border border-surface-light p-1 rounded-lg">
                         {(['user', 'developer'] as const).map((m) => (
                             <button
                                 key={m}

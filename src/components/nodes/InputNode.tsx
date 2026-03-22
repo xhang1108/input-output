@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
@@ -8,22 +8,39 @@ import { PayloadUtils } from '../../utils/PayloadUtils';
 export const InputNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
+    const unwrappedValue = PayloadUtils.unwrap(data.value);
+    const [localValue, setLocalValue] = useState(String(unwrappedValue ?? ''));
+    const [isFocused, setIsFocused] = useState(false);
 
-    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    useEffect(() => {
+        if (!isFocused) setLocalValue(String(unwrappedValue ?? ''));
+    }, [unwrappedValue, isFocused]);
+
+    const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalValue(e.target.value);
         const val = parseFloat(e.target.value);
-        if (!isNaN(val)) {
-            brain.applyTransaction({
-                type: 'UPDATE_VALUE',
-                payload: { id, value: val } // Brain will wrap this
-            });
-        }
+        if (!isNaN(val)) brain.applyTransaction({ type: 'UPDATE_VALUE', payload: { id, value: val } });
     }, [id, brain]);
 
-    const displayValue = Number(PayloadUtils.unwrap(data.value)) || 0;
+    const handleStringChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setLocalValue(val);
+        brain.applyTransaction({ type: 'UPDATE_VALUE', payload: { id, value: val } });
+    }, [id, brain]);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+            (e.target as HTMLInputElement).blur();
+        }
+    };
 
     return (
         <BaseNode {...props}>
-            <div className="flex flex-col gap-2 p-1">
+            <div 
+                className="flex flex-col gap-2 p-1"
+                onPointerDown={(e) => e.stopPropagation()}
+            >
                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Value</label>
                 {data.type === 'string' ? (
                     <input
@@ -31,15 +48,12 @@ export const InputNode = memo((props: NodeProps) => {
                         className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-focus outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="Text..."
-                        value={String(data.value ?? '')}
-                        onChange={(e) => {
-                            brain.applyTransaction({
-                                type: 'UPDATE_NODE_DATA',
-                                payload: { id, data: { value: e.target.value } }
-                            });
-                        }}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
+                        value={localValue}
+                        onChange={handleStringChange}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onKeyDown={handleKeyDown}
                     />
                 ) : (
                     <input
@@ -47,39 +61,12 @@ export const InputNode = memo((props: NodeProps) => {
                         className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-focus outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="0.0"
-                        value={displayValue}
-                        onChange={handleChange}
-                        onKeyDown={(e) => {
-                            e.stopPropagation(); // Prevent React Flow hotkeys
-
-                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                                let step = 1;
-                                if (e.shiftKey) step = 0.1;
-                                if (e.altKey) step = 10;
-
-                                const delta = e.key === 'ArrowUp' ? step : -step;
-
-                                // If modifiers are used, we override default browser behavior
-                                // Or if we just want consistent control
-                                e.preventDefault();
-
-                                // Get current value from input because props might be stale if typing fast
-                                const currentVal = parseFloat(e.currentTarget.value) || 0;
-                                // Round to 2 decimals if using small steps, otherwise keep precision? 
-                                // Actually for 0.1 steps, 2 decimals is safe.
-                                const newVal = parseFloat((currentVal + delta).toFixed(2));
-
-                                // Update UI immediately (optional, but good for responsiveness)
-                                e.currentTarget.value = String(newVal); // This might desync with React state if not careful
-
-                                // Update Brain
-                                brain.applyTransaction({
-                                    type: 'UPDATE_VALUE',
-                                    payload: { id, value: newVal }
-                                });
-                            }
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
+                        value={localValue}
+                        onChange={handleNumberChange}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onKeyDown={handleKeyDown}
                     />
                 )}
             </div>

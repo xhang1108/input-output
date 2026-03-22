@@ -12,13 +12,12 @@ Organization and manipulation of multi-dimensional tensors.
 Node that accepts multiple inputs to build or concatenate arrays.
 
 - **Input**: One or more data values to stack.
-- **Output**: The generated array or matrix.
+- **Output**: The generated Array.
 
 ```playground
 {
   "nodeType": "DT-01",
-  "initialData": { "op": "BUILD", "label": "Array Stacker" },
-  "height": 220
+  "initialData": { "op": "BUILD" }
 }
 ```
 
@@ -31,8 +30,7 @@ Extract specific elements via 1D or 2D indexing.
 ```playground
 {
   "nodeType": "DT-02",
-  "initialData": { "indexMode": "1D", "label": "Element Picker" },
-  "height": 200
+  "initialData": { "indexMode": "1D" }
 }
 ```
 
@@ -45,8 +43,7 @@ Sort, reverse, or deduplicate 1D lists.
 ```playground
 {
   "nodeType": "DT-03",
-  "initialData": { "mode": "Sort (Asc)", "label": "List Manager" },
-  "height": 200
+  "initialData": { "mode": "Sort (Asc)" }
 }
 ```
 
@@ -59,8 +56,7 @@ Boolean set logic: Union, Intersection, and Difference.
 ```playground
 {
   "nodeType": "DT-04",
-  "initialData": { "mode": "Union", "label": "Set Engine" },
-  "height": 200
+  "initialData": { "mode": "Union" }
 }
 ```
 
@@ -76,8 +72,7 @@ Vector operations: Dot Product, Cross Product, Norm, and Distance.
 ```playground
 {
   "nodeType": "DT-05",
-  "initialData": { "op": "DOT", "label": "Dot Product" },
-  "height": 220
+  "initialData": { "op": "DOT" }
 }
 ```
 
@@ -92,8 +87,7 @@ Transform between arrays and discrete scalar channels.
 ```playground
 {
   "nodeType": "DT-06",
-  "initialData": { "mode": "separate", "label": "Channel Split" },
-  "height": 200
+  "initialData": { "mode": "separate" }
 }
 ```
 
@@ -101,12 +95,11 @@ Transform between arrays and discrete scalar channels.
 Matrix operations: Inverse, Determinant, Transpose, and Trace.
 
 - **Input**: The input matrix.
-- **Output**: The resulting matrix or scalar.
+- **Output**: The resulting Array or scalar.
 
 ```playground
 {
   "nodeType": "DT-07",
-  "initialData": { "op": "INV", "label": "Matrix Solver" },
-  "height": 220
+  "initialData": { "op": "INV" }
 }
 ```

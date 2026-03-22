@@ -496,6 +496,8 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
                     onClose();
                 }
             }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             onMouseEnter={() => setSelectedIndex(globalIndex)}
         >
             <div className="flex items-center gap-2 flex-1 min-w-0">

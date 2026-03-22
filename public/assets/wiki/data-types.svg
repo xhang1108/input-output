@@ -25,7 +25,7 @@
       <circle cx="20" cy="20" r="4.5" fill="#737373" />
       <text x="50" y="15" class="type-title" fill="#a3a3a3">Scalar</text>
       <text x="50" y="32" class="type-desc">Real numbers and constants</text>
-      <text x="350" y="24" class="type-example">3.14159, -42, 1e-10</text>
+      <text x="350" y="24" class="type-example">42, -3.14159</text>
     </g>
     <path d="M0 65 H720" class="divider" />
 
@@ -33,9 +33,9 @@
     <g transform="translate(0, 85)">
       <circle cx="20" cy="20" r="12" class="port-bg" stroke="#a78bfa" filter="url(#glow-matrix)" />
       <circle cx="20" cy="20" r="4.5" fill="#a78bfa" />
-      <text x="50" y="15" class="type-title" fill="#c4b5fd">Matrix / Array</text>
+      <text x="50" y="15" class="type-title" fill="#c4b5fd">Array</text>
       <text x="50" y="32" class="type-desc">Vectors, Matrices, and Tensors</text>
-      <text x="350" y="24" class="type-example">[[1, 0, 0], [0, 1, 0]], [x, y, z]</text>
+      <text x="350" y="24" class="type-example">[1, 2, 3], [[1, 0], [0, 1]]</text>
     </g>
     <path d="M0 150 H720" class="divider" />
 
@@ -55,7 +55,7 @@
       <circle cx="20" cy="20" r="4.5" fill="#f9a8d4" />
       <text x="50" y="15" class="type-title" fill="#fbcfe8">Boolean</text>
       <text x="50" y="32" class="type-desc">Logical state binary values</text>
-      <text x="350" y="24" class="type-example">true, false</text>
+      <text x="350" y="24" class="type-example">true, false, 1, 0</text>
     </g>
     <path d="M0 320 H720" class="divider" />
 
@@ -75,7 +75,7 @@
       <circle cx="20" cy="20" r="4.5" fill="#06b6d4" />
       <text x="50" y="15" class="type-title" fill="#22d3ee">Unit</text>
       <text x="50" y="32" class="type-desc">SI units and physical measurements</text>
-      <text x="350" y="24" class="type-example">5kg, 300m/s, 9.8m/s^2</text>
+      <text x="350" y="24" class="type-example">kg, m/s, m/s^2</text>
     </g>
     <path d="M0 490 H720" class="divider" />
 
@@ -85,7 +85,7 @@
       <circle cx="20" cy="20" r="4.5" fill="#eab308" />
       <text x="50" y="15" class="type-title" fill="#fde047">Color</text>
       <text x="50" y="32" class="type-desc">Visual color data and visualizers</text>
-      <text x="350" y="24" class="type-example">#FF0000, hsl(0, 100%, 50%)</text>
+      <text x="350" y="24" class="type-example">#3b82f6, rgb:[59,130,246], vec:[0.23,0.51,0.96]</text>
     </g>
     <path d="M0 575 H720" class="divider" />
 
@@ -94,8 +94,8 @@
       <circle cx="20" cy="20" r="12" class="port-bg" stroke="#ffffff" filter="url(#glow-any)" />
       <circle cx="20" cy="20" r="4.5" fill="#ffffff" />
       <text x="50" y="15" class="type-title" fill="#ffffff">Any</text>
-      <text x="50" y="32" class="type-desc">Universal / Undetermined slots</text>
-      <text x="350" y="24" class="type-example">dynamic_payload, object{...}</text>
+      <text x="50" y="32" class="type-desc">Can connect to handles of any color</text>
+      <text x="350" y="24" class="type-example"></text>
     </g>
   </g>
 </svg>

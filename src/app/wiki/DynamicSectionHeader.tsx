@@ -23,7 +23,7 @@ export const DynamicSectionHeader: React.FC<DynamicSectionHeaderProps> = ({ id, 
     const borderOpacity = isH2 ? "border-(--color-primary)/30" : "border-white/10";
 
     return (
-        <div id={id} className={`group relative ${isH2 ? 'mt-12' : 'mt-8'} mb-0 flex flex-col items-start not-prose scroll-mt-24`}>
+        <div id={id} className={`group relative ${isH2 ? 'mt-12' : 'mt-8'} mb-5 flex flex-col items-start not-prose scroll-mt-24`}>
             {/* THE CAPSULE HEADER CONTAINER */}
             <div className={`relative flex items-center justify-center ${height} ${padding} min-w-[80px]`}>
                 {/* BACKDROP CAPSULE */}

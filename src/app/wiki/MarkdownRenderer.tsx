@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Layers } from 'lucide-react';
 
 interface MarkdownRendererProps {
     content: string;
@@ -10,19 +11,14 @@ interface MarkdownRendererProps {
 
 import dynamic from 'next/dynamic';
 
-const NodeDemo = dynamic(() => import('./NodeDemo').then(m => m.NodeDemo), { 
+const IOPlayground = dynamic(() => import('./IOPlayground').then(m => m.IOPlayground), { 
     ssr: false,
     loading: () => <div className="w-full h-24 animate-pulse bg-white/5 rounded-xl border border-white/5" />
 });
 
-const CircuitDemo = dynamic(() => import('./CircuitDemo').then(m => m.CircuitDemo), { 
-    ssr: false,
-    loading: () => <div className="w-full h-32 animate-pulse bg-white/5 rounded-xl border border-white/5" />
-});
-
 import { DynamicSectionHeader } from './DynamicSectionHeader';
 
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+export const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content }) => {
     const components = useMemo(() => {
         const flattenText = (children: React.ReactNode): string => {
             return React.Children.toArray(children).reduce((text: string, child: any) => {
@@ -37,13 +33,14 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
         const HeadingWithAnchor = (level: number) => ({ node, ...props }: any) => {
             const text = flattenText(props.children);
             const match = text.match(/\(([A-Z0-9]{2}-\d{2})\)/);
-            const id = match ? match[1] : text.toLowerCase().replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            const nodeId = match ? match[1] : null;
+            const slug = nodeId || text.toLowerCase().replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
             const Tag = `h${level}` as any;
 
             if (level === 2 || level === 3) {
                 return (
                     <DynamicSectionHeader
-                        id={id}
+                        id={slug}
                         title={text}
                         level={level}
                     />
@@ -51,7 +48,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
             }
 
             return (
-                <Tag id={id} className="scroll-mt-24 group relative" {...props}>
+                <Tag id={slug} className="scroll-mt-24 group relative" {...props}>
                     {props.children}
                 </Tag>
             );
@@ -66,7 +63,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
             },
             blockquote({ children }: any) {
                 const text = flattenText(children);
-                const calloutRegex = /\[!(TIP|NOTE|IMPORTANT|WARNING|CAUTION)\]/i;
+                const calloutRegex = /\[!(TIP|NOTE|IMPORTANT|WARNING|CAUTION|LOG)\]/i;
                 const calloutMatch = text.match(calloutRegex);
 
                 // Clean out ALL occurrences of the marker [!TYPE] in the entire tree
@@ -89,9 +86,39 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                 };
 
                 const finalChildren = cleanContent(children);
+                
+                // Filter out effectively empty nodes to ensure first/last-child selectors work correctly
+                const filteredChildren = React.Children.toArray(finalChildren).filter((child: any) => {
+                    if (typeof child === 'string') return child.trim().length > 0;
+                    if (React.isValidElement(child)) {
+                        const props = (child as any).props;
+                        if (props && props.children) {
+                            const nestedText = flattenText(props.children);
+                            return nestedText.trim().length > 0;
+                        }
+                        // If it's a self-closing element or has no children, we keep it (e.g. img, Playground)
+                        return true;
+                    }
+                    return !!child;
+                });
 
                 if (calloutMatch) {
                     const type = calloutMatch[1].toUpperCase();
+
+                    if (type === 'LOG') {
+                        return (
+                            <div className="mb-12 p-8 border border-white/5 bg-white/2 bg-linear-to-br from-white/3 to-transparent rounded-2xl relative overflow-hidden group/log">
+                                <div className="relative z-10
+                                              prose-h2:mt-0! prose-h2:mb-6 prose-h2:text-3xl 
+                                              prose-h3:mt-0! prose-h3:text-primary/80 
+                                              prose-li:text-zinc-400 
+                                              [&>*:first-child]:mt-0! [&>*:last-child]:mb-0!">
+                                    {filteredChildren}
+                                </div>
+                            </div>
+                        );
+                    }
+
                     const colors: any = {
                         TIP: 'border-emerald-500/60',
                         NOTE: 'border-cloud/60',
@@ -102,14 +129,14 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
 
                     return (
                         <blockquote className={`border-l-4 ${colors[type] || 'border-white/10'} pl-6 my-10 italic text-zinc-400 opacity-90 leading-relaxed`}>
-                            {finalChildren}
+                            {filteredChildren}
                         </blockquote>
                     );
                 }
 
                 return (
                     <blockquote className="border-l-4 border-white/10 pl-6 my-10 italic text-zinc-500">
-                        {children}
+                        {filteredChildren}
                     </blockquote>
                 );
             },
@@ -122,7 +149,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                         const payload = JSON.parse(String(children).replace(/\n$/, ''));
                         return (
                             <div className="not-prose w-full mb-4 bg-transparent! border-none! shadow-none!" style={{ minHeight: payload.height || 80 }}>
-                                <NodeDemo
+                                <IOPlayground
                                     nodeType={payload.nodeType}
                                     initialData={payload.initialData || payload.data}
                                     label={payload.label}
@@ -144,7 +171,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                         const payload = JSON.parse(String(children).replace(/\n$/, ''));
                         return (
                             <div className="not-prose w-full my-8 bg-transparent! border-none! shadow-none!" style={{ minHeight: payload.height || 120 }}>
-                                <CircuitDemo
+                                <IOPlayground
                                     iogl={payload.iogl}
                                     label={payload.label}
                                     height={payload.height}
@@ -237,4 +264,4 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
             </ReactMarkdown>
         </div>
     );
-};
+});

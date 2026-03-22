@@ -13,6 +13,9 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { getDocInfo } from '@/config/docRegistry';
 import { useRouter } from 'next/navigation';
 import { Footer } from '@/components/ui/Footer';
+import { BrainProvider } from '@/context/BrainContext';
+import pkg from '../../../package.json';
+
 
 type WikiMode = 'user' | 'developer';
 
@@ -46,6 +49,7 @@ interface WikiClientViewProps {
     initialUserSections: WikiDocSection[];
     initialDeveloperSections: WikiDocSection[];
     initialSlug?: string;
+    initialMode?: WikiMode;
 }
 
 const IconMap: Record<string, React.ReactNode> = {
@@ -54,7 +58,7 @@ const IconMap: Record<string, React.ReactNode> = {
     Layers: <Layers className="w-4 h-4" />,
 };
 
-const WikiSidebar = ({
+const WikiSidebar = React.memo(({
     sections,
     activeSectionId,
     activeItemId,
@@ -67,7 +71,22 @@ const WikiSidebar = ({
 }) => {
     return (
         <aside className="w-72 shrink-0 hidden lg:block sticky top-20 self-start max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar border-r border-white/5 pr-6 py-4">
-            <div className="text-[9px] text-white/20 font-bold uppercase tracking-[0.4em] mb-10">System_Directory</div>
+            <div className="mb-10 p-4 border border-white/5 bg-white/2 bg-linear-to-br from-white/3 to-transparent rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
+                        <span className="text-[9px] font-bold text-green-500/80 uppercase tracking-widest">Operational</span>
+                    </div>
+                    <span className="text-[8px] font-mono text-white/20">SYS_OK</span>
+                </div>
+                <div className="text-3xl font-black text-white tracking-tighter mb-1">
+                    V{pkg.version}
+                </div>
+                <div className="text-[9px] text-white/40 font-medium uppercase tracking-[0.2em]">
+                    Core System Engine
+                </div>
+            </div>
+            <div className="text-[9px] text-white/10 font-bold uppercase tracking-[0.4em] mb-10 px-1">System_Directory</div>
             <nav className="space-y-10">
                 {sections.map(section => (
                     <div key={section.id} className="space-y-4">
@@ -81,58 +100,66 @@ const WikiSidebar = ({
                             <span>{section.title}</span>
                         </button>
 
-                        <AnimatePresence initial={false}>
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                                className="overflow-hidden"
-                            >
-                                <div className="mt-1 flex flex-col gap-0.5 border-l border-zinc-900 ml-3">
-                                    {section.items.map((item) => (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => onNavigate(section.id, item.id)}
-                                            className={`group flex items-center justify-between py-1.5 pl-4 pr-3 text-[11px] transition-all relative cursor-pointer
-                                                        ${activeItemId === item.id
-                                                    ? 'text-white'
-                                                    : 'text-zinc-500 hover:text-zinc-300'
-                                                }`}
-                                        >
-                                            <span className="truncate relative z-10">{item.metadata.title}</span>
-                                            {activeItemId === item.id && (
-                                                <motion.div
-                                                    layoutId="active-item-bg"
-                                                    className="absolute inset-y-0 -left-px w-[2px] bg-primary shadow-[0_0_10px_rgba(255,140,0,0.5)] z-20"
-                                                />
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        </AnimatePresence>
+                        <div className="mt-1 flex flex-col gap-0.5 border-l border-white/5 ml-3">
+                            {section.items.map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => onNavigate(section.id, item.id)}
+                                    className={`group flex items-center justify-between py-1.5 pl-4 pr-3 text-[11px] transition-all relative cursor-pointer
+                                                ${activeItemId === item.id
+                                            ? 'text-white'
+                                            : 'text-zinc-500 hover:text-zinc-300'
+                                        }`}
+                                >
+                                    <span className="truncate relative z-10">{item.metadata.title}</span>
+                                    {activeItemId === item.id && (
+                                        <div
+                                            className="absolute inset-y-0 -left-px w-px bg-primary/80 shadow-[0_0_8px_rgba(255,140,0,0.2)] z-20"
+                                        />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 ))}
             </nav>
         </aside>
     );
-};
+});
 
+WikiSidebar.displayName = 'WikiSidebar';
 export const WikiClientView: React.FC<WikiClientViewProps> = ({
     initialUserSections,
     initialDeveloperSections,
-    initialSlug
+    initialSlug,
+    initialMode = 'user'
 }) => {
-    const [mode, setMode] = useState<WikiMode>('user');
-    const [activeSectionId, setActiveSectionId] = useState<string>('');
-    const [activeItemId, setActiveItemId] = useState<string>('');
-    const [visibleItemsCount, setVisibleItemsCount] = useState<number>(20);
+    const [mode, setMode] = useState<WikiMode>(initialMode);
+
+    const sections = useMemo(() => (mode === 'user' ? initialUserSections : initialDeveloperSections), [mode, initialUserSections, initialDeveloperSections]);
+
+    const [activeSectionId, setActiveSectionId] = useState<string>(() => {
+        if (initialSlug) {
+            const target = sections.find((s: WikiDocSection) => s.slug === initialSlug);
+            if (target) return target.id;
+        }
+        if (sections.length > 0) return sections[0].id;
+        return '';
+    });
+
+    const [activeItemId, setActiveItemId] = useState<string>(() => {
+        if (initialSlug) {
+            const target = sections.find((s: WikiDocSection) => s.slug === initialSlug);
+            if (target && target.items.length > 0) return target.items[0].id;
+        }
+        if (sections.length > 0 && sections[0].items.length > 0) return sections[0].items[0].id;
+        return '';
+    });
+
+    const [visibleItemsCount, setVisibleItemsCount] = useState<number>(2);
     const scrollerRef = useRef<HTMLDivElement>(null);
     const isNavigatingRef = useRef(false);
     const router = useRouter();
-
-    const sections = useMemo(() => (mode === 'user' ? initialUserSections : initialDeveloperSections), [mode, initialUserSections, initialDeveloperSections]);
 
     // Automatically switch mode based on URL if not already set correctly
     useEffect(() => {
@@ -148,7 +175,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
         }
     }, [mode]);
 
-    const activeSection = useMemo(() => sections.find(s => s.id === activeSectionId) || sections[0], [sections, activeSectionId]);
+    const activeSection = useMemo(() => sections.find((s: WikiDocSection) => s.id === activeSectionId) || sections[0], [sections, activeSectionId]);
 
     // Track previously active section to handle smooth replacement
     const prevSectionIdRef = useRef<string>(activeSectionId);
@@ -191,10 +218,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                 if (section?.items.length) setActiveItemId(section.items[0].id);
             }
 
-            // Scroll scroller to top immediately so new content starts at 0
-            if (scrollerRef.current) {
-                scrollerRef.current.scrollTop = 0;
-            }
+
 
             // Wait for mounting then attempt to scroll to specific item if provided
             if (itemId || anchorId) {
@@ -239,68 +263,56 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
     }, [activeSectionId, sections, router]);
 
     useEffect(() => {
-        if (sections.length > 0) {
-            // 1. Check for Path-based Slug navigation
-            // Expected initialSlug comes from server as the segment after /wiki/[mode]/
-            if (initialSlug) {
-                const targetSection = sections.find(s => s.slug === initialSlug);
-                if (targetSection) {
-                    setActiveSectionId(targetSection.id);
-                    // Check if there's also a hash
-                    const hash = window.location.hash.replace('#', '');
-                    if (hash) {
-                        setTimeout(() => handleNavigate(targetSection.id, hash, hash), 300);
-                    } else {
-                        setActiveItemId(targetSection.items[0].id);
-                    }
-                    return;
-                }
-            }
+        // Only run deep link handling if we have a hash to navigate to, 
+        // as the basic section/item state is already initialized synchronously.
+        const hash = window.location.hash.replace('#', '');
+        if (hash && sections.length > 0) {
+            let targetDocId = hash;
+            const docInfo = getDocInfo(hash);
+            if (docInfo) targetDocId = docInfo.sectionId;
 
-            // 2. Fallback to Hash-based Deep Linking (Old support)
-            const hash = window.location.hash.replace('#', '');
-            if (hash) {
-                let targetDocId = hash;
-                const docInfo = getDocInfo(hash);
-                if (docInfo) targetDocId = docInfo.sectionId;
-
-                // Strictly find only in current mode sections
-                const targetSection = sections.find(s => s.items.some(i => i.id === targetDocId));
-                if (targetSection) {
-                    setActiveSectionId(targetSection.id);
-                    setTimeout(() => handleNavigate(targetSection.id, targetDocId, hash), 300);
-                    return;
-                }
-            }
-
-            // 3. Absolute Fallback
-            if (activeSectionId === '' || !sections.some(s => s.id === activeSectionId)) {
-                setActiveSectionId(sections[0].id);
-                setActiveItemId(sections[0].items[0].id);
+            const targetSection = sections.find((s: WikiDocSection) =>
+                s.items.some((i: WikiDoc) => i.id === targetDocId)
+);
+            if (targetSection) {
+                setActiveSectionId(targetSection.id);
+                setActiveItemId(targetDocId);
+                setTimeout(() => handleNavigate(targetSection.id, targetDocId, hash), 300);
             }
         }
-    }, [sections, handleNavigate, initialSlug, activeSectionId]);
+    }, [sections, handleNavigate]);
 
     // 🛠️ FIX: Synchronous & Instant Section Switch
     // Use useLayoutEffect to reset scroll BEFORE browser paint
     React.useLayoutEffect(() => {
         if (!activeSection.id) return;
 
-        // 1. Instant Scroll Reset
-        if (scrollerRef.current) {
+        // 1. Conditional Scroll Reset: Only reset if navigation was manually triggered (click)
+        // If isNavigatingRef is false, it means the section changed due to SCROLLING, so don't reset.
+        if (isNavigatingRef.current && scrollerRef.current) {
             scrollerRef.current.scrollTop = 0;
         }
 
-        // 2. Load all content immediately to prevent layout shifts
-        // We set a high number to cover most docs instantly
-        setVisibleItemsCount(30);
+        // 2. Progressive Loading Reset: Start with a small count to ensure fast first paint
+        // This solves the lag issue on heavy "Node" pages by not mounting 30+ items at once.
+        setVisibleItemsCount(6);
 
-        // 3. Clear any existing navigation flags
+        // 3. Clear any existing navigation flags after a safety timeout
         const timer = setTimeout(() => {
             isNavigatingRef.current = false;
-        }, 100);
+        }, 150);
         return () => clearTimeout(timer);
     }, [activeSection.id]);
+
+    // 🚀 Progressive Loader: Incrementally load more items to fill the section without hanging the UI thread
+    useEffect(() => {
+        if (visibleItemsCount < activeSection.items.length) {
+            const timer = setTimeout(() => {
+                setVisibleItemsCount(prev => Math.min(prev + 6, activeSection.items.length));
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [visibleItemsCount, activeSection.items.length]);
 
     // 💡 Robust Scroll Tracking: IntersectionObserver for Sidebar Highlighting
     useEffect(() => {
@@ -340,7 +352,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
 
             if (closestId && closestId !== activeItemId) {
                 // Find section and update active states
-                const section = sections.find(s => s.items.some(i => i.id === closestId));
+                const section = sections.find((s: WikiDocSection) => s.items.some((i: WikiDoc) => i.id === closestId));
                 if (section && section.id !== activeSectionId) setActiveSectionId(section.id);
                 setActiveItemId(closestId);
             }
@@ -370,87 +382,98 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
 
         return () => {
             observer.disconnect();
-            mutationObserver.disconnect();
+    mutationObserver.disconnect();
         };
     }, [sections, activeSection.id, activeItemId, activeSectionId]);
 
     if (!activeSection) return null;
 
+    const pageSessionId = `wiki-${mode}-${activeSection.slug}`;
+
     return (
-        <div className="h-screen flex flex-col bg-bg-deep text-zinc-400 font-sans selection:bg-selection">
-            <div className="fixed inset-0 pointer-events-none bg-grid-dots" />
+        <BrainProvider session={pageSessionId}>
+            <div className="h-screen flex flex-col bg-bg-deep text-zinc-400 font-sans selection:bg-selection">
+                <div className="fixed inset-0 pointer-events-none"
+                    style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0)', backgroundSize: '20px 20px' }} />
 
-            <SystemHeader
-                showModeSwitcher
-                mode={mode}
-                onModeChange={(m) => {
-                    const newMode = m as WikiMode;
-                    setMode(newMode);
-                    // Reset to the first section of the new mode
-                    const newSections = newMode === 'user' ? initialUserSections : initialDeveloperSections;
-                    if (newSections.length > 0) {
-                        router.push(`/wiki/${newMode}/${newSections[0].slug}`, { scroll: false });
-                    }
-                }}
-                title="I/O System Blueprint"
-                subtitle={`ENGINE: V1.0 // ${mode.toUpperCase()}_MODE_ACTIVE`}
-            />
-
-            <div className="flex-1 flex max-w-7xl mx-auto px-8 w-full overflow-hidden">
-                <WikiSidebar
-                    sections={sections}
-                    activeSectionId={activeSectionId}
-                    activeItemId={activeItemId}
-                    onNavigate={handleNavigate}
+                <SystemHeader
+                    showModeSwitcher
+                    mode={mode}
+                    onModeChange={(m) => {
+                        const newMode = m as WikiMode;
+                        setMode(newMode);
+                        // Reset to the first section of the new mode
+                        const newSections = newMode === 'user' ? initialUserSections : initialDeveloperSections;
+                        if (newSections.length > 0) {
+                            router.push(`/wiki/${newMode}/${newSections[0].slug}`, { scroll: false });
+                        }
+                    }}
+                    title="I/O System Blueprint"
+                    subtitle={`ENGINE: V${pkg.version} // ${mode.toUpperCase()}_MODE_ACTIVE`}
                 />
 
-                <main ref={scrollerRef} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-12 pb-0 pt-12">
-                    <div
-                        key={activeSection.id}
-                        className="space-y-24 max-w-4xl mx-auto w-full"
-                    >
-                        <header id={activeSection.id} className="mb-16">
-                            <div className={`inline-block px-3 py-1 border text-[10px] font-bold mb-6 tracking-[0.2em] uppercase ${mode === 'user' ? 'border-secondary/30 text-secondary' : 'border-primary/30 text-primary'}`}>
-                                {mode === 'user' ? 'User Manual V1.0' : 'Developer Specs V1.0'}
-                            </div>
-                            <h2 className="text-6xl font-black text-white tracking-tighter uppercase mb-8 leading-none">
-                                {activeSection.title}
-                            </h2>
-                            <div className="w-12 h-1 bg-primary/50 mb-8" />
-                        </header>
+                <div className="flex-1 flex max-w-7xl mx-auto px-8 w-full overflow-hidden">
+                    <WikiSidebar
+                        sections={sections}
+                        activeSectionId={activeSectionId}
+                        activeItemId={activeItemId}
+                        onNavigate={handleNavigate}
+                    />
 
-                        <div className="space-y-40">
-                            {activeSection.items.slice(0, visibleItemsCount).map(item => (
-                                <div key={item.id} id={item.id} data-wiki-item={item.id} className="scroll-mt-24">
-                                    <MarkdownRenderer content={item.content} />
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="mt-48 flex flex-col pt-12 pb-32 border-t border-white/5">
-                            {nextSection ? (
-                                <button
-                                    onClick={() => handleNavigate(nextSection.id)}
-                                    className="group flex flex-col items-start gap-4 hover:opacity-80 transition-opacity cursor-pointer"
-                                >
-                                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em]">Next Module</span>
-                                    <div className="flex items-center gap-4">
-                                        <h3 className="text-3xl font-bold text-white uppercase tracking-tighter">{nextSection.title}</h3>
-                                        <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-primary transition-colors">
-                                            <ArrowRight className="w-5 h-5 text-white group-hover:text-primary transition-colors" />
-                                        </div>
+                    <main ref={scrollerRef} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-12 pb-0 pt-12 relative">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeSection.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.25, ease: "easeOut" }}
+                                className="space-y-24 max-w-4xl mx-auto w-full"
+                            >
+                                <header id={activeSection.id} className="mb-16">
+                                    <div className={`inline-block px-3 py-1 border text-[10px] font-bold mb-6 tracking-[0.2em] uppercase border-primary/30 text-primary`}>
+                                        {mode === 'user' ? `User Manual V${pkg.version}` : `Developer Specs V${pkg.version}`}
                                     </div>
-                                </button>
-                            ) : (
-                                <div className="text-center opacity-50">
-                                    <span className="text-[10px] font-bold text-zinc-700 uppercase tracking-[0.4em]">End of Documentation</span>
+                                    <h2 className="text-6xl font-black text-white tracking-tighter uppercase mb-8 leading-none">
+                                        {activeSection.title}
+                                    </h2>
+                                    <div className="w-12 h-1 bg-primary/50 mb-8" />
+                                </header>
+
+                                <div className="space-y-40">
+                                    {activeSection.items.slice(0, visibleItemsCount).map((item: WikiDoc) => (
+                                        <div key={item.id} id={item.id} data-wiki-item={item.id} className="scroll-mt-24">
+                                            <MarkdownRenderer content={item.content} />
+                                        </div>
+                                    ))}
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                </main>
+
+                                <div className="mt-48 flex flex-col pt-12 pb-32 border-t border-white/5">
+                                    {nextSection ? (
+                                        <button
+                                            onClick={() => handleNavigate(nextSection.id)}
+                                            className="group flex flex-col items-start gap-4 hover:opacity-80 transition-opacity cursor-pointer"
+                                        >
+                                            <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em]">Next Module</span>
+                                            <div className="flex items-center gap-4">
+                                                <h3 className="text-3xl font-bold text-white uppercase tracking-tighter">{nextSection.title}</h3>
+                                                <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-primary transition-colors">
+                                                    <ArrowRight className="w-5 h-5 text-white group-hover:text-primary transition-colors" />
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ) : (
+                                        <div className="text-center opacity-50">
+                                            <span className="text-[10px] font-bold text-zinc-700 uppercase tracking-[0.4em]">End of Documentation</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </AnimatePresence>
+                    </main>
+                </div>
+                <Footer />
             </div>
-            <Footer />
-        </div>
+        </BrainProvider>
     );
 };

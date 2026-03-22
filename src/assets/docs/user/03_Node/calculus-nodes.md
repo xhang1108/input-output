@@ -21,8 +21,7 @@ Calculates the rate of change of a symbolic expression.
 ```playground
 {
   "nodeType": "CL-01",
-  "initialData": { "variable": "x", "order": 1, "label": "df/dx" },
-  "height": 200
+  "initialData": { "variable": "x", "order": 1 }
 }
 ```
 
@@ -35,8 +34,7 @@ Calculates the area under a curve. Supporting definite and indefinite modes.
 ```playground
 {
   "nodeType": "CL-02",
-  "initialData": { "mode": "indefinite", "variable": "x", "label": "integral f(x)" },
-  "height": 220
+  "initialData": { "mode": "indefinite", "variable": "x" }
 }
 ```
 
@@ -49,8 +47,7 @@ Calculates the numerical limit of an expression as it approaches a value.
 ```playground
 {
   "nodeType": "CL-03",
-  "initialData": { "variable": "x", "approach": "0", "label": "Limit" },
-  "height": 200
+  "initialData": { "variable": "x", "approach": "0" }
 }
 ```
 
@@ -63,8 +60,7 @@ Input a symbolic equation to find its roots.
 ```playground
 {
   "nodeType": "CL-04",
-  "initialData": { "label": "Roots Solver" },
-  "height": 200
+  "initialData": { }
 }
 ```
 
@@ -72,12 +68,11 @@ Input a symbolic equation to find its roots.
 Numerical differential equation solver (RK4/Euler).
 
 - **Input**: The differential equation in terms of t and y.
-- **Output**: An array of (t, y) coordinates representing the solution.
+- **Output**: An Array of (t, y) coordinates representing the solution.
 
 ```playground
 {
   "nodeType": "CL-05",
-  "initialData": { "method": "RK4", "tEnd": 10, "label": "ODE Engine" },
-  "height": 220
+  "initialData": { "method": "RK4", "tEnd": 10 }
 }
 ```

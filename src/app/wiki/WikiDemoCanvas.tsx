@@ -22,7 +22,7 @@ interface WikiDemoCanvasProps {
 export const WikiDemoCanvas: React.FC<WikiDemoCanvasProps> = ({ children, height = 160 }) => {
     return (
         <div 
-            className="not-prose relative mt-2 mb-8 w-full overflow-hidden transition-[height] duration-300 ease-in-out bg-transparent! border-none! shadow-none!" 
+            className="not-prose relative mt-2 mb-8 w-full overflow-visible bg-transparent! border-none! shadow-none!" 
             style={{ 
                 height: `${height}px`,
             }}

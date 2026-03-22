@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
@@ -9,7 +9,13 @@ export const ToggleNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
 
-    const isActive = !!PayloadUtils.unwrap(data.value);
+    const unwrapped = PayloadUtils.unwrap(data.value);
+    const [localActive, setLocalActive] = useState(!!unwrapped);
+
+    // Sync from parent
+    useEffect(() => {
+        setLocalActive(!!unwrapped);
+    }, [unwrapped]);
 
     const handles = [
         { id: 'out', type: 'source', position: 'right', variant: 'single', dataType: 'boolean' }
@@ -18,22 +24,33 @@ export const ToggleNode = memo((props: NodeProps) => {
     const nodeData = { ...data, handles };
 
     const handleToggle = useCallback(() => {
-        const newValue = !isActive;
+        const next = !localActive;
+        setLocalActive(next);
         brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
-            payload: { id, data: { value: newValue } }
+            payload: { id, data: { value: next } }
         });
-    }, [id, isActive, brain]);
+    }, [id, localActive, brain]);
+
+    const isActive = localActive;
 
     return (
         <BaseNode {...props} data={nodeData}>
-            <div className="flex flex-col items-center gap-3 p-2 min-w-[80px]">
+            <div 
+                className="flex flex-col items-center gap-3 p-2 min-w-[80px]"
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+            >
                 <div
                     className={`
                         nodrag cursor-pointer w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out
                         ${isActive ? 'bg-orange-500' : 'bg-zinc-700'}
                     `}
-                    onClick={handleToggle}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggle();
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
                     <div
