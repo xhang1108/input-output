@@ -17,8 +17,7 @@ Multi-purpose arithmetic operator for addition, subtraction, multiplication, and
 ```playground
 {
   "nodeType": "MA-01",
-  "initialData": { "op": "ADD", "label": "Add" },
-  "height": 220
+  "initialData": { "op": "ADD" }
 }
 ```
 
@@ -33,8 +32,7 @@ Specialized for exponential growth and extraction. Supports operations like **Po
 ```playground
 {
   "nodeType": "MA-02",
-  "initialData": { "op": "POW", "label": "Power" },
-  "height": 220
+  "initialData": { "op": "POW" }
 }
 ```
 
@@ -49,8 +47,7 @@ Calculates Natural Log (ln), log10, log2, or Log base n.
 ```playground
 {
   "nodeType": "MA-03",
-  "initialData": { "op": "LN", "label": "Natural Log" },
-  "height": 200
+  "initialData": { "op": "LN" }
 }
 ```
 
@@ -63,8 +60,7 @@ Calculates circular and hyperbolic functions like Sine, Cosine, and Tangent.
 ```playground
 {
   "nodeType": "MA-04",
-  "initialData": { "op": "SIN", "label": "Sine" },
-  "height": 220
+  "initialData": { "op": "SIN" }
 }
 ```
 
@@ -77,8 +73,7 @@ Standard math rounding tools: `Round`, `Floor`, `Ceiling`, and `Truncate`.
 ```playground
 {
   "nodeType": "MA-05",
-  "initialData": { "op": "ROUND", "label": "Rounding" },
-  "height": 220
+  "initialData": { "op": "ROUND" }
 }
 ```
 
@@ -95,8 +90,7 @@ Decomposes a floating point number into its integer and fractional parts.
 ```playground
 {
   "nodeType": "MA-06",
-  "initialData": { "label": "Fraction" },
-  "height": 180
+  "initialData": { }
 }
 ```
 
@@ -111,8 +105,7 @@ Includes `GCD`, `LCM`, `Modulo`, and a primality test.
 ```playground
 {
   "nodeType": "MA-07",
-  "initialData": { "op": "GCD", "label": "GCD" },
-  "height": 200
+  "initialData": { "op": "GCD" }
 }
 ```
 
@@ -127,7 +120,6 @@ Calculates Combinations C(n, r), Permutations P(n, r), and Factorials n!.
 ```playground
 {
   "nodeType": "MA-08",
-  "initialData": { "op": "NCR", "label": "Combinations" },
-  "height": 200
+  "initialData": { "op": "NCR" }
 }
 ```

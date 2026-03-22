@@ -15,7 +15,7 @@ Think of IOGL as **Digital Lego Instructions**.
 - When you connect two nodes, you are defining a **Stud**.
 - The entire graph is a **Blueprint (Recipe)** that can be saved, shared, and rebuilt instantly.
 
-In technical terms, IOGL is a high-performance serialization format that converts your visual canvas into a mathematical graph.
+In technical terms, IOGL is a serialization format that converts your visual canvas into a mathematical graph.
 
 ## 2. Why IOGL?
 

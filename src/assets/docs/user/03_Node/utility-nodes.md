@@ -28,8 +28,7 @@ Double-click the content to enter Edit Mode. Press `Esc` or click completely out
     "bgColor": "blue",
     "textSize": "md"
   },
-  "width": 250,
-  "height": 130
+  "width": 250
 }
 ```
 

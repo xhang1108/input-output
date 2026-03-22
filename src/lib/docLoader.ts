@@ -107,7 +107,7 @@ export function getWikiData(mode: string): DocSection[] {
                     .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0));
 
                 const cleanTitle = dir.name.replace(/^\d+_/, '').replace(/-/g, ' ');
-                const slug = dir.name.replace(/^\d+_/, '').toLowerCase();
+                const slug = dir.name.replace(/^\d+_/, '').toLowerCase().replace(/_/g, '-');
 
                 return {
                     id: dir.name.toLowerCase(),

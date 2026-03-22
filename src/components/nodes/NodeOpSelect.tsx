@@ -85,6 +85,7 @@ export const NodeOpSelect = memo(({
             <button
                 className="nodrag w-full bg-zinc-900 border border-zinc-700/50 rounded-[10px] px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-50 transition-all flex items-center justify-between group active:scale-95"
                 onClick={handleTrigger}
+                onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
             >
                 <span className="truncate font-medium group-hover:text-white">{currentLabel}</span>

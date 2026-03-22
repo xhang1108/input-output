@@ -16,21 +16,19 @@ The simplest input node. Type a number or use the scroll wheel to increment/decr
 ```playground
 {
   "nodeType": "IN-01",
-  "initialData": { "value": 42, "unit": "rad", "label": "Initial Theta" },
-  "height": 200
+  "initialData": { "value": 42, "unit": "rad" }
 }
 ```
 
 ## 2. Slider (IN-02)
-Use the Slider for continuous real-time modulation. Perfect for tuning physical parameters or color values.
+Use the Slider for continuous real-time modulation. Perfect for tuning physical parameters or color values. You can set the *min*, *max*, and *step* values to control the slider's range and precision.
 
 - **Output**: The current value of the slider.
 
 ```playground
 {
   "nodeType": "IN-02",
-  "initialData": { "value": 0.5, "min": 0, "max": 1, "step": 0.01, "label": "Modulator" },
-  "height": 220
+  "initialData": { "value": 0.5, "min": 0, "max": 1, "step": 0.01 }
 }
 ```
 
@@ -45,8 +43,7 @@ Pick a color and output it as a HEX string or an RGB/Vec3 vector.
 ```playground
 {
   "nodeType": "IN-03",
-  "initialData": { "value": "#3b82f6", "label": "Color Picker" },
-  "height": 180
+  "initialData": { "value": "#3b82f6" }
 }
 ```
 
@@ -59,8 +56,7 @@ Inject a static text string into the calculation flow.
 ```playground
 {
   "nodeType": "IN-04",
-  "initialData": { "value": "Hello World", "label": "Label" },
-  "height": 160
+  "initialData": { "value": "Hello World" }
 }
 ```
 
@@ -72,8 +68,7 @@ A simple boolean trigger. Supports **Sticky (toggle)** and **Momentary (hold)** 
 ```playground
 {
   "nodeType": "IN-05",
-  "initialData": { "label": "Trigger" },
-  "height": 160
+  "initialData": { }
 }
 ```
 
@@ -85,53 +80,49 @@ Provide mathematical constants like pi, e, phi, and tau.
 ```playground
 {
   "nodeType": "IN-06",
-  "initialData": { "val": "pi", "label": "Pi" },
-  "height": 160
+  "initialData": { "val": "pi" }
 }
 ```
 
 ## 7. Array Input (IN-07)
-Define 2D data structures. Matrices are represented in IOGL using JSON bracket notation.
+Define 2D data structures.
 
-- **Output**: The defined array or matrix.
+- **Output**: The defined Array.
 
 ```playground
 {
   "nodeType": "IN-07",
-  "initialData": { "rawExpression": "[[0,0,0],[0,0,0],[0,0,0]]", "label": "Matrix Input", "width": 152, "height": 160 },
-  "height": 240
+  "initialData": { "rawExpression": "[[0,0,0],[0,0,0],[0,0,0]]", "width": 152, "height": 160 }
 }
 ```
 
 ## 8. Abacus (IN-08)
-A physical-computing inspired input for large integers.
+A node that exists for fun, maybe one day someone will need it.
 
 - **Output**: The numeric value represented by the abacus beads.
 
 ```playground
 {
   "nodeType": "IN-08",
-  "initialData": { "label": "Abacus" },
-  "width": 240,
-  "height": 140
+  "initialData": { },
+  "width": 240
 }
 ```
 
 ## 9. Expression (IN-09)
-**Symbolic only.** Provides a static string for Calculus nodes. It has NO input handles.
+Used to create nodes we haven't preset. You can understand our library to write the formulas you need. This is also the node used to connect to the solver node.
 
 - **Output**: The symbolic expression string.
 
 ```playground
 {
   "nodeType": "IN-09",
-  "initialData": { "code": "x^2 + sin(x)", "label": "Formula" },
-  "height": 160
+  "initialData": { "code": "x^2 + sin(x)" }
 }
 ```
 
 ## 10. Random (IN-10)
-A high-performance stochastic generator that consolidates noise and distribution logic. It supports four major statistical models and three output architectures.
+A stochastic generator that consolidates noise and distribution logic. It supports four major statistical models and three output architectures.
 
 ### Supported Distributions
 *   **Uniform**: Standard range between `Min` and `Max`.
@@ -142,13 +133,12 @@ A high-performance stochastic generator that consolidates noise and distribution
 ### Output Modes
 *   **Scalar**: Single number output.
 *   **Vector**: 1D Array defined by `Length`.
-*   **Matrix**: 2D Array defined by `Rows` x `Cols`.
+*   **Array (2D)**: 2D data structure defined by `Rows` x `Cols`.
 
 ```playground
 {
   "nodeType": "IN-10",
-  "initialData": { "mode": "scalar", "distribution": "Uniform", "label": "Stochastic Gen" },
-  "height": 335
+  "initialData": { "mode": "scalar", "distribution": "Uniform" }
 }
 ```
 

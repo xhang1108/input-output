@@ -110,7 +110,11 @@ export const SliderNode = memo((props: NodeProps) => {
                     </div>
                 )}
 
-                <div className="relative group">
+                <div 
+                    className="relative group"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                >
                     <input
                         type="range"
                         min={min}
@@ -118,11 +122,18 @@ export const SliderNode = memo((props: NodeProps) => {
                         step={step}
                         value={localValue}
                         onChange={handleChange}
+                        onPointerDown={(e) => {
+                            isInteracting.current = true;
+                            e.stopPropagation();
+                        }}
                         onMouseDown={(e) => {
                             isInteracting.current = true;
                             e.stopPropagation();
                         }}
                         onMouseUp={() => {
+                            isInteracting.current = false;
+                        }}
+                        onPointerUp={() => {
                             isInteracting.current = false;
                         }}
                         className="nodrag w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400 transition-all"
