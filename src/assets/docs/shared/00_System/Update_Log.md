@@ -5,10 +5,6 @@ icon: Layers
 ---
 
 # Update Log
-> **Current Version**: V1.0.0
-> **Status**: Operational
-
----
 
 ## Future Roadmap
 - **Advanced Macro Systems**: Implementation of Composite Recipes for logical encapsulation.

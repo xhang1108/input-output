@@ -15,32 +15,7 @@
  *   HEALTH_CHECK → Report node/edge counts + value hashes for validation
  */
 
-// Phase 4.1: Externalize mathjs to CDN for worker to bypass build timeouts
-// During build (Node.js), importScripts doesn't exist, we use the static import.
-// In the browser worker, we use importScripts to avoid bundling mathjs.
-let mathjs_create: any;
-let mathjs_all: any;
-
-if (typeof (self as any).importScripts === 'function') {
-    // Browser worker context
-    try {
-        (self as any).importScripts('https://unpkg.com/mathjs@14.2.1/lib/browser/math.js');
-        (self as any).importScripts('https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js');
-        // @ts-ignore
-        const m = (self as any).math;
-        mathjs_create = m.create;
-        mathjs_all = m.all;
-    } catch (e) {
-        console.error('[BrainWorker] Failed to load mathjs/nerdamer from CDN', e);
-    }
-} else {
-    // Build-time / Node context (Wait, workers aren't usually run in Node during build)
-    // But we keep the imports for TS types and potential SSR logic.
-    // Use eval('require') to hide from bundler
-    const m = eval('require')('mathjs');
-    mathjs_create = m.create;
-    mathjs_all = m.all;
-}
+import { create, all } from 'mathjs';
 
 import { MATH_CONFIG } from './mathConfig';
 import { NodeRegistry } from './NodeRegistry';
@@ -365,13 +340,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     switch (msg.type) {
         case 'INIT': {
             NodeRegistry.initializeNodes();
-            math = mathjs_create(mathjs_all, msg.config);
+            math = create(all, msg.config);
             respond({ type: 'READY' });
             break;
         }
 
         case 'UPDATE_CONFIG': {
-            math = mathjs_create(mathjs_all, msg.config);
+            math = create(all, msg.config);
             // Optionally, we could re-trigger evaluation of all dirty nodes here,
             // but usually the proxy will follow up with an EVAL if needed.
             respond({ type: 'READY' });

@@ -328,7 +328,18 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             const isBrandNew = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('new') === '1';
 
             if (actualId === 'new' || isBrandNew) {
+                console.log(`[useProjectSave] Brand new project detected (${actualId === 'new' ? 'ID:new' : 'URL:new'}).`);
                 hasSyncedRef.current = false;
+                
+                // NEW: Initialize metadata for ownership detection if session exists
+                if (session?.user?.id) {
+                    setProjectMeta({
+                        title: 'Untitled Project',
+                        visibility: 'private',
+                        userId: session.user.id
+                    });
+                }
+                
                 brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
                     setIsLoaded(true);
                 });
@@ -394,6 +405,13 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                     })
                     .then(data => {
                         if (data.__isNew) {
+                            if (session?.user?.id) {
+                                setProjectMeta({
+                                    title: 'Untitled Project',
+                                    visibility: 'private',
+                                    userId: session.user.id
+                                });
+                            }
                             brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
                                 setIsLoaded(true);
                             });

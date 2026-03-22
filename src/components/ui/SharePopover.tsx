@@ -9,6 +9,8 @@ interface SharePopoverProps {
     onVisibilityChange?: (visibility: 'private' | 'public') => void;
     showTrigger?: boolean;
     align?: 'left' | 'right';
+    activeSlotId?: string | null;
+    onOpen?: () => void;
 }
 
 export function SharePopover({
@@ -16,7 +18,9 @@ export function SharePopover({
     visibility = 'private',
     onVisibilityChange,
     showTrigger = true,
-    align = 'right'
+    align = 'right',
+    activeSlotId,
+    onOpen
 }: SharePopoverProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const [copied, setCopied] = React.useState(false);
@@ -45,6 +49,13 @@ export function SharePopover({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isOpen]);
 
+    // Close if another card becomes active
+    React.useEffect(() => {
+        if (activeSlotId && activeSlotId !== projectId && isOpen) {
+            setIsOpen(false);
+        }
+    }, [activeSlotId, projectId, isOpen]);
+
     return (
         <div
             ref={containerRef}
@@ -55,7 +66,9 @@ export function SharePopover({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-                        setIsOpen(!isOpen);
+                        const next = !isOpen;
+                        setIsOpen(next);
+                        if (next) onOpen?.();
                     }}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all border
                         ${visibility === 'public'

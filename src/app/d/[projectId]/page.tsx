@@ -30,7 +30,8 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
 
     return (
         <BrainProvider session="main">
-            <div className="w-screen h-screen bg-black relative flex flex-col overflow-hidden">
+            <div className="w-screen h-screen bg-bg-deep relative flex flex-col overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none bg-grid-dots" />
                 <div className="flex-1 relative overflow-hidden flex flex-col">
                     <VisualClock />
                     <Body

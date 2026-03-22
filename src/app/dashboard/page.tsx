@@ -25,7 +25,8 @@ export default function Dashboard() {
     }, [router]);
 
     return (
-        <div className="w-screen h-screen bg-black relative flex flex-col overflow-hidden">
+        <div className="w-screen h-screen bg-bg-deep relative flex flex-col overflow-hidden">
+            <div className="fixed inset-0 pointer-events-none bg-grid-dots" />
             <SystemHeader
                 isDashboard={true}
                 title="Input-Output Engine"
