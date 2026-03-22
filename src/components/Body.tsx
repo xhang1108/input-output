@@ -622,7 +622,7 @@ export function Body({
     return (
         <RelinkContext.Provider value={relinkValue}>
             <div
-                className="h-full w-full bg-zinc-950 relative"
+                className="h-full w-full bg-zinc-800 relative"
                 onMouseMove={onMouseMove}
                 onMouseDown={onMouseDown}
                 onMouseUp={onMouseUp}
@@ -636,7 +636,7 @@ export function Body({
             >
                 {/* Loading Overlay — blocks flash while project data loads */}
                 {!isLoaded && (
-                    <div className="absolute inset-0 z-9999 bg-zinc-950 flex items-center justify-center">
+                    <div className="absolute inset-0 z-9999 bg-zinc-800 flex items-center justify-center">
                         <div className="flex flex-col items-center gap-3">
                             <div className="w-8 h-8 border-2 border-zinc-700 border-t-unit rounded-full animate-spin" />
                             <span className="text-xs text-zinc-500">Loading project...</span>

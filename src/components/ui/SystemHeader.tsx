@@ -30,7 +30,7 @@ export function SystemHeader({
     isLoading = false,
 }: SystemHeaderProps) {
     return (
-        <header className="sticky top-0 z-50 border-b border-surface-base bg-surface-dim">
+        <header className="sticky top-0 z-50 border-b border-white/5 bg-black/20 backdrop-blur-sm">
             <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
                 <div className="flex items-center gap-6">
                     {!isDashboard ? (

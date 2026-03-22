@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 html {
-  background-color: black;
+  background-color: var(--color-surface-light);
 }
 
 body {
@@ -12,7 +12,7 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: black;
+  background-color: var(--color-surface-light);
   color: white;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -41,6 +41,9 @@ body {
   --color-primary: #FF8C00;
   --color-secondary: #B0B0B0;
   --color-accent: var(--color-primary);
+
+  --color-bg-deep: #121212;
+  --color-grid-dot: rgba(255, 255, 255, 0.05);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -506,3 +509,9 @@ input[type="number"] {
 .markdown-alert-caution { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
 .markdown-alert-caution .markdown-alert-title { color: #ef4444; }
 
+@layer utilities {
+  .bg-grid-dots {
+    background-image: radial-gradient(circle at 1px 1px, var(--color-grid-dot) 1px, transparent 0);
+    background-size: 20px 20px;
+  }
+}
