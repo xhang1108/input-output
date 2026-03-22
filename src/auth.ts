@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import * as schema from "./db/schema";
 import { getDb } from "./db/setup";
+import { eq } from "drizzle-orm";
 import type { DefaultSession } from 'next-auth';
 
 declare module "next-auth" {
@@ -73,6 +74,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
         async signIn({ user, account, profile }) {
             console.log("Auth: Event - Sign In Successful:", user?.email, "via", account?.provider);
+            
+            // Refresh profile picture if it's a Google account to avoid stale/broken URLs
+            if (account?.provider === "google" && profile?.picture && user?.id) {
+                try {
+                    const db = getDb();
+                    if (db) {
+                        await db.update(schema.users)
+                            .set({ image: profile.picture as string })
+                            .where(eq(schema.users.id, user.id));
+                        console.log("Auth: Refreshed user image from Google for:", user.email);
+                    }
+                } catch (e) {
+                    console.warn("Auth: Failed to refresh user image during sign-in event:", e);
+                }
+            }
         },
     },
     callbacks: {
