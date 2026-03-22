@@ -43,6 +43,8 @@ function SaveSlotCard({
     isTransferring = false,
     loading = false,
     onVisibilityChange,
+    activeSlotId,
+    setActiveSlotId,
 }: {
     meta: SaveSlotMeta;
     isCloud?: boolean;
@@ -54,18 +56,27 @@ function SaveSlotCard({
     isTransferring?: boolean;
     loading?: boolean;
     onVisibilityChange?: (visibility: 'private' | 'public') => void;
+    activeSlotId?: string | null;
+    setActiveSlotId?: (id: string | null) => void;
 }) {
     const [isRenaming, setIsRenaming] = useState(false);
     const [nameInput, setNameInput] = useState(meta.name);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
-    const submitRename = () => {
+    const submitRename = useCallback(() => {
         const trimmed = nameInput.trim();
         if (trimmed && trimmed !== meta.name) {
             onRename(trimmed);
         }
         setIsRenaming(false);
-    };
+    }, [nameInput, meta.name, onRename]);
+
+    // Handle exclusive interaction: submit rename if another card becomes active
+    useEffect(() => {
+        if (activeSlotId !== meta.id && isRenaming) {
+            submitRename();
+        }
+    }, [activeSlotId, meta.id, isRenaming, submitRename]);
 
     return (
         <motion.div
@@ -73,11 +84,11 @@ function SaveSlotCard({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className={`group relative flex flex-col border bg-surface-dim transition-all duration-300 rounded-2xl overflow-hidden
+            className={`group relative flex flex-col border bg-surface-dim transition-all duration-300 rounded-2xl
                        ${meta.syncStatus === 'pending'
                     ? 'border-warning/50 shadow-[0_0_20px_-3px_hsla(38,92%,55%,0.15)]'
                     : isCloud ? 'border-surface-dim shadow-[0_0_15px_-3px_hsla(217,91%,60%,0.1)]' : 'border-surface-dim'}
-                       ${loading ? 'opacity-70 pointer-events-none' : 'hover:border-surface-light hover:shadow-xl hover:-translate-y-1 cursor-pointer'} 
+                       ${loading ? 'opacity-70 pointer-events-none' : 'hover:border-surface-light hover:shadow-xl hover:-translate-y-1 hover:z-60 focus-within:z-60 cursor-pointer'} 
                        ${isTransferring ? 'animate-pulse' : ''}`}
             whileTap={{ scale: 0.97, opacity: 0.8 }}
             onClick={() => !loading && onOpen()}
@@ -98,7 +109,7 @@ function SaveSlotCard({
             </div>
 
             {/* Visual Header / Thumbnail */}
-            <div className={`aspect-16/10 relative flex items-center justify-center overflow-hidden
+            <div className={`aspect-16/10 relative flex items-center justify-center overflow-hidden rounded-t-[calc(1rem-1px)]
                            ${isCloud ? 'bg-cloud/5' : 'bg-surface-base/40 border-b border-white/5'}`}>
 
                 {loading ? (
@@ -220,11 +231,15 @@ function SaveSlotCard({
                     )}
 
                     <button
-                        onClick={() => { setNameInput(meta.name); setIsRenaming(true); }}
-                        className="p-1.5 rounded-sm text-text-muted hover:text-zinc-300 hover:bg-surface-light transition-colors cursor-pointer"
-                        title="Rename"
+                        onClick={() => { 
+                            setActiveSlotId?.(meta.id);
+                            if (isRenaming) submitRename();
+                            else { setNameInput(meta.name); setIsRenaming(true); }
+                        }}
+                        className={`p-1.5 rounded-sm transition-all cursor-pointer ${isRenaming ? 'text-success hover:text-success/80 bg-success/10' : 'text-text-muted hover:text-zinc-300 hover:bg-surface-light'}`}
+                        title={isRenaming ? "Save changes" : "Rename"}
                     >
-                        <Pencil className="w-3.5 h-3.5" />
+                        {isRenaming ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
                     </button>
                     <div className="relative ml-auto flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                         {confirmDelete ? (
@@ -249,6 +264,8 @@ function SaveSlotCard({
                                         projectId={meta.id}
                                         visibility={meta.visibility || 'private'}
                                         onVisibilityChange={onVisibilityChange}
+                                        activeSlotId={activeSlotId}
+                                        onOpen={() => setActiveSlotId?.(meta.id)}
                                     />
                                 )}
                                 <button
@@ -336,6 +353,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     const [isLoadingCloud, setIsLoadingCloud] = useState(false);
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [transferringIds, setTransferringIds] = useState<Record<string, boolean>>({});
+    const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
 
     const refreshLocal = useCallback(() => {
         setSlots(SaveManager.list());
@@ -684,6 +702,8 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                                         onTransfer={(toCloud) => handleTransfer(meta.id, toCloud)}
                                         onVisibilityChange={(newVisibility) => handleRename(meta.id, meta.name, true, newVisibility)}
                                         canSyncToCloud={!!session && cloudSlots.length < 20}
+                                        activeSlotId={activeSlotId}
+                                        setActiveSlotId={setActiveSlotId}
                                     />
                                 );
                             })}
