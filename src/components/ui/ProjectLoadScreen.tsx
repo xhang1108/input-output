@@ -43,6 +43,8 @@ function SaveSlotCard({
     isTransferring = false,
     loading = false,
     onVisibilityChange,
+    activeSlotId,
+    setActiveSlotId,
 }: {
     meta: SaveSlotMeta;
     isCloud?: boolean;
@@ -54,18 +56,27 @@ function SaveSlotCard({
     isTransferring?: boolean;
     loading?: boolean;
     onVisibilityChange?: (visibility: 'private' | 'public') => void;
+    activeSlotId?: string | null;
+    setActiveSlotId?: (id: string | null) => void;
 }) {
     const [isRenaming, setIsRenaming] = useState(false);
     const [nameInput, setNameInput] = useState(meta.name);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
-    const submitRename = () => {
+    const submitRename = useCallback(() => {
         const trimmed = nameInput.trim();
         if (trimmed && trimmed !== meta.name) {
             onRename(trimmed);
         }
         setIsRenaming(false);
-    };
+    }, [nameInput, meta.name, onRename]);
+
+    // Handle exclusive interaction: submit rename if another card becomes active
+    useEffect(() => {
+        if (activeSlotId !== meta.id && isRenaming) {
+            submitRename();
+        }
+    }, [activeSlotId, meta.id, isRenaming, submitRename]);
 
     return (
         <motion.div
@@ -73,11 +84,11 @@ function SaveSlotCard({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className={`group relative flex flex-col border transition-all duration-300 rounded-2xl overflow-hidden
+            className={`group relative flex flex-col border bg-surface-dim transition-all duration-300 rounded-2xl
                        ${meta.syncStatus === 'pending'
-                    ? 'border-warning/50 from-warning/10 to-warning/5 shadow-[0_0_20px_-3px_hsla(38,92%,55%,0.15)]'
-                    : isCloud ? 'border-surface-dim from-cloud/10 to-cloud/5 shadow-[0_0_15px_-3px_hsla(217,91%,60%,0.1)]' : 'border-surface-dim from-surface-base/50 to-surface-base/30'}
-                       ${loading ? 'opacity-70 pointer-events-none' : 'hover:border-surface-light hover:shadow-xl hover:-translate-y-1 cursor-pointer'} 
+                    ? 'border-warning/50 shadow-[0_0_20px_-3px_hsla(38,92%,55%,0.15)]'
+                    : isCloud ? 'border-surface-dim shadow-[0_0_15px_-3px_hsla(217,91%,60%,0.1)]' : 'border-surface-dim'}
+                       ${loading ? 'opacity-70 pointer-events-none' : 'hover:border-surface-light hover:shadow-xl hover:-translate-y-1 hover:z-60 focus-within:z-60 cursor-pointer'} 
                        ${isTransferring ? 'animate-pulse' : ''}`}
             whileTap={{ scale: 0.97, opacity: 0.8 }}
             onClick={() => !loading && onOpen()}
@@ -98,8 +109,8 @@ function SaveSlotCard({
             </div>
 
             {/* Visual Header / Thumbnail */}
-            <div className={`aspect-16/10 relative flex items-center justify-center overflow-hidden
-                           ${isCloud ? 'bg-cloud/5' : 'bg-surface-light/20'}`}>
+            <div className={`aspect-16/10 relative flex items-center justify-center overflow-hidden rounded-t-[calc(1rem-1px)]
+                           ${isCloud ? 'bg-cloud/5' : 'bg-surface-base/40 border-b border-white/5'}`}>
 
                 {loading ? (
                     <div className="flex flex-col items-center gap-3">
@@ -220,11 +231,15 @@ function SaveSlotCard({
                     )}
 
                     <button
-                        onClick={() => { setNameInput(meta.name); setIsRenaming(true); }}
-                        className="p-1.5 rounded-sm text-text-muted hover:text-zinc-300 hover:bg-surface-light transition-colors cursor-pointer"
-                        title="Rename"
+                        onClick={() => { 
+                            setActiveSlotId?.(meta.id);
+                            if (isRenaming) submitRename();
+                            else { setNameInput(meta.name); setIsRenaming(true); }
+                        }}
+                        className={`p-1.5 rounded-sm transition-all cursor-pointer ${isRenaming ? 'text-success hover:text-success/80 bg-success/10' : 'text-text-muted hover:text-zinc-300 hover:bg-surface-light'}`}
+                        title={isRenaming ? "Save changes" : "Rename"}
                     >
-                        <Pencil className="w-3.5 h-3.5" />
+                        {isRenaming ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
                     </button>
                     <div className="relative ml-auto flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                         {confirmDelete ? (
@@ -249,6 +264,8 @@ function SaveSlotCard({
                                         projectId={meta.id}
                                         visibility={meta.visibility || 'private'}
                                         onVisibilityChange={onVisibilityChange}
+                                        activeSlotId={activeSlotId}
+                                        onOpen={() => setActiveSlotId?.(meta.id)}
                                     />
                                 )}
                                 <button
@@ -277,43 +294,46 @@ function NewProjectCard({ onClick, isCloud = false, disabled = false, descriptio
             transition={{ duration: 0.2, delay: 0.05 }}
             whileTap={{ scale: 0.94, opacity: 0.7 }}
             onClick={() => !disabled && !loading && onClick()}
-            className={`flex flex-col items-center justify-center border-2 border-dashed
-                       rounded-2xl min-h-[220px] transition-all duration-200 group
+            className={`relative flex flex-col items-center justify-center border-2 border-dashed
+                       rounded-2xl min-h-[220px] transition-all duration-200 group overflow-hidden
                        ${(disabled || loading) ? 'opacity-40 cursor-not-allowed border-border-dim' : 'cursor-pointer'}
                        ${isCloud
-                    ? 'bg-cloud/5 border-cloud/30 hover:border-cloud/50 hover:bg-cloud/10 shadow-[0_0_15px_-3px_hsla(217,91%,60%,0.05)]'
-                    : 'bg-surface-base/30 border-surface-light hover:border-unit/50 hover:bg-surface-base/50'}`}
+                    ? 'bg-surface-dim border-cloud/30 hover:border-cloud/50 hover:bg-surface-light shadow-[0_0_15px_-3px_hsla(217,91%,60%,0.05)]'
+                    : 'bg-surface-dim border-surface-light hover:border-unit/50 hover:bg-surface-light'}`}
         >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors duration-200
-                          ${isCloud
-                    ? 'bg-cloud/20 text-text-cloud group-hover:bg-cloud/20'
-                    : 'bg-surface-light text-text-muted group-hover:bg-unit/20 group-hover:text-unit'}`}>
-                {loading ? (
-                    <motion.img 
-                        src="/logo.webp" 
-                        alt="Loading" 
-                        className="w-8 h-8 object-contain"
-                        animate={{ 
-                            scale: [1, 1.1, 1],
-                            opacity: [0.5, 1, 0.5]
-                        }}
-                        transition={{ 
-                            duration: 1.5,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                        }}
-                    />
-                ) : (
-                    isCloud ? <Cloud className="w-6 h-6" /> : <Plus className="w-6 h-6" />
-                )}
-            </div>
-            <div className="flex flex-col items-center text-center px-4">
-                <span className={`text-sm font-bold uppercase tracking-widest ${isCloud ? 'text-text-cloud' : 'text-text-dim group-hover:text-zinc-200'}`}>
-                    {loading ? 'Initialising...' : 'New Project'}
-                </span>
-                <span className="text-[10px] text-zinc-600 mt-1">
-                    {loading ? 'Please wait' : (description || (isCloud ? 'Synced with D1' : 'Saved in Browser'))}
-                </span>
+            <div className="absolute inset-x-0 top-0 h-1/2 bg-surface-base/30 border-b border-dashed border-white/5 pointer-events-none" />
+            <div className="relative z-10 flex flex-col items-center pt-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors duration-200
+                              ${isCloud
+                        ? 'bg-cloud/20 text-text-cloud group-hover:bg-cloud/20'
+                        : 'bg-surface-light text-text-muted group-hover:bg-unit/20 group-hover:text-unit'}`}>
+                    {loading ? (
+                        <motion.img 
+                            src="/logo.webp" 
+                            alt="Loading" 
+                            className="w-8 h-8 object-contain"
+                            animate={{ 
+                                scale: [1, 1.1, 1],
+                                opacity: [0.5, 1, 0.5]
+                            }}
+                            transition={{ 
+                                duration: 1.5,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                            }}
+                        />
+                    ) : (
+                        isCloud ? <Cloud className="w-6 h-6" /> : <Plus className="w-6 h-6" />
+                    )}
+                </div>
+                <div className="flex flex-col items-center text-center px-4">
+                    <span className={`text-sm font-bold uppercase tracking-widest ${isCloud ? 'text-text-cloud' : 'text-text-dim group-hover:text-zinc-200'}`}>
+                        {loading ? 'Initialising...' : 'New Project'}
+                    </span>
+                    <span className="text-[10px] text-zinc-600 mt-1">
+                        {loading ? 'Please wait' : (description || (isCloud ? 'Synced with D1' : 'Saved in Browser'))}
+                    </span>
+                </div>
             </div>
         </motion.div>
     );
@@ -333,6 +353,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     const [isLoadingCloud, setIsLoadingCloud] = useState(false);
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [transferringIds, setTransferringIds] = useState<Record<string, boolean>>({});
+    const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
 
     const refreshLocal = useCallback(() => {
         setSlots(SaveManager.list());
@@ -621,7 +642,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     };
 
     return (
-        <div className="flex-1 flex flex-col overflow-auto bg-black relative">
+        <div className="flex-1 flex flex-col overflow-auto bg-transparent relative">
             {isLoadingCloud && (
                 <div className="absolute top-6 right-8 flex items-center gap-2 px-3 py-1.5 bg-cloud/10 border border-cloud/20 rounded-full z-20">
                     <motion.img 
@@ -681,6 +702,8 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                                         onTransfer={(toCloud) => handleTransfer(meta.id, toCloud)}
                                         onVisibilityChange={(newVisibility) => handleRename(meta.id, meta.name, true, newVisibility)}
                                         canSyncToCloud={!!session && cloudSlots.length < 20}
+                                        activeSlotId={activeSlotId}
+                                        setActiveSlotId={setActiveSlotId}
                                     />
                                 );
                             })}
