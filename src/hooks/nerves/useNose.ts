@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback } from 'react';
-import { Brain } from '../engine/Brain';
-import { useBrain } from '../context/BrainContext';
-import { DataType } from '../types/payload';
+import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
+import { DataType } from '../../types/payload';
 
 /**
  * useNose (The Sniffer Organ)

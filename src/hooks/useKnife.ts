@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useReactFlow, XYPosition } from '@xyflow/react';
-import { useCanvasProjection } from '../hooks/useCanvasProjection';
+import { useCanvasProjection } from './useCanvasProjection';
 
 /**
  * useKnife

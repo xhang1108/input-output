@@ -1,8 +1,8 @@
 import { useCallback, RefObject, useEffect, useRef } from 'react';
-import { useBrain } from '../context/BrainContext';
-import { Brain } from '../engine/Brain';
-import { GraphCodec } from '../engine/GraphCodec';
-import { parseLatexToGraph } from '../utils/latex/latexToGraph';
+import { useBrain } from '../../context/BrainContext';
+import { Brain } from '../../engine/Brain';
+import { GraphCodec } from '../../engine/GraphCodec';
+import { parseLatexToGraph } from '../../utils/latex/latexToGraph';
 
 /**
  * useMouth (The Mouth/Speech Organ)

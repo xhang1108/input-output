@@ -1,7 +1,7 @@
 import { Settings, Check, Grid, Magnet, Bug, PanelRight, Mouse, Upload, Download, FolderOpen, Layout } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Panel } from '@xyflow/react';
-import { LayoutAlgorithm, LayoutDirection } from '../../nerves/layoutEngine';
+import { LayoutAlgorithm, LayoutDirection } from '../../hooks/layoutEngine';
 import { AuthButton } from './AuthButton';
 
 interface SettingsPanelProps {

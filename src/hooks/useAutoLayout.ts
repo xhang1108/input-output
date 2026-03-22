@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
-import { getLayoutedElements, LayoutAlgorithm, LayoutDirection } from '../nerves/layoutEngine';
+import { getLayoutedElements, LayoutAlgorithm, LayoutDirection } from './layoutEngine';
 
 export function useAutoLayout(
     nodes: Node[],

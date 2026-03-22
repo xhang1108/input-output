@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
-import { LayoutAlgorithm, LayoutDirection } from '../nerves/layoutEngine';
+import { LayoutAlgorithm, LayoutDirection } from '../hooks/layoutEngine';
 import { MathPrecision } from '../engine/mathConfig';
 
 interface AppState {

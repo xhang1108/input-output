@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Download, Copy, Check } from 'lucide-react';
-import { useMouth } from '../../hooks/useMouth';
+import { useMouth } from '../../hooks/nerves/useMouth';
 
 interface GraphExportModalProps {
     isOpen: boolean;

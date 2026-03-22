@@ -5,7 +5,7 @@ import { X, Upload, Check, Copy, Calculator as CalcIcon, FileText } from 'lucide
 import { Brain } from '../../engine/Brain';
 import { parseLatexToGraph } from '../../utils/latex/latexToGraph';
 import { toast } from 'sonner';
-import { useMouth } from '../../hooks/useMouth';
+import { useMouth } from '../../hooks/nerves/useMouth';
 
 interface GraphImportModalProps {
     isOpen: boolean;
