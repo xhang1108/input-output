@@ -127,9 +127,14 @@ export function getWikiData(mode: string): DocSection[] {
     modeSections.forEach(s => combinedMap.set(s.id, s));
 
     const combinedSections = Array.from(combinedMap.values());
+    
+    // Filter out system section for user mode
+    const filteredSections = mode === 'user' 
+        ? combinedSections.filter(s => s.id !== '00_system')
+        : combinedSections;
 
     // Sort sections by folder prefix "00_", "01_", etc.
-    return combinedSections.sort((a, b) => {
+    return filteredSections.sort((a, b) => {
         const aMatch = a.id.match(/^(\d+)_/);
         const bMatch = b.id.match(/^(\d+)_/);
 

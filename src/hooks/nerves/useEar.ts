@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useBrain } from '../context/BrainContext';
-import { Brain } from '../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
+import { Brain } from '../../engine/Brain';
 
 type HotkeyAction = (e: KeyboardEvent) => void;
 

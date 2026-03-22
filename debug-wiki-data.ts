@@ -19,10 +19,12 @@ function findNonPlain(obj: any, path: string = ''): void {
 
 console.log('Testing User Sections...');
 const user = getWikiData('user');
+console.log('User Section IDs:', user.map(s => s.id));
 findNonPlain(user, 'user');
 
-console.log('Testing Developer Sections...');
+console.log('\nTesting Developer Sections...');
 const dev = getWikiData('developer');
+console.log('Developer Section IDs:', dev.map(s => s.id));
 findNonPlain(dev, 'developer');
 
-console.log('Done.');
+console.log('\nDone.');

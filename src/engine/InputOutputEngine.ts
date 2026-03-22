@@ -1,4 +1,4 @@
-import * as math from 'mathjs';
+import { create, all } from 'mathjs';
 import { InputOutputEngineInterface } from './interfaces/InputOutputEngineInterface';
 import { MATH_CONFIG } from './mathConfig';
 
@@ -7,15 +7,25 @@ export class InputOutputEngine implements InputOutputEngineInterface {
     private math: any;
 
     private constructor() {
-        // 💡 Pattern: Context-Aware Loading
-        // 1. Check for global math instance (Worker CDN / Browser CDN)
-        const globalMath = (typeof self !== 'undefined' && (self as any).math) || (typeof window !== 'undefined' && (window as any).math);
-        
-        if (globalMath && typeof globalMath.create === 'function') {
-            this.math = globalMath;
-        } else {
-            // 2. Fallback to imported math (Node.js / Standard Bundled Client)
-            this.math = math.create(math.all, MATH_CONFIG);
+        console.log('[InputOutputEngine] Constructor starting... [V2-FIXED]');
+        try {
+            // 💡 In a module worker, we strongly prefer the bundled 'mathjs' import
+            // to ensure consistency and availability of BigNumber/Units.
+            
+            console.log('[InputOutputEngine] Creating local math instance with bundled all/create...');
+            this.math = create(all, MATH_CONFIG);
+            
+            if (typeof this.math.bignumber !== 'function') {
+                console.error('[InputOutputEngine] Created math instance is missing bignumber! Trying fallback...');
+                // Emergency attempt if 'all' didn't include it for some reason
+                this.math = create(all, MATH_CONFIG);
+            }
+
+            console.log('[InputOutputEngine] Math instance ready. bignumber check:', typeof this.math.bignumber);
+        } catch (error) {
+            console.error('[InputOutputEngine] Initialization failed CRITICALLY:', error);
+            // Last resort: try to create without config
+            try { this.math = create(all); } catch { this.math = {}; }
         }
     }
 

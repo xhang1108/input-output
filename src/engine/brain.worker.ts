@@ -236,6 +236,7 @@ async function getValue(
         try {
             resultPayload = await NodeRegistry.evaluate(node, inputPayloads as any);
         } catch (error) {
+            console.error('[Worker] Evaluation error for node:', node.id, error);
             resultPayload = PayloadUtils.createError('Computation Failed');
         }
 
@@ -330,6 +331,7 @@ function respond(msg: WorkerResponse) {
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const msg = event.data;
+    console.log('[Worker] Received message:', msg.type, 'msgId:', (msg as any).msgId);
     if ('msgId' in msg && msg.msgId <= lastProcessedMsgId) {
         return;
     }

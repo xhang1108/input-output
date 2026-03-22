@@ -73,8 +73,12 @@ export class BrainWorkerProxy {
 
     private spawnWorker() {
         try {
+            // 💡 Cache-busting: add a timestamp to force worker refresh after refactor
+            const workerUrl = new URL('./brain.worker.ts', import.meta.url);
+            workerUrl.searchParams.set('v', Date.now().toString());
+
             this.worker = new Worker(
-                new URL('./brain.worker.ts', import.meta.url),
+                workerUrl,
                 { type: 'module' }
             );
 

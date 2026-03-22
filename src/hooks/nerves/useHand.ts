@@ -1,12 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useReactFlow, Node, XYPosition } from '@xyflow/react';
-import { useCanvasProjection } from '../hooks/useCanvasProjection';
-import { Brain } from '../engine/Brain';
-import { useBrain } from '../context/BrainContext';
-import { Transaction } from '../engine/types';
-import { useClipboard } from './useClipboard';
-import { useSelection } from './useSelection';
-import { useKnife } from './useKnife';
+import { useCanvasProjection } from '../useCanvasProjection';
+import { Brain } from '../../engine/Brain';
+import { useBrain } from '../../context/BrainContext';
+import { Transaction } from '../../engine/types';
+import { useClipboard } from '../useClipboard';
+import { useSelection } from '../useSelection';
+import { useKnife } from '../useKnife';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 

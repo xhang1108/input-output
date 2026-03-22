@@ -22,13 +22,13 @@ import { useRef, useCallback, useState, useEffect } from 'react';
 import { FormulaRenderer } from '../utils/FormulaRenderer';
 import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
 import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
-import { useEar } from '../nerves/useEar';
-import { useHand } from '../nerves/useHand';
-import { useKnife } from './useKnife';
+import { useEar } from '../hooks/nerves/useEar';
+import { useHand } from '../hooks/nerves/useHand';
+import { useKnife } from '../hooks/useKnife';
 import { COMMAND_REGISTRY, getEarShortcuts, Platform } from '../config/shortcuts';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
-import { useEye } from '../nerves/useEye';
+import { useEye } from '../hooks/nerves/useEye';
 import { useCanvasProjection } from '../hooks/useCanvasProjection';
 import { useRelink } from '../hooks/useRelink';
 import { useAutoInsert } from '../hooks/useAutoInsert';
@@ -292,23 +292,17 @@ export function Body({
 
     // Connect Brain Log to UI Log
     useEffect(() => {
-        // @ts-expect-error - Expose for debugging
         window.Brain = Brain;
-        // @ts-expect-error - Expose for debugging
         window.brain = brain;
-        // @ts-expect-error - Expose for debugging
         window.NodeRegistry = NodeRegistry;
-        // @ts-expect-error - Expose for debugging
         window.FormulaRenderer = FormulaRenderer;
 
-        // @ts-expect-error - Debug helper
         window.debugBrain = () => {
             console.log('Brain State:', (brain as any).state);
             console.log('Available Nodes:', Array.from((brain as any).state.nodes.keys()));
             console.log('Registered Evaluators:', (NodeRegistry as any).evaluators.size);
             console.log('Registered Symbolizers:', (NodeRegistry as any).symbolizers.size);
         };
-        // @ts-expect-error - Debug helper
         window.getNodes = () => Array.from((brain as any).state.nodes.values());
 
         const cleanupLog = brain.on('log', (msg: unknown) => logAction(String(msg)));
