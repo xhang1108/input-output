@@ -48,7 +48,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const valA = getHydrated(payloadA);
         const valB = getHydrated(payloadB);
         const data = (node.data || {}) as Record<string, unknown>;
-        const op = data.op as string || 'ADD';
+        const op = (data.op as string || 'ADD').toUpperCase();
 
         const extractValue = (v: unknown) => {
             if (v && typeof v === 'object' && !Array.isArray(v)) {

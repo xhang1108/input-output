@@ -38,6 +38,13 @@ export const PayloadUtils = {
             }
         }
 
+        // 💡 Pulse Consistency: All Scalars MUST have rank 0 and empty dimensions
+        // to pass deepEqual checks during stepwise propagation.
+        if (type === DataType.Scalar) {
+            meta.rank = 0;
+            meta.dimensions = [];
+        }
+
         return {
             type,
             value: this.dehydrate(value),

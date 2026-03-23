@@ -432,7 +432,14 @@ export class Brain {
 
             // Stepwise Propagation: Only propagate if the value ACTUALLY changed.
             // This prevents "Performance Avalanches" (Fatal Flaw 4 Fix)
-            if (oldPayload && !deepEqual(oldPayload, resultPayload)) {
+            // 💡 Pulse Protection: We ignore the 'symbol' field because it can change (e.g. literals in AST) 
+            // even if the result value is identical.
+            const isEqual = oldPayload && 
+                deepEqual(oldPayload.value, resultPayload.value) &&
+                oldPayload.type === resultPayload.type &&
+                deepEqual(oldPayload.meta, resultPayload.meta);
+
+            if (oldPayload && !isEqual) {
                 this.triggerDirtyChain(nodeId);
             } else if (!oldPayload) {
                 this.triggerDirtyChain(nodeId);
@@ -494,6 +501,9 @@ export class Brain {
         const dirtyChainNodeIds = Array.from(this.state.nodes.values())
             .filter(n => n.isInDirtyChain)
             .map(n => n.id);
+
+        // 💡 Pulse Protection: Clear the visual tracking set to avoid infinite heartbeats
+        this.dirtyNodes.clear();
 
         for (const id of dirtyChainNodeIds) {
             const node = this.state.nodes.get(id);
