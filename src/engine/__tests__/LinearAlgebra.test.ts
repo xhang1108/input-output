@@ -30,7 +30,7 @@ describe('Linear Algebra & Array Nodes', () => {
 
         const result = await NodeRegistry.evaluate(node as any, inputs);
 
-        expect(result.type).toBe(DataType.Array);
+        expect(result.type).toBe(DataType.Object);
         // multi-output should contain 'Q' and 'R' keys
         const val = result.value as any;
         expect(val.Q).toBeDefined();

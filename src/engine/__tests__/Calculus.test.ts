@@ -5,8 +5,8 @@ import { DataType } from '../../types/payload';
 import { RuntimeGuard } from '../calculus/RuntimeGuard';
 import { NerdamerService } from '../calculus/NerdamerService';
 
-// Initialize NodeRegistry
-NodeRegistry.initializeNodes();
+// NodeRegistry initialization is handled by global setup.ts
+
 
 // ─── CL-01: Derivative ─────────────────────────────────────────
 describe('CL-01: Derivative', () => {

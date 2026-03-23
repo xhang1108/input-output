@@ -3,10 +3,6 @@ import { initializeNodes } from '../NodeRegistry';
 import { nodeTypes } from '../../config/nodeTypeMap';
 
 describe('NodeRegistry Stability Architect', () => {
-    beforeAll(() => {
-        // 1. Initialize all distributed nodes
-        initializeNodes();
-    });
 
     it('should have an evaluator registered for every Node mapping in nodeTypes', () => {
         // nodeTypes maps string IDs (e.g. 'MA-01') to React components.

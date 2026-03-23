@@ -5,10 +5,6 @@ import { PayloadUtils } from '../../utils/PayloadUtils';
 import { InputOutputEngine } from '../InputOutputEngine';
 
 describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
-    beforeAll(() => {
-        InputOutputEngine.getInstance();
-        initializeNodes();
-    });
 
     test('MA-12: Should convert decimal to fraction', async () => {
         const node = {
@@ -16,6 +12,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -39,6 +36,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -61,6 +59,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -84,6 +83,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-14',
             data: { precision: 2 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -104,6 +104,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: { mixed: true },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -128,6 +129,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             type: 'MA-12',
             data: { mixed: true },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
         };
@@ -143,5 +145,63 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         expect(val.numerator.value).toBe(0);
         expect(val.denominator.value).toBe(1);
         expect(val.string.value).toBe('3');
+    });
+    
+    test('MA-12: Should handle dehydrated BigNumber from Division (Regression)', async () => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        
+        // Simulate MA-01 (Division 1/3)
+        const divResult = math.divide(math.bignumber(1), math.bignumber(3));
+        const divPayload = PayloadUtils.wrap(divResult); // Dehydrates to { mathjs: 'BigNumber', value: '...' }
+        
+        const node = {
+            id: 'test-fraction-div',
+            type: 'MA-12',
+            data: {},
+            value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            in: divPayload
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = result.value as any;
+
+        expect(result.type).toBe(DataType.Object);
+        expect(val.numerator.value).toBe(1);
+        expect(val.denominator.value).toBe(3);
+        expect(val.string.value).toBe('1/3');
+    });
+
+    test('MA-08: Should handle dehydrated BigNumber inputs (Combinatorics Regression)', async () => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        
+        const nPayload = PayloadUtils.wrap(math.bignumber(10));
+        const rPayload = PayloadUtils.wrap(math.bignumber(3));
+        
+        const node = {
+            id: 'test-comb',
+            type: 'MA-08',
+            data: { op: 'nCr' },
+            value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            in_n: nPayload,
+            in_r: rPayload
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        expect(result.type).toBe(DataType.Scalar);
+        
+        const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(result), math);
+        expect(Number(hydrated)).toBe(120);
     });
 });

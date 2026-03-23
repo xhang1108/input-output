@@ -49,7 +49,7 @@ describe('Switch Node Logic', () => {
             type: 'ADD_NODE',
             payload: {
                 id: 'SW1',
-                type: 'MA-04',
+                type: 'LG-02',
                 data: {},
                 position: { x: 0, y: 0 }
             }

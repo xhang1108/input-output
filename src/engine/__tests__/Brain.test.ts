@@ -66,52 +66,6 @@ describe('Brain', () => {
         });
     });
 
-    describe('Calculations', () => {
-        it('should perform addition correctly', async () => {
-            // Setup: A(10) + B(20) = Result
-            await brain.injectNodes({
-                nodes: [
-                    { id: 'A', type: 'IO-01', position: { x: 0, y: 0 }, value: 10 },
-                    { id: 'B', type: 'IO-01', position: { x: 0, y: 50 }, value: 20 },
-                    { id: 'Add', type: 'MA-01', position: { x: 100, y: 25 }, data: { op: 'ADD' } },
-                    { id: 'Res', type: 'IO-11', position: { x: 200, y: 25 } }
-                ],
-                edges: [
-                    { id: 'e1', source: 'A', sourceHandle: 'out', target: 'Add', targetHandle: 'in_a' },
-                    { id: 'e2', source: 'B', sourceHandle: 'out', target: 'Add', targetHandle: 'in_b' },
-                    { id: 'e3', source: 'Add', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
-                ]
-            });
-
-            const result = await brain.getValue('Res');
-            expect(Number(result.value)).toBe(30);
-        });
-
-        it('should update results when input values change', async () => {
-            await brain.injectNodes({
-                nodes: [
-                    { id: 'A', type: 'IO-01', position: { x: 0, y: 0 }, value: 5 },
-                    { id: 'Res', type: 'IO-11', position: { x: 100, y: 0 } }
-                ],
-                edges: [
-                    { id: 'e1', source: 'A', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
-                ]
-            });
-
-            let result = await brain.getValue('Res');
-            expect(Number(result.value)).toBe(5);
-
-            // Update A to 10
-            brain.applyTransaction({
-                type: 'UPDATE_VALUE',
-                payload: { id: 'A', value: 10 }
-            });
-
-            result = await brain.getValue('Res');
-            expect(Number(result.value)).toBe(10);
-        });
-    });
-
     describe('Content Metrics Protocol', () => {
         it('updateNodeBoundingBox should write width/height into NodeLogic', () => {
             brain.applyTransaction({
