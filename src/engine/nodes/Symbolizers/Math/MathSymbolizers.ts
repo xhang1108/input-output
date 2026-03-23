@@ -81,13 +81,21 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     'MA-08': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'nCr';
+        
+        const n = inputs['n'] || inputs['in_n'] || PayloadUtils.createSymbol('Literal', { value: 'n' });
+        const r = inputs['r'] || inputs['in_r'] || PayloadUtils.createSymbol('Literal', { value: 'r' });
+
+        if (op === 'FACTORIAL') {
+            return PayloadUtils.createSymbol('FunctionCall', {
+                name: 'factorial',
+                args: [n]
+            });
+        }
+
         const funcMap: any = { nCr: 'nCr', nPr: 'nPr' };
         return PayloadUtils.createSymbol('FunctionCall', {
             name: funcMap[op] || 'nCr',
-            args: [
-                inputs['in_n'] || PayloadUtils.createSymbol('Literal', { value: 'n' }),
-                inputs['in_r'] || PayloadUtils.createSymbol('Literal', { value: 'r' })
-            ]
+            args: [n, r]
         });
     },
     // TR-01: Unit

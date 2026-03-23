@@ -135,17 +135,28 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'nCr';
-        const valN = inputs['in_n'], valR = inputs['in_r'];
-        if (!valN || !valR) return PayloadUtils.createError('Missing Inputs');
+
+        // 💡 Support both legacy (in_n, in_r) and new (n, r) handle IDs
+        const valN = inputs['n'] || inputs['in_n'];
+        const valR = inputs['r'] || inputs['in_r'];
+
+        if (!valN) return PayloadUtils.createError('Missing Input (n)');
+        
+        // Factorial only needs 'n'
+        if (op !== 'FACTORIAL' && !valR) return PayloadUtils.createError('Missing Input (r)');
+
         try {
             const n = PayloadUtils.hydrate(PayloadUtils.unwrap(valN), math);
-            const r = PayloadUtils.hydrate(PayloadUtils.unwrap(valR), math);
+            const r = valR ? PayloadUtils.hydrate(PayloadUtils.unwrap(valR), math) : 0;
+
             let result: any;
             if (op === 'nCr') result = math.combinations(n, r);
             else if (op === 'nPr') result = math.permutations(n, r);
+            else if (op === 'FACTORIAL') result = math.factorial(n);
             else result = math.combinations(n, r);
+
             return PayloadUtils.wrap(result);
-        } catch (e: any) { return PayloadUtils.createError(`${op} Failed`); }
+        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
     'MA-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;

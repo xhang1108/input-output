@@ -194,8 +194,8 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const inputs = {
-            in_n: nPayload,
-            in_r: rPayload
+            n: nPayload,
+            r: rPayload
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);

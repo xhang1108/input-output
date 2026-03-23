@@ -451,7 +451,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { op: 'nCr' },
         aliases: ['probability', 'counting'],
-        opTokens: ['NCR', 'NPR'],
+        opTokens: ['NCR', 'NPR', 'FACTORIAL'],
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
