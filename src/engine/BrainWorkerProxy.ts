@@ -73,9 +73,7 @@ export class BrainWorkerProxy {
 
     private spawnWorker() {
         try {
-            // 💡 Cache-busting: add a timestamp to force worker refresh after refactor
             const workerUrl = new URL('./brain.worker.ts', import.meta.url);
-            workerUrl.searchParams.set('v', Date.now().toString());
 
             this.worker = new Worker(
                 workerUrl,
@@ -87,7 +85,10 @@ export class BrainWorkerProxy {
             };
 
             this.worker.onerror = (error) => {
-                console.error('[BrainWorkerProxy] Worker crashed:', error);
+                const message = (error as any).message || 'Unknown error';
+                const filename = (error as any).filename || '';
+                const lineno = (error as any).lineno || 0;
+                console.error(`[BrainWorkerProxy] Worker crashed: ${message} at ${filename}:${lineno}`);
                 this.handleCrash();
             };
 
