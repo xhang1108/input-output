@@ -273,14 +273,14 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'ADD', label: 'Add' },
-        aliases: ['add', 'sub', 'mul', 'div', '+', '-', '*', '/'],
+        aliases: ['basic math', 'arithmetic'],
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
-                    { label: 'Add (+)', value: 'ADD', category: 'Arithmetic' },
-                    { label: 'Subtract (−)', value: 'SUB', category: 'Arithmetic' },
-                    { label: 'Multiply (×)', value: 'MUL', category: 'Arithmetic' },
-                    { label: 'Divide (÷)', value: 'DIV', category: 'Arithmetic' }
+                    { label: 'Add (+)', value: 'ADD', category: 'Arithmetic', aliases: ['add', 'plus', '+'] },
+                    { label: 'Subtract (−)', value: 'SUB', category: 'Arithmetic', aliases: ['sub', 'subtract', 'minus', '-'] },
+                    { label: 'Multiply (×)', value: 'MUL', category: 'Arithmetic', aliases: ['mul', 'multiply', 'times', '*', 'x'] },
+                    { label: 'Divide (÷)', value: 'DIV', category: 'Arithmetic', aliases: ['div', 'divide', 'fraction', '/', '÷'] }
                 ]
             }
         ]
@@ -302,15 +302,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'POW', label: 'Power' },
-        aliases: ['pow', 'sqrt', 'abs', '^', 'root'],
+        aliases: ['advanced math'],
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
-                    { label: 'Power (xⁿ)', value: 'POW', category: 'Exponents' },
-                    { label: 'Square Root (√x)', value: 'SQRT', category: 'Exponents' },
-                    { label: 'Absolute Value (|x|)', value: 'ABS', category: 'Basic' },
-                    { label: 'Negate (−x)', value: 'NEG', category: 'Basic' },
-                    { label: 'Sign', value: 'SIGN', category: 'Basic' }
+                    { label: 'Power (xⁿ)', value: 'POW', category: 'Exponents', aliases: ['pow', 'power', 'exp', '^'] },
+                    { label: 'Square Root (√x)', value: 'SQRT', category: 'Exponents', aliases: ['sqrt', 'root', 'square root'] },
+                    { label: 'Absolute Value (|x|)', value: 'ABS', category: 'Basic', aliases: ['abs', 'absolute', 'magnitude'] },
+                    { label: 'Negate (−x)', value: 'NEG', category: 'Basic', aliases: ['negate', 'negative', 'inverse'] },
+                    { label: 'Sign', value: 'SIGN', category: 'Basic', aliases: ['sign', 'sgn'] }
                 ]
             }
         ]
@@ -333,13 +333,13 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'LN' },
-        aliases: ['ln', 'log10', 'log2', 'log'],
+        aliases: ['log', 'exponential'],
         params: [
             {
                 id: 'op', label: 'Mode', type: 'select', options: [
-                    { label: 'Natural Log (ln)', value: 'LN', category: 'Logarithms' },
-                    { label: 'Log Base 10 (log₁₀)', value: 'LOG10', category: 'Logarithms' },
-                    { label: 'Log Base N (logₙ)', value: 'LOGN', category: 'Logarithms' }
+                    { label: 'Natural Log (ln)', value: 'LN', category: 'Logarithms', aliases: ['ln', 'natural log'] },
+                    { label: 'Log Base 10 (log₁₀)', value: 'LOG10', category: 'Logarithms', aliases: ['log10', 'log'] },
+                    { label: 'Log Base N (logₙ)', value: 'LOGN', category: 'Logarithms', aliases: ['logn', 'log base'] }
                 ]
             }
         ]
@@ -353,19 +353,19 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'SIN' },
-        aliases: ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'trig'],
+        aliases: ['trig', 'circular', 'angular'],
         params: [
             {
                 id: 'op', label: 'Function', type: 'select', options: [
-                    { label: 'Sine (sin)', value: 'SIN', category: 'Circular' },
-                    { label: 'Cosine (cos)', value: 'COS', category: 'Circular' },
-                    { label: 'Tangent (tan)', value: 'TAN', category: 'Circular' },
-                    { label: 'Arcsine (asin)', value: 'ASIN', category: 'Inverse' },
-                    { label: 'Arccosine (acos)', value: 'ACOS', category: 'Inverse' },
-                    { label: 'Arctangent (atan)', value: 'ATAN', category: 'Inverse' },
-                    { label: 'Atan2 (y, x)', value: 'ATAN2', category: 'Inverse' },
-                    { label: 'Hyperbolic Sine (sinh)', value: 'SINH', category: 'Hyperbolic' },
-                    { label: 'Hyperbolic Cosine (cosh)', value: 'COSH', category: 'Hyperbolic' }
+                    { label: 'Sine (sin)', value: 'SIN', category: 'Circular', aliases: ['sin', 'sine'] },
+                    { label: 'Cosine (cos)', value: 'COS', category: 'Circular', aliases: ['cos', 'cosine'] },
+                    { label: 'Tangent (tan)', value: 'TAN', category: 'Circular', aliases: ['tan', 'tangent'] },
+                    { label: 'Arcsine (asin)', value: 'ASIN', category: 'Inverse', aliases: ['asin', 'arcsin', 'sin-1'] },
+                    { label: 'Arccosine (acos)', value: 'ACOS', category: 'Inverse', aliases: ['acos', 'arccos', 'cos-1'] },
+                    { label: 'Arctangent (atan)', value: 'ATAN', category: 'Inverse', aliases: ['atan', 'arctan', 'tan-1'] },
+                    { label: 'Atan2 (y, x)', value: 'ATAN2', category: 'Inverse', aliases: ['atan2'] },
+                    { label: 'Hyperbolic Sine (sinh)', value: 'SINH', category: 'Hyperbolic', aliases: ['sinh'] },
+                    { label: 'Hyperbolic Cosine (cosh)', value: 'COSH', category: 'Hyperbolic', aliases: ['cosh'] }
                 ]
             }
         ]
@@ -378,15 +378,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Input' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { precision: 0 },
+        defaultData: { op: 'ROUND', precision: 0 },
         aliases: ['round', 'ceil', 'floor', 'trunc'],
         params: [
             {
                 id: 'op', label: 'Mode', type: 'select', options: [
-                    { label: 'Round (nearest)', value: 'ROUND', category: 'Rounding' },
-                    { label: 'Floor (↓)', value: 'FLOOR', category: 'Rounding' },
-                    { label: 'Ceiling (↑)', value: 'CEIL', category: 'Rounding' },
-                    { label: 'Truncate', value: 'TRUNC', category: 'Rounding' }
+                    { label: 'Round (nearest)', value: 'ROUND', category: 'Rounding', aliases: ['round', 'nearest'] },
+                    { label: 'Floor (↓)', value: 'FLOOR', category: 'Rounding', aliases: ['floor', 'down'] },
+                    { label: 'Ceiling (↑)', value: 'CEIL', category: 'Rounding', aliases: ['ceil', 'ceiling', 'up'] },
+                    { label: 'Truncate', value: 'TRUNC', category: 'Rounding', aliases: ['trunc', 'truncate', 'fix'] }
                 ]
             },
             {
@@ -428,14 +428,14 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'GCD' },
-        aliases: ['gcd', 'lcm', 'mod', 'prime', 'modulo', 'number theory', 'divisibility'],
+        aliases: ['divisibility', 'number theory'],
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
-                    { label: 'GCD', value: 'GCD' },
-                    { label: 'LCM', value: 'LCM' },
-                    { label: 'Modulo (A mod B)', value: 'MOD' },
-                    { label: 'Is Prime?', value: 'ISPRIME' }
+                    { label: 'GCD', value: 'GCD', aliases: ['gcd', 'greatest common divisor', 'hcf'] },
+                    { label: 'LCM', value: 'LCM', aliases: ['lcm', 'least common multiple'] },
+                    { label: 'Modulo (A mod B)', value: 'MOD', aliases: ['mod', 'modulo', 'remainder', '%'] },
+                    { label: 'Is Prime?', value: 'ISPRIME', aliases: ['prime', 'isprime', 'primality'] }
                 ]
             }
         ]
@@ -450,13 +450,14 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { op: 'nCr' },
+        aliases: ['probability', 'counting'],
         opTokens: ['NCR', 'NPR'],
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
-                    { label: 'Combinations C(n,r)', value: 'nCr' },
-                    { label: 'Permutations P(n,r)', value: 'nPr' },
-                    { label: 'Factorial n!', value: 'FACTORIAL' }
+                    { label: 'Combinations C(n,r)', value: 'nCr', aliases: ['ncr', 'combinations', 'choose'] },
+                    { label: 'Permutations P(n,r)', value: 'nPr', aliases: ['npr', 'permutations'] },
+                    { label: 'Factorial n!', value: 'FACTORIAL', aliases: ['factorial', 'fact', '!'] }
                 ]
             }
         ]
@@ -669,15 +670,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', variant: 'single', dataType: 'any' }
         ],
         defaultData: { op: 'DOT' },
+        aliases: ['vector math', 'geometry'],
         opTokens: ['DOT', 'CROSS'],
-        aliases: ['dot', 'cross', 'norm', 'distance', 'dist'],
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
-                    { label: 'Dot Product', value: 'DOT', category: 'Products', aliases: ['dot'] },
-                    { label: 'Cross Product', value: 'CROSS', category: 'Products', aliases: ['cross'] },
-                    { label: 'Norm (magnitude)', value: 'NORM', category: 'Metrics', aliases: ['norm', 'magnitude', 'length'] },
-                    { label: 'Distance', value: 'DISTANCE', category: 'Metrics', aliases: ['dist'] }
+                    { label: 'Dot Product', value: 'DOT', category: 'Products', aliases: ['dot', 'dot product', 'inner product'] },
+                    { label: 'Cross Product', value: 'CROSS', category: 'Products', aliases: ['cross', 'cross product', 'vector product'] },
+                    { label: 'Norm (magnitude)', value: 'NORM', category: 'Metrics', aliases: ['norm', 'magnitude', 'length', 'abs'] },
+                    { label: 'Distance', value: 'DISTANCE', category: 'Metrics', aliases: ['dist', 'distance', 'range'] }
                 ]
             }
         ]
@@ -714,18 +715,18 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out', type: 'source', variant: 'single', dataType: 'any' }
         ],
         defaultData: { op: 'INV' },
+        aliases: ['matrix math', 'linear algebra'],
         opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN'],
-        aliases: ['matrix tools', 'inv', 'det', 'transpose', 'trace', 'qr', 'lu', 'lup', 'eigen', 'svd'],
         params: [
             {
                 id: 'op', label: 'Operation', type: 'select', options: [
-                    { label: 'Inverse (A⁻¹)', value: 'INV', category: 'Linear Algebra', aliases: ['inv'] },
-                    { label: 'Determinant (det A)', value: 'DET', category: 'Linear Algebra', aliases: ['det'] },
-                    { label: 'Transpose (Aᵀ)', value: 'TRANSPOSE', category: 'Linear Algebra', aliases: ['transpose', 't', 'swap'] },
-                    { label: 'Trace (tr A)', value: 'TRACE', category: 'Linear Algebra', aliases: ['trace'] },
-                    { label: 'Eigenvalues (Sym)', value: 'EIGEN', category: 'Spectral', aliases: ['eigen', 'eig'] },
-                    { label: 'QR Decomposition', value: 'QR', category: 'Decomposition', aliases: ['qr'] },
-                    { label: 'LU Decomposition', value: 'LU', category: 'Decomposition', aliases: ['lu', 'lup'] }
+                    { label: 'Inverse (A⁻¹)', value: 'INV', category: 'Linear Algebra', aliases: ['inv', 'inverse', 'invert'] },
+                    { label: 'Determinant (det A)', value: 'DET', category: 'Linear Algebra', aliases: ['det', 'determinant'] },
+                    { label: 'Transpose (Aᵀ)', value: 'TRANSPOSE', category: 'Linear Algebra', aliases: ['transpose', 't', 'swap', 'flip'] },
+                    { label: 'Trace (tr A)', value: 'TRACE', category: 'Linear Algebra', aliases: ['trace', 'tr'] },
+                    { label: 'Eigenvalues (Sym)', value: 'EIGEN', category: 'Spectral', aliases: ['eigen', 'eig', 'eigenvalues'] },
+                    { label: 'QR Decomposition', value: 'QR', category: 'Decomposition', aliases: ['qr', 'qr decomp'] },
+                    { label: 'LU Decomposition', value: 'LU', category: 'Decomposition', aliases: ['lu', 'lup', 'lu decomp'] }
                 ]
             }
         ]
