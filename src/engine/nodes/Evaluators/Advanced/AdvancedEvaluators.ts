@@ -40,8 +40,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as any;
         const mode = data.indexMode || '1D';
         
-        const inPayload = inputs['in'];
-        const indexPayload = inputs['index'];
+        const inPayload = inputs['in_a'] || inputs['in'];
+        const indexPayload = inputs['index'] || inputs['in_b'];
         
         if (!inPayload) return PayloadUtils.createError('No Input Vector/Matrix');
         
@@ -64,14 +64,14 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 // 1D: Flat index extraction (1-based from user perspective)
                 let flatIdxRaw = 0;
                 if (Array.isArray(idxRaw)) flatIdxRaw = getNumeric(idxRaw[0]);
-                else if (idxRaw && typeof idxRaw === 'object' && idxRaw.isMatrix) flatIdxRaw = getNumeric(idxRaw.get([0]));
+                else if (idxRaw && typeof idxRaw === 'object' && (idxRaw as any).isMatrix) flatIdxRaw = getNumeric((idxRaw as any).get([0]));
                 else flatIdxRaw = getNumeric(idxRaw);
 
                 // Convert 1-based to 0-based
                 const flatIdx = flatIdxRaw - 1;
 
-                if (arr && typeof arr === 'object' && arr.isMatrix) {
-                    const size = arr.size();
+                if (arr && typeof arr === 'object' && (arr as any).isMatrix) {
+                    const size = (arr as any).size();
                     if (size.length === 1) {
                         result = math.subset(arr, math.index(flatIdx));
                     } else if (size.length === 2) {
@@ -91,8 +91,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 if (Array.isArray(idxRaw)) {
                     rRaw = getNumeric(idxRaw[0]);
                     cRaw = getNumeric(idxRaw[1]);
-                } else if (idxRaw && typeof idxRaw === 'object' && idxRaw.isMatrix) {
-                    const data = idxRaw.toArray().flat(Infinity);
+                } else if (idxRaw && typeof idxRaw === 'object' && (idxRaw as any).isMatrix) {
+                    const data = (idxRaw as any).toArray().flat(Infinity);
                     rRaw = getNumeric(data[0]);
                     cRaw = getNumeric(data[1]);
                 } else {
@@ -132,7 +132,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'DT-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any, mode = data.mode || 'Sort (Asc)';
-        const valPayload = inputs['data'] || inputs['in'];
+        const valPayload = inputs['in_a'] || inputs['in'] || inputs['data'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
@@ -168,7 +168,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // DT-07: Matrix Tools
     'DT-07': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in'];
+        const valPayload = inputs['in_a'] || inputs['in'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const data = (node.data || {}) as any, op = data.op || 'INV';
         try {
@@ -203,7 +203,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'DOT';
-        const valA = inputs['in_a'], valB = inputs['in_b'];
+        const valA = inputs['in_a'] || inputs['in'], valB = inputs['in_b'];
         if (!valA || !valB) return PayloadUtils.createError('Missing Inputs');
         try {
             const hA = PayloadUtils.hydrate(PayloadUtils.unwrap(valA), math), hB = PayloadUtils.hydrate(PayloadUtils.unwrap(valB), math);
@@ -267,7 +267,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-01': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', order = Number(data.order) || 1;
-        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['in_a'] || inputs['in'] || inputs['expr']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -279,7 +279,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-02': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', mode = data.mode || 'indefinite', lower = data.lower || '', upper = data.upper || '';
-        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['in_a'] || inputs['in'] || inputs['expr']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -506,7 +506,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const mode = data.mode || 'gradient', var1 = data.var1 || 'x', var2 = data.var2 || 'y';
-        const exprStr = PayloadUtils.extractExprStr(inputs['in_f']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['in_a'] || inputs['in'] || inputs['in_f'] || inputs['expr']);
         if (!exprStr) return PayloadUtils.createError('No Function Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -515,13 +515,13 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 return PayloadUtils.createArray([dx, dy]);
             }
             if (mode === 'divergence') {
-                const p = PayloadUtils.extractExprStr(inputs['in_p']), q = PayloadUtils.extractExprStr(inputs['in_q']);
+                const p = PayloadUtils.extractExprStr(inputs['in_p'] || inputs['p']), q = PayloadUtils.extractExprStr(inputs['in_q'] || inputs['q']);
                 if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
                 const dp = svc.differentiate(p, var1).text(), dq = svc.differentiate(q, var2).text();
                 return PayloadUtils.createSymbolic(`(${dp})+(${dq})`);
             }
             if (mode === 'curl') {
-                const p = PayloadUtils.extractExprStr(inputs['in_p']), q = PayloadUtils.extractExprStr(inputs['in_q']);
+                const p = PayloadUtils.extractExprStr(inputs['in_p'] || inputs['p']), q = PayloadUtils.extractExprStr(inputs['in_q'] || inputs['q']);
                 if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
                 const dq_dx = svc.differentiate(q, var1).text(), dp_dy = svc.differentiate(p, var2).text();
                 return PayloadUtils.createSymbolic(`(${dq_dx})-(${dp_dy})`);
@@ -535,7 +535,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any, mode = data.mode || 'separate';
         if (mode === 'separate') {
-            const inPayload = inputs['in'] || inputs['in_v'];
+            const inPayload = inputs['in_a'] || inputs['in'] || inputs['in_v'];
             if (!inPayload) return PayloadUtils.createError('No Input');
             const h = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
             const arr = (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
@@ -551,10 +551,10 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 meta: {}
             };
         } else {
-            const x = PayloadUtils.unwrap(inputs['in_x'] || inputs['x'] || PayloadUtils.createScalar(0));
-            const y = PayloadUtils.unwrap(inputs['in_y'] || inputs['y'] || PayloadUtils.createScalar(0));
-            const z = PayloadUtils.unwrap(inputs['in_z'] || inputs['z'] || PayloadUtils.createScalar(0));
-            const w = PayloadUtils.unwrap(inputs['in_w'] || inputs['w'] || PayloadUtils.createScalar(0));
+            const x = PayloadUtils.unwrap(inputs['in_a'] || inputs['in_x'] || inputs['x'] || PayloadUtils.createScalar(0));
+            const y = PayloadUtils.unwrap(inputs['in_b'] || inputs['in_y'] || inputs['y'] || PayloadUtils.createScalar(0));
+            const z = PayloadUtils.unwrap(inputs['in_c'] || inputs['in_z'] || inputs['z'] || PayloadUtils.createScalar(0));
+            const w = PayloadUtils.unwrap(inputs['in_d'] || inputs['in_w'] || inputs['w'] || PayloadUtils.createScalar(0));
             return PayloadUtils.createArray([x, y, z, w]);
         }
     },
@@ -580,7 +580,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-03': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', approach = data.approach || '0', direction = data.direction || 'both';
-        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['in_a'] || inputs['in'] || inputs['expr']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -611,7 +611,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const tEnd = Number(data.tEnd) || 1;
         const y0 = Number(data.y0) || 1;
         const stepSize = Number(data.stepSize) || 0.01;
-        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['in_a'] || inputs['in'] || inputs['expr']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();

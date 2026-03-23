@@ -10,16 +10,18 @@ export function registerUtilityNodes() {
 
     // UT-02: Reroute (Identity)
     NodeRegistry.register('UT-02', (node, inputs) => {
-        return inputs['in'] ? PayloadUtils.clone(inputs['in']) : PayloadUtils.createScalar(0);
+        const input = inputs['in_a'] || inputs['in'];
+        return input ? PayloadUtils.clone(input) : PayloadUtils.createScalar(0);
     }, (node, inputs) => {
-        return inputs['in'] || null;
+        return inputs['in_a'] || inputs['in'] || null;
     });
 
     // OT-04: Debug Node
     NodeRegistry.register('OT-04', (node, inputs) => {
-        return inputs['in'] || PayloadUtils.createScalar(0);
+        const input = inputs['in_a'] || inputs['in'];
+        return input || PayloadUtils.createScalar(0);
     }, (node, inputs) => {
-        return inputs['in'] || null;
+        return inputs['in_a'] || inputs['in'] || null;
     });
 
     // SY-05: Expert Node (Handled in Advanced as it uses Nerdamer, but could be here too)

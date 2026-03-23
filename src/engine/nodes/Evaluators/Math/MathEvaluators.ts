@@ -97,7 +97,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 case 'DIV': result = m.divide(procA, procB); break;
                 case 'POW': result = m.pow(procA, procB); break;
                 case 'SQRT': 
-                    result = (inputs['in_b'] && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA); 
+                    result = ((inputs['in_b'] || inputs['n'] || inputs['b']) && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA); 
                     break;
                 case 'ABS': result = m.abs(procA); break;
                 default: result = m.add(procA, procB);
@@ -149,7 +149,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     },
     'MA-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
+        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.op || 'ROUND';
         const prec = data.precision ?? 0;
@@ -172,7 +172,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-14': (node, inputs) => (MathEvaluators as any)['MA-05'](node, inputs),
     'MA-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const raw = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in']), math);
+        const raw = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_a'] || inputs['in']), math);
         const data = (node.data || {}) as any;
         const isMixed = data.mixed === true;
         try {
@@ -243,7 +243,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     },
     'MA-15': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const inputPayload = inputs['in'];
+        const inputPayload = inputs['in_a'] || inputs['in'];
         const targetBase = data.base || 'HEX';
         let finalValue = 0;
         if (inputPayload) {
@@ -300,7 +300,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         try {
             let result;
             if (op === 'LOG10') result = math.log10(val);
-            else if (op === 'LOGN') result = math.log(val, inputs['base'] ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['base']), math) : 10);
+            else if (op === 'LOGN') result = math.log(val, (inputs['in_b'] || inputs['base']) ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_b'] || inputs['base']), math) : 10);
             else result = math.log(val);
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
         } catch (e) { return PayloadUtils.createError('Log Failed'); }
@@ -427,7 +427,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const targetUnit = data.unit || 'm';
-        const valPayload = inputs['in'];
+        const valPayload = inputs['in_a'] || inputs['in'];
         if (!valPayload) return PayloadUtils.createScalar(0);
         try {
             const h = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
@@ -442,7 +442,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'TR-02': (node, inputs) => {
         const data = (node.data || {}) as any;
         const fromBase = Number(data.fromBase || 10), toBase = Number(data.toBase || 16);
-        const val = String(PayloadUtils.unwrap(inputs['in'] || PayloadUtils.createScalar(0)));
+        const val = String(PayloadUtils.unwrap(inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0)));
         try {
             const num = parseInt(val, fromBase);
             return PayloadUtils.createScalar(num.toString(toBase).toUpperCase());
@@ -453,7 +453,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'Mean';
-        const valPayload = inputs['data'] || inputs['in'];
+        const valPayload = inputs['in_a'] || inputs['in'] || inputs['data'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         let arr: any[] = [];
@@ -481,7 +481,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const factor = Number(data.factor || 0.5);
-        const currentVal = Number(PayloadUtils.unwrap(inputs['in'] || PayloadUtils.createScalar(0)));
+        const currentVal = Number(PayloadUtils.unwrap(inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0)));
         const prevVal = Number(PayloadUtils.unwrap((node.data as any)?.prevValue || PayloadUtils.createScalar(currentVal)));
         const result = prevVal + factor * (currentVal - prevVal);
         // Note: For side effects like saving prevValue, we'd need to emit a brain update, but for stateless evaluator we just return.

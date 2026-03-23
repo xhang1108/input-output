@@ -21,7 +21,7 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
         return sym;
     },
     'IO-11': (node, inputs) => {
-        return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
+        return inputs['in_a'] || inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
     },
     'IO-08': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
@@ -35,11 +35,11 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
         return PayloadUtils.createSymbol('Literal', { value: raw?.hex || String(raw) });
     },
     'IO-16': (node, inputs) => {
-        return inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'Matrix' });
+        return inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'Matrix' });
     },
     'IO-05': (node, inputs) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const inputSymbol = inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 });
+        const inputSymbol = inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 });
         const targetUnit = data.unit as string;
         return { ...inputSymbol, unit: targetUnit };
     },
