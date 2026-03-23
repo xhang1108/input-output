@@ -12,7 +12,27 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         return PayloadUtils.createString(raw);
     },
     'IO-11': (node, inputs) => {
-        return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
+        const payload = inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
+        const data = (node.data || {}) as Record<string, unknown>;
+        const precision = data.precision as number | undefined;
+
+        if (precision !== undefined && (payload.type === DataType.Scalar || payload.type === DataType.Array)) {
+            const math = InputOutputEngine.getInstance().getMathInstance();
+            const val = PayloadUtils.unwrap(payload);
+            try {
+                const hydrated = PayloadUtils.hydrate(val, math);
+                const rounded = math.round(hydrated, precision);
+                const wrapped = PayloadUtils.wrap(rounded);
+                return {
+                    ...wrapped,
+                    meta: { ...payload.meta, ...wrapped.meta }
+                };
+            } catch (e) {
+                return payload;
+            }
+        }
+
+        return payload;
     },
     'IO-08': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;

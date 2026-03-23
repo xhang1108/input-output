@@ -109,10 +109,10 @@ export const ResultNode = memo((props: NodeProps) => {
 
     return (
         <BaseNode {...props} data={nodeData}>
-            <div className="p-3 flex flex-col gap-2 min-w-[140px] max-w-[500px]">
-                <div className="flex justify-between items-center bg-zinc-800/20 px-2 py-1 -mx-3 -mt-3 mb-1 border-b border-zinc-800/40 shrink-0">
+            <div className="flex flex-col gap-3 min-w-[160px] max-w-[500px] h-full">
+                <div className="flex justify-between items-center bg-zinc-800/10 px-2.5 py-1.5 border border-zinc-800/30 rounded-lg shrink-0">
                     <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Result Info</span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                         {(effectiveMode === 'formula' || effectiveMode === 'latex') && (
                             <button
                                 onClick={() => brain.applyTransaction({ 
@@ -120,8 +120,8 @@ export const ResultNode = memo((props: NodeProps) => {
                                     payload: { id, data: { expandSymbols: !expandSymbols } } 
                                 })}
                                 className={cn(
-                                    "nodrag p-1 rounded-sm transition-colors",
-                                    expandSymbols ? "text-primary bg-primary/10" : "text-zinc-500 hover:bg-zinc-800"
+                                    "nodrag p-1 rounded-md transition-colors",
+                                    expandSymbols ? "text-primary bg-primary/10" : "text-zinc-500 hover:bg-zinc-800/50"
                                 )}
                                 title={expandSymbols ? "Showing Values (5+5)" : "Showing Symbols (x+y)"}
                             >
@@ -130,7 +130,7 @@ export const ResultNode = memo((props: NodeProps) => {
                         )}
                         <button
                             onClick={copyToClipboard}
-                            className={`nodrag p-1 rounded-sm hover:bg-zinc-800 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
+                            className={`nodrag p-1 rounded-md hover:bg-zinc-800/50 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
                             title="Copy Value"
                         >
                             {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -138,7 +138,7 @@ export const ResultNode = memo((props: NodeProps) => {
                     </div>
                 </div>
 
-                <div className={`w-full min-h-[44px] overflow-x-auto flex items-center justify-center border border-zinc-800/50 rounded-[10px] bg-black/20 transition-colors ${isError ? 'border-red-900/30' : ''} ${effectiveMode === 'text' ? 'px-3 py-2 justify-end' : ''}`}>
+                <div className={`w-full min-h-[60px] flex items-center justify-center border border-zinc-800/40 rounded-xl bg-black/10 transition-colors ${isError ? 'border-red-900/30 bg-red-950/5' : ''} ${effectiveMode === 'text' ? 'px-4 py-3 justify-end' : 'p-2'}`}>
                     {isError ? (
                         <div className="font-mono break-all whitespace-pre-wrap text-red-500 text-sm py-2 px-3">{errorStr}</div>
                     ) : !payload ? (
