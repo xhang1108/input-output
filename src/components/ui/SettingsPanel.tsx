@@ -7,8 +7,8 @@ import { AuthButton } from './AuthButton';
 interface SettingsPanelProps {
     isSnapping: boolean;
     setSnapping: (enabled: boolean) => void;
-    showDebug: boolean;
-    setShowDebug: (visible: boolean) => void;
+    showDebugStats: boolean;
+    setShowDebugStats: (visible: boolean) => void;
     edgeType: string;
     setEdgeType: (type: string) => void;
     layoutAlgorithm: LayoutAlgorithm;
@@ -27,7 +27,7 @@ import { GraphExportModal } from './GraphExportModal';
 
 export function SettingsPanel({
     isSnapping, setSnapping,
-    showDebug, setShowDebug,
+    showDebugStats, setShowDebugStats,
     edgeType, setEdgeType,
     layoutAlgorithm, setLayoutAlgorithm,
     panOnScroll, setPanOnScroll,
@@ -155,12 +155,12 @@ export function SettingsPanel({
 
                     <Divider />
 
-                    {/* Debug Log */}
+                    {/* Debug Stats */}
                     <ToggleRow
-                        label="Debug Overlay"
+                        label="Debug Stats"
                         icon={<Bug className="w-4 h-4" />}
-                        active={showDebug}
-                        onClick={() => { setShowDebug(!showDebug); }}
+                        active={showDebugStats}
+                        onClick={() => { setShowDebugStats(!showDebugStats); }}
                     />
 
                     <Divider />

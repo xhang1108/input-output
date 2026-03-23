@@ -20,6 +20,7 @@ import type {
     IncrementalPatch,
 } from './SerializableGraph';
 import type { Edge } from '@xyflow/react';
+import { debugManager } from '../debug/DebugManager';
 
 // ─── Audit Log ─────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ export class BrainWorkerProxy {
                 const filename = (error as any).filename || '';
                 const lineno = (error as any).lineno || 0;
                 console.error(`[BrainWorkerProxy] Worker crashed: ${message} at ${filename}:${lineno}`);
+                debugManager.trackWorkerError({ message, filename, lineno });
                 this.handleCrash();
             };
 
@@ -106,6 +108,7 @@ export class BrainWorkerProxy {
 
     private handleCrash() {
         console.warn('[BrainWorkerProxy] Respawning Worker...');
+        debugManager.trackWorkerError('Worker crashed (Respawning)');
         this.pendingRequest = false;
         this.queuedPatch = null;
         
