@@ -138,12 +138,13 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const valN = inputs['in_n'], valR = inputs['in_r'];
         if (!valN || !valR) return PayloadUtils.createError('Missing Inputs');
         try {
-            const n = PayloadUtils.unwrap(valN), r = PayloadUtils.unwrap(valR);
+            const n = PayloadUtils.hydrate(PayloadUtils.unwrap(valN), math);
+            const r = PayloadUtils.hydrate(PayloadUtils.unwrap(valR), math);
             let result: any;
             if (op === 'nCr') result = math.combinations(n, r);
             else if (op === 'nPr') result = math.permutations(n, r);
             else result = math.combinations(n, r);
-            return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+            return PayloadUtils.wrap(result);
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed`); }
     },
     'MA-05': (node, inputs) => {
@@ -168,15 +169,17 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             };
         } catch (e) { return PayloadUtils.createError('Op Failed'); }
     },
-    'MA-14': (node, inputs) => MathEvaluators['MA-05'](node, inputs),
+    'MA-14': (node, inputs) => (MathEvaluators as any)['MA-05'](node, inputs),
     'MA-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const raw = PayloadUtils.unwrap(inputs['in']);
+        const raw = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in']), math);
         const data = (node.data || {}) as any;
         const isMixed = data.mixed === true;
         try {
             if (raw === null || raw === undefined) return PayloadUtils.createScalar(0);
-            const f = math.fraction(raw);
+            // 💡 Important: mathjs.fraction(BigNumber) creates huge numerators/denominators for decimals.
+            // Using Number(raw) allows fraction.js to use rational approximation for results like 1/3 (0.333...).
+            const f = math.fraction(typeof raw === 'object' && (raw as any).isBigNumber ? (raw as any).toNumber() : raw);
             let n = Number(f.n), d = Number(f.d), integerPart = 0;
             let str = math.format(f);
             let latex = str;
@@ -194,7 +197,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             }
 
             return {
-                type: DataType.Array,
+                type: DataType.Object,
                 value: {
                     int: PayloadUtils.createScalar(integerPart),
                     numerator: PayloadUtils.createScalar(n),
@@ -207,7 +210,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             };
         } catch (e) { return PayloadUtils.createError('Invalid Fraction'); }
     },
-    'MA-12': (node, inputs) => MathEvaluators['MA-06'](node, inputs),
+    'MA-12': (node, inputs) => (MathEvaluators as any)['MA-06'](node, inputs),
     'MA-07': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;

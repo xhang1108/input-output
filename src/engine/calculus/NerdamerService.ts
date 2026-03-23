@@ -71,6 +71,14 @@ export class NerdamerService {
         return NerdamerService.instance;
     }
 
+    /**
+     * 💡 Reset for Testing
+     * Used to clear singleton state in test suites to prevent pollution.
+     */
+    public static reset() {
+        NerdamerService.instance = new NerdamerService();
+    }
+
     /** Raw nerdamer access for advanced operations */
     public getNerdamer(): any {
         return this.nerdamer;

@@ -178,10 +178,22 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'DET') result = math.det(hydrated);
             else if (op === 'TRANSPOSE') result = math.transpose(hydrated);
             else if (op === 'TRACE') result = math.trace(hydrated);
-            else if (op === 'EIGEN') result = math.eigs(hydrated).values;
-            else if (op === 'LUP') result = math.lup(hydrated).P;
-            else if (op === 'QR') result = math.qr(hydrated).Q;
+            else if (op === 'EIGEN') result = math.eigs(hydrated);
+            else if (op === 'LUP') result = math.lup(hydrated);
+            else if (op === 'QR') result = math.qr(hydrated);
             else result = hydrated;
+
+            // Handle multi-output objects (QR, LUP, EIGEN)
+            if (result && typeof result === 'object' && !Array.isArray(result) && !result.isMatrix && !result.isBigNumber) {
+                const multi: Record<string, any> = {};
+                for (const [key, val] of Object.entries(result)) {
+                    multi[key] = (Array.isArray(val) || (val as any)?.isMatrix) 
+                        ? PayloadUtils.createArray(PayloadUtils.dehydrate(val)) 
+                        : PayloadUtils.createScalar(PayloadUtils.dehydrate(val));
+                }
+                return { type: DataType.Object, value: multi, symbol: null, meta: {} };
+            }
+
             return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createArray(result) : PayloadUtils.createScalar(result);
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
@@ -483,8 +495,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 .slice(0, 6); // MAX_SOLUTIONS = 6
 
             return PayloadUtils.createArray(finalTokens);
-        } catch (e: any) { 
-            return PayloadUtils.createError(`Solve Failed: ${e.message}`); 
+        } catch (error) {
+            return PayloadUtils.createError('Solve Failed');
         }
     },
 

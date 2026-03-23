@@ -177,12 +177,22 @@ export class Brain {
         if (this.heartbeatInterval) return;
 
         // SSR/Build Guard: Never start heartbeats in Node.js environment during build
-        if (typeof window === 'undefined') return;
+        const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+        if (typeof window === 'undefined' && !isTest) return;
 
         this.heartbeatInterval = setInterval(async () => {
             // 1. Global Visual Tick
             const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
             this.visualTick = Math.floor(now / 16.67) % 10000;
+
+            // 1.5 Sync visual state to all nodes for SSOT consistency (Spinal Reflex)
+            for (const node of this.state.nodes.values()) {
+                if (!node.visualState) {
+                    node.visualState = { muted: false, visualTick: 0 };
+                }
+                node.visualState.muted = !!node.data?.muted;
+                node.visualState.visualTick = this.visualTick;
+            }
 
             if (!this.isRecalculating) {
                 this.emit('visualUpdate', this.visualTick);

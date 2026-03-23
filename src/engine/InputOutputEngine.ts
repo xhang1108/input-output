@@ -36,6 +36,14 @@ export class InputOutputEngine implements InputOutputEngineInterface {
         return InputOutputEngine.instance;
     }
 
+    /**
+     * 💡 Reset for Testing
+     * Used to clear singleton state in test suites to prevent pollution.
+     */
+    public static reset() {
+        InputOutputEngine.instance = new InputOutputEngine();
+    }
+
     public getMathInstance(): any {
         return this.math;
     }
