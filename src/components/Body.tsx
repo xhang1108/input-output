@@ -92,7 +92,7 @@ export function Body({
         showNPanel, setShowNPanel,
         manualSnap, setManualSnap,
         showGrid, setShowGrid,
-        showDebug, setShowDebug,
+        showDebugStats, setShowDebugStats,
         edgeType, setEdgeType,
         layoutAlgorithm, setLayoutAlgorithm,
         panOnScroll, setPanOnScroll,
@@ -730,15 +730,15 @@ export function Body({
                     maxZoom={4}
                 >
                     <Background color="#555" gap={20} size={1} />
-                    {showDebug && <DebugOverlay mode={mode} />}
+                    {showDebugStats && <DebugOverlay mode={mode} />}
 
 
 
                     <SettingsPanel
                         isSnapping={manualSnap}
                         setSnapping={setManualSnap}
-                        showDebug={showDebug}
-                        setShowDebug={setShowDebug}
+                        showDebugStats={showDebugStats}
+                        setShowDebugStats={setShowDebugStats}
                         edgeType={edgeType}
                         setEdgeType={setEdgeType}
                         layoutAlgorithm={layoutAlgorithm}

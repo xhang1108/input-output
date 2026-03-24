@@ -13,6 +13,7 @@ describe('Brain Visual Isolation', () => {
     let brain: Brain;
 
     beforeEach(async () => {
+        vi.setSystemTime(0);
         brain = Brain.getInstance();
         // Reset state using supported injectNodes(..., true)
         await brain.injectNodes({ nodes: [], edges: [] }, true);
@@ -30,7 +31,7 @@ describe('Brain Visual Isolation', () => {
             payload: { id: 'test-node', type: 'MA-01' }
         });
 
-        vi.advanceTimersByTime(16);
+        vi.advanceTimersByTime(20);
 
         const node = brain.getNodesMap().get('test-node');
         expect(node?.visualState).toBeDefined();
@@ -45,7 +46,7 @@ describe('Brain Visual Isolation', () => {
             payload: { id: 'tick-node', type: 'MA-01' }
         });
 
-        vi.advanceTimersByTime(16);
+        vi.advanceTimersByTime(20);
         const tick1 = brain.getNodesMap().get('tick-node')?.visualState?.visualTick ?? 0;
 
         // Advance enough time that the tick counter changes (> 16.67ms per unit)
@@ -62,7 +63,7 @@ describe('Brain Visual Isolation', () => {
             payload: { id: 'mute-node', type: 'MA-01', data: { muted: true } }
         });
 
-        vi.advanceTimersByTime(16);
+        vi.advanceTimersByTime(20);
         const node = brain.getNodesMap().get('mute-node');
         expect(node?.visualState?.muted).toBe(true);
 
@@ -73,7 +74,7 @@ describe('Brain Visual Isolation', () => {
         });
 
         // Next heartbeat should sync the muted state
-        vi.advanceTimersByTime(16);
+        vi.advanceTimersByTime(20);
         expect(brain.getNodesMap().get('mute-node')?.visualState?.muted).toBe(false);
     });
 });

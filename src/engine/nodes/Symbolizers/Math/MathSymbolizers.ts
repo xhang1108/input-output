@@ -17,7 +17,7 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
             right: inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 })
         });
     },
-    'MA-02': (node, inputs) => MathSymbolizers['MA-01'](node, inputs),
+    'MA-02': (node, inputs) => (MathSymbolizers as any)['MA-01'](node, inputs),
     'MA-05': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'ROUND';
@@ -38,9 +38,9 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
             args
         });
     },
-    'MA-14': (node, inputs) => MathSymbolizers['MA-05'](node, inputs),
-    'MA-06': (node, inputs) => PayloadUtils.createSymbol('FunctionCall', { name: 'fraction', args: [inputs['in']] }),
-    'MA-12': (node, inputs) => MathSymbolizers['MA-06'](node, inputs),
+    'MA-14': (node, inputs) => (MathSymbolizers as any)['MA-05'](node, inputs),
+    'MA-06': (node, inputs) => PayloadUtils.createSymbol('FunctionCall', { name: 'fraction', args: [inputs['in_a'] || inputs['in']] }),
+    'MA-12': (node, inputs) => (MathSymbolizers as any)['MA-06'](node, inputs),
     'MA-07': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'GCD';
@@ -52,56 +52,66 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     'MA-03': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'LN';
-        if (op === 'LOG10') return PayloadUtils.createSymbol('FunctionCall', { name: 'log10', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
-        if (op === 'LOGN') return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 }), inputs['base'] || PayloadUtils.createSymbol('Literal', { value: 10 })] });
-        return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
+        if (op === 'LOG10') return PayloadUtils.createSymbol('FunctionCall', { name: 'log10', args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
+        if (op === 'LOGN') return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 }), inputs['in_b'] || inputs['base'] || PayloadUtils.createSymbol('Literal', { value: 10 })] });
+        return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
     'MA-04': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'SIN';
-        return PayloadUtils.createSymbol('FunctionCall', { name: op.toLowerCase(), args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
+        return PayloadUtils.createSymbol('FunctionCall', { name: op.toLowerCase(), args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
-    'MA-17': (node, inputs) => MathSymbolizers['MA-04'](node, inputs),
+    'MA-17': (node, inputs) => (MathSymbolizers as any)['MA-04'](node, inputs),
     // TR-06: Statistics
     'TR-06': (node, inputs) => {
         const op = ((node.data || {}) as any).op || 'Mean';
         return PayloadUtils.createSymbol('FunctionCall', {
             name: op.toLowerCase(),
-            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
+            args: [inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
         });
     },
     // TR-05: Smoothing
     'TR-05': (node, inputs) => {
+        const data = inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' });
+        const windowSize = (node.data as any).windowMode || 3;
         return PayloadUtils.createSymbol('FunctionCall', {
             name: 'smooth',
-            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
+            args: [data, PayloadUtils.createSymbol('Literal', { value: windowSize })]
         });
     },
     // MA-08: Combinatorics
     'MA-08': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'nCr';
+        
+        const n = inputs['n'] || inputs['in_n'] || PayloadUtils.createSymbol('Literal', { value: 'n' });
+        const r = inputs['r'] || inputs['in_r'] || PayloadUtils.createSymbol('Literal', { value: 'r' });
+
+        if (op === 'FACTORIAL') {
+            return PayloadUtils.createSymbol('FunctionCall', {
+                name: 'factorial',
+                args: [n]
+            });
+        }
+
         const funcMap: any = { nCr: 'nCr', nPr: 'nPr' };
         return PayloadUtils.createSymbol('FunctionCall', {
             name: funcMap[op] || 'nCr',
-            args: [
-                inputs['in_n'] || PayloadUtils.createSymbol('Literal', { value: 'n' }),
-                inputs['in_r'] || PayloadUtils.createSymbol('Literal', { value: 'r' })
-            ]
+            args: [n, r]
         });
     },
     // TR-01: Unit
     'TR-01': (node, inputs) => {
         return PayloadUtils.createSymbol('FunctionCall', {
             name: 'unit',
-            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
+            args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
         });
     },
     // TR-02: Base Converter
     'TR-02': (node, inputs) => {
         return PayloadUtils.createSymbol('FunctionCall', {
             name: 'base',
-            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
+            args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
         });
     }
 };

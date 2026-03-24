@@ -5,6 +5,9 @@ import { Toaster as SonnerToaster } from 'sonner';
 import { ReactFlowProvider } from '@xyflow/react';
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
 import { NextAuthProvider } from './NextAuthProvider';
+import { ErrorBoundary } from './common/ErrorBoundary';
+import { debugManager } from '../debug/DebugManager';
+import { DebugOverlay } from './debug/DebugOverlay';
 
 /**
  * AppProviders
@@ -13,19 +16,32 @@ import { NextAuthProvider } from './NextAuthProvider';
  */
 export function AppProviders({ children }: { children: React.ReactNode }) {
     return (
-        <NextAuthProvider>
-            <ReactFlowProvider>
-                <InternalProviders>{children}</InternalProviders>
-            </ReactFlowProvider>
-        </NextAuthProvider>
+        <ErrorBoundary>
+            <NextAuthProvider>
+                <ReactFlowProvider>
+                    <InternalProviders>{children}</InternalProviders>
+                </ReactFlowProvider>
+            </NextAuthProvider>
+        </ErrorBoundary>
     );
 }
 
 function InternalProviders({ children }: { children: React.ReactNode }) {
     const [mounted, setMounted] = useState(false);
+    const [showDebugOverlay, setShowDebugOverlay] = useState(false);
 
     useEffect(() => {
         setMounted(true);
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'd') {
+                e.preventDefault();
+                setShowDebugOverlay(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     usePerformanceMonitor();
@@ -39,6 +55,7 @@ function InternalProviders({ children }: { children: React.ReactNode }) {
     return (
         <>
             <SonnerToaster position="top-center" richColors theme="dark" closeButton />
+            <DebugOverlay visible={showDebugOverlay} onClose={() => setShowDebugOverlay(false)} />
             {children}
         </>
     );

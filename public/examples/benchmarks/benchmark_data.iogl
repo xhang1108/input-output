@@ -1,0 +1,44 @@
+# Benchmark: Data & Structures (DT-01 to DT-07)
+
+M1:io:mat @0,0 = "[[1,2],[3,4]]"
+
+InvDet:data:det @300,100
+M1 -- InvDet:in_a
+
+Inv:data:inv @300,0
+M1 -- Inv:in_a
+
+N1:io:num @0,400 = "1"
+N5:io:num @0,500 = "5"
+N9:io:num @0,600 = "9"
+Builder:data:builder @300,450
+N1 -- Builder:in
+N5 -- Builder:in
+N9 -- Builder:in
+
+Ext:data:extract @600,450 = "1"
+Builder -- Ext:in
+Idx2:io:num @450,550 = "2"
+Idx2 -- Ext:index
+
+L1:io:mat @0,700 = "[3, 1, 2]"
+Sort:data:list @300,700 = "sort"
+L1 -- Sort:in
+
+Set1:io:mat @0,850 = "[1, 2]"
+Set2:io:mat @0,950 = "[2, 3]"
+Union:data:set @300,900 = "union"
+Set1 -- Union:in_a
+Set2 -- Union:in_b
+
+Res_Det:output:res @600,100
+Res_Inv:output:res @600,0
+Res_Ext:output:res @900,450
+Res_Sort:output:res @600,700
+Res_Union:output:res @600,900
+
+InvDet -- Res_Det:in
+Inv -- Res_Inv:in
+Ext -- Res_Ext:in
+Sort -- Res_Sort:in
+Union -- Res_Union:in

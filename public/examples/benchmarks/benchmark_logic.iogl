@@ -1,0 +1,29 @@
+# Benchmark: Logical Flow (LG-01 to LG-03)
+
+# Initial values as numbers/booleans
+V_True:io:num @0,0 = "1"
+V_False:io:num @0,100 = "0"
+
+Gate_AND:logic:gate @300,50 = "AND"
+V_True -- Gate_AND:in_a
+V_False -- Gate_AND:in_b
+
+A:io:num @0,300 = "100"
+B:io:num @0,400 = "200"
+Switch:logic:switch @600,300
+Gate_AND -- Switch:condition
+A -- Switch:in_false
+B -- Switch:in_true
+
+Data:io:num @0,500 = "500"
+Split:logic:split @600,500
+V_True -- Split:condition
+Data -- Split:data
+
+Res_Gate:output:res @900,50
+Res_Switch:output:res @900,300
+Res_TrueArr:output:res @900,500
+
+Gate_AND -- Res_Gate:in
+Switch -- Res_Switch:in
+Split:out_true -- Res_TrueArr:in

@@ -177,12 +177,22 @@ export class Brain {
         if (this.heartbeatInterval) return;
 
         // SSR/Build Guard: Never start heartbeats in Node.js environment during build
-        if (typeof window === 'undefined') return;
+        const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+        if (typeof window === 'undefined' && !isTest) return;
 
         this.heartbeatInterval = setInterval(async () => {
             // 1. Global Visual Tick
             const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
             this.visualTick = Math.floor(now / 16.67) % 10000;
+
+            // 1.5 Sync visual state to all nodes for SSOT consistency (Spinal Reflex)
+            for (const node of this.state.nodes.values()) {
+                if (!node.visualState) {
+                    node.visualState = { muted: false, visualTick: 0 };
+                }
+                node.visualState.muted = !!node.data?.muted;
+                node.visualState.visualTick = this.visualTick;
+            }
 
             if (!this.isRecalculating) {
                 this.emit('visualUpdate', this.visualTick);
@@ -422,7 +432,14 @@ export class Brain {
 
             // Stepwise Propagation: Only propagate if the value ACTUALLY changed.
             // This prevents "Performance Avalanches" (Fatal Flaw 4 Fix)
-            if (oldPayload && !deepEqual(oldPayload, resultPayload)) {
+            // 💡 Pulse Protection: We ignore the 'symbol' field because it can change (e.g. literals in AST) 
+            // even if the result value is identical.
+            const isEqual = oldPayload && 
+                deepEqual(oldPayload.value, resultPayload.value) &&
+                oldPayload.type === resultPayload.type &&
+                deepEqual(oldPayload.meta, resultPayload.meta);
+
+            if (oldPayload && !isEqual) {
                 this.triggerDirtyChain(nodeId);
             } else if (!oldPayload) {
                 this.triggerDirtyChain(nodeId);
@@ -484,6 +501,9 @@ export class Brain {
         const dirtyChainNodeIds = Array.from(this.state.nodes.values())
             .filter(n => n.isInDirtyChain)
             .map(n => n.id);
+
+        // 💡 Pulse Protection: Clear the visual tracking set to avoid infinite heartbeats
+        this.dirtyNodes.clear();
 
         for (const id of dirtyChainNodeIds) {
             const node = this.state.nodes.get(id);
@@ -735,22 +755,7 @@ export class Brain {
             const node = nodesToCheck.get(nodeId);
             if (!node) return null;
 
-            // 1. Special Case: Vector Split (AD-09) mode-based swap
-            // This MUST come before any pre-filled or static handle checks because AD-09 handles are dynamic.
-            if (node.type === 'AD-09') {
-                const op = String(node.data?.op || '').toUpperCase();
-                const mode = (node.data?.mode || (op === 'COMBINE' ? 'combine' : 'separate')) as string;
 
-                console.log(`[Brain] getHandleType for AD-09 (${node.id}): op=${op}, mode=${mode}, handle=${handleId}`);
-
-                if (mode === 'combine' || op === 'COMBINE') {
-                    if (['x', 'y', 'z'].includes(handleId)) return 'target';
-                    if (handleId === 'out') return 'source';
-                } else { // separate
-                    if (handleId === 'in') return 'target';
-                    if (['x', 'y', 'z'].includes(handleId)) return 'source';
-                }
-            }
 
             // 2. Check instance data for dynamically generated handles (SY-05, etc.)
             if (node.data && Array.isArray(node.data.handles)) {

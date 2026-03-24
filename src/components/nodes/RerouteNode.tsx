@@ -36,7 +36,7 @@ export const RerouteNode = memo(({ selected }: NodeProps) => {
             <Handle
                 type="target"
                 position={Position.Left}
-                id="in"
+                id="in_a"
                 className="opacity-0 rounded-full border-none! bg-transparent!"
                 style={{
                     position: 'absolute',

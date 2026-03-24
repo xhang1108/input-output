@@ -120,12 +120,7 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         return PayloadUtils.createSymbol('FunctionCall', { name: 'VectorField', args: [inSym] });
     },
 
-    // DT-06: Vector Split
-    'DT-06': (node, inputs) => {
-        const mode = ((node.data || {}) as any).mode || 'separate';
-        if (mode === 'separate') return PayloadUtils.createSymbol('Identifier', { name: 'SplitVector' });
-        return PayloadUtils.createSymbol('FunctionCall', { name: 'matrix', args: Array.isArray(inputs['in']) ? inputs['in'] : [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
-    },
+
 
     // TR-03: Geometry
     'TR-03': (node, inputs) => {

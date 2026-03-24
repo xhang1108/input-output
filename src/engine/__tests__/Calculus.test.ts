@@ -5,8 +5,8 @@ import { DataType } from '../../types/payload';
 import { RuntimeGuard } from '../calculus/RuntimeGuard';
 import { NerdamerService } from '../calculus/NerdamerService';
 
-// Initialize NodeRegistry
-NodeRegistry.initializeNodes();
+// NodeRegistry initialization is handled by global setup.ts
+
 
 // ─── CL-01: Derivative ─────────────────────────────────────────
 describe('CL-01: Derivative', () => {
@@ -154,6 +154,27 @@ describe('CL-04: Equation Solver', () => {
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = PayloadUtils.unwrap(result);
         expect(val).toContain(5);
+    });
+
+    test('should hunt equations in arbitrary handle names (Robust Fallback)', async () => {
+        const node = {
+            id: 'solver-robust',
+            type: 'CL-04',
+            data: { variable: 'x' },
+            value: undefined,
+            selected: false,
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            'random_name_1': PayloadUtils.createSymbolic('x+3=6'),
+            'another_input': PayloadUtils.createString('y=5')
+        };
+
+        const result = await NodeRegistry.evaluate(node, inputs);
+        const val = PayloadUtils.unwrap(result);
+        expect(val).toContain(3);
     });
 
     test('should not crash on object input', async () => {

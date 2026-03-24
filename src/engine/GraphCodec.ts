@@ -564,8 +564,14 @@ export class GraphCodec {
             // Calculus Family Mapping
             if (typeInfo.category === 'Calculus') {
                 if (cNode.value !== undefined) {
-                    // For calculus nodes, value is the expression string
-                    data.expression = String(cNode.value);
+                    const val = String(cNode.value);
+                    if (typeInfo.id === 'CL-02' && (val === 'definite' || val === 'indefinite')) {
+                        data.mode = val;
+                    } else if (typeInfo.id === 'CL-03') {
+                        data.approach = val;
+                    } else {
+                        data.expression = val;
+                    }
                 }
             }
 
@@ -672,7 +678,7 @@ export class GraphCodec {
             if (['a', 'in', 'in_a'].includes(h)) {
                 if (typeId?.startsWith('MA-') || typeId?.startsWith('LG-') || typeId?.startsWith('CL-') || typeId?.startsWith('TR-')) {
                     if (['MA-01', 'MA-02', 'MA-05', 'MA-07', 'LG-01', 'TR-03'].includes(typeId)) return 'in_a';
-                    if (['MA-03', 'MA-04', 'MA-06', 'CL-04', 'TR-01'].includes(typeId)) return 'in';
+                    if (['MA-03', 'MA-04', 'MA-06', 'CL-04', 'TR-01', 'DT-01', 'OT-03'].includes(typeId)) return 'in';
                     if (['CL-01', 'CL-02', 'CL-03', 'CL-05', 'TR-04'].includes(typeId)) return 'expr';
                     return 'in_a'; // Fallback
                 }

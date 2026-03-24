@@ -26,10 +26,23 @@ export const PayloadUtils = {
             meta.rank = dims.length;
         }
         else if (typeof value === 'object' && value !== null) {
-            type = DataType.Array; // Unified Struct/Tensor
-            const dims = this.calculateDimensions(value);
-            meta.dimensions = dims;
-            meta.rank = dims.length;
+            const val = value as any;
+            // 💡 BigNumbers, Fractions, and Complex numbers are Scalars in our system
+            if (val.isBigNumber || val.isFraction || val.isComplex) {
+                type = DataType.Scalar;
+            } else {
+                type = DataType.Array; // Unified Struct/Tensor
+                const dims = this.calculateDimensions(value);
+                meta.dimensions = dims;
+                meta.rank = dims.length;
+            }
+        }
+
+        // 💡 Pulse Consistency: All Scalars MUST have rank 0 and empty dimensions
+        // to pass deepEqual checks during stepwise propagation.
+        if (type === DataType.Scalar) {
+            meta.rank = 0;
+            meta.dimensions = [];
         }
 
         return {
@@ -506,6 +519,25 @@ export const PayloadUtils = {
             return String((raw as Record<string, unknown>).value);
         }
         return String(raw);
+    },
+
+    /**
+     * Deduplicates numerical results with a small epsilon window.
+     * Prevents [2.0000000001, 2.0] from appearing in solver results.
+     */
+    deduplicateResults(results: any[], epsilon: number = 1e-10): any[] {
+        if (!Array.isArray(results)) return [];
+        const unique: any[] = [];
+        for (const val of results) {
+            const isDuplicate = unique.some(u => {
+                if (typeof val === 'number' && typeof u === 'number') {
+                    return Math.abs(val - u) < epsilon;
+                }
+                return val === u;
+            });
+            if (!isDuplicate) unique.push(val);
+        }
+        return unique;
     },
 
     /**

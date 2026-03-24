@@ -27,7 +27,7 @@ import { NodeExpression } from '../components/nodes/NodeExpression';
 import { DebugNode } from '../components/nodes/DebugNode';
 import { VectorUtilsNode } from '../components/nodes/VectorUtilsNode';
 import { CombinatoricsNode } from '../components/nodes/CombinatoricsNode';
-import { VectorSplitNode } from '../components/nodes/VectorSplitNode';
+
 import { GeometryNode } from '../components/nodes/GeometryNode';
 import { ArrayExtractNode } from '../components/nodes/ArrayExtractNode';
 import { ArrayBuilderNode } from '../components/nodes/ArrayBuilderNode';
@@ -85,7 +85,7 @@ export const nodeTypes = {
     'DT-03': GenericSelectorNode,
     'DT-04': GenericSelectorNode,
     'DT-05': VectorUtilsNode,
-    'DT-06': VectorSplitNode,
+
     'DT-07': GenericSelectorNode,
 
     // ─── 6. Transform ───────────────────────────────────────

@@ -63,4 +63,68 @@ describe('FormulaRenderer (AST to LaTeX)', () => {
         expect(FormulaRenderer.render(nested)).toBe('a + b');
         expect(FormulaRenderer.render(nested, { expandSymbols: true })).toBe('10 + 20');
     });
+
+    it('should handle operator precedence with parentheses', () => {
+        // (a + b) * c
+        const complex = PayloadUtils.createSymbol('BinaryExpression', {
+            operator: 'MUL',
+            left: PayloadUtils.createSymbol('BinaryExpression', {
+                operator: 'ADD',
+                left: PayloadUtils.createSymbol('Identifier', { name: 'a' }),
+                right: PayloadUtils.createSymbol('Identifier', { name: 'b' })
+            }),
+            right: PayloadUtils.createSymbol('Identifier', { name: 'c' })
+        });
+        expect(FormulaRenderer.render(complex)).toBe('\\left(a + b\\right) \\cdot c');
+
+        // a + (b * c) -> should NOT have parens because MUL > ADD
+        const simple = PayloadUtils.createSymbol('BinaryExpression', {
+            operator: 'ADD',
+            left: PayloadUtils.createSymbol('Identifier', { name: 'a' }),
+            right: PayloadUtils.createSymbol('BinaryExpression', {
+                operator: 'MUL',
+                left: PayloadUtils.createSymbol('Identifier', { name: 'b' }),
+                right: PayloadUtils.createSymbol('Identifier', { name: 'c' })
+            })
+        });
+        expect(FormulaRenderer.render(simple)).toBe('a + b \\cdot c');
+    });
+
+    it('should render calculus symbols correctly', () => {
+        const diff = PayloadUtils.createSymbol('FunctionCall', {
+            name: 'diff',
+            args: [
+                PayloadUtils.createSymbol('FunctionCall', {
+                    name: 'sin',
+                    args: [PayloadUtils.createSymbol('Identifier', { name: 'x' })]
+                }),
+                PayloadUtils.createSymbol('Identifier', { name: 'x' })
+            ]
+        });
+        expect(FormulaRenderer.render(diff)).toBe('\\frac{d}{dx}\\left(\\sin{x}\\right)');
+
+        const integral = PayloadUtils.createSymbol('FunctionCall', {
+            name: 'int',
+            args: [
+                PayloadUtils.createSymbol('BinaryExpression', {
+                    operator: 'POW',
+                    left: PayloadUtils.createSymbol('Identifier', { name: 'x' }),
+                    right: PayloadUtils.createSymbol('Literal', { value: 2 })
+                }),
+                PayloadUtils.createSymbol('Identifier', { name: 'x' })
+            ]
+        });
+        expect(FormulaRenderer.render(integral)).toBe('\\int {x}^{2} \\, dx');
+    });
+
+    it('should render matrices correctly', () => {
+        const mat = PayloadUtils.createSymbol('FunctionCall', {
+            name: 'matrix',
+            args: [{
+                type: 'Literal',
+                value: [[1, 2], [3, 4]]
+            } as any]
+        });
+        expect(FormulaRenderer.render(mat)).toBe('\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}');
+    });
 });

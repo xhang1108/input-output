@@ -2,8 +2,6 @@ import { InputOutputEngine } from '../../../InputOutputEngine';
 import { DataType, NodePayload } from '../../../../types/payload';
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeEvaluator } from '../../../NodeRegistry';
-import { NerdamerService } from '../../../calculus/NerdamerService';
-import { RuntimeGuard } from '../../../calculus/RuntimeGuard';
 
 
 
@@ -48,7 +46,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const valA = getHydrated(payloadA);
         const valB = getHydrated(payloadB);
         const data = (node.data || {}) as Record<string, unknown>;
-        const op = data.op as string || 'ADD';
+        const op = (data.op as string || 'ADD').toUpperCase();
 
         const extractValue = (v: unknown) => {
             if (v && typeof v === 'object' && !Array.isArray(v)) {
@@ -97,9 +95,13 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 case 'DIV': result = m.divide(procA, procB); break;
                 case 'POW': result = m.pow(procA, procB); break;
                 case 'SQRT': 
-                    result = (inputs['in_b'] && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA); 
+                    result = ((inputs['in_b'] || inputs['n'] || inputs['b']) && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA); 
                     break;
                 case 'ABS': result = m.abs(procA); break;
+                case 'NEG': result = m.unaryMinus(procA); break;
+                case 'SIGN': result = m.sign(procA); break;
+                case 'CBRT': result = m.cbrt(procA); break;
+                case 'FACT': result = m.factorial(procA); break;
                 default: result = m.add(procA, procB);
             }
 
@@ -135,20 +137,32 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'nCr';
-        const valN = inputs['in_n'], valR = inputs['in_r'];
-        if (!valN || !valR) return PayloadUtils.createError('Missing Inputs');
+
+        // 💡 Support both legacy (in_n, in_r) and new (n, r) handle IDs
+        const valN = inputs['n'] || inputs['in_n'];
+        const valR = inputs['r'] || inputs['in_r'];
+
+        if (!valN) return PayloadUtils.createError('Missing Input (n)');
+        
+        // Factorial only needs 'n'
+        if (op !== 'FACTORIAL' && !valR) return PayloadUtils.createError('Missing Input (r)');
+
         try {
-            const n = PayloadUtils.unwrap(valN), r = PayloadUtils.unwrap(valR);
+            const n = PayloadUtils.hydrate(PayloadUtils.unwrap(valN), math);
+            const r = valR ? PayloadUtils.hydrate(PayloadUtils.unwrap(valR), math) : 0;
+
             let result: any;
             if (op === 'nCr') result = math.combinations(n, r);
             else if (op === 'nPr') result = math.permutations(n, r);
+            else if (op === 'FACTORIAL') result = math.factorial(n);
             else result = math.combinations(n, r);
-            return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
-        } catch (e: any) { return PayloadUtils.createError(`${op} Failed`); }
+
+            return PayloadUtils.wrap(result);
+        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
     'MA-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
+        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.op || 'ROUND';
         const prec = data.precision ?? 0;
@@ -168,15 +182,17 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             };
         } catch (e) { return PayloadUtils.createError('Op Failed'); }
     },
-    'MA-14': (node, inputs) => MathEvaluators['MA-05'](node, inputs),
+    'MA-14': (node, inputs) => (MathEvaluators as any)['MA-05'](node, inputs),
     'MA-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const raw = PayloadUtils.unwrap(inputs['in']);
+        const raw = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_a'] || inputs['in']), math);
         const data = (node.data || {}) as any;
         const isMixed = data.mixed === true;
         try {
             if (raw === null || raw === undefined) return PayloadUtils.createScalar(0);
-            const f = math.fraction(raw);
+            // 💡 Important: mathjs.fraction(BigNumber) creates huge numerators/denominators for decimals.
+            // Using Number(raw) allows fraction.js to use rational approximation for results like 1/3 (0.333...).
+            const f = math.fraction(typeof raw === 'object' && (raw as any).isBigNumber ? (raw as any).toNumber() : raw);
             let n = Number(f.n), d = Number(f.d), integerPart = 0;
             let str = math.format(f);
             let latex = str;
@@ -194,7 +210,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             }
 
             return {
-                type: DataType.Array,
+                type: DataType.Object,
                 value: {
                     int: PayloadUtils.createScalar(integerPart),
                     numerator: PayloadUtils.createScalar(n),
@@ -207,7 +223,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             };
         } catch (e) { return PayloadUtils.createError('Invalid Fraction'); }
     },
-    'MA-12': (node, inputs) => MathEvaluators['MA-06'](node, inputs),
+    'MA-12': (node, inputs) => (MathEvaluators as any)['MA-06'](node, inputs),
     'MA-07': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
@@ -240,7 +256,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     },
     'MA-15': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const inputPayload = inputs['in'];
+        const inputPayload = inputs['in_a'] || inputs['in'];
         const targetBase = data.base || 'HEX';
         let finalValue = 0;
         if (inputPayload) {
@@ -259,7 +275,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-03_OLD': (node, inputs) => MathEvaluators['MA-03'](node, inputs), // Alias if needed
     'MA-04': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
+        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.op || 'SIN';
         const angleMode = data.angleMode || 'RAD';
@@ -290,14 +306,14 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     },
     'MA-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in'] || PayloadUtils.createScalar(0);
+        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.op || 'LN';
         const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         try {
             let result;
             if (op === 'LOG10') result = math.log10(val);
-            else if (op === 'LOGN') result = math.log(val, inputs['base'] ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['base']), math) : 10);
+            else if (op === 'LOGN') result = math.log(val, (inputs['in_b'] || inputs['base']) ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_b'] || inputs['base']), math) : 10);
             else result = math.log(val);
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
         } catch (e) { return PayloadUtils.createError('Log Failed'); }
@@ -399,7 +415,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as any;
         const valId = data.val || 'pi';
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const precision = data.precision || 5;
+        const precision = Number(data.precision ?? 5);
 
         let result: any;
         if (valId === 'pi') result = math.pi;
@@ -410,9 +426,11 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
         if (math.bignumber) {
             result = math.bignumber(result);
-            if (precision !== undefined) {
-                result = math.format(result, { precision });
-                result = math.evaluate(result);
+            // Precision >= 0 means Round to Decimal Places (not sig-figs)
+            if (precision >= 0) {
+                result = math.round(result, precision);
+                // After rounding, evaluate ensures it's a clean BigNumber or number
+                result = math.evaluate(math.format(result));
             }
         }
 
@@ -423,26 +441,64 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'TR-01': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const targetUnit = data.unit || 'm';
-        const valPayload = inputs['in'];
+        const isCustom = data.unit === 'CUSTOM';
+        const targetUnit = isCustom ? data.customUnit : (data.unit || 'm');
+        const valPayload = inputs['in_a'] || inputs['in'];
         if (!valPayload) return PayloadUtils.createScalar(0);
+        
         try {
-            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
-            const result = math.unit(h, targetUnit);
+            const raw = PayloadUtils.unwrap(valPayload);
+            const sourceUnit = valPayload.meta?.unit;
+            
+            // Standard Conversion logic
+            if (sourceUnit && sourceUnit !== targetUnit && !isCustom) {
+                try {
+                    const result = math.unit(raw, sourceUnit).to(targetUnit);
+                    return {
+                        ...PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit),
+                        meta: { unit: targetUnit }
+                    };
+                } catch (e: any) {
+                    // If both are potentially standard units, this is an incompatibility error
+                    if (e.message?.includes('Units do not match') || e.message?.includes('Unexpected unit')) {
+                        return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
+                    }
+                    // Fallback for non-standard labels if not explicitly caught
+                }
+            }
+            
+            // Otherwise just assign the label (Custom or Standard label)
             return {
-                ...PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit),
+                ...PayloadUtils.createScalar(raw, targetUnit),
                 meta: { unit: targetUnit }
             };
-        } catch (e) { return PayloadUtils.createError('Conversion Failed'); }
+        } catch (e: any) { 
+            return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`); 
+        }
     },
     // TR-02: Base Converter
     'TR-02': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const fromBase = Number(data.fromBase || 10), toBase = Number(data.toBase || 16);
-        const val = String(PayloadUtils.unwrap(inputs['in'] || PayloadUtils.createScalar(0)));
+        const inputPayload = inputs['in_a'] || inputs['in'];
+        const metaUnit = inputPayload?.meta?.unit?.toLowerCase();
+        
+        const baseMap: Record<string, number> = { 'bin': 2, 'quat': 4, 'oct': 8, 'dec': 10, 'hex': 16 };
+        const unitMap: Record<number, string> = { 2: 'bin', 4: 'quat', 8: 'oct', 10: 'dec', 16: 'hex' };
+
+        const fromBase = Number(data.fromBase || baseMap[metaUnit!] || 10);
+        const toBase = Number(data.toBase || 16);
+        const val = String(PayloadUtils.unwrap(inputPayload || PayloadUtils.createScalar(0)));
+        
         try {
             const num = parseInt(val, fromBase);
-            return PayloadUtils.createScalar(num.toString(toBase).toUpperCase());
+            if (isNaN(num)) throw new Error('NaN');
+            const resultStr = num.toString(toBase).toUpperCase();
+            const outputUnit = unitMap[toBase] || 'scalar';
+            
+            return {
+                ...PayloadUtils.createScalar(resultStr),
+                meta: { unit: outputUnit }
+            };
         } catch (e) { return PayloadUtils.createError('Base Conversion Failed'); }
     },
     // TR-06: Statistics
@@ -450,7 +506,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'Mean';
-        const valPayload = inputs['data'] || inputs['in'];
+        const valPayload = inputs['in_a'] || inputs['in'] || inputs['data'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         let arr: any[] = [];
@@ -473,15 +529,56 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
         } catch (e: any) { return PayloadUtils.createError(`Stats Failed: ${e.message}`); }
     },
-    // TR-05: Smoothing
+    // TR-05: Smoothing (2D Spatial Moving Average)
     'TR-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as any;
-        const factor = Number(data.factor || 0.5);
-        const currentVal = Number(PayloadUtils.unwrap(inputs['in'] || PayloadUtils.createScalar(0)));
-        const prevVal = Number(PayloadUtils.unwrap((node.data as any)?.prevValue || PayloadUtils.createScalar(currentVal)));
-        const result = prevVal + factor * (currentVal - prevVal);
-        // Note: For side effects like saving prevValue, we'd need to emit a brain update, but for stateless evaluator we just return.
-        return PayloadUtils.createScalar(result);
+        const dataPayload = inputs['data'] || inputs['in_a'] || inputs['in'];
+
+        if (!dataPayload) return PayloadUtils.createError('Missing Input (data)');
+
+        try {
+            const raw = PayloadUtils.hydrate(PayloadUtils.unwrap(dataPayload), math);
+            const windowMode = Number((node.data as any)?.windowMode || 3);
+            const radius = Math.floor(windowMode / 2);
+
+            // CASE 1: Scalar smoothing (Pass-through for now, as 2D filter needs context)
+            if (dataPayload.type === DataType.Scalar) {
+                return dataPayload;
+            }
+
+            // CASE 2: Array/Matrix smoothing (Unified 2D Blur)
+            const matrix = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && (raw as any).isMatrix ? (raw as any).toArray() : [raw]);
+            
+            if (!Array.isArray(matrix)) return dataPayload;
+
+            const is2D = Array.isArray(matrix[0]);
+            const rows = matrix.length;
+            const cols = is2D ? matrix[0].length : 1;
+
+            const result = matrix.map((rowArr: any, r: number) => {
+                const row = is2D ? rowArr : [rowArr];
+                return row.map((_: any, c: number) => {
+                    let sum = 0, count = 0;
+                    for (let dr = -radius; dr <= radius; dr++) {
+                        for (let dc = -radius; dc <= radius; dc++) {
+                            const nr = r + dr;
+                            const nc = c + dc;
+                            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                                const val = is2D ? matrix[nr][nc] : (cols === 1 ? matrix[nr] : matrix[nr][nc]);
+                                sum += Number(val);
+                                count++;
+                            }
+                        }
+                    }
+                    return sum / count;
+                });
+            });
+
+            // Restore original dimensionality
+            const final = is2D ? result : result.map((r: any) => r[0]);
+            return PayloadUtils.createArray(final);
+        } catch (e) {
+            return PayloadUtils.createError(String(e));
+        }
     }
 };

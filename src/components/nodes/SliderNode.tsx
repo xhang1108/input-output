@@ -38,8 +38,8 @@ export const SliderNode = memo((props: NodeProps) => {
 
             // Send to Brain. Brain handles debouncing the heavy calculation.
             brain.applyTransaction({
-                type: 'UPDATE_VALUE',
-                payload: { id, value: val }
+                type: 'UPDATE_NODE_DATA',
+                payload: { id, data: { value: val } }
             });
         }
     }, [id, brain]);

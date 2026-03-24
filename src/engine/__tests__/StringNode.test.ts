@@ -1,57 +1,45 @@
-import { describe, test, expect, beforeAll } from 'vitest';
-import { NodeRegistry, initializeNodes } from '../NodeRegistry';
-import { DataType } from '../../types/payload';
+import { describe, test, expect } from 'vitest';
+import { NodeRegistry } from '../NodeRegistry';
+import { PayloadUtils } from '../../utils/PayloadUtils';
 
-beforeAll(() => {
-    initializeNodes();
-});
-
-describe('String Node (IO-04)', () => {
-    test('Should output a string payload', async () => {
+describe('String Node (IN-04)', () => {
+    
+    test('should handle raw string in data.value with type: string', async () => {
         const node = {
-            id: 'test-string',
-            type: 'IO-04',
-            data: { value: 'Hello World' },
-            value: { type: DataType.String, value: '', symbol: null, meta: {} },
-            isInDirtyChain: false,
-            position: { x: 0, y: 0 }
+            id: 'in-04-test-raw',
+            type: 'IN-04',
+            data: { type: 'string', value: 'Apple' },
+            value: undefined
         };
 
-        const result = await NodeRegistry.evaluate(node, {});
-
-        expect(result.type).toBe(DataType.String);
-        expect(result.value).toBe('Hello World');
+        const result = await NodeRegistry.evaluate(node as any, {});
+        expect(PayloadUtils.unwrap(result)).toBe('Apple');
     });
 
-    test('Should handle empty string', async () => {
+    test('should handle payload object in data.value (legacy compatibility)', async () => {
         const node = {
-            id: 'test-string-empty',
-            type: 'IO-04',
-            data: { value: '' },
-            value: { type: DataType.String, value: '', symbol: null, meta: {} },
-            isInDirtyChain: false,
-            position: { x: 0, y: 0 }
+            id: 'in-04-test-legacy',
+            type: 'IN-04',
+            data: { 
+                type: 'string',
+                value: { type: 'string', value: 'Hello', symbol: null, meta: {} } 
+            },
+            value: undefined
         };
 
-        const result = await NodeRegistry.evaluate(node, {});
-
-        expect(result.type).toBe(DataType.String);
-        expect(result.value).toBe('');
+        const result = await NodeRegistry.evaluate(node as any, {});
+        expect(PayloadUtils.unwrap(result)).toBe('Hello');
     });
 
-    test('Should stringify numbers', async () => {
+    test('should fallback to node.value if data is missing', async () => {
         const node = {
-            id: 'test-string-num',
-            type: 'IO-04',
-            data: { value: 123 },
-            value: { type: DataType.String, value: '', symbol: null, meta: {} },
-            isInDirtyChain: false,
-            position: { x: 0, y: 0 }
+            id: 'in-04-test-fallback',
+            type: 'IN-04',
+            data: { type: 'string' },
+            value: PayloadUtils.createString('Cached')
         };
 
-        const result = await NodeRegistry.evaluate(node, {});
-
-        expect(result.type).toBe(DataType.String);
-        expect(result.value).toBe('123');
+        const result = await NodeRegistry.evaluate(node as any, {});
+        expect(PayloadUtils.unwrap(result)).toBe('Cached');
     });
 });

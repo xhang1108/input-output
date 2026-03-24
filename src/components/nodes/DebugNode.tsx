@@ -10,7 +10,7 @@ export const DebugNode = memo((props: NodeProps) => {
 
     const handles = [
         {
-            id: 'in',
+            id: 'in_a',
             type: 'target',
             position: Position.Left,
             variant: 'single',

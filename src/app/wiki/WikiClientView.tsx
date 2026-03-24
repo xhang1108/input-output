@@ -159,6 +159,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
     const [visibleItemsCount, setVisibleItemsCount] = useState<number>(2);
     const scrollerRef = useRef<HTMLDivElement>(null);
     const isNavigatingRef = useRef(false);
+    const hasProcessedInitialHash = useRef(false);
     const router = useRouter();
 
     // Mode is now passed as a prop from the server-side page.tsx, so we don't need to sync it here.
@@ -184,7 +185,8 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
         if (isCrossSection) {
             const section = sections.find(s => s.id === sectionId);
             if (section) {
-                router.push(`/wiki/${mode}/${section.slug}${window.location.hash}`, { scroll: false });
+                const hash = anchorId || itemId ? `#${anchorId || itemId}` : '';
+                router.push(`/wiki/${mode}/${section.slug}${hash}`, { scroll: false });
             }
         }
 
@@ -233,8 +235,11 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                 setTimeout(() => { isNavigatingRef.current = false; }, 400);
             }
         } else {
-            // Same-section: Smooth scroll
-            if (itemId) setActiveItemId(itemId);
+            // Same-section: Smooth scroll & URL update
+            if (itemId) {
+                setActiveItemId(itemId);
+                router.push(`/wiki/${mode}/${activeSection.slug}#${itemId}`, { scroll: false });
+            }
 
             const performSmooth = () => {
                 if (!scrollTargetId) {
@@ -258,24 +263,27 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
     }, [activeSectionId, sections, router]);
 
     useEffect(() => {
+        if (hasProcessedInitialHash.current) return;
+
         // Only run deep link handling if we have a hash to navigate to, 
         // as the basic section/item state is already initialized synchronously.
         const hash = window.location.hash.replace('#', '');
         if (hash && sections.length > 0) {
+            hasProcessedInitialHash.current = true;
             let targetDocId = hash;
             const docInfo = getDocInfo(hash);
             if (docInfo) targetDocId = docInfo.sectionId;
 
             const targetSection = sections.find((s: WikiDocSection) =>
                 s.items.some((i: WikiDoc) => i.id === targetDocId)
-);
+            );
             if (targetSection) {
                 setActiveSectionId(targetSection.id);
                 setActiveItemId(targetDocId);
                 setTimeout(() => handleNavigate(targetSection.id, targetDocId, hash), 300);
             }
         }
-    }, [sections, handleNavigate]);
+    }, [sections]);
 
     // 🛠️ FIX: Synchronous & Instant Section Switch
     // Use useLayoutEffect to reset scroll BEFORE browser paint

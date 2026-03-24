@@ -20,6 +20,7 @@ function buildMenuItems(): CategorizedMenuItem[] {
 
     for (const cat of categories) {
         for (const def of cat.items) {
+            // 1. Add the base node as-is
             items.push({
                 id: def.id,
                 label: def.label,
@@ -30,6 +31,49 @@ function buildMenuItems(): CategorizedMenuItem[] {
                     handles: def.handles,
                 }
             });
+
+            // 2. Discover sub-variants from select params
+            // A parameter is "spread" if its options have aliases defined.
+            const subParams = def.params?.filter(p => p.type === 'select' && p.options?.some(opt => opt.aliases && opt.aliases.length > 0));
+            
+            if (subParams) {
+                for (const param of subParams) {
+                    if (!param.options) continue;
+
+                    for (const opt of param.options) {
+                        // Only create variant if it has aliases (prevents over-spreading)
+                        if (!opt.aliases || opt.aliases.length === 0) continue;
+
+                        const cleanLabel = opt.label.split(' (')[0].trim();
+                        
+                        // Deduplication: If this variant's value is already the default for the node,
+                        // and they share a similar name, we can skip it to avoid "Add" vs "Add" noise.
+                        // However, we usually want these to show up specifically when searched.
+                        // Better check: if the base node's label and defaultData already match this variant, skip.
+                        const isDefaultVariant = def.defaultData?.[param.id] === opt.value;
+                        if (isDefaultVariant && (def.label.toLowerCase() === cleanLabel.toLowerCase())) continue;
+
+                        items.push({
+                            id: `${def.id}:${param.id}:${opt.value}`,
+                            label: cleanLabel,
+                            category: cat.category,
+                            isVariant: true,
+                            // Variants only match their OWN aliases and labels to avoid noise
+                            // (e.g. searching "Math" shouldn't show 50 math sub-operations)
+                            aliases: Array.from(new Set([
+                                ...(opt.aliases || []),
+                                cleanLabel.toLowerCase()
+                            ])),
+                            data: {
+                                ...def.defaultData,
+                                [param.id]: opt.value,
+                                label: cleanLabel,
+                                handles: def.handles,
+                            }
+                        });
+                    }
+                }
+            }
         }
     }
     return items;
@@ -71,7 +115,9 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
     }, [pendingConnection]);
 
     const handleSelect = (item: CategorizedMenuItem, isContinuous: boolean) => {
-        onSelect(item.id, item.label, item.data, isContinuous);
+        // If it's a variant (id contains ':'), the node type is the first part
+        const nodeType = item.id.includes(':') ? item.id.split(':')[0] : item.id;
+        onSelect(nodeType, item.label, item.data, isContinuous);
     };
 
     return (

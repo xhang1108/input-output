@@ -2,7 +2,6 @@
 
 import { useStore, Panel } from '@xyflow/react';
 import { useAppStore } from '../../store/useStore';
-import Link from 'next/link';
 
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
@@ -104,15 +103,6 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
                         </span>
                     )}
                 </div>
-
-                <div className="w-px h-3 border-l border-surface-light mx-1" />
-
-                <Link
-                    href="/wiki"
-                    className="text-primary/80 hover:text-primary font-bold tracking-widest transition-colors px-1"
-                >
-                    [WIKI / HELP]
-                </Link>
 
                 <div className="w-px h-3 bg-surface-light mx-1" />
 

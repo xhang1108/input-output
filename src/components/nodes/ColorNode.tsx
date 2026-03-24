@@ -64,8 +64,8 @@ export const ColorNode = memo((props: NodeProps) => {
 
         setLocalVal(newVal);
         brain.applyTransaction({
-            type: 'UPDATE_VALUE',
-            payload: { id, value: newVal }
+            type: 'UPDATE_NODE_DATA',
+            payload: { id, data: { value: newVal } }
         });
     }, [id, brain]);
 
@@ -79,8 +79,8 @@ export const ColorNode = memo((props: NodeProps) => {
 
         setLocalVal(newVal);
         brain.applyTransaction({
-            type: 'UPDATE_VALUE',
-            payload: { id, value: newVal }
+            type: 'UPDATE_NODE_DATA',
+            payload: { id, data: { value: newVal } }
         });
     }, [id, maxRange, rNorm, gNorm, bNorm, brain]);
 
@@ -94,8 +94,8 @@ export const ColorNode = memo((props: NodeProps) => {
 
         setLocalVal(nextVal);
         brain.applyTransaction({
-            type: 'UPDATE_VALUE',
-            payload: { id, value: nextVal }
+            type: 'UPDATE_NODE_DATA',
+            payload: { id, data: { value: nextVal } }
         });
     }, [id, rNorm, gNorm, bNorm, brain]);
 

@@ -15,6 +15,7 @@ export interface CategorizedMenuItem {
     description?: ReactNode;
     data?: any;
     icon?: ReactNode;
+    isVariant?: boolean; // If true, hide from default list when search is empty
 }
 
 interface CategorizedMenuProps {
@@ -79,14 +80,44 @@ export function CategorizedMenu({
     }
 
 
-    // 1. Initial filter based on search
+    // 1. Filter and Score based on search
     const baseFilteredItems = useMemo(() => {
-        const searchLower = search.toLowerCase();
-        return items.filter(item =>
-            item.label.toLowerCase().includes(searchLower) ||
-            item.id.toLowerCase().includes(searchLower) ||
-            item.aliases?.some(alias => alias.toLowerCase().includes(searchLower))
-        );
+        const searchLower = search.trim().toLowerCase();
+        
+        if (!searchLower) {
+            // No search: Only show base items (non-variants)
+            return items.filter(item => !item.isVariant);
+        }
+
+        // Search active: Score items for relevance
+        const scored = items.map(item => {
+            let score = 0;
+            const labelLower = item.label.toLowerCase();
+            
+            // 1. Label Match (Primary)
+            if (labelLower === searchLower) score = 100;
+            else if (labelLower.startsWith(searchLower)) score = 80;
+            else if (labelLower.includes(searchLower)) score = 40;
+            
+            // 2. Alias Match (Secondary)
+            const aliasMatch = item.aliases?.some(a => a.toLowerCase() === searchLower);
+            const aliasStart = item.aliases?.some(a => a.toLowerCase().startsWith(searchLower));
+            const aliasInclude = item.aliases?.some(a => a.toLowerCase().includes(searchLower));
+            
+            let aliasScore = 0;
+            if (aliasMatch) aliasScore = 90; // Higher than startsWith label to prioritize exact keyword matches
+            else if (aliasStart) aliasScore = 60;
+            else if (aliasInclude) aliasScore = 20;
+
+            score = Math.max(score, aliasScore);
+            
+            return { item, score };
+        }).filter(entry => entry.score > 0);
+
+        // Sort by score (descending), then maintain original order for ties
+        return scored
+            .sort((a, b) => b.score - a.score)
+            .map(entry => entry.item);
     }, [items, search]);
 
     // 2. Hierarchical grouping (Hierarchical)

@@ -40,8 +40,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as any;
         const mode = data.indexMode || '1D';
         
-        const inPayload = inputs['in'];
-        const indexPayload = inputs['index'];
+        const inPayload = inputs['in_a'] || inputs['in'];
+        const indexPayload = inputs['index'] || inputs['in_b'];
         
         if (!inPayload) return PayloadUtils.createError('No Input Vector/Matrix');
         
@@ -64,14 +64,14 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 // 1D: Flat index extraction (1-based from user perspective)
                 let flatIdxRaw = 0;
                 if (Array.isArray(idxRaw)) flatIdxRaw = getNumeric(idxRaw[0]);
-                else if (idxRaw && typeof idxRaw === 'object' && idxRaw.isMatrix) flatIdxRaw = getNumeric(idxRaw.get([0]));
+                else if (idxRaw && typeof idxRaw === 'object' && (idxRaw as any).isMatrix) flatIdxRaw = getNumeric((idxRaw as any).get([0]));
                 else flatIdxRaw = getNumeric(idxRaw);
 
                 // Convert 1-based to 0-based
                 const flatIdx = flatIdxRaw - 1;
 
-                if (arr && typeof arr === 'object' && arr.isMatrix) {
-                    const size = arr.size();
+                if (arr && typeof arr === 'object' && (arr as any).isMatrix) {
+                    const size = (arr as any).size();
                     if (size.length === 1) {
                         result = math.subset(arr, math.index(flatIdx));
                     } else if (size.length === 2) {
@@ -91,8 +91,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 if (Array.isArray(idxRaw)) {
                     rRaw = getNumeric(idxRaw[0]);
                     cRaw = getNumeric(idxRaw[1]);
-                } else if (idxRaw && typeof idxRaw === 'object' && idxRaw.isMatrix) {
-                    const data = idxRaw.toArray().flat(Infinity);
+                } else if (idxRaw && typeof idxRaw === 'object' && (idxRaw as any).isMatrix) {
+                    const data = (idxRaw as any).toArray().flat(Infinity);
                     rRaw = getNumeric(data[0]);
                     cRaw = getNumeric(data[1]);
                 } else {
@@ -103,7 +103,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 const r = rRaw - 1;
                 const c = cRaw - 1;
                 
-                if (arr && typeof arr === 'object' && arr.isMatrix) {
+                if (arr && typeof arr === 'object' && (arr as any).isMatrix) {
                     result = math.subset(arr, math.index(r, c));
                 } else if (Array.isArray(arr)) {
                     result = (arr[r] && Array.isArray(arr[r])) ? arr[r][c] : 0;
@@ -113,14 +113,14 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             }
             
             // Auto-unwrap 1x1 matrix results
-            if (result && typeof result === 'object' && result.isMatrix) {
-                const size = result.size();
+            if (result && typeof result === 'object' && (result as any).isMatrix) {
+                const size = (result as any).size();
                 if (size.every((s: number) => s === 1)) {
                     result = result.get(size.map(() => 0));
                 }
             }
 
-            return (Array.isArray(result) || (result && typeof result === 'object' && result.isMatrix)) 
+            return (Array.isArray(result) || (result && typeof result === 'object' && (result as any).isMatrix)) 
                 ? PayloadUtils.createArray(PayloadUtils.dehydrate(result)) 
                 : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
         } catch (e: any) {
@@ -132,7 +132,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'DT-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any, mode = data.mode || 'Sort (Asc)';
-        const valPayload = inputs['data'] || inputs['in'];
+        const valPayload = inputs['in_a'] || inputs['in'] || inputs['data'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
@@ -152,11 +152,16 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const mode = ((node.data || {}) as any).mode || 'Union';
         const getArr = (key: string) => {
             const p = inputs[key]; if (!p) return [];
-            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(p), math) as any;
-            return (h && typeof h === 'object' && 'toArray' in h) ? h.toArray().flat(Infinity) : (Array.isArray(h) ? h : [h]);
+            const unwrapped = PayloadUtils.unwrap(p);
+            // Handle array of values (capsule handle behavior)
+            const rawArray = Array.isArray(unwrapped) ? unwrapped.flat(Infinity) : [unwrapped];
+            return rawArray.map(v => {
+                const h = PayloadUtils.hydrate(v, math);
+                return (h && typeof h === 'object' && 'toArray' in h) ? (h as any).toArray().flat(Infinity) : h;
+            }).flat(Infinity);
         };
-        const setA = new Set<string>(getArr('a').map((x: any) => String(x)));
-        const setB = new Set<string>(getArr('b').map((x: any) => String(x)));
+        const setA = new Set<string>(getArr(inputs['in_a'] ? 'in_a' : 'a').map((x: any) => String(x)));
+        const setB = new Set<string>(getArr(inputs['in_b'] ? 'in_b' : 'b').map((x: any) => String(x)));
         let resultSet: string[] = [];
         if (mode === 'Union') resultSet = Array.from(new Set<string>([...Array.from(setA), ...Array.from(setB)]));
         else if (mode === 'Intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
@@ -168,7 +173,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // DT-07: Matrix Tools
     'DT-07': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in'];
+        const valPayload = inputs['in_a'] || inputs['in'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const data = (node.data || {}) as any, op = data.op || 'INV';
         try {
@@ -178,10 +183,22 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'DET') result = math.det(hydrated);
             else if (op === 'TRANSPOSE') result = math.transpose(hydrated);
             else if (op === 'TRACE') result = math.trace(hydrated);
-            else if (op === 'EIGEN') result = math.eigs(hydrated).values;
-            else if (op === 'LUP') result = math.lup(hydrated).P;
-            else if (op === 'QR') result = math.qr(hydrated).Q;
+            else if (op === 'EIGEN') result = math.eigs(hydrated);
+            else if (op === 'LUP') result = math.lup(hydrated);
+            else if (op === 'QR') result = math.qr(hydrated);
             else result = hydrated;
+
+            // Handle multi-output objects (QR, LUP, EIGEN)
+            if (result && typeof result === 'object' && !Array.isArray(result) && !(result as any).isMatrix && !(result as any).isBigNumber) {
+                const multi: Record<string, any> = {};
+                for (const [key, val] of Object.entries(result)) {
+                    multi[key] = (Array.isArray(val) || (val as any)?.isMatrix) 
+                        ? PayloadUtils.createArray(PayloadUtils.dehydrate(val)) 
+                        : PayloadUtils.createScalar(PayloadUtils.dehydrate(val));
+                }
+                return { type: DataType.Object, value: multi, symbol: null, meta: {} };
+            }
+
             return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createArray(result) : PayloadUtils.createScalar(result);
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
@@ -191,7 +208,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'DOT';
-        const valA = inputs['in_a'], valB = inputs['in_b'];
+        const valA = inputs['in_a'] || inputs['in'], valB = inputs['in_b'];
         if (!valA || !valB) return PayloadUtils.createError('Missing Inputs');
         try {
             const hA = PayloadUtils.hydrate(PayloadUtils.unwrap(valA), math), hB = PayloadUtils.hydrate(PayloadUtils.unwrap(valB), math);
@@ -227,7 +244,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'NORM') result = math.norm(vA);
             else if (op === 'DISTANCE') result = math.distance(vA, vB);
             else result = math.dot(vA, vB);
-            return (Array.isArray(result) || result?.isMatrix) ? PayloadUtils.createArray(result) : PayloadUtils.createScalar(result);
+            return (Array.isArray(result) || (result as any)?.isMatrix) ? PayloadUtils.createArray(result) : PayloadUtils.createScalar(result);
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
 
@@ -255,7 +272,13 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-01': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', order = Number(data.order) || 1;
-        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
+        let exprStr = PayloadUtils.extractExprStr(inputs['expr'] || inputs['in_a'] || inputs['in']);
+        if (!exprStr || ['null', 'undefined'].includes(exprStr)) {
+            // Robust Fallback: Search all inputs for a symbolic/string payload
+            const fallbackNode = Object.values(inputs).find(p => p.type === DataType.Symbolic || p.type === DataType.String);
+            if (fallbackNode) exprStr = PayloadUtils.extractExprStr(fallbackNode);
+        }
+        
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -266,13 +289,25 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // CL-02: Integral
     'CL-02': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const variable = data.variable || 'x', mode = data.mode || 'indefinite', lower = data.lower || '', upper = data.upper || '';
-        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
-        if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
+        const variable = PayloadUtils.unwrap(inputs['variable']) as string || data.variable || 'x';
+        const mode = data.mode || 'indefinite';
+        const lower = PayloadUtils.unwrap(inputs['from'] || inputs['lower']) ?? data.lower ?? '';
+        const upper = PayloadUtils.unwrap(inputs['to'] || inputs['upper']) ?? data.upper ?? '';
+        let exprStr = PayloadUtils.extractExprStr(inputs['expr'] || inputs['in_a'] || inputs['in']);
+        if (!exprStr || ['null', 'undefined'].includes(exprStr)) {
+            // Robust Fallback: Search all inputs for a symbolic/string payload
+            const fallbackNode = Object.values(inputs).find(p => p.type === DataType.Symbolic || p.type === DataType.String);
+            if (fallbackNode) exprStr = PayloadUtils.extractExprStr(fallbackNode);
+        }
+
+        if (!exprStr || ['null', 'undefined'].includes(exprStr)) {
+            console.error(`[CL-02] No Expression Input. Keys in inputs: ${Object.keys(inputs).join(', ')}`);
+            return PayloadUtils.createError('No Expression Input');
+        }
         try {
             const svc = NerdamerService.getInstance();
             if (mode === 'definite') {
-                const res = RuntimeGuard.safeEvaluate(() => svc.definiteIntegral(exprStr, variable, lower, upper));
+                const res = RuntimeGuard.safeEvaluate(() => svc.definiteIntegral(exprStr, String(variable).trim(), String(lower).trim(), String(upper).trim()));
                 if (res.ok) {
                     const text = (res.value as any).text('decimals');
                     const num = Number(text);
@@ -329,12 +364,25 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         Object.keys(inputs).sort().forEach(key => processPayload(inputs[key], key));
 
         if (equations.length === 0) {
+            // Robust Fallback: Search all inputs for symbolic/string content
+            Object.keys(inputs).forEach(key => {
+                const p = inputs[key];
+                const raw = PayloadUtils.unwrap(p);
+                if (typeof raw === 'string' && raw.trim()) {
+                    equations.push(raw.trim());
+                }
+            });
+        }
+
+        if (equations.length === 0) {
             // Fallback to static expression from node.data
             const expr = (node.data as any)?.expression;
             if (expr) equations.push(expr);
         }
 
-        if (equations.length === 0) return PayloadUtils.createError('No Equations');
+        if (equations.length === 0) {
+            return PayloadUtils.createError('No Equations');
+        }
 
         // 1. Unicode Case Warning: detect non-ASCII characters often used in math (², ×, −, etc.)
         const hasUnicode = equations.some(eq => /[^\x00-\x7F]/.test(eq));
@@ -483,8 +531,9 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 .slice(0, 6); // MAX_SOLUTIONS = 6
 
             return PayloadUtils.createArray(finalTokens);
-        } catch (e: any) { 
-            return PayloadUtils.createError(`Solve Failed: ${e.message}`); 
+        } catch (error: any) {
+            console.error('[CL-04] Solve Exception:', error);
+            return PayloadUtils.createError(`Solve Failed: ${error.message || String(error)}`);
         }
     },
 
@@ -494,58 +543,96 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const mode = data.mode || 'gradient', var1 = data.var1 || 'x', var2 = data.var2 || 'y';
-        const exprStr = PayloadUtils.extractExprStr(inputs['in_f']);
-        if (!exprStr) return PayloadUtils.createError('No Function Input');
+
         try {
             const svc = NerdamerService.getInstance();
+            let result: any = null;
+
+            // Helper to sample any two component functions into an NX4 field array
+            const sampleField = (fx: (s: any) => number, fy: (s: any) => number) => {
+                const samples: any[] = [];
+                try {
+                    const min = (data.min !== undefined && data.min !== null) ? Number(data.min) : -5;
+                    const max = (data.max !== undefined && data.max !== null) ? Number(data.max) : 5;
+                    const density = (data.density !== undefined && data.density !== null) ? Number(data.density) : 10;
+                    const step = (max - min) / density;
+                    const eps = step / 100; // Small epsilon for inclusive loop
+
+                    for (let x = min; x <= max + eps; x += step) {
+                        for (let y = min; y <= max + eps; y += step) {
+                            const scope = { [var1]: x, [var2]: y };
+                            samples.push([
+                                Number(x.toFixed(10)), 
+                                Number(y.toFixed(10)), 
+                                Number(fx(scope)), 
+                                Number(fy(scope)) 
+                            ]);
+                        }
+                    }
+                } catch (e) { /* fallback if sampling fails */ }
+                return samples;
+            };
+
+            const sanitize = (s: string | null | undefined) => {
+                if (!s) return '';
+                return s.replace(/^[a-zA-Z_]\w*\s*(\([^)]*\))?\s*=\s*/, '').replace(/{/g, '(').replace(/}/g, ')');
+            };
+
             if (mode === 'gradient') {
-                const dx = svc.differentiate(exprStr, var1).text(), dy = svc.differentiate(exprStr, var2).text();
-                return PayloadUtils.createArray([dx, dy]);
-            }
-            if (mode === 'divergence') {
-                const p = PayloadUtils.extractExprStr(inputs['in_p']), q = PayloadUtils.extractExprStr(inputs['in_q']);
+                const exprStr = sanitize(PayloadUtils.extractExprStr(inputs['in_f'] || inputs['f'] || inputs['expr']));
+                if (!exprStr) return PayloadUtils.createError('No Function Input');
+
+                const dx = svc.differentiate(exprStr, var1).text();
+                const dy = svc.differentiate(exprStr, var2).text();
+                
+                result = {
+                    out_symbolic: PayloadUtils.createSymbolic(`[${dx}, ${dy}]`),
+                    out_field: PayloadUtils.createArray(sampleField(
+                        svc.compileToFunction(dx, [var1, var2]) as any,
+                        svc.compileToFunction(dy, [var1, var2]) as any
+                    ))
+                };
+            } else if (mode === 'direct' || mode === 'vector field') {
+                const p = sanitize(PayloadUtils.extractExprStr(inputs['in_p'] || inputs['p']));
+                const q = sanitize(PayloadUtils.extractExprStr(inputs['in_q'] || inputs['q']));
+                if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
+
+                result = {
+                    out_symbolic: PayloadUtils.createSymbolic(`[${p}, ${q}]`),
+                    out_field: PayloadUtils.createArray(sampleField(
+                        svc.compileToFunction(p, [var1, var2]) as any,
+                        svc.compileToFunction(q, [var1, var2]) as any
+                    ))
+                };
+            } else if (mode === 'divergence') {
+                const p = sanitize(PayloadUtils.extractExprStr(inputs['in_p'] || inputs['p']));
+                const q = sanitize(PayloadUtils.extractExprStr(inputs['in_q'] || inputs['q']));
                 if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
                 const dp = svc.differentiate(p, var1).text(), dq = svc.differentiate(q, var2).text();
-                return PayloadUtils.createSymbolic(`(${dp})+(${dq})`);
-            }
-            if (mode === 'curl') {
-                const p = PayloadUtils.extractExprStr(inputs['in_p']), q = PayloadUtils.extractExprStr(inputs['in_q']);
+                result = { out_symbolic: PayloadUtils.createSymbolic(`(${dp})+(${dq})`) };
+            } else if (mode === 'curl') {
+                const p = sanitize(PayloadUtils.extractExprStr(inputs['in_p'] || inputs['p']));
+                const q = sanitize(PayloadUtils.extractExprStr(inputs['in_q'] || inputs['q']));
                 if (!p || !q) return PayloadUtils.createError('Missing P/Q components');
                 const dq_dx = svc.differentiate(q, var1).text(), dp_dy = svc.differentiate(p, var2).text();
-                return PayloadUtils.createSymbolic(`(${dq_dx})-(${dp_dy})`);
+                result = { out_symbolic: PayloadUtils.createSymbolic(`(${dq_dx})-(${dp_dy})`) };
             }
-            return PayloadUtils.createError('Unsupported Mode');
-        } catch (e: any) { return PayloadUtils.createError(`VectorField Failed: ${e.message}`); }
-    },
 
-    // DT-06: Vector Split
-    'DT-06': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as any, mode = data.mode || 'separate';
-        if (mode === 'separate') {
-            const inPayload = inputs['in'] || inputs['in_v'];
-            if (!inPayload) return PayloadUtils.createError('No Input');
-            const h = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
-            const arr = (h && typeof h === 'object' && (h as any).toArray ? (h as any).toArray() : Array.isArray(h) ? h : [h]).flat(Infinity);
+            if (!result) return PayloadUtils.createError('Unsupported Mode');
+
             return {
-                type: DataType.Array,
-                value: {
-                    x: PayloadUtils.dehydrate(arr[0] ?? 0),
-                    y: PayloadUtils.dehydrate(arr[1] ?? 0),
-                    z: PayloadUtils.dehydrate(arr[2] ?? 0),
-                    w: PayloadUtils.dehydrate(arr[3] ?? 0)
-                },
+                type: DataType.Array, // Using Array as a wrapper for multi-handle objects is common in this engine
+                value: result,
                 symbol: null,
                 meta: {}
             };
-        } else {
-            const x = PayloadUtils.unwrap(inputs['in_x'] || inputs['x'] || PayloadUtils.createScalar(0));
-            const y = PayloadUtils.unwrap(inputs['in_y'] || inputs['y'] || PayloadUtils.createScalar(0));
-            const z = PayloadUtils.unwrap(inputs['in_z'] || inputs['z'] || PayloadUtils.createScalar(0));
-            const w = PayloadUtils.unwrap(inputs['in_w'] || inputs['w'] || PayloadUtils.createScalar(0));
-            return PayloadUtils.createArray([x, y, z, w]);
+        } catch (e: any) { 
+            console.error('[TR-04] VectorField Error:', e);
+            return PayloadUtils.createError(`VectorField Failed: ${e.message}`); 
         }
     },
+
+
 
     // TR-03: Geometry
     'TR-03': (node, inputs) => {
@@ -567,8 +654,14 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
     'CL-03': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const variable = data.variable || 'x', approach = data.approach || '0', direction = data.direction || 'both';
-        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
+        const variable = PayloadUtils.unwrap(inputs['variable']) as string || data.variable || 'x';
+        const approach = PayloadUtils.unwrap(inputs['approach']) ?? data.approach ?? '0';
+        const direction = data.direction || 'both';
+        let exprStr = PayloadUtils.extractExprStr(inputs['expr'] || inputs['in_a'] || inputs['in']);
+        if (!exprStr || ['null', 'undefined'].includes(exprStr)) {
+            const fallbackNode = Object.values(inputs).find(p => p.type === DataType.Symbolic || p.type === DataType.String);
+            if (fallbackNode) exprStr = PayloadUtils.extractExprStr(fallbackNode);
+        }
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -595,11 +688,24 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // CL-05: ODE Solver
     'CL-05': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const t0 = Number(data.t0) || 0;
-        const tEnd = Number(data.tEnd) || 1;
-        const y0 = Number(data.y0) || 1;
-        const stepSize = Number(data.stepSize) || 0.01;
-        const exprStr = PayloadUtils.extractExprStr(inputs['expr']);
+        const getNum = (key: string, handleId: string, def: number) => {
+            const val = inputs[handleId];
+            if (val) {
+                const unwrapped = PayloadUtils.unwrap(val);
+                return isNaN(Number(unwrapped)) ? def : Number(unwrapped);
+            }
+            return Number(data[key]) || def;
+        };
+
+        const t0 = getNum('t0', 't0', 0);
+        const tEnd = getNum('tEnd', 'tEnd', 1);
+        const y0 = getNum('y0', 'y0', 1);
+        const stepSize = getNum('stepSize', 'h', 0.01);
+        let exprStr = PayloadUtils.extractExprStr(inputs['expr'] || inputs['in_a'] || inputs['in']);
+        if (!exprStr || ['null', 'undefined'].includes(exprStr)) {
+            const fallbackNode = Object.values(inputs).find(p => p.type === DataType.Symbolic || p.type === DataType.String);
+            if (fallbackNode) exprStr = PayloadUtils.extractExprStr(fallbackNode);
+        }
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -626,13 +732,9 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as Record<string, unknown>;
         const code = String(data.code || '');
         if (!code) return PayloadUtils.createError('No Expression');
-        try {
-            const svc = NerdamerService.getInstance();
-            const result = svc.evaluate(code);
-            // result is already a string from svc.evaluate
-            return PayloadUtils.createSymbolic(result);
-        } catch (e: any) {
-            return PayloadUtils.createError(`Eval Failed: ${e.message}`);
-        }
+        // 💡 Phase 2.5: Symbolic Pass-through
+        // Do NOT evaluate here. IN-09 is a symbolic provider for downstream nodes.
+        // Evaluating here causes 'window is not defined' in Workers and breaks equations.
+        return PayloadUtils.createSymbolic(code);
     }
 };

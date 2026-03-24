@@ -1,0 +1,21 @@
+# Vector Field Node Test Case (TR-04)
+# This graph demonstrates gradient, divergence, and curl operations.
+
+# 1. Scalar Field for Gradient
+ScalarFunc:io:expr @0,0 = "sin(x) * cos(y)"
+GradField:transform:field @300,0
+ScalarFunc -- GradField:in_f
+
+# 2. Vector Components for Divergence
+P:io:expr @0,150 = "x^2"
+Q:io:expr @0,250 = "y^2"
+DivField:transform:field @300,200 = "{\"mode\": \"divergence\"}"
+P -- DivField:in_p
+Q -- DivField:in_q
+
+# 3. Output Visualization
+GradResult:output:res @600,0
+DivResult:output:res @600,200
+
+GradField:out_grad -- GradResult:in
+DivField:out -- DivResult:in

@@ -196,7 +196,7 @@ export class TransactionManager {
                     type: p.type || 'baseNode',
                     value: initialPayload,
                     data: p.data || {},
-                    position: p.position as { x: number; y: number },
+                    position: p.position || { x: 0, y: 0 },
                     isInDirtyChain: true,
                     selected: (p as any).selected || false,
                     parentId: p.parentId,

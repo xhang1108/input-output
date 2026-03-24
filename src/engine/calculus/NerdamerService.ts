@@ -1,7 +1,9 @@
 import nerdamer from 'nerdamer';
 import 'nerdamer/all';
-import { InputOutputEngineInterface } from '../interfaces/InputOutputEngineInterface';
+import { create, all } from 'mathjs';
 import { MATH_CONFIG } from '../mathConfig';
+
+const math = create(all, { number: 'number' });
 
 /**
  * 🧮 NerdamerService: Symbolic Math Engine Facade
@@ -52,15 +54,17 @@ export class NerdamerService {
     private compiledFnCache: LRUCache<string, Function>;
 
     private constructor() {
-        // 💡 Pattern: Context-Aware Loading
-        const globalNerd = (typeof self !== 'undefined' && (self as any).nerdamer) || (typeof window !== 'undefined' && (window as any).nerdamer);
+        // 💡 Fix: Use globalThis for safe universal scope access (Worker/Window/Node)
+        const globalNerd = (globalThis as any).nerdamer;
         
         if (globalNerd) {
             this.nerdamer = globalNerd;
         } else {
             // Server-side / Node / Standard Bundled Client
-            this.nerdamer = nerdamer;
+            // 💡 Fix: Handle ESM default export vs CommonJS
+            this.nerdamer = (nerdamer as any).default || nerdamer;
         }
+
         this.compiledFnCache = new LRUCache(256);
     }
 
@@ -69,6 +73,14 @@ export class NerdamerService {
             NerdamerService.instance = new NerdamerService();
         }
         return NerdamerService.instance;
+    }
+
+    /**
+     * 💡 Reset for Testing
+     * Used to clear singleton state in test suites to prevent pollution.
+     */
+    public static reset() {
+        NerdamerService.instance = new NerdamerService();
     }
 
     /** Raw nerdamer access for advanced operations */
@@ -80,7 +92,7 @@ export class NerdamerService {
 
     /** Compute symbolic derivative: diff(expr, variable, order) */
     public differentiate(expr: string, variable: string, order: number = 1): any {
-        let result = this.nerdamer(expr);
+        let result = this.nerdamer(`(${expr})`);
         for (let i = 0; i < order; i++) {
             result = this.nerdamer(`diff(${result.text()}, ${variable})`);
         }
@@ -89,17 +101,21 @@ export class NerdamerService {
 
     /** Compute symbolic integral: integrate(expr, variable) */
     public integrate(expr: string, variable: string): any {
-        return this.nerdamer(`integrate(${expr}, ${variable})`);
+        return this.nerdamer(`integrate((${expr}), ${variable})`);
     }
 
     /** Compute definite integral: defint(expr, lower, upper, variable) */
-    public definiteIntegral(expr: string, variable: string, lower: string, upper: string): any {
-        return this.nerdamer(`defint(${expr}, ${lower}, ${upper}, ${variable})`);
+    public definiteIntegral(expr: string, variable: string, lower: string | number, upper: string | number): any {
+        // Standard Nerdamer syntax: defint(expression, from, to, variable)
+        const cleanExpr = String(expr).trim();
+        const cleanVar = String(variable).trim();
+        const cmd = `defint((${cleanExpr}),${lower},${upper},${cleanVar})`;
+        return this.nerdamer(cmd);
     }
 
     /** Compute symbolic limit */
     public limit(expr: string, variable: string, approach: string): any {
-        return this.nerdamer(`limit(${expr}, ${variable}, ${approach})`);
+        return this.nerdamer(`limit((${expr}), ${variable}, ${approach})`);
     }
 
     // ─── AST-to-JS Compiler with LRU Cache ────────────────────────
@@ -122,31 +138,19 @@ export class NerdamerService {
         // Build the JS function from nerdamer expression
         try {
             const nExpr = this.nerdamer(expr);
-            let jsText = nExpr.text('javascript');
+            const textExpr = nExpr.text();
 
-            // nerdamer outputs sin/cos/log etc. without Math. prefix
-            // Replace bare function names with Math.xxx equivalents
-            const mathFns = [
-                'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2',
-                'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh',
-                'sqrt', 'cbrt', 'abs', 'ceil', 'floor', 'round',
-                'exp', 'log', 'log2', 'log10', 'sign',
-                'min', 'max', 'pow', 'PI', 'E'
-            ];
-
-            for (const fn of mathFns) {
-                // Replace standalone function calls (not already prefixed with Math.)
-                const regex = new RegExp(`(?<!Math\\.)(?<!\\w)${fn}(?=\\()`, 'g');
-                jsText = jsText.replace(regex, `Math.${fn}`);
-            }
-
-            // Replace ^ with ** for exponentiation
-            jsText = jsText.replace(/\^/g, '**');
-
-            // Create a function that takes a scope object
-            const paramAccess = vars.map(v => `var ${v} = scope['${v}'] ?? 0;`).join('\n');
-            const fnBody = `${paramAccess}\nreturn ${jsText};`;
-            const fn = new Function('scope', fnBody);
+            // 💡 Use MathJS for robust evaluation (handles ^ and math functions natively)
+            // Using 'number' mode for performance and compatibility with plotting.
+            const compiled = math.compile(textExpr);
+            const fn = (scope: any) => {
+                try {
+                    const res = compiled.evaluate(scope);
+                    return Number(res);
+                } catch {
+                    return NaN;
+                }
+            };
 
             this.compiledFnCache.set(cacheKey, fn);
             return fn;
