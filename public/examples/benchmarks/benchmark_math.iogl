@@ -1,0 +1,51 @@
+# Benchmark: Math Core (MA-01 to MA-08)
+
+# 1. Inputs
+V10:io:num @0,0 = "10"
+V5:io:num @0,100 = "5"
+V3:io:num @0,200 = "3"
+V2:io:num @0,300 = "2"
+V4:io:num @0,400 = "4"
+
+# Math Chain
+Add:math:add @200,50
+Sub:math:sub @400,50
+Mul:math:mul @600,50
+Div:math:div @800,50
+
+V10 -- Add:in_a
+V5 -- Add:in_b
+Add -- Sub:in_a
+V3 -- Sub:in_b
+Sub -- Mul:in_a
+V2 -- Mul:in_b
+Mul -- Div:in_a
+V4 -- Div:in_b
+
+# Advanced
+Pow:math:pow @1000,50
+Div -- Pow:in_a
+V2 -- Pow:in_b # 6^2 = 36
+
+Sqrt:math:sqrt @1200,50
+Pow -- Sqrt:in_a
+
+# Results
+Res_Arith:output:res @1400,50
+Sqrt -- Res_Arith:in
+
+# GCD
+GCD:math:gcd @200,450
+V12:io:num @0,450 = "12"
+V18:io:num @0,550 = "18"
+V12 -- GCD:in_a
+V18 -- GCD:in_b
+Res_GCD:output:res @400,450
+GCD -- Res_GCD:in
+
+# Combinatorics
+NCR:math:ncr @200,700
+V5 -- NCR:n
+V2 -- NCR:r
+Res_NCR:output:res @400,700
+NCR -- Res_NCR:in

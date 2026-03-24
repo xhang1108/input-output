@@ -48,25 +48,28 @@ export const UnitNode = memo((props: NodeProps) => {
 
     const validateAndApply = useCallback((unit: string, forceCustom: boolean = false) => {
         const math = InputOutputEngine.getInstance().getMathInstance();
+        let isMathJSUnit = false;
         try {
             math.unit(unit);
-            setIsValid(true);
-
-            const updates: any = {};
-            if (forceCustom || mode === 'custom') {
-                updates.unit = 'CUSTOM';
-                updates.customUnit = unit;
-            } else {
-                updates.unit = unit;
-            }
-
-            brain.applyTransaction({
-                type: 'UPDATE_NODE_DATA',
-                payload: { id, data: updates }
-            });
+            isMathJSUnit = true;
         } catch (e) {
-            setIsValid(false);
+            isMathJSUnit = false;
         }
+
+        setIsValid(true); // Always valid as a label now
+
+        const updates: any = {};
+        if (forceCustom || mode === 'custom') {
+            updates.unit = 'CUSTOM';
+            updates.customUnit = unit;
+        } else {
+            updates.unit = unit;
+        }
+
+        brain.applyTransaction({
+            type: 'UPDATE_NODE_DATA',
+            payload: { id, data: updates }
+        });
     }, [id, mode, brain]);
 
     const handleMenuSelect = (item: CategorizedMenuItem) => {

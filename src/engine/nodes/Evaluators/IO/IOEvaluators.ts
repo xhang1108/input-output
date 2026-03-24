@@ -4,12 +4,62 @@ import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NodeEvaluator } from '../../../NodeRegistry';
 
 export const IOEvaluators: Record<string, NodeEvaluator> = {
-    'IO-01': (node) => node.value || PayloadUtils.createScalar(0),
-    'IO-02': (node) => node.value || PayloadUtils.createScalar(0),
+    'IO-01': (node) => {
+        const data = (node.data || {}) as Record<string, unknown>;
+        const math = InputOutputEngine.getInstance().getMathInstance();
+        const original = node.value || PayloadUtils.createScalar(0);
+        // 💡 Fix: Support both 'value' and 'val' keys from different UI components
+        const rawVal = data.value ?? data.val;
+        let val = rawVal !== undefined ? (rawVal as number) : PayloadUtils.unwrap(original);
+        
+        // Support precision rounding for Constant node (IN-01 variant)
+        const rawPrecision = data.precision ?? data.accuracy;
+        const precision = rawPrecision !== undefined ? Number(rawPrecision) : -1;
+        
+        if (precision >= 0) {
+            try { val = math.round(val, precision); } catch (e) {}
+        }
+        
+        const unit = (data.unit as string) || (original.meta?.unit);
+        
+        return {
+            ...PayloadUtils.createScalar(val, unit),
+            meta: { ...original.meta, unit } // 💡 Fix: Prioritize data.unit then original.meta
+        };
+    },
+    'IO-02': (node) => {
+        const data = (node.data || {}) as Record<string, unknown>;
+        const math = InputOutputEngine.getInstance().getMathInstance();
+        const original = node.value || PayloadUtils.createScalar(0);
+        // 💡 Fix: Support both 'value' and 'val'
+        const rawVal = data.value ?? data.val;
+        let val = rawVal !== undefined ? (rawVal as number) : PayloadUtils.unwrap(original);
+        
+        // Support precision rounding for Slider node
+        const rawPrecision = data.precision ?? data.accuracy;
+        const precision = rawPrecision !== undefined ? Number(rawPrecision) : -1;
+
+        if (precision >= 0) {
+            try { val = math.round(val, precision); } catch (e) {}
+        }
+        
+        const unit = (data.unit as string) || (original.meta?.unit);
+        
+        return {
+            ...PayloadUtils.createScalar(val, unit),
+            meta: { ...original.meta, unit }
+        };
+    },
     'IO-04': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const raw = String(data.value ?? '');
-        return PayloadUtils.createString(raw);
+        const original = node.value || PayloadUtils.createString('');
+        const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
+        let val = rawVal !== undefined ? rawVal : PayloadUtils.unwrap(original);
+        const unit = (data.unit as string) || (original.meta?.unit);
+        return {
+            ...PayloadUtils.createString(String(val ?? '')),
+            meta: { ...original.meta, unit }
+        };
     },
     'IO-11': (node, inputs) => {
         const payload = inputs['in_a'] || inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
@@ -21,13 +71,18 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             const val = PayloadUtils.unwrap(payload);
             try {
                 const hydrated = PayloadUtils.hydrate(val, math);
-                const rounded = math.round(hydrated, precision);
+                // 💡 Fix: Handle plain Arrays as well as mathjs objects
+                const rounded = (typeof hydrated === 'number' || Array.isArray(hydrated) || (hydrated && typeof hydrated === 'object' && ((hydrated as any).isBigNumber || (hydrated as any).isFraction || (hydrated as any).isComplex || (hydrated as any).isMatrix)))
+                    ? math.round(hydrated, precision)
+                    : hydrated;
+                
                 const wrapped = PayloadUtils.wrap(rounded);
                 return {
                     ...wrapped,
                     meta: { ...payload.meta, ...wrapped.meta }
                 };
-            } catch (e) {
+            } catch (e: any) {
+                console.error(`[IO-11] Precision Failed: ${e.message}`, { val, precision });
                 return payload;
             }
         }
@@ -62,35 +117,26 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IO-18': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const dataVal = data.value;
+        const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
         const cachedVal = PayloadUtils.unwrap(node.value);
 
         let hex = '#3b82f6';
-        let rNorm = 0, gNorm = 0, bNorm = 0;
+        let rNorm = 0.231, gNorm = 0.510, bNorm = 0.965; // Default blue
 
-        if (dataVal && typeof dataVal === 'object' && !Array.isArray(dataVal) && 'vec3' in dataVal) {
-            const colorData = dataVal as { hex?: string; vec3?: number[] };
-            hex = colorData.hex || '#000000';
-            if (Array.isArray(colorData.vec3)) {
-                [rNorm, gNorm, bNorm] = colorData.vec3;
+        const extract = (val: any) => {
+            if (val && typeof val === 'object') {
+                if (val.hex) hex = val.hex;
+                if (Array.isArray(val.vec3)) [rNorm, gNorm, bNorm] = val.vec3;
+            } else if (typeof val === 'string' && (val.startsWith('#') || val.length === 6)) {
+                hex = val.startsWith('#') ? val : '#' + val;
+                rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
+                gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
+                bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
             }
-        } else if (typeof dataVal === 'string' && (dataVal.startsWith('#') || dataVal.length === 6)) {
-            hex = dataVal.startsWith('#') ? dataVal : '#' + dataVal;
-            rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
-            gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
-            bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
-        } else if (cachedVal && typeof cachedVal === 'object' && !Array.isArray(cachedVal) && 'vec3' in cachedVal) {
-            const cVal = cachedVal as { hex?: string; vec3?: number[] };
-            hex = cVal.hex || '#000000';
-            if (Array.isArray(cVal.vec3)) {
-                [rNorm, gNorm, bNorm] = cVal.vec3;
-            }
-        } else if (typeof cachedVal === 'string' && cachedVal.startsWith('#')) {
-            hex = cachedVal;
-            rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
-            gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
-            bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
-        }
+        };
+
+        if (rawVal) extract(rawVal);
+        else if (cachedVal) extract(cachedVal);
 
         const depth = data.depth as string || '8bit';
         const scaler = depth === '10bit' ? 1023 : depth === '12bit' ? 4095 : 255;
@@ -186,36 +232,40 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createArray([]);
     },
     'IO-05': (node, inputs) => {
+        const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as Record<string, unknown>;
-        const inputPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
-        const val = PayloadUtils.unwrap(inputPayload);
-        const unit = data.unit as string || 'm';
-        const inputUnit = inputPayload.meta?.unit;
-
-        const math = InputOutputEngine.getInstance().getMathInstance();
-        const hydratedInput = PayloadUtils.hydrate(val, math);
-
-        let finalVal: number;
-        const h = hydratedInput as { isBigNumber?: boolean; isUnit?: boolean; toNumber: () => number };
-        if (typeof hydratedInput === 'number') {
-            finalVal = hydratedInput;
-        } else if (h && h.isBigNumber) {
-            finalVal = h.toNumber();
-        } else if (h && h.isUnit) {
-            finalVal = h.toNumber();
-        } else {
-            finalVal = Number(hydratedInput);
-        }
-
-        if (inputUnit && inputUnit !== unit) {
-            try {
-                finalVal = InputOutputEngine.getInstance().convertUnit(finalVal, inputUnit, unit);
-            } catch (e) {
-                return PayloadUtils.createError(`Cannot convert ${inputUnit} to ${unit}`);
+        const isCustom = data.unit === 'CUSTOM';
+        const targetUnit = isCustom ? (data.customUnit as string) : (data.unit as string || 'm');
+        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
+        
+        try {
+            const raw = PayloadUtils.unwrap(valPayload);
+            const sourceUnit = valPayload.meta?.unit;
+            
+            // Standard Conversion logic
+            if (sourceUnit && sourceUnit !== targetUnit && !isCustom) {
+                try {
+                    const result = math.unit(raw, sourceUnit).to(targetUnit);
+                    return {
+                        ...PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit),
+                        meta: { unit: targetUnit }
+                    };
+                } catch (e: any) {
+                    // If both are potentially standard units, this is an incompatibility error
+                    if (e.message?.includes('Units do not match') || e.message?.includes('Unexpected unit')) {
+                        return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
+                    }
+                }
             }
+            
+            // Otherwise just assign the label (Custom or Standard label)
+            return {
+                ...PayloadUtils.createScalar(raw, targetUnit),
+                meta: { unit: targetUnit }
+            };
+        } catch (e: any) { 
+            return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`);
         }
-
-        return PayloadUtils.createScalar(finalVal, unit);
     },
     'IO-21': (node) => {
         let total = 0;

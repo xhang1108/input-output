@@ -47,6 +47,42 @@ describe('UnitNode Engine Logic', () => {
         expect(Number(PayloadUtils.unwrap(result))).toBe(1000);
     });
 
+    it('should support arbitrary labels like "apple" without conversion failure', async () => {
+        await brain.injectNodes({
+            nodes: [
+                { id: 'In', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: 10 } },
+                { id: 'Unit', type: 'TR-01', position: { x: 100, y: 0 }, data: { unit: 'CUSTOM', customUnit: 'apple' } },
+                { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
+            ],
+            edges: [
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
+                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+            ]
+        });
+
+        const result = await brain.getValue('Res');
+        expect(PayloadUtils.unwrap(result)).toBe(10);
+        expect(result.meta?.unit).toBe('apple');
+    });
+
+    it('should handle conversion between standard units correctly', async () => {
+        await brain.injectNodes({
+            nodes: [
+                { id: 'In', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: 1, unit: 'm' } },
+                { id: 'Unit', type: 'TR-01', position: { x: 100, y: 0 }, data: { unit: 'cm' } },
+                { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
+            ],
+            edges: [
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
+                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+            ]
+        });
+
+        const result = await brain.getValue('Res');
+        expect(result.meta?.unit).toBe('cm');
+        expect(PayloadUtils.unwrap(result)).toBe(100);
+    });
+
     it('should handle custom unit conversion (m/s to km/h)', async () => {
         // 10 m/s -> UnitNode(km/h) -> 36 km/h
         await brain.injectNodes({
@@ -81,6 +117,6 @@ describe('UnitNode Engine Logic', () => {
 
         const result = await brain.getValue('Res');
         expect(result.type).toBe('error');
-        expect(result.meta?.error).toContain('Cannot convert kg to m');
+        expect(result.meta?.error).toContain('Unit operation failed for m');
     });
 });

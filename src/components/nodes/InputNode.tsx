@@ -19,13 +19,13 @@ export const InputNode = memo((props: NodeProps) => {
     const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalValue(e.target.value);
         const val = parseFloat(e.target.value);
-        if (!isNaN(val)) brain.applyTransaction({ type: 'UPDATE_VALUE', payload: { id, value: val } });
+        if (!isNaN(val)) brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: val } } });
     }, [id, brain]);
 
     const handleStringChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setLocalValue(val);
-        brain.applyTransaction({ type: 'UPDATE_VALUE', payload: { id, value: val } });
+        brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: val } } });
     }, [id, brain]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {

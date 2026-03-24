@@ -755,22 +755,7 @@ export class Brain {
             const node = nodesToCheck.get(nodeId);
             if (!node) return null;
 
-            // 1. Special Case: Vector Split (AD-09) mode-based swap
-            // This MUST come before any pre-filled or static handle checks because AD-09 handles are dynamic.
-            if (node.type === 'AD-09') {
-                const op = String(node.data?.op || '').toUpperCase();
-                const mode = (node.data?.mode || (op === 'COMBINE' ? 'combine' : 'separate')) as string;
 
-                console.log(`[Brain] getHandleType for AD-09 (${node.id}): op=${op}, mode=${mode}, handle=${handleId}`);
-
-                if (mode === 'combine' || op === 'COMBINE') {
-                    if (['x', 'y', 'z'].includes(handleId)) return 'target';
-                    if (handleId === 'out') return 'source';
-                } else { // separate
-                    if (handleId === 'in') return 'target';
-                    if (['x', 'y', 'z'].includes(handleId)) return 'source';
-                }
-            }
 
             // 2. Check instance data for dynamically generated handles (SY-05, etc.)
             if (node.data && Array.isArray(node.data.handles)) {

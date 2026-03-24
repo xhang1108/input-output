@@ -68,9 +68,22 @@ export class InputOutputEngine implements InputOutputEngineInterface {
     public processInput(val: unknown, unit?: string): unknown {
         if (unit) {
             try {
+                // 💡 NEW: Lazy Unit Registration
+                // If mathjs doesn't know this unit, try to create it as a base unit
+                // to allow it to participate in basic arithmetic and formatting.
+                try {
+                    this.math.unit(unit);
+                } catch {
+                    // Only register if it looks like a valid identifier (no spaces/weird chars)
+                    if (/^[a-zA-Z][a-zA-Z0-9_/]*$/.test(unit)) {
+                        console.log(`[InputOutputEngine] Registering custom unit: ${unit}`);
+                        this.math.createUnit(unit);
+                    }
+                }
+                
                 return this.math.unit(val as any, unit);
             } catch (e) {
-                console.warn(`[InputOutputEngine] Failed to create unit ${val} ${unit}`, e);
+                // console.warn(`[InputOutputEngine] Failed to create/register unit ${val} ${unit}`, e);
                 return val;
             }
         }
@@ -78,6 +91,16 @@ export class InputOutputEngine implements InputOutputEngineInterface {
     }
 
     public convertUnit(val: number, fromUnit: string, toUnit: string): number {
-        return this.math.unit(val, fromUnit).to(toUnit).toNumber(toUnit);
+        try {
+            return this.math.unit(val, fromUnit).to(toUnit).toNumber(toUnit);
+        } catch (e: any) {
+            const msg = e.message || '';
+            // If mathjs knows both units but they are incompatible (e.g. m to kg)
+            if (msg.includes('Units do not match') || msg.includes('Unexpected type')) {
+                throw e; 
+            }
+            // Otherwise it's likely an unknown unit (like 'apple'), so just relay
+            return val;
+        }
     }
 }

@@ -53,6 +53,7 @@ export const CapsuleHandle = memo(({ h, id, isConnectable, nodeData }: CapsuleHa
                     dataType: h.dynamicColor ? h.dynamicColor(nodeData) : h.dataType
                 })}
                 isConnectable={isConnectable}
+                maxConnections={50}
             />
 
             {/* Placeholder for the handle's space in the flex column (only if NOT manual) */}

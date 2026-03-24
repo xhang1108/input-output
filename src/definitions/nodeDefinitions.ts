@@ -27,7 +27,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'scalar', value: { type: 'scalar', value: 0, symbol: null, meta: {} } },
         params: [
-            { id: 'value', label: 'Value', type: 'number', step: 1 }
+            { id: 'value', label: 'Value', type: 'number', step: 1 },
+            { id: 'unit', label: 'Unit', type: 'string', hint: 'e.g. apple, m, degC' }
         ]
     },
     {
@@ -44,6 +45,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         },
         params: [
             { id: 'value', label: 'Value', type: 'number' },
+            { id: 'unit', label: 'Unit', type: 'string', hint: 'e.g. vibe, kg, s' },
             { id: 'min', label: 'Min', type: 'number' },
             { id: 'max', label: 'Max', type: 'number' },
             { id: 'step', label: 'Step', type: 'number', min: 0, hint: 'Drag increment' }
@@ -92,7 +94,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         handles: [
             { id: 'out', type: 'source', variant: 'single', dataType: 'string' }
         ],
-        defaultData: { type: 'string', value: { type: 'string', value: 'Hello', symbol: null, meta: {} } },
+        defaultData: { type: 'string', value: 'Apple' },
         params: [
             { id: 'value', label: 'Value', type: 'string' }
         ]
@@ -272,7 +274,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'B' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'ADD', label: 'Add' },
+        defaultData: { op: 'ADD', label: 'Basic Math' },
         aliases: ['basic math', 'arithmetic'],
         params: [
             {
@@ -301,7 +303,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'POW', label: 'Power' },
+        defaultData: { op: 'POW', label: 'Advanced Math' },
         aliases: ['advanced math'],
         params: [
             {
@@ -493,6 +495,9 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Calculus',
         handles: [
             { id: 'expr', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f(x)' },
+            { id: 'from', type: 'target', variant: 'single', dataType: 'scalar', label: 'a' },
+            { id: 'to', type: 'target', variant: 'single', dataType: 'scalar', label: 'b' },
+            { id: 'variable', type: 'target', variant: 'single', dataType: 'string', label: 'var' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { variable: 'x', mode: 'indefinite', lower: '', upper: '' },
@@ -536,7 +541,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Equation Solver',
         category: 'Calculus',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
         ],
         defaultData: { op: 'SOLVE', variable: 'x' },
@@ -575,7 +580,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Array Builder',
         category: 'Data & Structures',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'any', label: 'In' },
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any', label: 'In' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { axis: 0 },
@@ -684,29 +689,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ]
     },
     {
-        id: 'DT-06',
-        label: 'Array Split',
-        category: 'Data & Structures',
-        handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' },
-            { id: 'x', type: 'source', variant: 'single', dataType: 'scalar', label: 'X' },
-            { id: 'y', type: 'source', variant: 'single', dataType: 'scalar', label: 'Y' },
-            { id: 'z', type: 'source', variant: 'single', dataType: 'scalar', label: 'Z' },
-            { id: 'w', type: 'source', variant: 'single', dataType: 'scalar', label: 'W' }
-        ],
-        defaultData: { mode: 'separate' },
-        opTokens: ['SEPARATE', 'COMBINE'],
-        aliases: ['separate', 'combine', 'split'],
-        params: [
-            {
-                id: 'mode', label: 'Mode', type: 'select', options: [
-                    { label: 'Separate (Arr → Scalar)', value: 'separate' },
-                    { label: 'Combine (Scalar → Arr)', value: 'combine' }
-                ]
-            }
-        ]
-    },
-    {
         id: 'DT-07',
         label: 'Array Calculus',
         category: 'Data & Structures',
@@ -779,15 +761,16 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
             { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'string' }
         ],
-        defaultData: { base: 'HEX' },
+        defaultData: { toBase: 16 },
         params: [
             {
-                id: 'base', label: 'Target Base', type: 'select', options: [
-                    { label: 'Hexadecimal (16)', value: 'HEX' },
-                    { label: 'Binary (2)', value: 'BIN' },
-                    { label: 'Octal (8)', value: 'OCT' },
-                    { label: 'Decimal (10)', value: 'DEC' },
-                    { label: 'Duodecimal (12)', value: 'DUO' }
+                id: 'toBase', label: 'Target Base', type: 'select', options: [
+                    { label: 'Binary (2)', value: 2 },
+                    { label: 'Quaternary (4)', value: 4 },
+                    { label: 'Octal (8)', value: 8 },
+                    { label: 'Decimal (10)', value: 10 },
+                    { label: 'Duodecimal (12)', value: 12 },
+                    { label: 'Hexadecimal (16)', value: 16 }
                 ]
             }
         ]
@@ -826,17 +809,21 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Vector Field',
         category: 'Transform',
         handles: [
-            { id: 'in_f', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f' },
-            { id: 'out_field', type: 'source', variant: 'single', dataType: 'array', label: 'Arrows' },
-            { id: 'out_grad', type: 'source', variant: 'single', dataType: 'array', label: 'Grad' }
+            { id: 'in_f', type: 'target', variant: 'single', dataType: 'symbolic', label: 'f', hidden: (d) => d.mode !== 'gradient' },
+            { id: 'in_p', type: 'target', variant: 'single', dataType: 'symbolic', label: 'P', hidden: (d) => d.mode === 'gradient' },
+            { id: 'in_q', type: 'target', variant: 'single', dataType: 'symbolic', label: 'Q', hidden: (d) => d.mode === 'gradient' },
+            { id: 'out_field', type: 'source', variant: 'single', dataType: 'array', label: 'Arrows', hidden: (d) => d.mode === 'divergence' || d.mode === 'curl' },
+            { id: 'out_symbolic', type: 'source', variant: 'single', dataType: 'symbolic', label: 'Result' }
         ],
         defaultData: { mode: 'gradient', var1: 'x', var2: 'y', min: -5, max: 5, density: 10 },
-        aliases: ['grad', 'gradient', 'vector field'],
+        aliases: ['grad', 'gradient', 'vector field', 'divergence', 'curl'],
         params: [
             {
                 id: 'mode', label: 'Mode', type: 'select', options: [
                     { label: 'Gradient', value: 'gradient' },
-                    { label: 'Direct Field', value: 'direct' }
+                    { label: 'Direct Field', value: 'direct' },
+                    { label: 'Divergence', value: 'divergence' },
+                    { label: 'Curl (2D)', value: 'curl' }
                 ]
             },
             { id: 'var1', label: 'Var 1', type: 'string' },
@@ -852,7 +839,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Transform',
         handles: [
             { id: 'data', type: 'target', variant: 'single', dataType: 'array' },
-            { id: 'window', type: 'target', variant: 'single', dataType: 'scalar', label: 'Win' },
             { id: 'out', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { windowMode: 3 },
@@ -988,7 +974,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Graph Plot',
         category: 'Output',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'any' }
+            { id: 'in', type: 'target', variant: 'capsule', dataType: 'any' }
         ],
         defaultData: { minX: -10, maxX: 10, points: 100 },
         aliases: ['plot', 'graph', 'chart', 'visualization'],

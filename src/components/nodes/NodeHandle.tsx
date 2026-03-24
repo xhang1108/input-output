@@ -9,13 +9,14 @@ interface CustomHandleProps extends HandleProps {
     color?: string; // CSS variable or hex
     id: string;
     nodeId: string;
+    maxConnections?: number;
 }
 
 /**
  * NodeHandle - Performance-optimized custom handle.
  * Robust implementation for consistent color rendering.
  */
-export function NodeHandle({ className, color, id, nodeId, ...props }: CustomHandleProps) {
+export function NodeHandle({ className, color, id, nodeId, maxConnections, ...props }: CustomHandleProps) {
     const updateNodeInternals = useUpdateNodeInternals();
 
     useEffect(() => {

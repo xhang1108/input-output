@@ -18,7 +18,7 @@ export function registerAdvancedNodes() {
         'DT-04', // Set Ops
         'DT-07', // Matrix Tools
         'DT-05', // Vector Utils
-        'DT-06', // Vector Split
+
 
         // ─── 6. Transform ───────────────────────────────────────
         'TR-03', // Geometry

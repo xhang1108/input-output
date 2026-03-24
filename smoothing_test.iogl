@@ -1,0 +1,23 @@
+# Smoothing Node Test Case (TR-05)
+# This graph demonstrates spatial smoothing on a 1D array.
+
+# 1. Noisy Data Input
+NoisyData:io:mat @0,0 = "[10, 50, 10, 60, 20, 80, 10]"
+
+# 2. Window Size Slider
+WindowSize:io:slider @0,150 = "3"
+
+# 3. Smoothing Operation
+Smoother:transform:smooth @300,75
+NoisyData -- Smoother:data
+WindowSize -- Smoother:window
+
+# 4. Results Visualization
+RawResult:output:res @600,0
+SmoothResult:output:res @600,150
+Plotter:output:plot @600,300
+
+NoisyData -- RawResult:in
+Smoother -- SmoothResult:in
+NoisyData -- Plotter:append
+Smoother -- Plotter:append

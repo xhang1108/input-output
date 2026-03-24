@@ -67,14 +67,16 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
         const op = ((node.data || {}) as any).op || 'Mean';
         return PayloadUtils.createSymbol('FunctionCall', {
             name: op.toLowerCase(),
-            args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
+            args: [inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
         });
     },
     // TR-05: Smoothing
     'TR-05': (node, inputs) => {
+        const data = inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' });
+        const windowSize = (node.data as any).windowMode || 3;
         return PayloadUtils.createSymbol('FunctionCall', {
             name: 'smooth',
-            args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
+            args: [data, PayloadUtils.createSymbol('Literal', { value: windowSize })]
         });
     },
     // MA-08: Combinatorics
