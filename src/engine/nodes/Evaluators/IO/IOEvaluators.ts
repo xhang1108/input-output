@@ -4,7 +4,7 @@ import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NodeEvaluator } from '../../../NodeRegistry';
 
 export const IOEvaluators: Record<string, NodeEvaluator> = {
-    'IO-01': (node) => {
+    'IN-01': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const math = InputOutputEngine.getInstance().getMathInstance();
         const original = node.value || PayloadUtils.createScalar(0);
@@ -27,7 +27,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             meta: { ...original.meta, unit } // 💡 Fix: Prioritize data.unit then original.meta
         };
     },
-    'IO-02': (node) => {
+    'IN-02': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const math = InputOutputEngine.getInstance().getMathInstance();
         const original = node.value || PayloadUtils.createScalar(0);
@@ -50,7 +50,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             meta: { ...original.meta, unit }
         };
     },
-    'IO-04': (node) => {
+    'IN-04': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const original = node.value || PayloadUtils.createString('');
         const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
@@ -61,7 +61,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             meta: { ...original.meta, unit }
         };
     },
-    'IO-11': (node, inputs) => {
+    'OT-01': (node, inputs) => {
         const payload = inputs['in_a'] || inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as Record<string, unknown>;
         const precision = data.precision as number | undefined;
@@ -89,7 +89,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
 
         return payload;
     },
-    'IO-08': (node) => {
+    'IN-07': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const dataVal = data.value;
         if (dataVal !== undefined) {
@@ -115,7 +115,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         }
         return PayloadUtils.createArray([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
     },
-    'IO-18': (node) => {
+    'IN-03': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
         const cachedVal = PayloadUtils.unwrap(node.value);
@@ -148,7 +148,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         return {
             type: DataType.Color,
             value: {
-                hex: hex,
+                hex: hex.replace('#', ''),
                 rgb: [rOut, gOut, bOut],
                 vec3: [rNorm, gNorm, bNorm]
             },
@@ -156,7 +156,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             meta: {
                 role: 'color',
                 handleMeta: {
-                    hex: { role: 'color', unit: 'string' },
+                hex: { role: 'color', unit: 'hex' },
                     rgb: { role: 'color', unit: 'rgb' },
                     vec3: { role: 'color', unit: 'vec3' }
                 }
@@ -231,7 +231,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     'IO-16': (node, inputs) => {
         return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createArray([]);
     },
-    'IO-05': (node, inputs) => {
+    'TR-01': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as Record<string, unknown>;
         const isCustom = data.unit === 'CUSTOM';
@@ -267,7 +267,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`);
         }
     },
-    'IO-21': (node) => {
+    'IN-08': (node) => {
         let total = 0;
         const digits = (node.data?.digits as number[]) || [0, 0, 0, 0, 0, 0, 0];
         for (let i = 0; i < digits.length; i++) {
@@ -275,7 +275,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         }
         return PayloadUtils.createScalar(total);
     },
-    'IO-14': (node, inputs) => {
+    'OT-03': (node, inputs) => {
         // OT-03: Graph Plot — Pure engine sampling.
         // Receives capsule inputs, runs sampling, returns computed plotPoints in meta.
         import('../../../../utils/PlottingUtils').then(() => { }); // Ensure bundled
@@ -357,7 +357,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             }
         };
     },
-    'IO-22': (node, inputs) => {
+    'OT-02': (node, inputs) => {
         const input = inputs['in_a'] || inputs['in'] || Object.values(inputs)[0];
         const val = PayloadUtils.unwrap(input);
 

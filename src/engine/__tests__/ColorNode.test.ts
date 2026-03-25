@@ -22,7 +22,7 @@ describe('Color Node Evaluator', () => {
         const result = await brain.getValue('Color1');
         expect(result.type).toBe(DataType.Color);
         expect(PayloadUtils.unwrap(result)).toEqual({
-            hex: '#ff0000',
+            hex: 'ff0000',
             rgb: [255, 0, 0],
             vec3: [1, 0, 0]
         });
@@ -38,7 +38,7 @@ describe('Color Node Evaluator', () => {
 
         // First evaluation: returns object
         const firstResult = await brain.getValue('Color1');
-        expect((firstResult.value as any).hex).toBe('#00ff00');
+        expect((firstResult.value as any).hex).toBe('00ff00');
 
         // Simulate a recalculation where the node's value is already the object
         const node = brain.getNode('Color1');
@@ -49,7 +49,7 @@ describe('Color Node Evaluator', () => {
         const secondResult = await brain.getValue('Color1');
         expect(secondResult.type).toBe(DataType.Color);
         const secondVal = PayloadUtils.unwrap(secondResult) as any;
-        expect(secondVal.hex).toBe('#00ff00');
+        expect(secondVal.hex).toBe('00ff00');
         expect(secondVal.rgb).toEqual([0, 255, 0]);
     });
 
@@ -62,7 +62,7 @@ describe('Color Node Evaluator', () => {
         });
 
         const result = await brain.getValue('Color1');
-        expect((result.value as any).hex).toBe('#0000ff');
+        expect((result.value as any).hex).toBe('0000ff');
         expect((result.value as any).rgb).toEqual([0, 0, 255]);
     });
 
@@ -75,8 +75,8 @@ describe('Color Node Evaluator', () => {
         });
 
         const result = await brain.getValue('Color1');
-        // Should fallback to default color #3b82f6
-        expect((result.value as any).hex).toBe('#3b82f6');
+        // Should fallback to default color 3b82f6 (no hash)
+        expect((result.value as any).hex).toBe('3b82f6');
     });
 
     it('should allow MUL operations on Color results (Vec3)', async () => {

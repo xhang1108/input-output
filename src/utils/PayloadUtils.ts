@@ -550,13 +550,19 @@ export const PayloadUtils = {
         
         // Color Normalization (HEX extraction)
         if (nodeType === 'IN-03' || nodeType === 'IN-COLOR') {
-            const colorObj = (typeof unwrapped === 'object' && unwrapped !== null) ? unwrapped as any : null;
+            const colorObj = (typeof unwrapped === 'object' && unwrapped !== null && !Array.isArray(unwrapped)) ? unwrapped as any : null;
             let displayColor = (colorObj && typeof colorObj.hex === 'string')
                 ? colorObj.hex
-                : (typeof unwrapped === 'string' ? unwrapped : '#3b82f6');
+                : (typeof unwrapped === 'string' ? unwrapped : '');
             
+            // If it's an array, we should ideally convert to hex, but for normalization let's just use first element or fallback
+            if (Array.isArray(unwrapped)) {
+                return '#3b82f6'; // Safe fallback for normalization
+            }
+
             // Fallback for non-hex results
             if (typeof displayColor !== 'string' || !displayColor.startsWith('#')) {
+                if (typeof displayColor === 'string' && displayColor.length === 6) return `#${displayColor}`;
                 return '#3b82f6';
             }
             return displayColor;

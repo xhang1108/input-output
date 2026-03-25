@@ -49,7 +49,7 @@ describe('BaseConverter Node Engine Logic', () => {
     it('should fallback to base 10 for unknown units', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'In', type: 'IN-04', position: { x: 0, y: 0 }, data: { value: '15', unit: 'meters' } },
+                { id: 'In', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: 15, unit: 'meters' } }, // Scalar is allowed
                 { id: 'Base', type: 'TR-02', position: { x: 100, y: 0 }, data: { toBase: 16 } },
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
@@ -64,10 +64,10 @@ describe('BaseConverter Node Engine Logic', () => {
         expect(result.meta?.unit).toBe('hex');
     });
 
-    it('should default to base 10 for input "1000" and convert correctly', async () => {
+    it('should default to base 10 for input "1000" if correctly typed as Scalar', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'In', type: 'IN-04', position: { x: 0, y: 0 }, data: { value: '1000' } }, // No unit
+                { id: 'In', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: 1000 } }, // Scalar
                 { id: 'BaseHex', type: 'TR-02', position: { x: 100, y: 0 }, data: { toBase: 16 } },
                 { id: 'BaseDec', type: 'TR-02', position: { x: 100, y: 100 }, data: { toBase: 10 } },
                 { id: 'ResHex', type: 'OT-01', position: { x: 200, y: 0 } },
@@ -141,5 +141,41 @@ describe('BaseConverter Node Engine Logic', () => {
         const result = await brain.getValue('Res');
         expect(PayloadUtils.unwrap(result)).toBe('10');
         expect(result.meta?.unit).toBe('quat');
+    });
+
+    it('should reject Array input (e.g., RGB)', async () => {
+        await brain.injectNodes({
+            nodes: [
+                { id: 'In', type: 'IN-07', position: { x: 0, y: 0 }, data: { value: [255, 128, 64], unit: 'rgb' } },
+                { id: 'Base', type: 'TR-02', position: { x: 100, y: 0 }, data: { toBase: 16 } },
+                { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
+            ],
+            edges: [
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+            ]
+        });
+
+        const result = await brain.getValue('Res');
+        expect(result.type).toBe('error');
+        expect(result.meta?.error).toContain('scalar or base-prefixed strings');
+    });
+
+    it('should reject generic String input without unit', async () => {
+        await brain.injectNodes({
+            nodes: [
+                { id: 'In', type: 'IN-04', position: { x: 0, y: 0 }, data: { value: '1010' } }, // No unit
+                { id: 'Base', type: 'TR-02', position: { x: 100, y: 0 }, data: { toBase: 10 } },
+                { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
+            ],
+            edges: [
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+            ]
+        });
+
+        const result = await brain.getValue('Res');
+        expect(result.type).toBe('error');
+        expect(result.meta?.error).toContain('scalar or base-prefixed strings');
     });
 });

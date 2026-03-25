@@ -480,14 +480,26 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'TR-02': (node, inputs) => {
         const data = (node.data || {}) as any;
         const inputPayload = inputs['in_a'] || inputs['in'];
-        const metaUnit = inputPayload?.meta?.unit?.toLowerCase();
+        if (!inputPayload) return PayloadUtils.createScalar(0);
+
+        const metaUnit = inputPayload.meta?.unit?.toLowerCase();
         
-        const baseMap: Record<string, number> = { 'bin': 2, 'quat': 4, 'oct': 8, 'dec': 10, 'hex': 16 };
-        const unitMap: Record<number, string> = { 2: 'bin', 4: 'quat', 8: 'oct', 10: 'dec', 16: 'hex' };
+        const baseMap: Record<string, number> = { 'bin': 2, 'quat': 4, 'oct': 8, 'dec': 10, 'duo': 12, 'hex': 16 };
+
+        // Final Whitelist: Allow ONLY if Scalar OR explicit Base Unit
+        const isScalar = inputPayload.type === DataType.Scalar;
+        const hasBaseUnit = !!baseMap[metaUnit || ''];
+        const isArray = inputPayload.type === DataType.Array || inputPayload.type === DataType.Matrix;
+        
+        if (isArray || (!isScalar && !hasBaseUnit)) {
+            return PayloadUtils.createError("Base Conversion only supports scalar or base-prefixed strings.");
+        }
+
+        const unitMap: Record<number, string> = { 2: 'bin', 4: 'quat', 8: 'oct', 10: 'dec', 12: 'duo', 16: 'hex' };
 
         const fromBase = Number(data.fromBase || baseMap[metaUnit!] || 10);
         const toBase = Number(data.toBase || 16);
-        const val = String(PayloadUtils.unwrap(inputPayload || PayloadUtils.createScalar(0)));
+        const val = String(PayloadUtils.unwrap(inputPayload));
         
         try {
             const num = parseInt(val, fromBase);

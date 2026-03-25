@@ -4,7 +4,7 @@ import { Brain } from '../../../Brain';
 import { NodeLogic } from '../../../types';
 
 export const IOSymbolizers: Record<string, NodeSymbolizer> = {
-    'IO-01': (node) => {
+    'IN-01': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const name = data.label as string;
         const value = PayloadUtils.unwrap(node.value);
@@ -12,7 +12,7 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
             ? PayloadUtils.createSymbol('Identifier', { name, value: value as string | number | boolean | undefined })
             : PayloadUtils.createSymbol('Literal', { value: value as string | number | boolean | undefined });
     },
-    'IO-04': (node) => {
+    'IN-04': (node) => {
         const val = PayloadUtils.unwrap(node.value);
         const data = (node.data || {}) as Record<string, unknown>;
         const strVal = val !== undefined ? String(val) : String(data.value || '');
@@ -20,33 +20,34 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
         if (node.id) sym.sourceId = node.id;
         return sym;
     },
-    'IO-11': (node, inputs) => {
+    'OT-01': (node, inputs) => {
         return inputs['in_a'] || inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
     },
-    'IO-08': (node) => {
+    'IN-07': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const label = data.label as string;
         if (label) return PayloadUtils.createSymbol('Identifier', { name: label });
         return PayloadUtils.createSymbol('Identifier', { name: 'Matrix' });
     },
-    'IO-18': (node) => {
+    'IN-03': (node) => {
         const val = node.value || { value: '#ffffff' };
         const raw = PayloadUtils.unwrap(val) as any;
-        return PayloadUtils.createSymbol('Literal', { value: raw?.hex || String(raw) });
+        const hex = raw?.hex || String(raw);
+        return PayloadUtils.createSymbol('Literal', { value: hex.replace('#', '') });
     },
     'IO-16': (node, inputs) => {
         return inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'Matrix' });
     },
-    'IO-05': (node, inputs) => {
+    'TR-01': (node, inputs) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const inputSymbol = inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 });
         const targetUnit = data.unit as string;
         return { ...inputSymbol, unit: targetUnit };
     },
-    'IO-02': (node) => {
+    'IN-02': (node) => {
         return PayloadUtils.createSymbol('Literal', { value: PayloadUtils.unwrap(node.value) as string | number | boolean | undefined });
     },
-    'IO-06': (node) => {
+    'IN-10': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         return PayloadUtils.createSymbol('FunctionCall', {
             name: 'random',
@@ -56,7 +57,7 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
             ]
         });
     },
-    'IO-21': (node: NodeLogic, inputs: Record<string, any>, brain?: Brain) => {
+    'IN-08': (node: NodeLogic, inputs: Record<string, any>, brain?: Brain) => {
         let total = 0;
         const accumulateValue = (currentNodeId: string): void => {
             // If brain is not provided (standalone test/utility), we fall back to singleton if exists

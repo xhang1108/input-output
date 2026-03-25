@@ -34,9 +34,11 @@ export const ColorNode = memo((props: NodeProps) => {
     const colorObj = (typeof localVal === 'object' && localVal !== null) ? localVal as Record<string, unknown> : null;
 
     // If unwrapped is an object with hex/rgb/vec3, extract hex; otherwise use as string
-    const displayColor = (colorObj && typeof colorObj.hex === 'string')
+    const rawDisplay = (colorObj && typeof colorObj.hex === 'string')
         ? colorObj.hex
-        : (typeof localVal === 'string' ? localVal : 'var(--color-primary)');
+        : (typeof localVal === 'string' ? localVal : '3b82f6');
+    
+    const displayColor = rawDisplay.startsWith('#') ? rawDisplay : `#${rawDisplay}`;
 
     // Vec3 normalized channels
     let rNorm = 0, gNorm = 0, bNorm = 0;
