@@ -18,8 +18,8 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
-                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -36,8 +36,8 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
-                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -54,8 +54,8 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
-                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -74,10 +74,10 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'ResDec', type: 'OT-01', position: { x: 200, y: 100 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'BaseHex', targetHandle: 'in' },
-                { id: 'e2', source: 'BaseHex', sourceHandle: 'out', target: 'ResHex', targetHandle: 'in' },
-                { id: 'e3', source: 'In', sourceHandle: 'out', target: 'BaseDec', targetHandle: 'in' },
-                { id: 'e4', source: 'BaseDec', sourceHandle: 'out', target: 'ResDec', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'BaseHex', targetHandle: 'in_a' },
+                { id: 'e2', source: 'BaseHex', sourceHandle: 'out', target: 'ResHex', targetHandle: 'in_a' },
+                { id: 'e3', source: 'In', sourceHandle: 'out', target: 'BaseDec', targetHandle: 'in_a' },
+                { id: 'e4', source: 'BaseDec', sourceHandle: 'out', target: 'ResDec', targetHandle: 'in_a' }
             ]
         });
 
@@ -96,8 +96,8 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
-                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -115,8 +115,8 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
-                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -133,8 +133,8 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
-                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -151,8 +151,8 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
-                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -169,8 +169,8 @@ describe('BaseConverter Node Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in' },
-                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Base', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Base', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 

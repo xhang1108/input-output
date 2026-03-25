@@ -17,9 +17,9 @@ export const ArrayExtractNode = memo((props: NodeProps) => {
     const handles = useMemo<any[]>(() => {
         const is2D = indexMode === '2D';
         return [
-            { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'array', label: 'Matrix' },
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'array', label: 'Matrix' },
             { 
-                id: 'index', 
+                id: 'in_b', 
                 type: 'target', 
                 position: Position.Left, 
                 variant: 'single', 
@@ -28,7 +28,7 @@ export const ArrayExtractNode = memo((props: NodeProps) => {
                 label: is2D ? 'Idx (r,c)' : 'Idx' 
             },
             { 
-                id: 'out', 
+                id: 'out_a', 
                 type: 'source', 
                 position: Position.Right, 
                 variant: 'single', 

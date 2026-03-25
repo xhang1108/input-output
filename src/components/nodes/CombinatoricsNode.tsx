@@ -11,14 +11,14 @@ export const CombinatoricsNode = memo((props: NodeProps) => {
 
 
     const handles: any[] = [
-        { id: 'n', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'n' }
+        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'n' }
     ];
 
     if (op !== 'n!') {
-        handles.push({ id: 'r', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'r' });
+        handles.push({ id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'r' });
     }
 
-    handles.push({ id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' });
+    handles.push({ id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' });
 
     const nodeData = { ...data, handles };
     return (

@@ -53,26 +53,26 @@ export function registerLogicNodes() {
     // LG-03: Logic Split
     NodeRegistry.register('LG-03', (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance();
-        const condition = PayloadUtils.toBoolean(inputs['condition'], math);
-        const data = inputs['data'] || PayloadUtils.createScalar(0);
+        const condition = PayloadUtils.toBoolean(inputs['in_a'], math);
+        const data = inputs['in_b'] || PayloadUtils.createScalar(0);
         return {
             type: DataType.Object,
-            value: { out_true: condition ? data : null, out_false: !condition ? data : null },
+            value: { out_a: condition ? data : null, out_b: !condition ? data : null },
             symbol: null,
-            meta: { handleMeta: { out_true: data.meta, out_false: data.meta } }
+            meta: { handleMeta: { out_a: data.meta, out_b: data.meta } }
         };
     });
 
     // LG-02: Switch
     NodeRegistry.register('LG-02', (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance();
-        const condition = PayloadUtils.toBoolean(inputs['condition'], math);
-        return (condition ? inputs['in_true'] : inputs['in_false']) || PayloadUtils.createError('No Input');
+        const condition = PayloadUtils.toBoolean(inputs['in_a'], math);
+        return (condition ? inputs['in_b'] : inputs['in_c']) || PayloadUtils.createError('No Input');
     }, (node, inputs) => {
         return PayloadUtils.createSymbol('ConditionalExpression', {
-            test: inputs['condition'] || PayloadUtils.createSymbol('Literal', { value: false }),
-            consequent: inputs['in_true'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
-            alternate: inputs['in_false'] || PayloadUtils.createSymbol('Literal', { value: 0 })
+            test: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: false }),
+            consequent: inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 }),
+            alternate: inputs['in_c'] || PayloadUtils.createSymbol('Literal', { value: 0 })
         });
     });
 

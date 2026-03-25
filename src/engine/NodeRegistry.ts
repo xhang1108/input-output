@@ -43,7 +43,7 @@ export class NodeRegistry {
         // Mute Bypass Logic: If muted, pass through the primary input ONLY
         const data = (node.data || {}) as Record<string, unknown>;
         if (data.muted) {
-            const primaryInput = inputs['in_a'] || inputs['in'] || inputs['a'] || inputs['expr'];
+            const primaryInput = inputs['in_a'];
             if (primaryInput) return primaryInput;
 
             // If primary input is missing, return a clean zero (don't leak old state)

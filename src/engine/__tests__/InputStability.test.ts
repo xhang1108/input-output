@@ -56,8 +56,8 @@ describe('Input Node Stability', () => {
 
         const result = await NodeRegistry.evaluate(node as any, {});
         const val = PayloadUtils.unwrap(result) as any;
-        expect(val.hex).toBe('ff0000');
-        expect(val.vec3).toEqual([1, 0, 0]);
+        expect(val.out_a).toBe('ff0000');
+        expect(val.out_c).toEqual([1, 0, 0]);
     });
 
     test('OT-01 (Result) should handle precision without crashing', async () => {
@@ -72,7 +72,7 @@ describe('Input Node Stability', () => {
         };
 
         const inputs = {
-            'in': PayloadUtils.createScalar(Math.PI)
+            'in_a': PayloadUtils.createScalar(Math.PI)
         };
 
         const result = await NodeRegistry.evaluate(node as any, inputs);

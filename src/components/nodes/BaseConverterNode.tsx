@@ -13,8 +13,8 @@ export const BaseConverterNode = memo((props: NodeProps) => {
     const brain = useBrain();
 
     const handles: HandleConfig[] = [
-        { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'unit' }
+        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' },
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'unit' }
     ];
 
     const currentToBase = Number(data.toBase || 16);

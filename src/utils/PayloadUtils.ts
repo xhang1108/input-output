@@ -551,8 +551,8 @@ export const PayloadUtils = {
         // Color Normalization (HEX extraction)
         if (nodeType === 'IN-03' || nodeType === 'IN-COLOR') {
             const colorObj = (typeof unwrapped === 'object' && unwrapped !== null && !Array.isArray(unwrapped)) ? unwrapped as any : null;
-            let displayColor = (colorObj && typeof colorObj.hex === 'string')
-                ? colorObj.hex
+            let displayColor = (colorObj && typeof colorObj.out_a === 'string')
+                ? colorObj.out_a
                 : (typeof unwrapped === 'string' ? unwrapped : '');
             
             // If it's an array, we should ideally convert to hex, but for normalization let's just use first element or fallback

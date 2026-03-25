@@ -47,7 +47,7 @@ describe('Result Node Precision', () => {
                 source: 'IN-1',
                 sourceHandle: 'out',
                 target: 'OT-1',
-                targetHandle: 'in'
+                targetHandle: 'in_a'
             }
         });
 
@@ -98,7 +98,7 @@ describe('Result Node Precision', () => {
                 source: 'IN-2',
                 sourceHandle: 'out',
                 target: 'OT-2',
-                targetHandle: 'in'
+                targetHandle: 'in_a'
             }
         });
 

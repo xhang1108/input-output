@@ -3,20 +3,20 @@
 Formula:io:expr @0,0 = "x^3 - 4*x^2 + 6*x - 3"
 
 D1:calculus:diff @300,0 = "x"
-Formula -- D1:expr
+Formula -- D1:in_a
 
 D2:calculus:diff @600,0 = "x"
-D1 -- D2:expr
+D1 -- D2:in_a
 
 Int:calculus:int @300,200 = "definite"
-Formula -- Int:expr
+Formula -- Int:in_a
 L0:io:num @0,200 = "0"
 L2:io:num @0,300 = "2"
-L0 -- Int:from
-L2 -- Int:to
+L0 -- Int:in_b
+L2 -- Int:in_c
 
 Lim:calculus:lim @300,400 = "0"
-Formula -- Lim:expr
+Formula -- Lim:in_a
 
 Eq:io:expr @0,600 = "x^2 - 4 = 0"
 Solve:calculus:solve @300,600 = "x"
@@ -27,7 +27,7 @@ Res_Int:output:res @600,200
 Res_Lim:output:res @600,400
 Res_Solve:output:res @600,600
 
-D2 -- Res_D2:in
-Int -- Res_Int:in
-Lim -- Res_Lim:in
-Solve -- Res_Solve:in
+D2 -- Res_D2:in_a
+Int -- Res_Int:in_a
+Lim -- Res_Lim:in_a
+Solve -- Res_Solve:in_a

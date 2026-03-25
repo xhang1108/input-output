@@ -675,18 +675,10 @@ export class GraphCodec {
         // 2. Common Math Aliases (MA-01 uses in_a, in_b)
         if (!isSource) {
             // Standardize first input handle for Math/Logic/Calculus families
-            if (['a', 'in', 'in_a'].includes(h)) {
-                if (typeId?.startsWith('MA-') || typeId?.startsWith('LG-') || typeId?.startsWith('CL-') || typeId?.startsWith('TR-')) {
-                    if (['MA-01', 'MA-02', 'MA-05', 'MA-07', 'LG-01', 'TR-03'].includes(typeId)) return 'in_a';
-                    if (['MA-03', 'MA-04', 'MA-06', 'CL-04', 'TR-01', 'DT-01', 'OT-03'].includes(typeId)) return 'in';
-                    if (['CL-01', 'CL-02', 'CL-03', 'CL-05', 'TR-04'].includes(typeId)) return 'expr';
-                    return 'in_a'; // Fallback
+            if (['a', 'in', 'in_a', 'expr'].includes(h)) {
+                if (typeId?.startsWith('MA-') || typeId?.startsWith('LG-') || typeId?.startsWith('CL-') || typeId?.startsWith('TR-') || typeId?.startsWith('DT-')) {
+                    return 'in_a';
                 }
-            }
-
-            // Support for Capsule/Dynamic Array Indexing
-            if (/^\[(\d+)\]$/.test(h)) {
-                return 'in';
             }
 
             // Allow standard a/b aliasing for all nodes unless they explicitly use raw a/b
@@ -706,21 +698,22 @@ export class GraphCodec {
             }
 
             // Array/List operations
-            if (typeId === 'DT-01' && h === 'append') return 'in'; // Magic handle for builder
-            if (typeId === 'DT-02' && (h === 'array' || h === 'list' || h === 'in')) return 'in';
-            if (typeId === 'DT-03' && (h === 'array' || h === 'list' || h === 'in')) return 'in';
+            if (typeId === 'DT-01' && h === 'append') return 'in_a';
+            if (typeId === 'DT-02' && (h === 'array' || h === 'list' || h === 'in')) return 'in_a';
+            if (typeId === 'DT-03' && (h === 'array' || h === 'list' || h === 'in')) return 'in_a';
             if (typeId === 'DT-04' && (h === 'in_a' || h === 'setA' || h === 'a')) return 'in_a';
             if (typeId === 'DT-04' && (h === 'in_b' || h === 'setB' || h === 'b')) return 'in_b';
 
-            // Nodes whose primary visual target handle is 'data' instead of 'in'
+            // Nodes whose primary visual target handle is 'in_a'
             if (typeId === 'LG-03' || typeId === 'TR-05' || typeId === 'TR-06') {
-                if (h === 'in' || h === 'input' || h === 'data') return 'data';
+                if (h === 'in' || h === 'input' || h === 'data') return 'in_b'; // For Split/Smoothing, 'in_b' is the data input
+                if (h === 'cond' || h === 'condition') return 'in_a';
             }
 
             // Semantic mappings
-            if (h === 'cond' || h === 'if' || h === 'sel') return 'condition';
-            if (h === 't' || h === 'true') return 'in_true';
-            if (h === 'f' || h === 'false') return 'in_false';
+            if (h === 'cond' || h === 'if' || h === 'sel') return 'in_a';
+            if (h === 't' || h === 'true') return 'in_b';
+            if (h === 'f' || h === 'false') return 'in_c';
 
             // Generic aliases
             let resolved = h;
@@ -746,8 +739,10 @@ export class GraphCodec {
 
         // 4. Source aliases
         let resolved = h;
-        if (h === 'val' || h === 'ans' || h === 'res' || h === 'out' || h === 'result' || h === 'output') {
-            resolved = 'out';
+        if (['val', 'ans', 'res', 'out', 'result', 'output', 'out_true'].includes(h)) {
+            resolved = 'out_a';
+        } else if (h === 'out_false') {
+            resolved = 'out_b';
         }
 
         // Wireless link immunity for sources
@@ -862,7 +857,11 @@ export class GraphCodec {
             if (opLower === 'statistics' || opLower === 'stats' || opLower === 'mean' || opLower === 'sum' || opLower === 'min' || opLower === 'max') {
                 const def = NODE_DEFINITIONS.find(d => d.id === 'TR-06');
                 if (!def) return undefined;
-                return { ...def, defaultData: { ...def.defaultData, op: opLower.toUpperCase() === 'STATS' || opLower.toUpperCase() === 'STATISTICS' ? 'MEAN' : opLower.toUpperCase() } };
+                let op = 'Mean';
+                if (opLower === 'sum') op = 'Sum';
+                else if (opLower === 'max') op = 'Max';
+                else if (opLower === 'min') op = 'Min';
+                return { ...def, defaultData: { ...def.defaultData, op } };
             }
         }
 

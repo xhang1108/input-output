@@ -98,14 +98,14 @@ test('MA-03 Logarithm: Operations and Handle Fallback', async () => {
     const resLn = await evalMath('MA-03', 'LN', { in_a: PayloadUtils.createScalar(Math.E) });
     expect(resLn.value).toBeCloseTo(1, 10);
 
-    // 2. LOG10 via 'in' (fallback testing)
-    const resLog10 = await evalMath('MA-03', 'LOG10', { in: PayloadUtils.createScalar(100) });
+    // 2. LOG10 via 'in_a'
+    const resLog10 = await evalMath('MA-03', 'LOG10', { in_a: PayloadUtils.createScalar(100) });
     expect(resLog10.value).toBeCloseTo(2, 10);
 
     // 3. LOGN via 'in_a' and 'base'
     const resLogn = await evalMath('MA-03', 'LOGN', {
         in_a: PayloadUtils.createScalar(16),
-        base: PayloadUtils.createScalar(2)
+        in_b: PayloadUtils.createScalar(2)
     });
     expect(resLogn.value).toBeCloseTo(4, 10);
 });
@@ -115,8 +115,8 @@ test('MA-04 Trigonometry: Operations and Handle Fallback', async () => {
     const resSin = await evalMath('MA-04', 'SIN', { in_a: PayloadUtils.createScalar(Math.PI / 2) });
     expect(resSin.value).toBeCloseTo(1, 10);
 
-    // 2. COS via 'in' (fallback testing)
-    const resCos = await evalMath('MA-04', 'COS', { in: PayloadUtils.createScalar(0) });
+    // 2. COS via 'in_a'
+    const resCos = await evalMath('MA-04', 'COS', { in_a: PayloadUtils.createScalar(0) });
     expect(resCos.value).toBeCloseTo(1, 10);
 });
 

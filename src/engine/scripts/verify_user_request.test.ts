@@ -20,24 +20,24 @@ test('Manual Verification: Gaussian Field Gradient', async () => {
 
     // Case: f(x, y) = e^{-(x^2 + y^2)}
     const inputs = {
-        'in_f': PayloadUtils.createSymbolic('e^{-(x^2 + y^2)}')
+        'in_a': PayloadUtils.createSymbolic('e^{-(x^2 + y^2)}')
     };
 
     console.log('Evaluating Gaussian Field Gradient...');
     const result = await NodeRegistry.evaluate(node, inputs) as any;
     
     const resObj = result.value as any;
-    const out_symbolic = PayloadUtils.unwrap(resObj.out_symbolic);
-    const out_field = PayloadUtils.unwrap(resObj.out_field) as any[][];
+    const out_b = PayloadUtils.unwrap(resObj.out_b);
+    const out_a = PayloadUtils.unwrap(resObj.out_a) as any[][];
 
-    console.log('Symbolic Result (Gradient):', out_symbolic);
-    console.log('Sampling Density Check:', out_field.length);
+    console.log('Symbolic Result (Gradient):', out_b);
+    console.log('Sampling Density Check:', out_a.length);
     
     // Total points for density 10 from -5 to 5 is (10+1)^2 = 121
-    expect(out_field.length).toBe(121);
+    expect(out_a.length).toBe(121);
     
     // Verify a specific point, e.g., (1, 1)
-    const p11 = out_field.find(p => p[0] === 1 && p[1] === 1);
+    const p11 = out_a.find(p => p[0] === 1 && p[1] === 1);
     expect(p11).toBeDefined();
     
     if (p11) {

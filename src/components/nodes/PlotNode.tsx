@@ -443,7 +443,7 @@ export const PlotNode = memo((props: NodeProps) => {
             data={{
                 ...data,
                 handles: [
-                    { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any', color: 'var(--color-any)' }
+                    { id: 'in_a', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any', color: 'var(--color-any)' }
                 ]
             }}
         >

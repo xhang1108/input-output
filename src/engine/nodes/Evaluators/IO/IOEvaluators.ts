@@ -65,7 +65,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         };
     },
     'OT-01': (node, inputs) => {
-        const payload = inputs['in_a'] || inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createScalar(0);
+        const payload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as Record<string, unknown>;
         const precision = data.precision as number | undefined;
 
@@ -131,7 +131,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     // TR-07 is now redundant and has been merged into IN-03.
     // Logic extracted to ColorUtils.ts for better reuse.
     'UT-03': (node, inputs) => {
-        return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createArray([]);
+        return inputs['in_a'] || PayloadUtils.createArray([]);
     },
     'IN-08': (node) => {
         let total = 0;
@@ -151,7 +151,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const maxX = typeof data.maxX === 'number' ? data.maxX : 10;
         const pointsCount = typeof data.points === 'number' ? data.points : 100;
 
-        const rawInput = inputs['in_a'] || inputs['in'] || Object.values(inputs)[0];
+        const rawInput = inputs['in_a'];
 
         // Normalize to array of payloads (capsule may give array or single)
         let payloadList: any[] = [];
@@ -224,7 +224,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         };
     },
     'OT-02': (node, inputs) => {
-        const input = inputs['in_a'] || inputs['in'] || Object.values(inputs)[0];
+        const input = inputs['in_a'];
         const val = PayloadUtils.unwrap(input);
 
         // Strict logic: true/1 = ok, false/0 = fail, others = void

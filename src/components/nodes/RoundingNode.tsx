@@ -15,7 +15,7 @@ export const RoundingNode = memo((props: NodeProps) => {
 
     const handles = [
         { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Input' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
     ];
 
     const nodeData = { ...data, handles };

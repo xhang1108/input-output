@@ -13,14 +13,14 @@ export const SolverNode = memo((props: NodeProps) => {
 
     // Explicitly define handles to ensure 'symbolic' (Orange) color and avoid stale session data
     const handles: HandleConfig[] = [
-        { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
+        { id: 'in_a', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
     ];
 
     const nodeData = { ...data, handles };
 
     const nodes = useNodes();
-    const incomingConnections = useNodeConnections({ handleType: 'target', handleId: 'in' });
+    const incomingConnections = useNodeConnections({ handleType: 'target', handleId: 'in_a' });
 
     const variables = useMemo(() => {
         const vars = new Set<string>();

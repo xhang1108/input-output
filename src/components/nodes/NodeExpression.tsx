@@ -10,7 +10,7 @@ export const NodeExpression = memo((props: NodeProps) => {
     const [code, setCode] = useState<string>((data.code as string) || '');
 
     const handles: HandleConfig[] = [
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
     ];
 
     const nodeData = { ...data, handles };

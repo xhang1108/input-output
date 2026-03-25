@@ -45,8 +45,10 @@ export const IntegralNode = memo((props: NodeProps) => {
 
     // Inject handles dynamically
     const handles = [
-        { id: 'expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic', label: 'f(x)' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: INTEGRAL_MODE_OUTPUT[mode] ?? 'symbolic' }
+        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic' as any, label: 'f(x)' },
+        { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' as any, label: 'a' },
+        { id: 'in_c', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' as any, label: 'b' },
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: (INTEGRAL_MODE_OUTPUT[mode] ?? 'symbolic') as any }
     ];
 
     const nodeData = { ...data, handles };

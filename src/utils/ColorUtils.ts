@@ -16,7 +16,7 @@ export const ColorUtils = {
         const val = PayloadUtils.unwrap(input);
         
         // 1. Already a structured color object?
-        if (val && typeof val === 'object' && !Array.isArray(val) && (val as any).hex) {
+        if (val && typeof val === 'object' && !Array.isArray(val) && (val as any).out_a) {
             return PayloadUtils.wrap(val);
         }
 
@@ -53,9 +53,9 @@ export const ColorUtils = {
         return {
             type: DataType.Color,
             value: {
-                hex: hex.replace('#', ''),
-                rgb: [Math.round(rNorm * 255), Math.round(gNorm * 255), Math.round(bNorm * 255)],
-                vec3: [Number(rNorm.toFixed(3)), Number(gNorm.toFixed(3)), Number(bNorm.toFixed(3))]
+                out_a: hex.replace('#', ''),
+                out_b: [Math.round(rNorm * 255), Math.round(gNorm * 255), Math.round(bNorm * 255)],
+                out_c: [Number(rNorm.toFixed(3)), Number(gNorm.toFixed(3)), Number(bNorm.toFixed(3))]
             },
             symbol: null,
             meta: { role: 'color' }

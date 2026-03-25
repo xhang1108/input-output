@@ -57,7 +57,7 @@ describe('Brain', () => {
                     source: 'A',
                     sourceHandle: 'out',
                     target: 'B',
-                    targetHandle: 'in'
+                    targetHandle: 'in_a'
                 }
             });
 

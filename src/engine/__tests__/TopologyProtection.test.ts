@@ -36,7 +36,7 @@ describe('Topology Protection & Durable Safety', () => {
             // 3. Try to connect B -> A (Illegal Cycle)
             const connectBA = brain.applyTransaction({
                 type: 'CONNECT',
-                payload: { id: 'e2', source: 'B', sourceHandle: 'out', target: 'A', targetHandle: 'in' }
+                payload: { id: 'e2', source: 'B', sourceHandle: 'out', target: 'A', targetHandle: 'in_a' }
             });
 
             expect(connectBA.success).toBe(false);
@@ -56,7 +56,7 @@ describe('Topology Protection & Durable Safety', () => {
             // C -> A (Illegal)
             const result = brain.applyTransaction({
                 type: 'CONNECT',
-                payload: { id: 'e3', source: 'C', sourceHandle: 'out', target: 'A', targetHandle: 'in' }
+                payload: { id: 'e3', source: 'C', sourceHandle: 'out', target: 'A', targetHandle: 'in_a' }
             });
 
             expect(result.success).toBe(false);

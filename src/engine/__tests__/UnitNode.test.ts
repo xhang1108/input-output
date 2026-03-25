@@ -22,8 +22,8 @@ describe('UnitNode Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
-                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -41,8 +41,8 @@ describe('UnitNode Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
-                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -59,8 +59,8 @@ describe('UnitNode Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
-                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -77,8 +77,8 @@ describe('UnitNode Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
-                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -96,8 +96,8 @@ describe('UnitNode Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
-                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 
@@ -114,8 +114,8 @@ describe('UnitNode Engine Logic', () => {
                 { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
-                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
-                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in' }
+                { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in_a' },
+                { id: 'e2', source: 'Unit', sourceHandle: 'out', target: 'Res', targetHandle: 'in_a' }
             ]
         });
 

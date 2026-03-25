@@ -68,7 +68,7 @@ describe('Switch Node Logic', () => {
                 source: 'T1',
                 sourceHandle: 'out',
                 target: 'SW1',
-                targetHandle: 'condition'
+                targetHandle: 'in_a'
             }
         });
         expect(c1.success).toBe(true);
@@ -81,7 +81,7 @@ describe('Switch Node Logic', () => {
                 source: 'N1',
                 sourceHandle: 'out',
                 target: 'SW1',
-                targetHandle: 'in_true'
+                targetHandle: 'in_b'
             }
         });
         expect(c2.success).toBe(true);
@@ -94,7 +94,7 @@ describe('Switch Node Logic', () => {
                 source: 'N2',
                 sourceHandle: 'out',
                 target: 'SW1',
-                targetHandle: 'in_false'
+                targetHandle: 'in_c'
             }
         });
         expect(c3.success).toBe(true);
@@ -127,7 +127,7 @@ describe('Switch Node Logic', () => {
                 source: 'N1', // Input Node
                 sourceHandle: 'in', // IN-01 'in' doesn't exist
                 target: 'SW1',
-                targetHandle: 'condition'
+                targetHandle: 'in_a'
             }
         });
         expect(res.success).toBe(false);

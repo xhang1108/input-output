@@ -792,7 +792,7 @@ export class Brain {
         const isInput = (id: string, typeHint: string | null) => {
             if (typeHint) return typeHint === 'target';
             const lid = id.toLowerCase();
-            return !!id && (lid.startsWith('in') || lid === 'target' || lid.includes('input') || lid === 'condition' || lid === 'select' || lid === 'data' || lid === 'if');
+            return !!id && (lid === 'in' || lid.startsWith('in_') || lid === 'target' || lid.includes('input'));
         };
 
         const sourceIsInput = isInput(sourceHandle!, sourceHandleType);

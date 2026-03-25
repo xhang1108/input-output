@@ -24,7 +24,7 @@ export const VectorUtilsNode = memo((props: NodeProps) => {
         if (op !== 'NORM') {
             h.push({ id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'array', label: 'B' });
         }
-        h.push({ id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: VECTOR_OP_OUTPUT[op] ?? 'scalar' });
+        h.push({ id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: VECTOR_OP_OUTPUT[op] ?? 'scalar' });
         return h;
     }, [op]);
 
