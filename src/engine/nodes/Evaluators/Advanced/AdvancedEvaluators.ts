@@ -170,8 +170,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         return PayloadUtils.createArray(final);
     },
 
-    // DT-07: Matrix Tools
-    'DT-07': (node, inputs) => {
+    // DT-06: Matrix Tools
+    'DT-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || inputs['in'];
         if (!valPayload) return PayloadUtils.createError('No Input');

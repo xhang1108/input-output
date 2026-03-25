@@ -76,22 +76,7 @@ Vector operations: Dot Product, Cross Product, Norm, and Distance.
 }
 ```
 
-## 6. Array Split (DT-06)
-Transform between arrays and discrete scalar channels.
-
-- **Inputs**: 
-  - **in**: The input array (or scalars in Combine mode).
-- **Outputs**: 
-  - **X, Y, Z, W**: Discrete scalar channels.
-
-```playground
-{
-  "nodeType": "DT-06",
-  "initialData": { "mode": "separate" }
-}
-```
-
-## 7. Linear Algebra (DT-07)
+## 6. Linear Algebra (DT-06)
 Matrix operations: Inverse, Determinant, Transpose, and Trace.
 
 - **Input**: The input matrix.
@@ -99,7 +84,7 @@ Matrix operations: Inverse, Determinant, Transpose, and Trace.
 
 ```playground
 {
-  "nodeType": "DT-07",
+  "nodeType": "DT-06",
   "initialData": { "op": "INV" }
 }
 ```

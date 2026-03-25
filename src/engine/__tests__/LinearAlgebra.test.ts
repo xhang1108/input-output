@@ -10,10 +10,10 @@ describe('Linear Algebra & Array Nodes', () => {
         initializeNodes();
     });
 
-    test('DT-07 (MatrixTools): QR Decomposition Multi-Output', async () => {
+    test('DT-06 (MatrixTools): QR Decomposition Multi-Output', async () => {
         const node = {
             id: 'n1',
-            type: 'DT-07',
+            type: 'DT-06',
             data: { op: 'QR' } as any,
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
             isInDirtyChain: false,

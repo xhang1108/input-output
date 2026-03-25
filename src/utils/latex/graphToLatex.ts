@@ -130,7 +130,7 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
             };
 
         // --- Linear Algebra Utils ---
-        case 'DT-07': // Matrix Tools
+        case 'DT-06': // Matrix Tools
         case 'TR-06': // Stats
             const nodeOp = (data.op || '').toLowerCase();
             return {

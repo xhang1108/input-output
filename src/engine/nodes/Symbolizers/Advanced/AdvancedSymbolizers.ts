@@ -40,8 +40,8 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         });
     },
 
-    // DT-07: Matrix Tools
-    'DT-07': (node, inputs) => {
+    // DT-06: Matrix Tools
+    'DT-06': (node, inputs) => {
         const data = (node.data || {}) as any;
         const op = data.op || 'INV';
         const funcMap: any = { INV: 'inv', DET: 'det', TRANSPOSE: 'transpose', TRACE: 'trace', EIGEN: 'eigs', LUP: 'lup', QR: 'qr' };

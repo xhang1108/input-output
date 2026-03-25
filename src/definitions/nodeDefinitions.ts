@@ -713,7 +713,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ]
     },
     {
-        id: 'DT-07',
+        id: 'DT-06',
         label: 'Array Calculus',
         category: 'Data & Structures',
         handles: [

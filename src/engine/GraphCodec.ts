@@ -832,9 +832,15 @@ export class GraphCodec {
             if (opLower === 'list' || opLower === 'sort') return NODE_DEFINITIONS.find(d => d.id === 'DT-03');
             if (opLower === 'set' || opLower === 'union' || opLower === 'intersection') return NODE_DEFINITIONS.find(d => d.id === 'DT-04');
             if (opLower === 'vector' || opLower === 'dot' || opLower === 'cross' || opLower === 'vec') return NODE_DEFINITIONS.find(d => d.id === 'DT-05');
-            // 'split' is sometimes used instead of 'vec split'
-            if (opLower === 'split' || opLower === 'separate' || opLower === 'combine') return NODE_DEFINITIONS.find(d => d.id === 'DT-06');
-            if (opLower === 'matrix' || opLower === 'mat' || opLower === 'det' || opLower === 'inv' || opLower === 'transpose' || opLower === 'trace') return NODE_DEFINITIONS.find(d => d.id === 'DT-07');
+            if (opLower === 'matrix' || opLower === 'mat' || opLower === 'det' || opLower === 'inv' || opLower === 'transpose' || opLower === 'trace') {
+                const def = NODE_DEFINITIONS.find(d => d.id === 'DT-06');
+                if (!def) return undefined;
+                let op = 'INV';
+                if (opLower === 'det') op = 'DET';
+                else if (opLower === 'transpose') op = 'TRANSPOSE';
+                else if (opLower === 'trace') op = 'TRACE';
+                return { ...def, defaultData: { ...def.defaultData, op } };
+            }
         }
 
         // 5. Calculus (CL)
@@ -853,7 +859,11 @@ export class GraphCodec {
             if (opLower === 'geometry' || opLower === 'shape' || opLower === 'geo') return NODE_DEFINITIONS.find(d => d.id === 'TR-03');
             if (opLower === 'field' || opLower === 'gradient') return NODE_DEFINITIONS.find(d => d.id === 'TR-04');
             if (opLower === 'smoothing' || opLower === 'smooth') return NODE_DEFINITIONS.find(d => d.id === 'TR-05');
-            if (opLower === 'statistics' || opLower === 'stats') return NODE_DEFINITIONS.find(d => d.id === 'TR-06');
+            if (opLower === 'statistics' || opLower === 'stats' || opLower === 'mean' || opLower === 'sum' || opLower === 'min' || opLower === 'max') {
+                const def = NODE_DEFINITIONS.find(d => d.id === 'TR-06');
+                if (!def) return undefined;
+                return { ...def, defaultData: { ...def.defaultData, op: opLower.toUpperCase() === 'STATS' || opLower.toUpperCase() === 'STATISTICS' ? 'MEAN' : opLower.toUpperCase() } };
+            }
         }
 
         // 7. Expert (IN-09)
@@ -929,8 +939,7 @@ export class GraphCodec {
             else if (node.type === 'DT-03') opCode = 'list';
             else if (node.type === 'DT-04') opCode = 'set';
             else if (node.type === 'DT-05') opCode = 'vec';
-            else if (node.type === 'DT-06') opCode = 'split';
-            else if (node.type === 'DT-07') opCode = 'mat';
+            else if (node.type === 'DT-06') opCode = 'mat';
 
             // Transform Family
             else if (node.type === 'TR-01') opCode = 'unit';

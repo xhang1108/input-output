@@ -16,7 +16,7 @@ export function registerAdvancedNodes() {
         'DT-02', // Array Extract
         'DT-03', // List Utility
         'DT-04', // Set Ops
-        'DT-07', // Matrix Tools
+        'DT-06', // Matrix Tools
         'DT-05', // Vector Utils
 
 

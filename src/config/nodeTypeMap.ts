@@ -86,7 +86,7 @@ export const nodeTypes = {
     'DT-04': GenericSelectorNode,
     'DT-05': VectorUtilsNode,
 
-    'DT-07': GenericSelectorNode,
+    'DT-06': GenericSelectorNode,
 
     // ─── 6. Transform ───────────────────────────────────────
     'TR-01': UnitNode,

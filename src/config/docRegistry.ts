@@ -140,7 +140,6 @@ export const NODE_DOC_MAP: Record<string, string> = {
   "DT-04": "data-nodes",
   "DT-05": "data-nodes",
   "DT-06": "data-nodes",
-  "DT-07": "data-nodes",
   "IN-01": "input-nodes",
   "IN-02": "input-nodes",
   "IN-03": "input-nodes",
