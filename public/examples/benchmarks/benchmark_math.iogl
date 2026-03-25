@@ -32,7 +32,7 @@ Pow -- Sqrt:in_a
 
 # Results
 Res_Arith:output:res @1400,50
-Sqrt -- Res_Arith:in
+Sqrt -- Res_Arith:in_a
 
 # GCD
 GCD:math:gcd @200,450
@@ -41,11 +41,11 @@ V18:io:num @0,550 = "18"
 V12 -- GCD:in_a
 V18 -- GCD:in_b
 Res_GCD:output:res @400,450
-GCD -- Res_GCD:in
+GCD -- Res_GCD:in_a
 
 # Combinatorics
 NCR:math:ncr @200,700
-V5 -- NCR:n
-V2 -- NCR:r
+V5 -- NCR:in_a
+V2 -- NCR:in_b
 Res_NCR:output:res @400,700
-NCR -- Res_NCR:in
+NCR -- Res_NCR:in_a

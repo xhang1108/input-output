@@ -66,7 +66,7 @@ If you write imperative logic (variable assignment, linear flow), the system CRA
 - math:pow {in_a:Base, in_b:Exp} -> Single :out
 - calculus:int {in_a:Expr, in_b:Low, in_c:Up, in_d:Var} -> Single :out
 - logic:gate {in_a, in_b} (op:AND|OR|NOT|GT|LT) -> Single :out
-- logic:switch {in_a:TrueVal, in_b:FalseVal, in_c:Cond} -> Single :out (3 Mandatory Ports!)
+- logic:switch {in_a:Cond, in_b:TrueVal, in_c:FalseVal} -> Single :out (3 Mandatory Ports!)
 
 ---
 

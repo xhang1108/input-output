@@ -58,18 +58,10 @@ export function isProbablyInputHandle(handleId: string | null): boolean {
     if (!handleId) return false;
     const lh = handleId.toLowerCase();
     return (
-        lh.startsWith('in') ||
+        lh === 'in' ||
+        lh.startsWith('in_') ||
         lh === 'target' ||
-        lh.includes('input') ||
-        lh === 'condition' ||
-        lh === 'select' ||
-        lh === 'data' ||
-        lh === 'if' ||
-        lh === 'val' ||
-        lh === 'index' ||
-        lh === 'base' ||
-        lh === 'n' ||
-        lh === 'r'
+        lh.includes('input')
     );
 }
 

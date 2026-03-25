@@ -27,7 +27,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
 
             if (data.rawExpression) {
                 try {
-                    const parsed = JSON.parse(data.rawExpression);
+                    const parsed = JSON.parse(data.rawExpression as string);
                     const extracted = extract2DArray(parsed);
                     if (extracted) return extracted;
                 } catch (e) { }
@@ -100,7 +100,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
 
     // Define Output Handle
     const handles = [
-        { id: 'out', type: 'source', position: 'right' as any, variant: 'single' as any, dataType: 'array' as any }
+        { id: 'out_a', type: 'source', position: 'right' as any, variant: 'single' as any, dataType: 'array' as any }
     ];
 
     const nodeData = {
@@ -126,6 +126,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                                     <input
                                         type="text"
                                         defaultValue={val}
+                                        onFocus={(e) => e.target.select()}
                                         onBlur={(e) => updateCell(r, c, e.target.value)}
                                         className="w-full h-full bg-transparent text-center text-[10px] text-zinc-300 outline-none font-mono"
                                     />

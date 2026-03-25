@@ -17,7 +17,7 @@ describe('TR-05: Smoothing', () => {
         };
 
         const inputs = {
-            'data': PayloadUtils.createArray([10, 20, 10, 20, 10])
+            'in_a': PayloadUtils.createArray([10, 20, 10, 20, 10])
         };
 
         const result = await NodeRegistry.evaluate(node, inputs) as any;
@@ -48,7 +48,7 @@ describe('TR-05: Smoothing', () => {
         // [[0],[10],[0],[10],[0],[10],[0]]
         const colVec = math.matrix([[0], [10], [0], [10], [0], [10], [0]]);
         const inputs = {
-            'data': PayloadUtils.wrap(colVec)
+            'in_a': PayloadUtils.wrap(colVec)
         };
 
         const result = await NodeRegistry.evaluate(node, inputs) as any;
@@ -76,7 +76,7 @@ describe('TR-05: Smoothing', () => {
         };
  
         const inputs = {
-            'data': PayloadUtils.createArray([1, 1, 1, 10, 10])
+            'in_a': PayloadUtils.createArray([1, 1, 1, 10, 10])
         };
  
         const result = await NodeRegistry.evaluate(node, inputs) as any;
@@ -100,23 +100,23 @@ describe('TR-04: Vector Field', () => {
         };
 
         const inputs = {
-            'in_f': PayloadUtils.createSymbolic('x^2 + y^2')
+            'in_a': PayloadUtils.createSymbolic('x^2 + y^2')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs) as any;
         expect(result.type).toBe(DataType.Array);
         
         const resObj = result.value as any;
-        expect(resObj.out_symbolic).toBeDefined();
-        expect(resObj.out_field).toBeDefined();
+        expect(resObj.out_b).toBeDefined();
+        expect(resObj.out_a).toBeDefined();
 
-        const grad = PayloadUtils.unwrap(resObj.out_symbolic) as string;
+        const grad = PayloadUtils.unwrap(resObj.out_b) as string;
         expect(grad).toContain('2*x');
         expect(grad).toContain('2*y');
         expect(grad).toContain('[');
         expect(grad).toContain(']');
 
-        const field = PayloadUtils.unwrap(resObj.out_field) as any[][];
+        const field = PayloadUtils.unwrap(resObj.out_a) as any[][];
         expect(field.length).toBeGreaterThan(0);
         // Point (1, 1) should have grad (2, 2)
         const p11 = field.find(p => p[0] === 1 && p[1] === 1);
@@ -144,12 +144,12 @@ describe('TR-04: Vector Field', () => {
         };
 
         const inputs = {
-            'in_f': PayloadUtils.createSymbolic('x + y')
+            'in_a': PayloadUtils.createSymbolic('x + y')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs) as any;
         const resObj = result.value as any;
-        const field = PayloadUtils.unwrap(resObj.out_field) as any[][];
+        const field = PayloadUtils.unwrap(resObj.out_a) as any[][];
 
         // Density 5 over [0, 10] means 6 points (0, 2, 4, 6, 8, 10) per axis
         // Total 6 * 6 = 36 points
@@ -179,13 +179,13 @@ describe('TR-04: Vector Field', () => {
         };
 
         const inputs = {
-            'in_p': PayloadUtils.createSymbolic('x'),
-            'in_q': PayloadUtils.createSymbolic('y')
+            'in_b': PayloadUtils.createSymbolic('x'),
+            'in_c': PayloadUtils.createSymbolic('y')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs) as any;
         const resObj = result.value as any;
-        const out = PayloadUtils.unwrap(resObj.out_symbolic);
+        const out = PayloadUtils.unwrap(resObj.out_b);
         // div([x,y]) = d/dx(x) + d/dy(y) = 1 + 1 = 2
         // Nerdamer might return '(1)+(1)'
         expect(String(out).replace(/\(|\)/g, '')).toBe('1+1');
@@ -203,13 +203,13 @@ describe('TR-04: Vector Field', () => {
         };
 
         const inputs = {
-            'in_p': PayloadUtils.createSymbolic('-y'),
-            'in_q': PayloadUtils.createSymbolic('x')
+            'in_b': PayloadUtils.createSymbolic('-y'),
+            'in_c': PayloadUtils.createSymbolic('x')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs) as any;
         const resObj = result.value as any;
-        const out = PayloadUtils.unwrap(resObj.out_symbolic);
+        const out = PayloadUtils.unwrap(resObj.out_b);
         // curl([-y, x]) = d/dx(x) - d/dy(-y) = 1 - (-1) = 2
         expect(String(out).replace(/\(|\)/g, '')).toBe('1--1');
     });
@@ -226,15 +226,15 @@ describe('TR-04: Vector Field', () => {
         };
 
         const inputs = {
-            'in_p': PayloadUtils.createSymbolic('y'),
-            'in_q': PayloadUtils.createSymbolic('x')
+            'in_b': PayloadUtils.createSymbolic('y'),
+            'in_c': PayloadUtils.createSymbolic('x')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs) as any;
         const resObj = result.value as any;
-        const out = PayloadUtils.unwrap(resObj.out_symbolic);
+        const out = PayloadUtils.unwrap(resObj.out_b);
         expect(out).toBe('[y, x]');
-        const field = PayloadUtils.unwrap(resObj.out_field) as any[][];
+        const field = PayloadUtils.unwrap(resObj.out_a) as any[][];
         
         // (0,0) -> P=0, Q=0
         // (0,2) -> P=2, Q=0

@@ -10,7 +10,7 @@ export const NodeExpression = memo((props: NodeProps) => {
     const [code, setCode] = useState<string>((data.code as string) || '');
 
     const handles: HandleConfig[] = [
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
     ];
 
     const nodeData = { ...data, handles };
@@ -22,18 +22,21 @@ export const NodeExpression = memo((props: NodeProps) => {
         }
     }, [data.code]);
 
+    // ⚡ Debounced Engine Sync
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (code !== data.code) {
+                brain.applyTransaction({
+                    type: 'UPDATE_NODE_DATA',
+                    payload: { id, data: { code } }
+                });
+            }
+        }, 300); // 300ms debounce for expression typing
+        return () => clearTimeout(timer);
+    }, [code, id, brain, data.code]);
+
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setCode(e.target.value);
-    };
-
-    const handleBlur = () => {
-        brain.applyTransaction({
-            type: 'UPDATE_NODE_DATA',
-            payload: {
-                id,
-                data: { code }
-            }
-        });
     };
 
     return (
@@ -44,8 +47,8 @@ export const NodeExpression = memo((props: NodeProps) => {
                     className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:border-focus outline-none resize-none font-mono"
                     style={{ background: 'var(--node-bg)', minHeight: '60px' }}
                     value={code}
+                    onFocus={(e) => e.target.select()}
                     onChange={handleChange}
-                    onBlur={handleBlur}
                     onMouseDown={(e) => e.stopPropagation()}
                     placeholder="e.g. A * sin(omega * t)"
                 />

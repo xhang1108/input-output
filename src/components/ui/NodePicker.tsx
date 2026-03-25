@@ -35,7 +35,7 @@ function buildMenuItems(): CategorizedMenuItem[] {
             // 2. Discover sub-variants from select params
             // A parameter is "spread" if its options have aliases defined.
             const subParams = def.params?.filter(p => p.type === 'select' && p.options?.some(opt => opt.aliases && opt.aliases.length > 0));
-            
+
             if (subParams) {
                 for (const param of subParams) {
                     if (!param.options) continue;
@@ -45,7 +45,7 @@ function buildMenuItems(): CategorizedMenuItem[] {
                         if (!opt.aliases || opt.aliases.length === 0) continue;
 
                         const cleanLabel = opt.label.split(' (')[0].trim();
-                        
+
                         // Deduplication: If this variant's value is already the default for the node,
                         // and they share a similar name, we can skip it to avoid "Add" vs "Add" noise.
                         // However, we usually want these to show up specifically when searched.
@@ -95,7 +95,7 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
 
             return nodeHandles.some((h: any) => {
                 if (h.type !== requiredHandleType) return false;
-                
+
                 const hColor = getHandleColorByConfig(h);
 
                 if (isGenericColor(searchColor)) {
@@ -105,7 +105,7 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
                     // 2. If dragging from an OUTPUT handle -> only match other Any inputs to keep specialized nodes clean.
                     return isGenericColor(hColor);
                 }
-                
+
                 // Specific handles match same color OR any
                 return hColor === searchColor || isGenericColor(hColor);
             });
@@ -131,6 +131,7 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
             followZoom={false}
             showCategories={true}
             showSearch={true}
+            width="48"
         />
     );
 }

@@ -14,17 +14,17 @@ export const FractionNode = memo((props: NodeProps) => {
 
     // Dynamic handles based on mixed mode
     const handles: HandleConfig[] = [
-        { id: 'in', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }
+        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' }
     ];
 
     if (isMixed) {
-        handles.push({ id: 'int', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'int' });
+        handles.push({ id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'int' });
     }
 
     handles.push(
-        { id: 'numerator', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'n' },
-        { id: 'denominator', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'd' },
-        { id: 'string', type: 'source', position: Position.Right, variant: 'single', dataType: 'string', label: 'Text' }
+        { id: 'out_b', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'n' },
+        { id: 'out_c', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'd' },
+        { id: 'out_d', type: 'source', position: Position.Right, variant: 'single', dataType: 'string', label: 'Text' }
     );
 
     const nodeData = { ...data, handles };

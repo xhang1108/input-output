@@ -45,8 +45,10 @@ export const IntegralNode = memo((props: NodeProps) => {
 
     // Inject handles dynamically
     const handles = [
-        { id: 'expr', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic', label: 'f(x)' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: INTEGRAL_MODE_OUTPUT[mode] ?? 'symbolic' }
+        { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'symbolic' as any, label: 'f(x)' },
+        { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' as any, label: 'a' },
+        { id: 'in_c', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar' as any, label: 'b' },
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: (INTEGRAL_MODE_OUTPUT[mode] ?? 'symbolic') as any }
     ];
 
     const nodeData = { ...data, handles };
@@ -95,6 +97,7 @@ export const IntegralNode = memo((props: NodeProps) => {
                             <input
                                 className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-14 text-center focus:outline-none focus:border-zinc-500 transition-colors"
                                 value={lower}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateNodeData(id, { lower: e.target.value })}
                                 placeholder="a"
                             />
@@ -102,6 +105,7 @@ export const IntegralNode = memo((props: NodeProps) => {
                             <input
                                 className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-14 text-center focus:outline-none focus:border-zinc-500 transition-colors"
                                 value={upper}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateNodeData(id, { upper: e.target.value })}
                                 placeholder="b"
                             />

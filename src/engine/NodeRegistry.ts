@@ -43,7 +43,7 @@ export class NodeRegistry {
         // Mute Bypass Logic: If muted, pass through the primary input ONLY
         const data = (node.data || {}) as Record<string, unknown>;
         if (data.muted) {
-            const primaryInput = inputs['in_a'] || inputs['in'] || inputs['a'] || inputs['expr'];
+            const primaryInput = inputs['in_a'];
             if (primaryInput) return primaryInput;
 
             // If primary input is missing, return a clean zero (don't leak old state)
@@ -63,6 +63,7 @@ export class NodeRegistry {
         if (result && typeof result === 'object' && result.symbol === null) {
             const inputSymbols: Record<string, ASTNode> = {};
             for (const [key, p] of Object.entries(inputs)) {
+                if (!p) continue;
                 if (Array.isArray(p)) {
                     // Capsule input: Multiple payloads
                     (inputSymbols as any)[key] = p.map(item => {

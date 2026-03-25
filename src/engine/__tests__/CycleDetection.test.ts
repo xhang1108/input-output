@@ -12,7 +12,7 @@ describe('Cycle Detection', () => {
 
     it('should reject a direct self-loop via validateConnection', async () => {
         await brain.injectNodes({
-            nodes: [createMockNode('A', 'IO-01') as any],
+            nodes: [createMockNode('A', 'IN-01') as any],
             edges: []
         });
 
@@ -24,7 +24,7 @@ describe('Cycle Detection', () => {
     it('should reject a simple A -> B -> A cycle', async () => {
         await brain.injectNodes({
             nodes: [
-                createMockNode('A', 'IO-01') as any,
+                createMockNode('A', 'IN-01') as any,
                 createMockNode('B', 'MA-01') as any
             ],
             edges: [
@@ -40,7 +40,7 @@ describe('Cycle Detection', () => {
     it('should reject a complex A -> B -> C -> A cycle', async () => {
         await brain.injectNodes({
             nodes: [
-                createMockNode('A', 'IO-01') as any,
+                createMockNode('A', 'IN-01') as any,
                 createMockNode('B', 'MA-01') as any,
                 createMockNode('C', 'MA-01') as any
             ],

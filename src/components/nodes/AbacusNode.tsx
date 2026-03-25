@@ -17,7 +17,7 @@ export const AbacusNode = memo((props: NodeProps) => {
     // Custom handles: output value
     const handles = useMemo(() => [
         {
-            id: 'val',
+            id: 'out_a',
             type: 'source' as const,
             position: Position.Right,
             variant: 'single' as const

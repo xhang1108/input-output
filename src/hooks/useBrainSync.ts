@@ -163,9 +163,22 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
 
         prevEdgesRef.current = currentEdges;
 
-        // Execute all accumulated changes securely inside a single batch
+        // Separate position-only MOVE_NODE from structural transactions.
+        // MOVE_NODE during drag generates high frequency, low-value updates.
+        // Sending them individually avoids triggering BATCH→syncWorker overhead.
         if (syncTxs.length > 0) {
-            brain.applyTransaction({ type: 'BATCH', payload: syncTxs });
+            const moveTxs = syncTxs.filter(t => t.type === 'MOVE_NODE');
+            const otherTxs = syncTxs.filter(t => t.type !== 'MOVE_NODE');
+
+            // Apply MOVE_NODE individually (no history — useHand's confirmGrab commits final position)
+            for (const tx of moveTxs) {
+                brain.applyTransaction(tx, false);
+            }
+
+            // Apply remaining structural changes as a BATCH
+            if (otherTxs.length > 0) {
+                brain.applyTransaction({ type: 'BATCH', payload: otherTxs });
+            }
         }
 
     }, [nodes, edges]);

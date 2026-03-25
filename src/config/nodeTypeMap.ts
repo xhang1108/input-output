@@ -69,7 +69,7 @@ export const nodeTypes = {
     'MA-04': TrigNode,
     'MA-05': RoundingNode,
     'MA-06': FractionNode,
-    'MA-07': NumberTheoryNode,
+    'MA-07': GenericSelectorNode,
     'MA-08': CombinatoricsNode,
 
     // ─── 4. Calculus ────────────────────────────────────────
@@ -86,7 +86,7 @@ export const nodeTypes = {
     'DT-04': GenericSelectorNode,
     'DT-05': VectorUtilsNode,
 
-    'DT-07': GenericSelectorNode,
+    'DT-06': GenericSelectorNode,
 
     // ─── 6. Transform ───────────────────────────────────────
     'TR-01': UnitNode,

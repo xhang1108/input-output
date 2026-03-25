@@ -1,11 +1,15 @@
 import { describe, it, beforeEach, expect } from 'vitest';
 import { Brain } from '../Brain';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { registerIONodes } from '../nodes/ioNodes';
+import { registerMathNodes } from '../nodes/mathNodes';
 
 describe('Switch Node Logic', () => {
     let brain: Brain;
 
     beforeEach(() => {
+        registerIONodes();
+        registerMathNodes();
         brain = Brain.getInstance();
         brain.clearAll();
     });
@@ -16,7 +20,7 @@ describe('Switch Node Logic', () => {
             type: 'ADD_NODE',
             payload: {
                 id: 'T1',
-                type: 'IO-01',
+                type: 'IN-01',
                 initialValue: true, // Start TRUE
                 position: { x: 0, y: 0 }
             }
@@ -27,7 +31,7 @@ describe('Switch Node Logic', () => {
             type: 'ADD_NODE',
             payload: {
                 id: 'N1',
-                type: 'IO-01',
+                type: 'IN-01',
                 initialValue: 100,
                 position: { x: 0, y: 0 }
             }
@@ -38,7 +42,7 @@ describe('Switch Node Logic', () => {
             type: 'ADD_NODE',
             payload: {
                 id: 'N2',
-                type: 'IO-01',
+                type: 'IN-01',
                 initialValue: 200,
                 position: { x: 0, y: 0 }
             }
@@ -64,7 +68,7 @@ describe('Switch Node Logic', () => {
                 source: 'T1',
                 sourceHandle: 'out',
                 target: 'SW1',
-                targetHandle: 'condition'
+                targetHandle: 'in_a'
             }
         });
         expect(c1.success).toBe(true);
@@ -77,7 +81,7 @@ describe('Switch Node Logic', () => {
                 source: 'N1',
                 sourceHandle: 'out',
                 target: 'SW1',
-                targetHandle: 'in_true'
+                targetHandle: 'in_b'
             }
         });
         expect(c2.success).toBe(true);
@@ -90,7 +94,7 @@ describe('Switch Node Logic', () => {
                 source: 'N2',
                 sourceHandle: 'out',
                 target: 'SW1',
-                targetHandle: 'in_false'
+                targetHandle: 'in_c'
             }
         });
         expect(c3.success).toBe(true);
@@ -121,9 +125,9 @@ describe('Switch Node Logic', () => {
             payload: {
                 id: 'e_invalid',
                 source: 'N1', // Input Node
-                sourceHandle: 'in', // IO-01 'in' doesn't exist
+                sourceHandle: 'in', // IN-01 'in' doesn't exist
                 target: 'SW1',
-                targetHandle: 'condition'
+                targetHandle: 'in_a'
             }
         });
         expect(res.success).toBe(false);

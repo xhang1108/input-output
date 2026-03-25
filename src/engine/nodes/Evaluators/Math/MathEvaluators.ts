@@ -95,7 +95,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 case 'DIV': result = m.divide(procA, procB); break;
                 case 'POW': result = m.pow(procA, procB); break;
                 case 'SQRT': 
-                    result = ((inputs['in_b'] || inputs['n'] || inputs['b']) && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA); 
+                    result = (payloadB && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA); 
                     break;
                 case 'ABS': result = m.abs(procA); break;
                 case 'NEG': result = m.unaryMinus(procA); break;
@@ -138,9 +138,8 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as any;
         const op = data.op || 'nCr';
 
-        // 💡 Support both legacy (in_n, in_r) and new (n, r) handle IDs
-        const valN = inputs['n'] || inputs['in_n'];
-        const valR = inputs['r'] || inputs['in_r'];
+        const valN = inputs['in_a'];
+        const valR = inputs['in_b'];
 
         if (!valN) return PayloadUtils.createError('Missing Input (n)');
         
@@ -162,7 +161,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     },
     'MA-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
+        const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.op || 'ROUND';
         const prec = data.precision ?? 0;
@@ -185,7 +184,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-14': (node, inputs) => (MathEvaluators as any)['MA-05'](node, inputs),
     'MA-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const raw = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_a'] || inputs['in']), math);
+        const raw = PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_a']), math);
         const data = (node.data || {}) as any;
         const isMixed = data.mixed === true;
         try {
@@ -212,10 +211,10 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             return {
                 type: DataType.Object,
                 value: {
-                    int: PayloadUtils.createScalar(integerPart),
-                    numerator: PayloadUtils.createScalar(n),
-                    denominator: PayloadUtils.createScalar(d),
-                    string: PayloadUtils.createString(str),
+                    out_a: PayloadUtils.createScalar(integerPart),
+                    out_b: PayloadUtils.createScalar(n),
+                    out_c: PayloadUtils.createScalar(d),
+                    out_d: PayloadUtils.createString(str),
                     latex: PayloadUtils.createString(latex)
                 },
                 symbol: null,
@@ -228,35 +227,71 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'GCD';
-        const getVal = (key: string) => {
-            const p = inputs[key];
-            if (!p) return 0;
-            const val = PayloadUtils.unwrap(p);
-            const hydrated = PayloadUtils.hydrate(val, math) as any;
-            if (p.meta?.unit && (typeof hydrated === 'number' || hydrated?.isBigNumber)) {
-                try { return hydrated.toNumber ? hydrated.toNumber() : Number(hydrated); } catch (e) { return 0; }
+
+        const collectNumbers = (p: NodePayload | NodePayload[] | undefined): any[] => {
+            if (!p) return [];
+            
+            // Handle Capsule Input (Array of Payloads)
+            if (Array.isArray(p)) {
+                return p.flatMap(item => collectNumbers(item));
             }
-            return hydrated;
+            
+            const unwrapped = PayloadUtils.unwrap(p);
+            const hydrated = PayloadUtils.hydrate(unwrapped, math);
+            
+            if (hydrated === null || hydrated === undefined) return [];
+            
+            // Flatten if it's a matrix or array
+            if (typeof hydrated === 'object' && (hydrated as any).isMatrix) {
+                return (hydrated as any).toArray().flat(Infinity);
+            }
+            if (Array.isArray(hydrated)) {
+                return hydrated.flat(Infinity);
+            }
+            return [hydrated];
         };
-        const valA = getVal('in_a');
-        const valB = getVal('in_b');
+
         try {
-            let result;
-            switch (op) {
-                case 'GCD': result = math.gcd(valA, valB); break;
-                case 'LCM': result = math.lcm(valA, valB); break;
-                case 'MOD': result = math.mod(valA, valB); break;
-                case 'IS_PRIME': result = math.isPrime(valA); break;
-                default: result = 0;
+            let result: any;
+            if (op === 'GCD' || op === 'LCM') {
+                const allNumbers = [
+                    ...collectNumbers(inputs['in_a']),
+                    ...collectNumbers(inputs['in_b'])
+                ];
+                if (allNumbers.length === 0) return PayloadUtils.createScalar(0);
+                if (allNumbers.length === 1) {
+                    result = allNumbers[0];
+                } else {
+                    result = op === 'GCD' ? math.gcd(...allNumbers) : math.lcm(...allNumbers);
+                }
+            } else if (op === 'MOD') {
+                const valsA = collectNumbers(inputs['in_a']);
+                const valsB = collectNumbers(inputs['in_b']);
+                const valA = valsA.length > 0 ? valsA[0] : 0;
+                const valB = valsB.length > 0 ? valsB[0] : 1;
+
+                if (Number(valB) === 0) {
+                    return PayloadUtils.createError('Modulo by zero');
+                }
+                
+                result = math.mod(valA, valB);
+            } else if (op === 'ISPRIME') {
+                const valsA = collectNumbers(inputs['in_a']);
+                const primes = valsA.filter(n => math.isPrime(n));
+                return PayloadUtils.createArray(primes);
+            } else {
+                result = 0;
             }
-            if (op === 'IS_PRIME') return PayloadUtils.createBoolean(!!result);
+
             const finalValue = (result as any)?.isBigNumber ? (result as any).toNumber() : result;
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(finalValue), symbol: null, meta: {} };
-        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
+        } catch (e: any) {
+            return PayloadUtils.createError(`${op} Failed: ${e.message}`);
+        }
     },
     'MA-15': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const inputPayload = inputs['in_a'] || inputs['in'];
+        const inputPayload = inputs['in_a'];
         const targetBase = data.base || 'HEX';
         let finalValue = 0;
         if (inputPayload) {
@@ -275,7 +310,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-03_OLD': (node, inputs) => MathEvaluators['MA-03'](node, inputs), // Alias if needed
     'MA-04': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
+        const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.op || 'SIN';
         const angleMode = data.angleMode || 'RAD';
@@ -306,14 +341,14 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     },
     'MA-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
+        const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.op || 'LN';
         const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         try {
             let result;
             if (op === 'LOG10') result = math.log10(val);
-            else if (op === 'LOGN') result = math.log(val, (inputs['in_b'] || inputs['base']) ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_b'] || inputs['base']), math) : 10);
+            else if (op === 'LOGN') result = math.log(val, (inputs['in_b']) ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_b']), math) : 10);
             else result = math.log(val);
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
         } catch (e) { return PayloadUtils.createError('Log Failed'); }
@@ -443,7 +478,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as any;
         const isCustom = data.unit === 'CUSTOM';
         const targetUnit = isCustom ? data.customUnit : (data.unit || 'm');
-        const valPayload = inputs['in_a'] || inputs['in'];
+        const valPayload = inputs['in_a'];
         if (!valPayload) return PayloadUtils.createScalar(0);
         
         try {
@@ -454,24 +489,15 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             if (sourceUnit && sourceUnit !== targetUnit && !isCustom) {
                 try {
                     const result = math.unit(raw, sourceUnit).to(targetUnit);
-                    return {
-                        ...PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit),
-                        meta: { unit: targetUnit }
-                    };
+                    return PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit);
                 } catch (e: any) {
-                    // If both are potentially standard units, this is an incompatibility error
-                    if (e.message?.includes('Units do not match') || e.message?.includes('Unexpected unit')) {
-                        return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
-                    }
-                    // Fallback for non-standard labels if not explicitly caught
+                    // If it was not a custom unit and conversion fails, it's an error.
+                    return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
                 }
             }
             
             // Otherwise just assign the label (Custom or Standard label)
-            return {
-                ...PayloadUtils.createScalar(raw, targetUnit),
-                meta: { unit: targetUnit }
-            };
+            return PayloadUtils.createScalar(raw, targetUnit);
         } catch (e: any) { 
             return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`); 
         }
@@ -479,15 +505,27 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     // TR-02: Base Converter
     'TR-02': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const inputPayload = inputs['in_a'] || inputs['in'];
-        const metaUnit = inputPayload?.meta?.unit?.toLowerCase();
+        const inputPayload = inputs['in_a'];
+        if (!inputPayload) return PayloadUtils.createScalar(0);
+
+        const metaUnit = inputPayload.meta?.unit?.toLowerCase();
         
-        const baseMap: Record<string, number> = { 'bin': 2, 'quat': 4, 'oct': 8, 'dec': 10, 'hex': 16 };
-        const unitMap: Record<number, string> = { 2: 'bin', 4: 'quat', 8: 'oct', 10: 'dec', 16: 'hex' };
+        const baseMap: Record<string, number> = { 'bin': 2, 'quat': 4, 'oct': 8, 'dec': 10, 'duo': 12, 'hex': 16 };
+
+        // Final Whitelist: Allow ONLY if Scalar OR explicit Base Unit
+        const isScalar = inputPayload.type === DataType.Scalar;
+        const hasBaseUnit = !!baseMap[metaUnit || ''];
+        const isArray = inputPayload.type === DataType.Array || inputPayload.type === DataType.Matrix;
+        
+        if (isArray || (!isScalar && !hasBaseUnit)) {
+            return PayloadUtils.createError("Base Conversion only supports scalar or base-prefixed strings.");
+        }
+
+        const unitMap: Record<number, string> = { 2: 'bin', 4: 'quat', 8: 'oct', 10: 'dec', 12: 'duo', 16: 'hex' };
 
         const fromBase = Number(data.fromBase || baseMap[metaUnit!] || 10);
         const toBase = Number(data.toBase || 16);
-        const val = String(PayloadUtils.unwrap(inputPayload || PayloadUtils.createScalar(0)));
+        const val = String(PayloadUtils.unwrap(inputPayload));
         
         try {
             const num = parseInt(val, fromBase);
@@ -506,7 +544,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'Mean';
-        const valPayload = inputs['in_a'] || inputs['in'] || inputs['data'];
+        const valPayload = inputs['in_a'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         let arr: any[] = [];
@@ -532,7 +570,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     // TR-05: Smoothing (2D Spatial Moving Average)
     'TR-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const dataPayload = inputs['data'] || inputs['in_a'] || inputs['in'];
+        const dataPayload = inputs['in_a'];
 
         if (!dataPayload) return PayloadUtils.createError('Missing Input (data)');
 

@@ -84,9 +84,9 @@ export function parseLatexToGraph(latex: string, startPos: { x: number, y: numbe
             const nodeTypeTag = node.mathjs || node.type;
 
             if (nodeTypeTag === 'ConstantNode') {
-                const id = generateNodeId('IO-01');
+                const id = generateNodeId('IN-01');
                 const val = typeof node.value === 'string' ? parseFloat(node.value) : (node.value ?? 0);
-                addNodeTransaction(id, 'IO-01', currentPos, { label: String(val), value: val, type: 'scalar' }, val);
+                addNodeTransaction(id, 'IN-01', currentPos, { label: String(val), value: val, type: 'scalar' }, val);
                 return id;
             }
 
@@ -96,9 +96,9 @@ export function parseLatexToGraph(latex: string, startPos: { x: number, y: numbe
                 if (symbolMap.has(name)) {
                     return symbolMap.get(name)!;
                 }
-                const id = generateNodeId('IO-01');
+                const id = generateNodeId('IN-01');
                 symbolMap.set(name, id);
-                addNodeTransaction(id, 'IO-01', currentPos, { label: name, value: 0, type: 'scalar' }, 0);
+                addNodeTransaction(id, 'IN-01', currentPos, { label: name, value: 0, type: 'scalar' }, 0);
                 return id;
             }
 

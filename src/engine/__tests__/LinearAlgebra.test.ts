@@ -10,10 +10,10 @@ describe('Linear Algebra & Array Nodes', () => {
         initializeNodes();
     });
 
-    test('DT-07 (MatrixTools): QR Decomposition Multi-Output', async () => {
+    test('DT-06 (MatrixTools): QR Decomposition Multi-Output', async () => {
         const node = {
             id: 'n1',
-            type: 'DT-07',
+            type: 'DT-06',
             data: { op: 'QR' } as any,
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
             isInDirtyChain: false,
@@ -21,7 +21,7 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const inputs = {
-            in: PayloadUtils.createArray([
+            in_a: PayloadUtils.createArray([
                 [12, -51, 4],
                 [6, 167, -68],
                 [-4, 24, -41]
@@ -31,12 +31,12 @@ describe('Linear Algebra & Array Nodes', () => {
         const result = await NodeRegistry.evaluate(node as any, inputs);
 
         expect(result.type).toBe(DataType.Object);
-        // multi-output should contain 'Q' and 'R' keys
+        // multi-output should contain 'out_a' (Q) and 'out_b' (R) keys
         const val = result.value as any;
-        expect(val.Q).toBeDefined();
-        expect(val.R).toBeDefined();
-        expect(val.Q.type).toBe(DataType.Array);
-        expect(val.R.type).toBe(DataType.Array);
+        expect(val.out_a).toBeDefined();
+        expect(val.out_b).toBeDefined();
+        expect(val.out_a.type).toBe(DataType.Array);
+        expect(val.out_b.type).toBe(DataType.Array);
     });
 
     test('DT-02 (ArrayExtract): Extract scalar from array', async () => {
@@ -50,8 +50,8 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const inputs = {
-            in: PayloadUtils.createArray([10, 20, 30] as any),
-            index: PayloadUtils.createScalar(2) // 1-based (2nd element is 20)
+            in_a: PayloadUtils.createArray([10, 20, 30] as any),
+            in_b: PayloadUtils.createScalar(2) // 1-based (2nd element is 20)
         };
 
         const result = await NodeRegistry.evaluate(node as any, inputs);
@@ -70,11 +70,11 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const inputs = {
-            in: PayloadUtils.createArray([
+            in_a: PayloadUtils.createArray([
                 [11, 12],
                 [21, 22]
             ] as any),
-            index: PayloadUtils.createArray([2, 1] as any) // Row 2, Col 1 -> 21
+            in_b: PayloadUtils.createArray([2, 1] as any) // Row 2, Col 1 -> 21
         };
 
         const result = await NodeRegistry.evaluate(node as any, inputs);
@@ -93,9 +93,11 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const inputs = {
-            in_0: PayloadUtils.createScalar(10),
-            in_1: PayloadUtils.createScalar(20),
-            in_2: PayloadUtils.createScalar(30)
+            in_a: [
+                PayloadUtils.createScalar(10),
+                PayloadUtils.createScalar(20),
+                PayloadUtils.createScalar(30)
+            ] as any
         };
 
         const result = await NodeRegistry.evaluate(node as any, inputs);
@@ -118,7 +120,7 @@ describe('Linear Algebra & Array Nodes', () => {
         };
 
         const inputs = {
-            in: [
+            in_a: [
                 PayloadUtils.createScalar(10),
                 PayloadUtils.createScalar(20),
                 PayloadUtils.createScalar(30)

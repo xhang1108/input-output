@@ -87,8 +87,8 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     // Separate handles by position
     // Priority: 1. Dynamic handles from data | 2. Definition handles | 3. DEFAULT_HANDLES
     const rawHandles = (data.handles as HandleConfig[]) || definition?.handles || [
-        { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' },
+        { id: 'in_a', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'scalar' },
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' },
     ];
 
     // Apply prop-based handle overrides (Phase 3: Dynamic Shape)
@@ -212,9 +212,9 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                     <svg className="w-full h-full">
                         <line
                             x1="0"
-                            y1={getHandleY(leftHandles, ['in_a', 'in', 'a', 'expr', 'val'])}
+                            y1={getHandleY(leftHandles, ['in_a', 'a'])}
                             x2="100%"
-                            y2={getHandleY(rightHandles, ['out', 'val'])}
+                            y2={getHandleY(rightHandles, ['out_a', 'out', 'val'])}
                             stroke="var(--color-scalar)"
                             strokeWidth="2"
                             strokeDasharray="4 4"
@@ -235,6 +235,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                         <input
                             ref={inputRef}
                             value={title}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => setTitle(e.target.value)}
                             onBlur={handleSubmit}
                             onKeyDown={handleKeyDown}

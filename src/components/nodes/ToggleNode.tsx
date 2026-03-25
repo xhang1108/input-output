@@ -18,7 +18,7 @@ export const ToggleNode = memo((props: NodeProps) => {
     }, [unwrapped]);
 
     const handles = [
-        { id: 'out', type: 'source', position: 'right', variant: 'single', dataType: 'boolean' }
+        { id: 'out_a', type: 'source', position: 'right', variant: 'single', dataType: 'boolean' }
     ];
 
     const nodeData = { ...data, handles };

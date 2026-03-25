@@ -9,7 +9,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     test('MA-12: Should convert decimal to fraction', async () => {
         const node = {
             id: 'test-fraction',
-            type: 'MA-12',
+            type: 'MA-06',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -18,22 +18,22 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const inputs = {
-            in: PayloadUtils.createScalar(0.5)
+            in_a: PayloadUtils.createScalar(0.5)
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = result.value as any;
 
         expect(result.type).toBe(DataType.Object);
-        expect(val.numerator.value).toBe(1);
-        expect(val.denominator.value).toBe(2);
-        expect(val.string.value).toBe('1/2');
+        expect(val.out_b.value).toBe(1);   // numerator
+        expect(val.out_c.value).toBe(2);   // denominator
+        expect(val.out_d.value).toBe('1/2'); // string
     });
 
     test('MA-12: Should handle repeating decimals', async () => {
         const node = {
             id: 'test-fraction-repeat',
-            type: 'MA-12',
+            type: 'MA-06',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -42,21 +42,21 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const inputs = {
-            in: PayloadUtils.createScalar(1 / 3) // 0.333...
+            in_a: PayloadUtils.createScalar(1 / 3) // 0.333...
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = result.value as any;
 
-        expect(val.numerator.value).toBe(1);
-        expect(val.denominator.value).toBe(3);
-        expect(val.string.value).toBe('1/3');
+        expect(val.out_b.value).toBe(1);   // numerator
+        expect(val.out_c.value).toBe(3);   // denominator
+        expect(val.out_d.value).toBe('1/3'); // string
     });
 
     test('MA-12: Should handle strings', async () => {
         const node = {
             id: 'test-fraction-str',
-            type: 'MA-12',
+            type: 'MA-06',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -64,23 +64,23 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             position: { x: 0, y: 0 }
         };
 
-        // Note: IO-04 outputs DataType.String now
+        // Note: IN-04 outputs DataType.String now
         const inputs = {
-            in: PayloadUtils.createString('2.5')
+            in_a: PayloadUtils.createString('2.5')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = result.value as any;
 
-        expect(val.numerator.value).toBe(5);
-        expect(val.denominator.value).toBe(2);
-        expect(val.string.value).toBe('5/2');
+        expect(val.out_b.value).toBe(5);   // numerator
+        expect(val.out_c.value).toBe(2);   // denominator
+        expect(val.out_d.value).toBe('5/2'); // string
     });
 
     test('MA-14: Should perform rounding (Regression)', async () => {
         const node = {
             id: 'test-round',
-            type: 'MA-14',
+            type: 'MA-05',
             data: { precision: 2 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -101,7 +101,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     test('MA-12: Should handle mixed fractions', async () => {
         const node = {
             id: 'test-mixed',
-            type: 'MA-12',
+            type: 'MA-06',
             data: { mixed: true },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -111,22 +111,22 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
 
         const inputs = {
             // 2.5 = 2 1/2
-            in: PayloadUtils.createScalar(2.5)
+            in_a: PayloadUtils.createScalar(2.5)
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = result.value as any;
 
-        expect(val.int.value).toBe(2);
-        expect(val.numerator.value).toBe(1);
-        expect(val.denominator.value).toBe(2);
-        expect(val.string.value).toBe('2 1/2');
+        expect(val.out_a.value).toBe(2);   // int
+        expect(val.out_b.value).toBe(1);   // numerator
+        expect(val.out_c.value).toBe(2);   // denominator
+        expect(val.out_d.value).toBe('2 1/2'); // string
     });
 
     test('MA-12: Should handle mixed fractions with integer result', async () => {
         const node = {
             id: 'test-mixed-int',
-            type: 'MA-12',
+            type: 'MA-06',
             data: { mixed: true },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -135,16 +135,16 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const inputs = {
-            in: PayloadUtils.createScalar(3)
+            in_a: PayloadUtils.createScalar(3)
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = result.value as any;
 
-        expect(val.int.value).toBe(3);
-        expect(val.numerator.value).toBe(0);
-        expect(val.denominator.value).toBe(1);
-        expect(val.string.value).toBe('3');
+        expect(val.out_a.value).toBe(3);   // int
+        expect(val.out_b.value).toBe(0);   // numerator
+        expect(val.out_c.value).toBe(1);   // denominator
+        expect(val.out_d.value).toBe('3'); // string
     });
     
     test('MA-12: Should handle dehydrated BigNumber from Division (Regression)', async () => {
@@ -156,7 +156,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         
         const node = {
             id: 'test-fraction-div',
-            type: 'MA-12',
+            type: 'MA-06',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -165,16 +165,16 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const inputs = {
-            in: divPayload
+            in_a: divPayload
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = result.value as any;
 
         expect(result.type).toBe(DataType.Object);
-        expect(val.numerator.value).toBe(1);
-        expect(val.denominator.value).toBe(3);
-        expect(val.string.value).toBe('1/3');
+        expect(val.out_b.value).toBe(1);   // numerator
+        expect(val.out_c.value).toBe(3);   // denominator
+        expect(val.out_d.value).toBe('1/3'); // string
     });
 
     test('MA-08: Should handle dehydrated BigNumber inputs (Combinatorics Regression)', async () => {
@@ -194,8 +194,8 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         };
 
         const inputs = {
-            n: nPayload,
-            r: rPayload
+            in_a: nPayload,
+            in_b: rPayload
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);

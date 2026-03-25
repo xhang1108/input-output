@@ -49,6 +49,7 @@ export const DifferentialNode = memo((props: NodeProps) => {
                             min={1}
                             max={5}
                             value={order}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => updateNodeData(id, { order: Math.max(1, Math.min(5, Number(e.target.value))) })}
                             className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-12 text-center focus:outline-none focus:border-zinc-500 transition-colors"
                         />

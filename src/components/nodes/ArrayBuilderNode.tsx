@@ -41,8 +41,8 @@ export const ArrayBuilderNode = memo((props: NodeProps) => {
     }, [id, brain, axisMenu]);
 
     const handles: any[] = [
-        { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any' },
-        { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'array' }
+        { id: 'in_a', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any' },
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'array' }
     ];
 
     const nodeData = { ...data, handles };

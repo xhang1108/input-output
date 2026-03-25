@@ -22,7 +22,7 @@ describe('CL-01: Derivative', () => {
         };
 
         const inputs = {
-            'expr': PayloadUtils.createString('x^2')
+            'in_a': PayloadUtils.createString('x^2')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -42,7 +42,7 @@ describe('CL-01: Derivative', () => {
         };
 
         const inputs = {
-            'expr': PayloadUtils.createScalar(5)
+            'in_a': PayloadUtils.createScalar(5)
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -64,7 +64,7 @@ describe('CL-02: Integral', () => {
         };
 
         const inputs = {
-            'expr': PayloadUtils.createString('x')
+            'in_a': PayloadUtils.createString('x')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -84,7 +84,7 @@ describe('CL-02: Integral', () => {
         };
 
         const inputs = {
-            'expr': PayloadUtils.createScalar(1)
+            'in_a': PayloadUtils.createScalar(1)
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -106,7 +106,7 @@ describe('CL-04: Equation Solver', () => {
         };
 
         const inputs = {
-            'in_0': PayloadUtils.createString('x+3=5')
+            'in_a': PayloadUtils.createString('x+3=5')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -126,8 +126,10 @@ describe('CL-04: Equation Solver', () => {
         };
 
         const inputs = {
-            'in_0': PayloadUtils.createString('x=2'),
-            'in_1': PayloadUtils.createString('y=3+x')
+            'in_a': [
+                PayloadUtils.createString('x=2'),
+                PayloadUtils.createString('y=3+x')
+            ] as any
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -147,8 +149,10 @@ describe('CL-04: Equation Solver', () => {
         };
 
         const inputs = {
-            'in_0': PayloadUtils.createString('y=3+x'),
-            'x': { ...PayloadUtils.createScalar(2), meta: { label: 'x' } }
+            'in_a': [
+                PayloadUtils.createString('y=3+x'),
+                { ...PayloadUtils.createScalar(2), meta: { label: 'x' } }
+            ] as any
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -210,7 +214,7 @@ describe('CL-04: Equation Solver', () => {
         };
 
         const inputs = {
-            'in': PayloadUtils.createString('x=2')
+            'in_a': PayloadUtils.createString('x=2')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -230,7 +234,7 @@ describe('CL-04: Equation Solver', () => {
         };
 
         const inputs = {
-            'in': [
+            'in_a': [
                 PayloadUtils.createString('x=2'),
                 PayloadUtils.createString('y=3+x')
             ] as any
@@ -253,7 +257,7 @@ describe('CL-04: Equation Solver', () => {
         };
 
         const inputs = {
-            'in': PayloadUtils.createString('x+y=5')
+            'in_a': PayloadUtils.createString('x+y=5')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);
@@ -273,7 +277,7 @@ describe('CL-04: Equation Solver', () => {
         };
 
         const inputs = {
-            'in': PayloadUtils.createString('x+y=5')
+            'in_a': PayloadUtils.createString('x+y=5')
         };
 
         const resultX = await NodeRegistry.evaluate(nodeX, inputs);
@@ -288,7 +292,7 @@ describe('CL-04: Equation Solver', () => {
 
     test('should resolve system x=2, y=3+x for both x and y', async () => {
         const inputs = {
-            'in': [
+            'in_a': [
                 PayloadUtils.createString('x=2'),
                 PayloadUtils.createString('y=3+x')
             ] as any
@@ -321,9 +325,11 @@ describe('CL-04: Equation Solver', () => {
         });
 
         const inputs = {
-            'in_0': PayloadUtils.createString('x+y+z=6'),
-            'in_1': PayloadUtils.createString('2*x-y+z=3'),
-            'in_2': PayloadUtils.createString('x+2*y-z=2'),
+            'in_a': [
+                PayloadUtils.createString('x+y+z=6'),
+                PayloadUtils.createString('2*x-y+z=3'),
+                PayloadUtils.createString('x+2*y-z=2')
+            ] as any
         };
 
         const rx = await NodeRegistry.evaluate(mkNode('sys3-x', 'x'), inputs);
@@ -343,7 +349,7 @@ describe('CL-04: Equation Solver', () => {
             id: 'quad-roots', type: 'CL-04', data: { variable: 'x' },
             value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
         };
-        const inputs = { 'in_0': PayloadUtils.createString('x^2+x-6=0') };
+        const inputs = { 'in_a': PayloadUtils.createString('x^2+x-6=0') };
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = PayloadUtils.unwrap(result) as any[];
         const nums = val.map(Number).sort((a, b) => a - b);
@@ -355,7 +361,7 @@ describe('CL-04: Equation Solver', () => {
             id: 'unicode-quad', type: 'CL-04', data: { variable: 'x' },
             value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
         };
-        const inputs = { 'in_0': PayloadUtils.createString('x² + x - 6 = 0') };
+        const inputs = { 'in_a': PayloadUtils.createString('x² + x - 6 = 0') };
         const result = await NodeRegistry.evaluate(node, inputs);
         expect(result.type).toBe(DataType.Error);
         expect(result.meta?.error).toContain('Unicode detected');
@@ -372,8 +378,10 @@ describe('CL-04: Equation Solver', () => {
         });
 
         const inputs = {
-            'in_0': PayloadUtils.createString('2*a+b=10'),
-            'in_1': PayloadUtils.createString('b=4'),
+            'in_a': [
+                PayloadUtils.createString('2*a+b=10'),
+                PayloadUtils.createString('b=4')
+            ] as any
         };
 
         const ra = await NodeRegistry.evaluate(mkNode('sub-a', 'a'), inputs);
@@ -389,7 +397,7 @@ describe('CL-04: Equation Solver', () => {
             id: 'redundant-root', type: 'CL-04', data: { variable: 'x' },
             value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
         };
-        const inputs = { 'in': PayloadUtils.createString('(x-2)^2=0') };
+        const inputs = { 'in_a': PayloadUtils.createString('(x-2)^2=0') };
         const result = await NodeRegistry.evaluate(node, inputs);
         expect(PayloadUtils.unwrap(result)).toEqual([2]);
     });
@@ -399,7 +407,7 @@ describe('CL-04: Equation Solver', () => {
             id: 'transcendental-sin', type: 'CL-04', data: { variable: 'x' },
             value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
         };
-        const inputs = { 'in': PayloadUtils.createString('sin(x)=0') };
+        const inputs = { 'in_a': PayloadUtils.createString('sin(x)=0') };
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = PayloadUtils.unwrap(result) as number[];
         expect(val.length).toBeLessThanOrEqual(6);
@@ -418,7 +426,7 @@ describe('CL-04: Equation Solver', () => {
         // swap order: 2.00000001 is closer to 0 than 2? No, 2 is closer.
         // Wait, |2.00000001| > |2|. 
         // If n1=2.00000001 comes first, it becomes the representative.
-        const inputsComplex = { 'in': [PayloadUtils.createString('x=2.00000001'), PayloadUtils.createString('x=2')] as any };
+        const inputsComplex = { 'in_a': [PayloadUtils.createString('x=2.00000001'), PayloadUtils.createString('x=2')] as any };
         const resComplex = await NodeRegistry.evaluate(node, inputsComplex);
         const val = PayloadUtils.unwrap(resComplex) as number[];
         expect(val.length).toBe(1);
@@ -430,7 +438,7 @@ describe('CL-04: Equation Solver', () => {
             id: 'exp-approx', type: 'CL-04', data: { variable: 'x' },
             value: undefined, selected: false, isInDirtyChain: false, position: { x: 0, y: 0 }
         };
-        const inputs = { 'in': PayloadUtils.createString('e^x=5') };
+        const inputs = { 'in_a': PayloadUtils.createString('e^x=5') };
         const result = await NodeRegistry.evaluate(node, inputs);
         const val = PayloadUtils.unwrap(result) as number[];
         expect(val[0]).toBeCloseTo(Math.log(5), 6);
@@ -452,7 +460,7 @@ describe('CL-05: ODE Solver', () => {
         };
 
         const inputs = {
-            'expr': PayloadUtils.createString('-y')
+            'in_a': PayloadUtils.createString('-y')
         };
 
         const result = await NodeRegistry.evaluate(node, inputs);

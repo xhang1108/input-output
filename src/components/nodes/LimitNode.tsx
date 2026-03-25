@@ -67,6 +67,7 @@ export const LimitNode = memo((props: NodeProps) => {
                         <input
                             className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] flex-1 text-center focus:outline-none focus:border-zinc-500 transition-colors"
                             value={approach}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => updateNodeData(id, { approach: e.target.value })}
                             placeholder="0"
                         />

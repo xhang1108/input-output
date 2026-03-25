@@ -26,9 +26,9 @@ describe('Logic Switch & Split (LG-02/03)', () => {
     describe('LG-02 Switch', () => {
         it('should switch based on scalar boolean', async () => {
             const inputs = {
-                condition: PayloadUtils.createBoolean(true),
-                in_true: PayloadUtils.createScalar(1),
-                in_false: PayloadUtils.createScalar(0)
+                in_a: PayloadUtils.createBoolean(true),
+                in_b: PayloadUtils.createScalar(1),
+                in_c: PayloadUtils.createScalar(0)
             };
             const res = await evaluate('LG-02', inputs);
             expect(res.value).toBe(1);
@@ -45,9 +45,9 @@ describe('Logic Switch & Split (LG-02/03)', () => {
             } as NodePayload;
 
             let inputs = {
-                condition: zeroUnitPayload,
-                in_true: PayloadUtils.createString('TruePath'),
-                in_false: PayloadUtils.createString('FalsePath')
+                in_a: zeroUnitPayload,
+                in_b: PayloadUtils.createString('TruePath'),
+                in_c: PayloadUtils.createString('FalsePath')
             };
             let res = await evaluate('LG-02', inputs);
             expect(res.value).toBe('FalsePath');
@@ -59,7 +59,7 @@ describe('Logic Switch & Split (LG-02/03)', () => {
                 symbol: null,
                 meta: { unit: 'm' }
             } as NodePayload;
-            inputs = { ...inputs, condition: fiveUnitPayload };
+            inputs = { ...inputs, in_a: fiveUnitPayload };
             res = await evaluate('LG-02', inputs);
             expect(res.value).toBe('TruePath');
         });
@@ -68,34 +68,34 @@ describe('Logic Switch & Split (LG-02/03)', () => {
     describe('LG-03 Logic Split', () => {
         it('should split based on scalar boolean', async () => {
             const inputs = {
-                condition: PayloadUtils.createBoolean(true),
-                data: PayloadUtils.createScalar(42)
+                in_a: PayloadUtils.createBoolean(true),
+                in_b: PayloadUtils.createScalar(42)
             };
             const res = await evaluate('LG-03', inputs);
             const val = res.value as Record<string, NodePayload>;
-            expect(val.out_true).not.toBeNull();
-            expect(val.out_false).toBeNull();
-            expect(val.out_true.value).toBe(42);
+            expect(val.out_a).not.toBeNull();
+            expect(val.out_b).toBeNull();
+            expect(val.out_a.value).toBe(42);
         });
 
         it('should handle Unit truthiness correctly', async () => {
-            // Case 1: 0m (Should be False -> out_true=null, out_false=data)
+            // Case 1: 0m (Should be False -> out_a=null, out_b=data)
             const inputs = {
-                condition: PayloadUtils.createScalar(0, 'm'),
-                data: PayloadUtils.createString('Data')
+                in_a: PayloadUtils.createScalar(0, 'm'),
+                in_b: PayloadUtils.createString('Data')
             };
             let res = await evaluate('LG-03', inputs);
             let val = res.value as Record<string, NodePayload>;
-            expect(val.out_true).toBeNull();
-            expect(val.out_false).not.toBeNull();
+            expect(val.out_a).toBeNull();
+            expect(val.out_b).not.toBeNull();
 
-            // Case 2: 5m (Should be True -> out_true=data, out_false=null)
-            inputs.condition = PayloadUtils.createScalar(5, 'm');
+            // Case 2: 5m (Should be True -> out_a=data, out_b=null)
+            inputs.in_a = PayloadUtils.createScalar(5, 'm');
             res = await evaluate('LG-03', inputs);
             val = res.value as Record<string, NodePayload>;
-            expect(val.out_true).not.toBeNull();
-            expect(val.out_false).toBeNull();
-            expect(val.out_true.value).toBe('Data');
+            expect(val.out_a).not.toBeNull();
+            expect(val.out_b).toBeNull();
+            expect(val.out_a.value).toBe('Data');
         });
     });
 });

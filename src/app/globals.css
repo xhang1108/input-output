@@ -81,6 +81,8 @@ body {
   --color-color:      hsl(50, 100%, 55%);
   --color-any:        hsl(0, 0%, 100%);
   --color-any-rgb:    255, 255, 255;
+  --color-array:      hsl(258, 65%, 65%);
+  --color-array-rgb:  158, 107, 224;
 
   --glow-any:         0 0 8px rgba(var(--color-any-rgb), 0.4);
   --glow-scalar:      0 0 4px rgba(var(--color-scalar-rgb), 0.2);
@@ -138,6 +140,11 @@ body {
 [data-handle-type="any"],
 .handle-any {
     background-color: var(--color-any) !important;
+}
+
+[data-handle-type="array"],
+.handle-array {
+    background-color: var(--color-array) !important;
 }
 
 :root {

@@ -15,9 +15,6 @@ export const ODESolverNode = memo((props: NodeProps) => {
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const { updateNodeData } = useReactFlow();
 
-
-
-
     const method = (data.method as string) || 'RK4';
     const t0 = data.t0 !== undefined ? Number(data.t0) : 0;
     const tEnd = data.tEnd !== undefined ? Number(data.tEnd) : 10;
@@ -27,7 +24,7 @@ export const ODESolverNode = memo((props: NodeProps) => {
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
         updateNodeData(id, { method: item.id });
         closeMenu();
-    }, [id, updateNodeData]);
+    }, [id, updateNodeData, closeMenu]);
 
 
     const currentLabel = METHOD_ITEMS.find(i => i.id === method)?.label || method;
@@ -62,6 +59,7 @@ export const ODESolverNode = memo((props: NodeProps) => {
                             <input
                                 type="number"
                                 value={t0}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateNodeData(id, { t0: Number(e.target.value) })}
                                 className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-full text-center focus:outline-none focus:border-zinc-500"
                             />
@@ -71,6 +69,7 @@ export const ODESolverNode = memo((props: NodeProps) => {
                             <input
                                 type="number"
                                 value={tEnd}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateNodeData(id, { tEnd: Number(e.target.value) })}
                                 className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-full text-center focus:outline-none focus:border-zinc-500"
                             />
@@ -80,6 +79,7 @@ export const ODESolverNode = memo((props: NodeProps) => {
                             <input
                                 type="number"
                                 value={y0}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateNodeData(id, { y0: Number(e.target.value) })}
                                 className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-full text-center focus:outline-none focus:border-zinc-500"
                             />
@@ -90,6 +90,7 @@ export const ODESolverNode = memo((props: NodeProps) => {
                                 type="number"
                                 step="0.001"
                                 value={stepSize}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateNodeData(id, { stepSize: Number(e.target.value) })}
                                 className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-full text-center focus:outline-none focus:border-zinc-500"
                             />

@@ -9,7 +9,7 @@ import { NodeOpSelect } from './NodeOpSelect';
 import { CategorizedMenuItem } from '../ui/CategorizedMenu';
 
 const HANDLES: HandleConfig[] = [
-    { id: 'val', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+    { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
 ];
 
 export const ConstantNode = memo((props: NodeProps) => {

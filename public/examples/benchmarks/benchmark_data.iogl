@@ -12,18 +12,18 @@ N1:io:num @0,400 = "1"
 N5:io:num @0,500 = "5"
 N9:io:num @0,600 = "9"
 Builder:data:builder @300,450
-N1 -- Builder:in
-N5 -- Builder:in
-N9 -- Builder:in
+N1 -- Builder:in_a
+N5 -- Builder:in_a
+N9 -- Builder:in_a
 
 Ext:data:extract @600,450 = "1"
-Builder -- Ext:in
+Builder -- Ext:in_a
 Idx2:io:num @450,550 = "2"
-Idx2 -- Ext:index
+Idx2 -- Ext:in_b
 
 L1:io:mat @0,700 = "[3, 1, 2]"
 Sort:data:list @300,700 = "sort"
-L1 -- Sort:in
+L1 -- Sort:in_a
 
 Set1:io:mat @0,850 = "[1, 2]"
 Set2:io:mat @0,950 = "[2, 3]"
@@ -37,8 +37,8 @@ Res_Ext:output:res @900,450
 Res_Sort:output:res @600,700
 Res_Union:output:res @600,900
 
-InvDet -- Res_Det:in
-Inv -- Res_Inv:in
-Ext -- Res_Ext:in
-Sort -- Res_Sort:in
-Union -- Res_Union:in
+InvDet -- Res_Det:in_a
+Inv -- Res_Inv:in_a
+Ext -- Res_Ext:in_a
+Sort -- Res_Sort:in_a
+Union -- Res_Union:in_a

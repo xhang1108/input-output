@@ -6,8 +6,8 @@ import { NodeOpSelect } from './NodeOpSelect';
 
 function getHandlesForShape(shape: string) {
     const outputs = [
-        { id: 'area', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Area' },
-        { id: 'perimeter', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Perim' }
+        { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Area' },
+        { id: 'out_b', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar', label: 'Perim' }
     ];
 
     if (shape === 'Circle') {

@@ -443,7 +443,7 @@ export const PlotNode = memo((props: NodeProps) => {
             data={{
                 ...data,
                 handles: [
-                    { id: 'in', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any', color: 'var(--color-any)' }
+                    { id: 'in_a', type: 'target', position: Position.Left, variant: 'capsule', dataType: 'any', color: 'var(--color-any)' }
                 ]
             }}
         >
@@ -531,6 +531,7 @@ export const PlotNode = memo((props: NodeProps) => {
                             type="number"
                             value={(data.minX ?? -10) as string | number}
                             className="bg-transparent outline-none text-zinc-300 w-full text-center"
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                                 brain.applyTransaction({
                                     type: 'UPDATE_NODE_DATA',
@@ -545,6 +546,7 @@ export const PlotNode = memo((props: NodeProps) => {
                             type="number"
                             value={(data.maxX ?? 10) as string | number}
                             className="bg-transparent outline-none text-zinc-300 w-full text-center"
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                                 brain.applyTransaction({
                                     type: 'UPDATE_NODE_DATA',
@@ -559,6 +561,7 @@ export const PlotNode = memo((props: NodeProps) => {
                             type="number"
                             value={(data.points ?? 100) as string | number}
                             className="bg-transparent outline-none text-zinc-300 w-full text-center"
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                                 brain.applyTransaction({
                                     type: 'UPDATE_NODE_DATA',

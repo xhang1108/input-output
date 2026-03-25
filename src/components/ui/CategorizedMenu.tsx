@@ -90,16 +90,35 @@ export function CategorizedMenu({
         }
 
         // Search active: Score items for relevance
+        const searchNormalized = searchLower.replace(/[^a-z0-9]/g, '');
+
         const scored = items.map(item => {
             let score = 0;
             const labelLower = item.label.toLowerCase();
+            const idLower = item.id.toLowerCase();
+            const idNormalized = idLower.replace(/[^a-z0-9]/g, '');
             
-            // 1. Label Match (Primary)
-            if (labelLower === searchLower) score = 100;
-            else if (labelLower.startsWith(searchLower)) score = 80;
-            else if (labelLower.includes(searchLower)) score = 40;
+            // 1. ID Match (Code Search, e.g. "cl05" -> "CL-05")
+            // No hardcoding, handles various formats via normalization
+            const isNumericSearch = /^\d+$/.test(searchNormalized);
+            if (idLower === searchLower || (searchNormalized && idNormalized === searchNormalized)) {
+                score = 110;
+            } else if (idLower.startsWith(searchLower) || (searchNormalized && idNormalized.startsWith(searchNormalized))) {
+                score = 95;
+            } else if (searchNormalized && isNumericSearch && idNormalized.endsWith(searchNormalized)) {
+                // Suffix match for numeric codes (e.g. "05" matches "CL-05")
+                score = 90;
+            }
             
-            // 2. Alias Match (Secondary)
+            // 2. Label Match (Primary)
+            let labelScore = 0;
+            if (labelLower === searchLower) labelScore = 100;
+            else if (labelLower.startsWith(searchLower)) labelScore = 80;
+            else if (labelLower.includes(searchLower)) labelScore = 40;
+            
+            score = Math.max(score, labelScore);
+            
+            // 3. Alias Match (Secondary)
             const aliasMatch = item.aliases?.some(a => a.toLowerCase() === searchLower);
             const aliasStart = item.aliases?.some(a => a.toLowerCase().startsWith(searchLower));
             const aliasInclude = item.aliases?.some(a => a.toLowerCase().includes(searchLower));
@@ -404,6 +423,7 @@ export function CategorizedMenu({
                                 className="bg-transparent text-[10px] text-zinc-200 outline-none w-full placeholder-zinc-700 font-medium"
                                 placeholder={placeholder}
                                 value={search}
+                                onFocus={(e) => e.target.select()}
                                 onChange={e => setSearch(e.target.value)}
                                 onKeyDown={handleKeyDown}
                             />
@@ -429,7 +449,7 @@ export function CategorizedMenu({
                             {filteredItems.map((item) => {
                                 const globalIndex = filteredItems.indexOf(item);
                                 const isSelected = globalIndex === selectedIndex;
-                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} inputRef={inputRef} />;
+                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} search={search} inputRef={inputRef} />;
                             })}
                         </div>
                     ) : menuLayout === 'horizontal' ? (
@@ -454,7 +474,7 @@ export function CategorizedMenu({
                                             {category.items.map((item) => {
                                                 const globalIndex = filteredItems.indexOf(item);
                                                 const isSelected = globalIndex === selectedIndex;
-                                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} inputRef={inputRef} />;
+                                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} search={search} inputRef={inputRef} />;
                                             })}
                                         </div>
                                     </div>
@@ -481,7 +501,7 @@ export function CategorizedMenu({
                                             {category.items.map((item) => {
                                                 const globalIndex = filteredItems.indexOf(item);
                                                 const isSelected = globalIndex === selectedIndex;
-                                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} inputRef={inputRef} />;
+                                                return <MenuItem key={item.id} item={item} isSelected={isSelected} globalIndex={globalIndex} onSelect={onSelect} onClose={onClose} setSelectedIndex={setSelectedIndex} setSearch={setSearch} search={search} inputRef={inputRef} />;
                                             })}
                                         </div>
                                     </div>
@@ -505,10 +525,25 @@ interface MenuItemProps {
     onClose: () => void;
     setSelectedIndex: (index: number) => void;
     setSearch: (search: string) => void;
+    search: string;
     inputRef: React.RefObject<HTMLInputElement | null>;
 }
 
-function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelectedIndex, setSearch, inputRef }: MenuItemProps) {
+function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelectedIndex, setSearch, search, inputRef }: MenuItemProps) {
+    const renderHighlighted = (text: string, query: string) => {
+        if (!query.trim()) return text;
+        const parts = text.split(new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
+        return (
+            <span>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === query.toLowerCase()
+                        ? <span key={i} className="text-primary-light font-bold underline underline-offset-2 decoration-1">{part}</span>
+                        : part
+                )}
+            </span>
+        );
+    };
+
     return (
         <button
             key={`${item.category}-${item.id}-${item.label}`}
@@ -533,7 +568,12 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
         >
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 {item.icon && <span className={isSelected ? 'opacity-100' : 'opacity-40'}>{item.icon}</span>}
-                <span className="truncate">{item.label}</span>
+                <div className="flex items-baseline justify-between flex-1 min-w-0 gap-2">
+                    <span className="truncate">{renderHighlighted(item.label, search)}</span>
+                    <span className={`text-[9px] font-mono opacity-40 shrink-0 ${isSelected ? 'text-white' : 'text-zinc-500'}`}>
+                        {renderHighlighted(item.id.includes(':') ? item.id.split(':')[0] : item.id, search)}
+                    </span>
+                </div>
             </div>
         </button>
     );
