@@ -74,10 +74,8 @@ export class BrainWorkerProxy {
 
     private spawnWorker() {
         try {
-            const workerUrl = new URL('./brain.worker.ts', import.meta.url);
-
             this.worker = new Worker(
-                workerUrl,
+                new URL('./brain.worker.ts', import.meta.url),
                 { type: 'module' }
             );
 

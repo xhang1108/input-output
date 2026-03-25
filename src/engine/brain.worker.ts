@@ -330,88 +330,99 @@ function respond(msg: WorkerResponse) {
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-    const msg = event.data;
-    console.log('[Worker] Received message:', msg.type, 'msgId:', (msg as any).msgId);
-    if ('msgId' in msg && msg.msgId <= lastProcessedMsgId) {
-        return;
-    }
-    if ('msgId' in msg) {
-        lastProcessedMsgId = msg.msgId;
-    }
-
-    switch (msg.type) {
-        case 'INIT': {
-            NodeRegistry.initializeNodes();
-            math = create(all, msg.config);
-            respond({ type: 'READY' });
-            break;
+    try {
+        const msg = event.data;
+        console.log('[Worker] Received message:', msg.type, 'msgId:', (msg as any).msgId);
+        if ('msgId' in msg && msg.msgId <= lastProcessedMsgId) {
+            return;
+        }
+        if ('msgId' in msg) {
+            lastProcessedMsgId = msg.msgId;
         }
 
-        case 'UPDATE_CONFIG': {
-            math = create(all, msg.config);
-            // Optionally, we could re-trigger evaluation of all dirty nodes here,
-            // but usually the proxy will follow up with an EVAL if needed.
-            respond({ type: 'READY' });
-            break;
-        }
-
-        case 'SYNC_GRAPH': {
-            loadSnapshot(msg.snapshot);
-            respond({ type: 'READY' });
-            break;
-        }
-
-        case 'EVAL': {
-            try {
-                applyPatch(msg.patches);
-                const patches = await computeDirtyChainNodes();
-                respond({ type: 'RESULT', epoch: msg.epoch, patches });
-            } catch (error) {
-                const errMsg = error instanceof Error ? error.message : String(error);
-                respond({ type: 'ERROR', epoch: msg.epoch, error: errMsg });
+        switch (msg.type) {
+            case 'INIT': {
+                try {
+                    NodeRegistry.initializeNodes();
+                    math = create(all, msg.config);
+                    respond({ type: 'READY' });
+                } catch (e: any) {
+                    respond({ type: 'ERROR', epoch: 0, error: 'INIT Error: ' + (e.stack || e.message || String(e)) });
+                }
+                break;
             }
-            break;
-        }
 
-        case 'SYNC_AND_EVAL': {
-            try {
-                // 1. Full graph replacement
+            case 'UPDATE_CONFIG': {
+                math = create(all, msg.config);
+                respond({ type: 'READY' });
+                break;
+            }
+
+            case 'SYNC_GRAPH': {
                 loadSnapshot(msg.snapshot);
-                // 2. Mark specified nodes dirty
-                for (const id of msg.dirtyChainNodeIds) {
-                    const node = nodes.get(id);
-                    if (node) node.isInDirtyChain = true;
-                }
-                // 3. Compute
-                const patches = await computeDirtyChainNodes();
-                respond({ type: 'RESULT', epoch: msg.epoch, patches });
-            } catch (error) {
-                const errMsg = error instanceof Error ? error.message : String(error);
-                respond({ type: 'ERROR', epoch: msg.epoch, error: errMsg });
+                respond({ type: 'READY' });
+                break;
             }
-            break;
-        }
 
-        case 'CLEAR_STATE': {
-            clearState();
-            respond({ type: 'READY' });
-            break;
-        }
-
-        case 'HEALTH_CHECK': {
-            const sampleHashes: Record<string, string> = {};
-            if (msg.sampleNodeIds) {
-                for (const id of msg.sampleNodeIds) {
-                    sampleHashes[id] = hashNodeValue(id);
+            case 'EVAL': {
+                try {
+                    applyPatch(msg.patches);
+                    const patches = await computeDirtyChainNodes();
+                    respond({ type: 'RESULT', epoch: msg.epoch, patches });
+                } catch (error) {
+                    const errMsg = error instanceof Error ? error.stack || error.message : String(error);
+                    respond({ type: 'ERROR', epoch: msg.epoch, error: 'EVAL Error: ' + errMsg });
                 }
+                break;
             }
-            respond({
-                type: 'HEALTH',
-                nodeCount: nodes.size,
-                edgeCount: edges.length,
-                sampleHashes,
-            });
-            break;
+
+            case 'SYNC_AND_EVAL': {
+                try {
+                    loadSnapshot(msg.snapshot);
+                    for (const id of msg.dirtyChainNodeIds) {
+                        const node = nodes.get(id);
+                        if (node) node.isInDirtyChain = true;
+                    }
+                    const patches = await computeDirtyChainNodes();
+                    respond({ type: 'RESULT', epoch: msg.epoch, patches });
+                } catch (error) {
+                    const errMsg = error instanceof Error ? error.stack || error.message : String(error);
+                    respond({ type: 'ERROR', epoch: msg.epoch, error: 'SYNC_AND_EVAL Error: ' + errMsg });
+                }
+                break;
+            }
+
+            case 'CLEAR_STATE': {
+                clearState();
+                respond({ type: 'READY' });
+                break;
+            }
+
+            case 'HEALTH_CHECK': {
+                const sampleHashes: Record<string, string> = {};
+                if (msg.sampleNodeIds) {
+                    for (const id of msg.sampleNodeIds) {
+                        sampleHashes[id] = hashNodeValue(id);
+                    }
+                }
+                respond({
+                    type: 'HEALTH',
+                    nodeCount: nodes.size,
+                    edgeCount: edges.length,
+                    sampleHashes,
+                });
+                break;
+            }
         }
+    } catch (globalError: any) {
+        respond({ type: 'ERROR', epoch: 0, error: 'Fatal Worker Error: ' + (globalError.stack || globalError.message || String(globalError)) });
     }
 };
+
+self.addEventListener('unhandledrejection', (event) => {
+    respond({ type: 'ERROR', epoch: 0, error: 'Unhandled Promise Rejection: ' + (event.reason?.stack || event.reason?.message || String(event.reason)) });
+});
+
+self.addEventListener('error', (event) => {
+    respond({ type: 'ERROR', epoch: 0, error: `Global Sync Error: ${event.message} at ${event.filename}:${event.lineno}` });
+});
