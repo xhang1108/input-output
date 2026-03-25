@@ -2,6 +2,7 @@ import { DataType } from '../../../../types/payload';
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NodeEvaluator } from '../../../NodeRegistry';
+import { ColorUtils } from '../../../../utils/ColorUtils';
 
 export const IOEvaluators: Record<string, NodeEvaluator> = {
     'IN-01': (node) => {
@@ -119,117 +120,16 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IN-03': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
-        const cachedVal = PayloadUtils.unwrap(node.value);
-
-        let hex = '#3b82f6';
-        let rNorm = 0.231, gNorm = 0.510, bNorm = 0.965; // Default blue
-
-        const extract = (val: any) => {
-            if (val && typeof val === 'object') {
-                if (val.hex) hex = val.hex;
-                if (Array.isArray(val.vec3)) [rNorm, gNorm, bNorm] = val.vec3;
-            } else if (typeof val === 'string' && (val.startsWith('#') || val.length === 6)) {
-                hex = val.startsWith('#') ? val : '#' + val;
-                rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
-                gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
-                bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
-            }
-        };
-
-        if (rawVal) extract(rawVal);
-        else if (cachedVal) extract(cachedVal);
-
-        const depth = data.depth as string || '8bit';
-        const scaler = depth === '10bit' ? 1023 : depth === '12bit' ? 4095 : 255;
-
-        const rOut = Math.round(rNorm * scaler);
-        const gOut = Math.round(gNorm * scaler);
-        const bOut = Math.round(bNorm * scaler);
-
-        return {
-            type: DataType.Color,
-            value: {
-                hex: hex.replace('#', ''),
-                rgb: [rOut, gOut, bOut],
-                vec3: [rNorm, gNorm, bNorm]
-            },
-            symbol: null,
-            meta: {
-                role: 'color',
-                handleMeta: {
-                hex: { role: 'color', unit: 'hex' },
-                    rgb: { role: 'color', unit: 'rgb' },
-                    vec3: { role: 'color', unit: 'vec3' }
-                }
-            }
-        };
+        const rawValue = data.value ?? data.val;
+        
+        // 💡 Priority: Static UI Value (data.value) -> Stale Cache (node.value) -> Default Blue
+        const source = rawValue ?? node.value ?? '#3b82f6';
+        
+        const depth = (data.depth as string) || '8bit';
+        return ColorUtils.standardize(source, depth);
     },
-    'TR-07': (node, inputs) => {
-        const payload = inputs['in'] || Object.values(inputs)[0];
-        if (!payload) return PayloadUtils.createError('No input');
-
-        const val = PayloadUtils.unwrap(payload);
-
-        if (val && typeof val === 'object' && !Array.isArray(val) && 'hex' in val) {
-            return payload;
-        }
-
-        let hex = '#000000';
-        let r = 0, g = 0, b = 0;
-
-        if (typeof val === 'string' && (val.startsWith('#') || val.length === 6)) {
-            hex = val.startsWith('#') ? val : '#' + val;
-            r = parseInt(hex.slice(1, 3), 16) || 0;
-            g = parseInt(hex.slice(3, 5), 16) || 0;
-            b = parseInt(hex.slice(5, 7), 16) || 0;
-        } else if (Array.isArray(val) && val.length >= 3) {
-            let vr = 0, vg = 0, vb = 0;
-            let fr = 0, fg = 0, fb = 0;
-
-            const depth = node.data?.depth || '8bit';
-            const unit = payload.meta?.unit;
-
-            const applyScale = (div: number) => {
-                vr = (val as number[])[0] / div;
-                vg = (val as number[])[1] / div;
-                vb = (val as number[])[2] / div;
-                fr = Math.round(vr * 255);
-                fg = Math.round(vg * 255);
-                fb = Math.round(vb * 255);
-            };
-
-            if (unit === 'vec3') applyScale(1);
-            else if (depth === '10bit') applyScale(1023);
-            else if (depth === '12bit') applyScale(4095);
-            else applyScale(255);
-
-            const toHex = (c: number) => Math.max(0, Math.min(255, c)).toString(16).padStart(2, '0');
-            hex = `#${toHex(fr)}${toHex(fg)}${toHex(fb)}`;
-
-            return {
-                type: DataType.Array,
-                value: {
-                    hex,
-                    rgb: [fr, fg, fb],
-                    vec3: [vr, vg, vb]
-                },
-                symbol: null,
-                meta: {}
-            };
-        }
-
-        return {
-            type: DataType.Object,
-            value: {
-                hex,
-                rgb: [r, g, b],
-                vec3: [Number((r / 255).toFixed(3)), Number((g / 255).toFixed(3)), Number((b / 255).toFixed(3))]
-            },
-            symbol: null,
-            meta: {}
-        };
-    },
+    // TR-07 is now redundant and has been merged into IN-03.
+    // Logic extracted to ColorUtils.ts for better reuse.
     'UT-03': (node, inputs) => {
         return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createArray([]);
     },
