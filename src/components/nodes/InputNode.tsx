@@ -17,8 +17,13 @@ export const InputNode = memo((props: NodeProps) => {
     }, [unwrappedValue, isFocused]);
 
     const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setLocalValue(e.target.value);
-        const val = parseFloat(e.target.value);
+        const valStr = e.target.value;
+        setLocalValue(valStr);
+
+        // Allow entering leading minus sign or empty string without immediate Brain sync
+        if (valStr === '' || valStr === '-') return;
+
+        const val = parseFloat(valStr);
         if (!isNaN(val)) brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: val } } });
     }, [id, brain]);
 
@@ -50,7 +55,10 @@ export const InputNode = memo((props: NodeProps) => {
                         placeholder="Text..."
                         value={localValue}
                         onChange={handleStringChange}
-                        onFocus={() => setIsFocused(true)}
+                        onFocus={(e) => {
+                            setIsFocused(true);
+                            e.target.select();
+                        }}
                         onBlur={() => setIsFocused(false)}
                         onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={handleKeyDown}
@@ -63,7 +71,10 @@ export const InputNode = memo((props: NodeProps) => {
                         placeholder="0.0"
                         value={localValue}
                         onChange={handleNumberChange}
-                        onFocus={() => setIsFocused(true)}
+                        onFocus={(e) => {
+                            setIsFocused(true);
+                            e.target.select();
+                        }}
                         onBlur={() => setIsFocused(false)}
                         onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={handleKeyDown}

@@ -49,12 +49,15 @@ function NumberField({ param, value, nodeId, onChange }: FieldProps) {
                 max={param.max}
                 step={param.step ?? 'any'}
                 value={local}
+                onFocus={(e) => {
+                    isFocused.current = true;
+                    e.target.select();
+                }}
                 onChange={e => {
                     setLocal(e.target.value);
                     const v = parseFloat(e.target.value);
                     if (!isNaN(v)) onChange(param.id, v);
                 }}
-                onFocus={() => { isFocused.current = true; }}
                 onBlur={() => {
                     isFocused.current = false;
                     // Re-sync to stored value on blur to correct any invalid input
@@ -87,11 +90,14 @@ function StringField({ param, value, nodeId, onChange }: FieldProps) {
             <input
                 type="text"
                 value={local}
+                onFocus={(e) => {
+                    isFocused.current = true;
+                    e.target.select();
+                }}
                 onChange={e => {
                     setLocal(e.target.value);
                     onChange(param.id, e.target.value);
                 }}
-                onFocus={() => { isFocused.current = true; }}
                 onBlur={() => { isFocused.current = false; }}
                 onMouseDown={e => e.stopPropagation()}
                 className={inputCls}
@@ -160,7 +166,10 @@ function ColorField({ param, value, nodeId, onChange }: FieldProps) {
                         setLocal(e.target.value);
                         onChange(param.id, e.target.value);
                     }}
-                    onFocus={() => { isFocused.current = true; }}
+                    onFocus={(e) => {
+                        isFocused.current = true;
+                        e.target.select();
+                    }}
                     onBlur={() => { isFocused.current = false; }}
                     onMouseDown={e => e.stopPropagation()}
                     className="w-8 h-7 rounded border border-border-dim cursor-pointer bg-surface-base p-0.5"
@@ -187,11 +196,14 @@ function TextareaField({ param, value, nodeId, onChange }: FieldProps) {
             <textarea
                 value={local}
                 rows={8}
+                onFocus={(e) => {
+                    isFocused.current = true;
+                    e.target.select();
+                }}
                 onChange={e => {
                     setLocal(e.target.value);
                     onChange(param.id, e.target.value);
                 }}
-                onFocus={() => { isFocused.current = true; }}
                 onBlur={() => { isFocused.current = false; }}
                 onMouseDown={e => e.stopPropagation()}
                 className={`${inputCls} resize-y font-mono leading-relaxed`}
@@ -331,6 +343,7 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                                     type="text"
                                     defaultValue={labelVal}
                                     key={`label-${selectedNode.id}-${labelVal}`}
+                                    onFocus={(e) => e.target.select()}
                                     onBlur={e => handleDataChange('label', e.target.value)}
                                     onKeyDown={e => {
                                         if (e.key === 'Enter') handleDataChange('label', (e.target as HTMLInputElement).value);
@@ -361,6 +374,7 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                                         type="number"
                                         defaultValue={posX}
                                         key={`pos-x-${selectedNode.id}-${posX}`}
+                                        onFocus={(e) => e.target.select()}
                                         onBlur={e => handlePositionChange('x', e.target.value)}
                                         onKeyDown={e => {
                                             if (e.key === 'Enter') handlePositionChange('x', (e.target as HTMLInputElement).value);
@@ -374,6 +388,7 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                                         type="number"
                                         defaultValue={posY}
                                         key={`pos-y-${selectedNode.id}-${posY}`}
+                                        onFocus={(e) => e.target.select()}
                                         onBlur={e => handlePositionChange('y', e.target.value)}
                                         onKeyDown={e => {
                                             if (e.key === 'Enter') handlePositionChange('y', (e.target as HTMLInputElement).value);

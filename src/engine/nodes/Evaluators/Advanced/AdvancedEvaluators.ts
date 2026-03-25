@@ -732,9 +732,27 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as Record<string, unknown>;
         const code = String(data.code || '');
         if (!code) return PayloadUtils.createError('No Expression');
-        // 💡 Phase 2.5: Symbolic Pass-through
-        // Do NOT evaluate here. IN-09 is a symbolic provider for downstream nodes.
-        // Evaluating here causes 'window is not defined' in Workers and breaks equations.
+
+        const engine = InputOutputEngine.getInstance();
+        const math = engine.getMathInstance();
+
+        // 🧠 Smart Evaluation: Constant expressions become Scalars
+        try {
+            const result = math.evaluate(code);
+            if (result !== undefined && result !== null) {
+                // Return Scalar if it's a numeric result
+                if (typeof result === 'number' || (result && typeof result === 'object' && (result.isBigNumber || result.isFraction || result.isUnit))) {
+                    const scalar = PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+                    return {
+                        ...scalar,
+                        symbol: PayloadUtils.createSymbol('Literal', { value: code })
+                    };
+                }
+            }
+        } catch (e: any) {
+            // Symbolic variables found, keep as Symbolic
+        }
+
         return PayloadUtils.createSymbolic(code);
     }
 };

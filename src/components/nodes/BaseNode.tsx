@@ -235,6 +235,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                         <input
                             ref={inputRef}
                             value={title}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => setTitle(e.target.value)}
                             onBlur={handleSubmit}
                             onKeyDown={handleKeyDown}

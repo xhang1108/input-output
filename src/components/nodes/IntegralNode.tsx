@@ -95,6 +95,7 @@ export const IntegralNode = memo((props: NodeProps) => {
                             <input
                                 className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-14 text-center focus:outline-none focus:border-zinc-500 transition-colors"
                                 value={lower}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateNodeData(id, { lower: e.target.value })}
                                 placeholder="a"
                             />
@@ -102,6 +103,7 @@ export const IntegralNode = memo((props: NodeProps) => {
                             <input
                                 className="nodrag bg-zinc-900 border border-zinc-700 text-zinc-300 px-1 py-1 rounded text-[10px] w-14 text-center focus:outline-none focus:border-zinc-500 transition-colors"
                                 value={upper}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateNodeData(id, { upper: e.target.value })}
                                 placeholder="b"
                             />

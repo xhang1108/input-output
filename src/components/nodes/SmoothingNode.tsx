@@ -26,6 +26,7 @@ export const SmoothingNode = memo((props: NodeProps) => {
                         className="nodrag w-16 border border-zinc-700/50 rounded px-1 text-xs text-zinc-300 focus:border-focus/50 outline-none transition-colors"
                         style={{ background: 'var(--node-bg-header)' }}
                         value={windowMode}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateData({ windowMode: Number(e.target.value) })}
                         onMouseDown={(e) => e.stopPropagation()}
                     />

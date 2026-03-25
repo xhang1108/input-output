@@ -423,6 +423,7 @@ export function CategorizedMenu({
                                 className="bg-transparent text-[10px] text-zinc-200 outline-none w-full placeholder-zinc-700 font-medium"
                                 placeholder={placeholder}
                                 value={search}
+                                onFocus={(e) => e.target.select()}
                                 onChange={e => setSearch(e.target.value)}
                                 onKeyDown={handleKeyDown}
                             />

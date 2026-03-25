@@ -84,6 +84,7 @@ export const SliderNode = memo((props: NodeProps) => {
                                 <input
                                     type="number"
                                     value={min}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) => handleSettingChange('min', e.target.value)}
                                     className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
                                 />
@@ -93,6 +94,7 @@ export const SliderNode = memo((props: NodeProps) => {
                                 <input
                                     type="number"
                                     value={max}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) => handleSettingChange('max', e.target.value)}
                                     className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
                                 />
@@ -102,6 +104,7 @@ export const SliderNode = memo((props: NodeProps) => {
                                 <input
                                     type="number"
                                     value={step}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) => handleSettingChange('step', e.target.value)}
                                     className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
                                 />

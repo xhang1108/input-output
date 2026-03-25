@@ -145,6 +145,7 @@ export const UnitNode = memo((props: NodeProps) => {
                                 autoFocus
                                 className="nodrag bg-transparent text-zinc-100 text-[11px] px-1 py-0.5 outline-none w-20 text-center font-mono placeholder:text-zinc-600"
                                 value={localUnit}
+                                onFocus={(e) => e.target.select()}
                                 onChange={handleInputChange}
                                 onKeyDown={handleKeyDown}
                                 placeholder="e.g. m/s"

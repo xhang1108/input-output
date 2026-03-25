@@ -47,6 +47,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                             type="text"
                             className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
                             value={var1}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => updateData({ var1: e.target.value })}
                         />
                     </div>
@@ -56,6 +57,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                             type="text"
                             className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
                             value={var2}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => updateData({ var2: e.target.value })}
                         />
                     </div>
@@ -68,6 +70,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                             type="number"
                             className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
                             value={min}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => updateData({ min: Number(e.target.value) })}
                         />
                     </div>
@@ -77,6 +80,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                             type="number"
                             className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
                             value={max}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => updateData({ max: Number(e.target.value) })}
                         />
                     </div>
@@ -90,6 +94,7 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                         value={density}
                         min={2}
                         max={50}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateData({ density: Number(e.target.value) })}
                     />
                 </div>

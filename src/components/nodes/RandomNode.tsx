@@ -73,6 +73,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                         type="number"
                                         className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors w-full"
                                         value={getVal(data.min, 0)}
+                                        onFocus={(e) => e.target.select()}
                                         onChange={(e) => handleChange('min', parseFloat(e.target.value))}
                                         onPointerDown={(e) => e.stopPropagation()}
                                         step="1"
@@ -84,6 +85,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                         type="number"
                                         className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors w-full"
                                         value={getVal(data.max, 1)}
+                                        onFocus={(e) => e.target.select()}
                                         onChange={(e) => handleChange('max', parseFloat(e.target.value))}
                                         onPointerDown={(e) => e.stopPropagation()}
                                         step="1"
@@ -100,6 +102,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                         type="number"
                                         className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors w-full"
                                         value={getVal(data.mean, 0)}
+                                        onFocus={(e) => e.target.select()}
                                         onChange={(e) => handleChange('mean', parseFloat(e.target.value))}
                                         onPointerDown={(e) => e.stopPropagation()}
                                         step="1"
@@ -111,6 +114,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                         type="number"
                                         className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors w-full"
                                         value={getVal(data.stdDev, 1)}
+                                        onFocus={(e) => e.target.select()}
                                         onChange={(e) => handleChange('stdDev', parseFloat(e.target.value))}
                                         onPointerDown={(e) => e.stopPropagation()}
                                         min={0}
@@ -127,6 +131,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                     type="number"
                                     className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors"
                                     value={getVal(data.lambda, 1)}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) => handleChange('lambda', parseFloat(e.target.value))}
                                     onPointerDown={(e) => e.stopPropagation()}
                                     min="0"
@@ -161,6 +166,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                 type="number"
                                 className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors"
                                 value={getVal(data.length, 100)}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => handleChange('length', parseInt(e.target.value))}
                                 onPointerDown={(e) => e.stopPropagation()}
                                 min={1}
@@ -177,6 +183,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                     type="number"
                                     className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors"
                                     value={getVal(data.rows, 3)}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) => handleChange('rows', parseInt(e.target.value))}
                                     onPointerDown={(e) => e.stopPropagation()}
                                     min={1}
@@ -189,6 +196,7 @@ export const RandomNode = memo((props: NodeProps) => {
                                     type="number"
                                     className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors"
                                     value={getVal(data.cols, 3)}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) => handleChange('cols', parseInt(e.target.value))}
                                     onPointerDown={(e) => e.stopPropagation()}
                                     min={1}

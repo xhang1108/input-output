@@ -218,7 +218,10 @@ const FloatInput = ({ value, onChange, min = 0, max = 1, step = 0.01, decimals =
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
-            onFocus={() => setIsFocused(true)}
+            onFocus={(e) => {
+                setIsFocused(true);
+                e.target.select();
+            }}
             onBlur={() => {
                 setIsFocused(false);
                 const parsed = parseFloat(localStr) || 0;
