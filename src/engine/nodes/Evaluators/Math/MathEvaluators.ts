@@ -454,24 +454,15 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             if (sourceUnit && sourceUnit !== targetUnit && !isCustom) {
                 try {
                     const result = math.unit(raw, sourceUnit).to(targetUnit);
-                    return {
-                        ...PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit),
-                        meta: { unit: targetUnit }
-                    };
+                    return PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit);
                 } catch (e: any) {
-                    // If both are potentially standard units, this is an incompatibility error
-                    if (e.message?.includes('Units do not match') || e.message?.includes('Unexpected unit')) {
-                        return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
-                    }
-                    // Fallback for non-standard labels if not explicitly caught
+                    // If it was not a custom unit and conversion fails, it's an error.
+                    return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
                 }
             }
             
             // Otherwise just assign the label (Custom or Standard label)
-            return {
-                ...PayloadUtils.createScalar(raw, targetUnit),
-                meta: { unit: targetUnit }
-            };
+            return PayloadUtils.createScalar(raw, targetUnit);
         } catch (e: any) { 
             return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`); 
         }

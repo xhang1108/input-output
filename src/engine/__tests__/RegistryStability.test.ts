@@ -33,12 +33,6 @@ describe('NodeRegistry Stability Architect', () => {
             }
         }
 
-        // We assert that the list of missing evaluators must be exactly 0 (or match accepted legacy exceptions)
-        // Currently IO-17 is a known legacy fallback that was deliberately dropped. We can document it here.
-        const acceptableLegacyDrops = ['IO-17'];
-
-        const trueMissing = missingEvaluators.filter(id => !acceptableLegacyDrops.includes(id));
-
-        expect(trueMissing).toEqual([]);
+        expect(missingEvaluators).toEqual([]);
     });
 });

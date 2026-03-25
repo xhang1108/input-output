@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Brain } from '../Brain';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { registerIONodes } from '../nodes/ioNodes';
+import { registerMathNodes } from '../nodes/mathNodes';
 
 describe('UnitNode Engine Logic', () => {
     let brain: Brain;
 
     beforeEach(async () => {
+        registerIONodes();
+        registerMathNodes();
         brain = Brain.getInstance();
         await brain.injectNodes({ nodes: [], edges: [] }, true);
     });
@@ -13,9 +17,9 @@ describe('UnitNode Engine Logic', () => {
     it('should assign a custom unit to a scalar input', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'In', type: 'IO-01', position: { x: 0, y: 0 }, value: 10 },
-                { id: 'Unit', type: 'IO-05', position: { x: 100, y: 0 }, data: { unit: 'm/s' } },
-                { id: 'Res', type: 'IO-11', position: { x: 200, y: 0 } }
+                { id: 'In', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: 10 } },
+                { id: 'Unit', type: 'TR-01', position: { x: 100, y: 0 }, data: { unit: 'm/s' } },
+                { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
                 { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
@@ -32,9 +36,9 @@ describe('UnitNode Engine Logic', () => {
         // 10 m -> UnitNode(cm) -> 1000 cm
         await brain.injectNodes({
             nodes: [
-                { id: 'In', type: 'IO-01', position: { x: 0, y: 0 }, value: PayloadUtils.createScalar(10, 'm') },
-                { id: 'Unit', type: 'IO-05', position: { x: 100, y: 0 }, data: { unit: 'cm' } },
-                { id: 'Res', type: 'IO-11', position: { x: 200, y: 0 } }
+                { id: 'In', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: PayloadUtils.createScalar(10, 'm') } },
+                { id: 'Unit', type: 'TR-01', position: { x: 100, y: 0 }, data: { unit: 'cm' } },
+                { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
                 { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
@@ -87,9 +91,9 @@ describe('UnitNode Engine Logic', () => {
         // 10 m/s -> UnitNode(km/h) -> 36 km/h
         await brain.injectNodes({
             nodes: [
-                { id: 'In', type: 'IO-01', position: { x: 0, y: 0 }, value: PayloadUtils.createScalar(10, 'm/s') },
-                { id: 'Unit', type: 'IO-05', position: { x: 100, y: 0 }, data: { unit: 'km/h' } },
-                { id: 'Res', type: 'IO-11', position: { x: 200, y: 0 } }
+                { id: 'In', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: PayloadUtils.createScalar(10, 'm/s') } },
+                { id: 'Unit', type: 'TR-01', position: { x: 100, y: 0 }, data: { unit: 'km/h' } },
+                { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
                 { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },
@@ -105,9 +109,9 @@ describe('UnitNode Engine Logic', () => {
     it('should show error for incompatible units', async () => {
         await brain.injectNodes({
             nodes: [
-                { id: 'In', type: 'IO-01', position: { x: 0, y: 0 }, value: PayloadUtils.createScalar(10, 'kg') },
-                { id: 'Unit', type: 'IO-05', position: { x: 100, y: 0 }, data: { unit: 'm' } },
-                { id: 'Res', type: 'IO-11', position: { x: 200, y: 0 } }
+                { id: 'In', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: PayloadUtils.createScalar(10, 'kg') } },
+                { id: 'Unit', type: 'TR-01', position: { x: 100, y: 0 }, data: { unit: 'm' } },
+                { id: 'Res', type: 'OT-01', position: { x: 200, y: 0 } }
             ],
             edges: [
                 { id: 'e1', source: 'In', sourceHandle: 'out', target: 'Unit', targetHandle: 'in' },

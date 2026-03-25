@@ -16,7 +16,7 @@ describe('Brain', () => {
                 type: 'ADD_NODE',
                 payload: {
                     id: 'N1',
-                    type: 'IO-01',
+                    type: 'IN-01',
                     position: { x: 10, y: 10 },
                     data: { label: 'Test Node', value: 10 }
                 }
@@ -30,7 +30,7 @@ describe('Brain', () => {
         it('should remove a node correctly', async () => {
             brain.applyTransaction({
                 type: 'ADD_NODE',
-                payload: { id: 'N1', type: 'IO-01', position: { x: 0, y: 0 }, data: {} }
+                payload: { id: 'N1', type: 'IN-01', position: { x: 0, y: 0 }, data: {} }
             });
             expect(brain.getNodesMap().size).toBe(1);
 
@@ -44,8 +44,8 @@ describe('Brain', () => {
         it('should connect nodes correctly', async () => {
             await brain.injectNodes({
                 nodes: [
-                    { id: 'A', type: 'IO-01', position: { x: 0, y: 0 }, data: { value: 5 } },
-                    { id: 'B', type: 'IO-11', position: { x: 100, y: 0 }, data: {} }
+                    { id: 'A', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: 5 } },
+                    { id: 'B', type: 'OT-01', position: { x: 100, y: 0 }, data: {} }
                 ],
                 edges: []
             });

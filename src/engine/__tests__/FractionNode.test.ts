@@ -9,7 +9,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     test('MA-12: Should convert decimal to fraction', async () => {
         const node = {
             id: 'test-fraction',
-            type: 'MA-12',
+            type: 'MA-06',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -33,7 +33,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     test('MA-12: Should handle repeating decimals', async () => {
         const node = {
             id: 'test-fraction-repeat',
-            type: 'MA-12',
+            type: 'MA-06',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -56,7 +56,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     test('MA-12: Should handle strings', async () => {
         const node = {
             id: 'test-fraction-str',
-            type: 'MA-12',
+            type: 'MA-06',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -64,7 +64,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
             position: { x: 0, y: 0 }
         };
 
-        // Note: IO-04 outputs DataType.String now
+        // Note: IN-04 outputs DataType.String now
         const inputs = {
             in: PayloadUtils.createString('2.5')
         };
@@ -80,7 +80,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     test('MA-14: Should perform rounding (Regression)', async () => {
         const node = {
             id: 'test-round',
-            type: 'MA-14',
+            type: 'MA-05',
             data: { precision: 2 },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -101,7 +101,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     test('MA-12: Should handle mixed fractions', async () => {
         const node = {
             id: 'test-mixed',
-            type: 'MA-12',
+            type: 'MA-06',
             data: { mixed: true },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -126,7 +126,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
     test('MA-12: Should handle mixed fractions with integer result', async () => {
         const node = {
             id: 'test-mixed-int',
-            type: 'MA-12',
+            type: 'MA-06',
             data: { mixed: true },
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
@@ -156,7 +156,7 @@ describe('Fraction Node (MA-12) & Rounding Node (MA-14)', () => {
         
         const node = {
             id: 'test-fraction-div',
-            type: 'MA-12',
+            type: 'MA-06',
             data: {},
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,

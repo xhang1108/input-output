@@ -35,9 +35,6 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
         const hex = raw?.hex || String(raw);
         return PayloadUtils.createSymbol('Literal', { value: hex.replace('#', '') });
     },
-    'IO-16': (node, inputs) => {
-        return inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'Matrix' });
-    },
     'TR-01': (node, inputs) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const inputSymbol = inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 });

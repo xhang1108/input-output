@@ -32,26 +32,27 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
 
     switch (type) {
         // --- Input Family ---
-        case 'IO-01': // Number
+        case 'IN-01': { // Number
             const val = data.value !== undefined ? data.value : 0;
             return data.label
                 ? { type: 'Identifier', name: data.label, value: val }
                 : { type: 'Literal', value: val };
+        }
 
-        case 'IO-02': // Slider
+        case 'IN-02': // Slider
             return { type: 'Literal', value: data.value !== undefined ? data.value : 0 };
 
-        case 'IO-03': // String (legacy)
-        case 'IO-04': // String
+        case 'IN-04': // String
             return { type: 'Literal', value: String(data.value || '') };
 
-        case 'IO-08': // Matrix
+        case 'IN-07': // Matrix Input
             return data.label ? { type: 'Identifier', name: data.label } : { type: 'Identifier', name: 'Matrix' };
 
-        case 'IO-18': // Color
+        case 'IN-03': { // Color
             let colorVal = data.value;
             if (colorVal && typeof colorVal === 'object' && colorVal.hex) colorVal = colorVal.hex;
             return { type: 'Literal', value: String(colorVal || '#ffffff') };
+        }
 
         case 'MA-03': // Constant
             return { type: 'Identifier', name: String(data.val || 'pi') };
@@ -75,10 +76,10 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
                 right: getInputAST('in_b', 0)
             };
 
-        case 'MA-14': // Round
+        case 'MA-05': // Round
             return { type: 'FunctionCall', name: 'round', args: [getInputAST('in_a', 0), { type: 'Literal', value: data.precision || 0 }] };
 
-        case 'MA-12': // Fraction
+        case 'MA-06': // Fraction
             return { type: 'FunctionCall', name: 'fraction', args: [getInputAST('in', 0)] };
 
         case 'MA-16': // Logarithm
@@ -89,7 +90,7 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
             };
 
         // --- Calculus / Linear Algebra ---
-        case 'AD-04': // Derivative
+        case 'CL-01': // Derivative
             return {
                 type: 'FunctionCall',
                 name: 'diff',
@@ -100,7 +101,7 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
                 ]
             };
 
-        case 'AD-05': // Integral
+        case 'CL-02': // Integral
             return {
                 type: 'FunctionCall',
                 name: data.mode === 'definite' ? 'defint' : 'integrate',
@@ -117,7 +118,7 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
                     ]
             };
 
-        case 'AD-11': // Limit
+        case 'CL-03': // Limit
             return {
                 type: 'FunctionCall',
                 name: 'limit',
@@ -129,9 +130,8 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
             };
 
         // --- Linear Algebra Utils ---
-        case 'AD-01': // Matrix Tools
-        case 'AD-02': // Vector Utils
-        case 'DA-01': // Stats
+        case 'DT-07': // Matrix Tools
+        case 'TR-06': // Stats
             const nodeOp = (data.op || '').toLowerCase();
             return {
                 type: 'FunctionCall',
@@ -140,14 +140,14 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
             };
 
         // --- Output/Pass-through Family ---
-        case 'IO-11': // Result
-        case 'IO-16': // Matrix View
-        case 'IO-19': // Color Result
-        case 'IO-05': // Unit Assigner
+        case 'OT-01': // Result
+        case 'TR-07': // Color Result
+        case 'TR-01': // Unit Assigner
             // For unit assigner, maybe we could prepend a unit? But it expects purely scalar math string for latex mostly.
             return getInputAST('in', 0);
 
-        case 'UI-03': // Reroute
+        case 'UT-02': // Reroute
+        case 'UI-03': 
             return getInputAST('in', 0);
 
         // --- Fallback ---

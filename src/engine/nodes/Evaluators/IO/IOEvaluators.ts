@@ -10,7 +10,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const original = node.value || PayloadUtils.createScalar(0);
         // 💡 Fix: Support both 'value' and 'val' keys from different UI components
         const rawVal = data.value ?? data.val;
-        let val = rawVal !== undefined ? (rawVal as number) : PayloadUtils.unwrap(original);
+        let val = rawVal !== undefined ? (PayloadUtils.unwrap(rawVal) as number) : PayloadUtils.unwrap(original);
         
         // Support precision rounding for Constant node (IN-01 variant)
         const rawPrecision = data.precision ?? data.accuracy;
@@ -20,11 +20,12 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             try { val = math.round(val, precision); } catch (e) {}
         }
         
-        const unit = (data.unit as string) || (original.meta?.unit);
+        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
         
+        const payload = PayloadUtils.createScalar(val, extractedUnit);
         return {
-            ...PayloadUtils.createScalar(val, unit),
-            meta: { ...original.meta, unit } // 💡 Fix: Prioritize data.unit then original.meta
+            ...payload,
+            meta: { ...payload.meta, ...original.meta, unit: extractedUnit }
         };
     },
     'IN-02': (node) => {
@@ -33,7 +34,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const original = node.value || PayloadUtils.createScalar(0);
         // 💡 Fix: Support both 'value' and 'val'
         const rawVal = data.value ?? data.val;
-        let val = rawVal !== undefined ? (rawVal as number) : PayloadUtils.unwrap(original);
+        let val = rawVal !== undefined ? (PayloadUtils.unwrap(rawVal) as number) : PayloadUtils.unwrap(original);
         
         // Support precision rounding for Slider node
         const rawPrecision = data.precision ?? data.accuracy;
@@ -43,11 +44,12 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             try { val = math.round(val, precision); } catch (e) {}
         }
         
-        const unit = (data.unit as string) || (original.meta?.unit);
+        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
         
+        const payload = PayloadUtils.createScalar(val, extractedUnit);
         return {
-            ...PayloadUtils.createScalar(val, unit),
-            meta: { ...original.meta, unit }
+            ...payload,
+            meta: { ...payload.meta, ...original.meta, unit: extractedUnit }
         };
     },
     'IN-04': (node) => {
@@ -82,7 +84,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
                     meta: { ...payload.meta, ...wrapped.meta }
                 };
             } catch (e: any) {
-                console.error(`[IO-11] Precision Failed: ${e.message}`, { val, precision });
+                console.error(`[OT-01] Precision Failed: ${e.message}`, { val, precision });
                 return payload;
             }
         }
@@ -163,7 +165,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             }
         };
     },
-    'IO-19': (node, inputs) => {
+    'TR-07': (node, inputs) => {
         const payload = inputs['in'] || Object.values(inputs)[0];
         if (!payload) return PayloadUtils.createError('No input');
 
@@ -228,44 +230,8 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             meta: {}
         };
     },
-    'IO-16': (node, inputs) => {
+    'UT-03': (node, inputs) => {
         return inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createArray([]);
-    },
-    'TR-01': (node, inputs) => {
-        const math = InputOutputEngine.getInstance().getMathInstance() as any;
-        const data = (node.data || {}) as Record<string, unknown>;
-        const isCustom = data.unit === 'CUSTOM';
-        const targetUnit = isCustom ? (data.customUnit as string) : (data.unit as string || 'm');
-        const valPayload = inputs['in_a'] || inputs['in'] || PayloadUtils.createScalar(0);
-        
-        try {
-            const raw = PayloadUtils.unwrap(valPayload);
-            const sourceUnit = valPayload.meta?.unit;
-            
-            // Standard Conversion logic
-            if (sourceUnit && sourceUnit !== targetUnit && !isCustom) {
-                try {
-                    const result = math.unit(raw, sourceUnit).to(targetUnit);
-                    return {
-                        ...PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit),
-                        meta: { unit: targetUnit }
-                    };
-                } catch (e: any) {
-                    // If both are potentially standard units, this is an incompatibility error
-                    if (e.message?.includes('Units do not match') || e.message?.includes('Unexpected unit')) {
-                        return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
-                    }
-                }
-            }
-            
-            // Otherwise just assign the label (Custom or Standard label)
-            return {
-                ...PayloadUtils.createScalar(raw, targetUnit),
-                meta: { unit: targetUnit }
-            };
-        } catch (e: any) { 
-            return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`);
-        }
     },
     'IN-08': (node) => {
         let total = 0;

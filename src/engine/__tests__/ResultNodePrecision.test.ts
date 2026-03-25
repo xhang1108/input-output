@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Brain } from '../Brain';
 import { DataType } from '../../types/payload';
+import { registerIONodes } from '../nodes/ioNodes';
+import { registerMathNodes } from '../nodes/mathNodes';
 
 describe('Result Node Precision', () => {
     let brain: Brain;
 
     beforeEach(async () => {
+        registerIONodes();
+        registerMathNodes();
         brain = Brain.getInstance();
         await brain.injectNodes({ nodes: [], edges: [] }, true);
     });
@@ -17,7 +21,7 @@ describe('Result Node Precision', () => {
             type: 'ADD_NODE',
             payload: {
                 id: 'IN-1',
-                type: 'IO-01',
+                type: 'IN-01',
                 position: { x: 0, y: 0 },
                 initialValue: val,
                 data: {}
@@ -68,7 +72,7 @@ describe('Result Node Precision', () => {
             type: 'ADD_NODE',
             payload: {
                 id: 'IN-2',
-                type: 'IO-01',
+                type: 'IN-01',
                 position: { x: 0, y: 0 },
                 initialValue: val,
                 data: {}
