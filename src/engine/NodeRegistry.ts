@@ -63,6 +63,7 @@ export class NodeRegistry {
         if (result && typeof result === 'object' && result.symbol === null) {
             const inputSymbols: Record<string, ASTNode> = {};
             for (const [key, p] of Object.entries(inputs)) {
+                if (!p) continue;
                 if (Array.isArray(p)) {
                     // Capsule input: Multiple payloads
                     (inputSymbols as any)[key] = p.map(item => {

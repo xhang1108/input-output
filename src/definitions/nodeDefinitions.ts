@@ -425,9 +425,33 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Divisibility & Primes',
         category: 'Math',
         handles: [
-            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'A' },
-            { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'B' },
-            { id: 'out', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
+            { 
+                id: 'in_a', 
+                type: 'target', 
+                position: Position.Left, 
+                variant: 'single', 
+                dataType: 'array', 
+                label: 'A',
+                dynamicColor: (d) => d.op === 'MOD' ? 'scalar' : 'array'
+            },
+            { 
+                id: 'in_b', 
+                type: 'target', 
+                position: Position.Left, 
+                variant: 'single', 
+                dataType: 'scalar', 
+                label: 'B',
+                hidden: (d) => d.op === 'ISPRIME',
+                dynamicColor: (d) => d.op === 'MOD' ? 'scalar' : 'array'
+            },
+            { 
+                id: 'out', 
+                type: 'source', 
+                position: Position.Right, 
+                variant: 'single', 
+                dataType: 'scalar',
+                dynamicColor: (d) => d.op === 'ISPRIME' ? 'array' : 'scalar'
+            }
         ],
         defaultData: { op: 'GCD' },
         aliases: ['divisibility', 'number theory'],

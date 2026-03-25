@@ -69,7 +69,7 @@ export const nodeTypes = {
     'MA-04': TrigNode,
     'MA-05': RoundingNode,
     'MA-06': FractionNode,
-    'MA-07': NumberTheoryNode,
+    'MA-07': GenericSelectorNode,
     'MA-08': CombinatoricsNode,
 
     // ─── 4. Calculus ────────────────────────────────────────

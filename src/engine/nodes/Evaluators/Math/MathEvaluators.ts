@@ -228,31 +228,67 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const op = data.op || 'GCD';
-        const getVal = (key: string) => {
-            const p = inputs[key];
-            if (!p) return 0;
-            const val = PayloadUtils.unwrap(p);
-            const hydrated = PayloadUtils.hydrate(val, math) as any;
-            if (p.meta?.unit && (typeof hydrated === 'number' || hydrated?.isBigNumber)) {
-                try { return hydrated.toNumber ? hydrated.toNumber() : Number(hydrated); } catch (e) { return 0; }
+
+        const collectNumbers = (p: NodePayload | NodePayload[] | undefined): any[] => {
+            if (!p) return [];
+            
+            // Handle Capsule Input (Array of Payloads)
+            if (Array.isArray(p)) {
+                return p.flatMap(item => collectNumbers(item));
             }
-            return hydrated;
+            
+            const unwrapped = PayloadUtils.unwrap(p);
+            const hydrated = PayloadUtils.hydrate(unwrapped, math);
+            
+            if (hydrated === null || hydrated === undefined) return [];
+            
+            // Flatten if it's a matrix or array
+            if (typeof hydrated === 'object' && (hydrated as any).isMatrix) {
+                return (hydrated as any).toArray().flat(Infinity);
+            }
+            if (Array.isArray(hydrated)) {
+                return hydrated.flat(Infinity);
+            }
+            return [hydrated];
         };
-        const valA = getVal('in_a');
-        const valB = getVal('in_b');
+
         try {
-            let result;
-            switch (op) {
-                case 'GCD': result = math.gcd(valA, valB); break;
-                case 'LCM': result = math.lcm(valA, valB); break;
-                case 'MOD': result = math.mod(valA, valB); break;
-                case 'IS_PRIME': result = math.isPrime(valA); break;
-                default: result = 0;
+            let result: any;
+            if (op === 'GCD' || op === 'LCM') {
+                const allNumbers = [
+                    ...collectNumbers(inputs['in_a']),
+                    ...collectNumbers(inputs['in_b'])
+                ];
+                if (allNumbers.length === 0) return PayloadUtils.createScalar(0);
+                if (allNumbers.length === 1) {
+                    result = allNumbers[0];
+                } else {
+                    result = op === 'GCD' ? math.gcd(...allNumbers) : math.lcm(...allNumbers);
+                }
+            } else if (op === 'MOD') {
+                const valsA = collectNumbers(inputs['in_a']);
+                const valsB = collectNumbers(inputs['in_b']);
+                const valA = valsA.length > 0 ? valsA[0] : 0;
+                const valB = valsB.length > 0 ? valsB[0] : 1;
+
+                if (Number(valB) === 0) {
+                    return PayloadUtils.createError('Modulo by zero');
+                }
+                
+                result = math.mod(valA, valB);
+            } else if (op === 'ISPRIME') {
+                const valsA = collectNumbers(inputs['in_a']);
+                const primes = valsA.filter(n => math.isPrime(n));
+                return PayloadUtils.createArray(primes);
+            } else {
+                result = 0;
             }
-            if (op === 'IS_PRIME') return PayloadUtils.createBoolean(!!result);
+
             const finalValue = (result as any)?.isBigNumber ? (result as any).toNumber() : result;
             return { type: DataType.Scalar, value: PayloadUtils.dehydrate(finalValue), symbol: null, meta: {} };
-        } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
+        } catch (e: any) {
+            return PayloadUtils.createError(`${op} Failed: ${e.message}`);
+        }
     },
     'MA-15': (node, inputs) => {
         const data = (node.data || {}) as any;
