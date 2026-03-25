@@ -707,7 +707,15 @@ export class Brain {
         });
 
         if (res.success && !silent) {
-            this.emit('graphChanged', null);
+            // Position-only transactions don't need full UI topology sync.
+            // MOVE_NODE has no effect on computation or structure.
+            const isPositionOnly = tx.type === 'MOVE_NODE' ||
+                (tx.type === 'BATCH' && (tx.payload as Transaction[]).every(
+                    t => t.type === 'MOVE_NODE' || t.type === 'RESIZE_NODE'
+                ));
+            if (!isPositionOnly) {
+                this.emit('graphChanged', null);
+            }
 
             // Layout Authority: refresh engine-side bounding box cache after structural changes
             const layoutTriggers: Set<string> = new Set(['ADD_NODE', 'RESIZE_NODE', 'MOVE_NODE', 'BATCH']);
@@ -715,9 +723,9 @@ export class Brain {
                 this.refreshBoundingBoxes();
             }
 
-            if (tx.type === 'BATCH' && this.worker.isEnabled()) {
-                this.syncWorker();
-            }
+            // NOTE: No explicit syncWorker() needed here.
+            // The heartbeat's syncAndEval() already sends a full graph snapshot
+            // + triggers evaluation whenever dirty nodes exist.
         }
 
         return res;
