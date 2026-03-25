@@ -570,7 +570,7 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
                 <div className="flex items-baseline justify-between flex-1 min-w-0 gap-2">
                     <span className="truncate">{renderHighlighted(item.label, search)}</span>
                     <span className={`text-[9px] font-mono opacity-40 shrink-0 ${isSelected ? 'text-white' : 'text-zinc-500'}`}>
-                        {renderHighlighted(item.id, search)}
+                        {renderHighlighted(item.id.includes(':') ? item.id.split(':')[0] : item.id, search)}
                     </span>
                 </div>
             </div>
