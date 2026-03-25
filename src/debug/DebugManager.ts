@@ -29,13 +29,15 @@ class DebugManager {
         if (typeof window === 'undefined') return;
 
         window.onerror = (message, source, lineno, colno, error) => {
-            this.addLog('error', `Global Error: ${String(message)} at ${String(source)}:${String(lineno)}:${String(colno)}`);
-            this.showCrashOverlay();
+            const msg = `Global Error: ${String(message)} at ${String(source)}:${String(lineno)}:${String(colno)}`;
+            this.addLog('error', msg);
+            this.showCrashOverlay(msg);
         };
 
         window.onunhandledrejection = (event) => {
-            this.addLog('error', `Unhandled Rejection: ${String(event.reason)}`);
-            this.showCrashOverlay();
+            const msg = `Unhandled Rejection: ${String(event.reason)}`;
+            this.addLog('error', msg);
+            this.showCrashOverlay(msg);
         };
     }
 
@@ -79,13 +81,14 @@ class DebugManager {
     }
 
     public trackWorkerError(error: any) {
-        this.addLog('error', `Worker Error: ${JSON.stringify(error)}`);
-        this.showCrashOverlay();
+        const errorMsg = typeof error === 'string' ? error : JSON.stringify(error);
+        this.addLog('error', `Worker Error: ${errorMsg}`);
+        this.showCrashOverlay(errorMsg);
     }
 
-    private showCrashOverlay() {
+    private showCrashOverlay(message: string = 'System Crash Detected') {
         if (typeof window === 'undefined') return;
-        window.dispatchEvent(new CustomEvent('input-output-crash'));
+        window.dispatchEvent(new CustomEvent('input-output-crash', { detail: { message } }));
     }
 
     public getLogs() {
