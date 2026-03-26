@@ -709,10 +709,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Array Calculus',
         category: 'Data & Structures',
         handles: [
-            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' },
-            { id: 'out_a', type: 'source', variant: 'single', dataType: 'any' },
-            { id: 'out_b', type: 'source', variant: 'single', dataType: 'any' },
-            { id: 'out_c', type: 'source', variant: 'single', dataType: 'any' }
+            { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' }
         ],
         defaultData: { op: 'INV' },
         aliases: ['matrix math', 'linear algebra'],

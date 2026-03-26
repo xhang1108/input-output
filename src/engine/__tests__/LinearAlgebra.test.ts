@@ -10,7 +10,7 @@ describe('Linear Algebra & Array Nodes', () => {
         initializeNodes();
     });
 
-    test('DT-06 (MatrixTools): QR Decomposition Multi-Output', async () => {
+    test('DT-06 (Array Calculus): QR Decomposition Multi-Output', async () => {
         const node = {
             id: 'n1',
             type: 'DT-06',
@@ -37,6 +37,64 @@ describe('Linear Algebra & Array Nodes', () => {
         expect(val.out_b).toBeDefined();
         expect(val.out_a.type).toBe(DataType.Array);
         expect(val.out_b.type).toBe(DataType.Array);
+    });
+
+    test('DT-06 (Array Calculus): LUP and LU Decomposition', async () => {
+        const inputA = PayloadUtils.createArray([[4, 3], [6, 3]] as any);
+
+        // 1. LUP (3 outputs)
+        const nodeLUP = { id: 'n-lup', type: 'DT-06', data: { op: 'LUP' } };
+        const resLUP = await NodeRegistry.evaluate(nodeLUP as any, { in_a: inputA });
+        expect(resLUP.type).toBe(DataType.Object);
+        const valLUP = resLUP.value as any;
+        expect(valLUP.out_a).toBeDefined(); // L
+        expect(valLUP.out_b).toBeDefined(); // U
+        expect(valLUP.out_c).toBeDefined(); // P
+        expect(valLUP.out_a.type).toBe(DataType.Array);
+
+        // 2. LU (2 outputs)
+        const nodeLU = { id: 'n-lu', type: 'DT-06', data: { op: 'LU' } };
+        const resLU = await NodeRegistry.evaluate(nodeLU as any, { in_a: inputA });
+        expect(resLU.type).toBe(DataType.Object);
+        const valLU = resLU.value as any;
+        expect(valLU.out_a).toBeDefined(); // L
+        expect(valLU.out_b).toBeDefined(); // U
+        expect(valLU.out_c).toBeUndefined(); // P should be hidden/undefined in LU mode
+    });
+
+    test('DT-06 (Array Calculus): EIGEN Spectral Decomposition', async () => {
+        const node = { id: 'n-eig', type: 'DT-06', data: { op: 'EIGEN' } };
+        const inputs = { in_a: PayloadUtils.createArray([[2, 0], [0, 5]]) };
+
+        const result = await NodeRegistry.evaluate(node as any, inputs);
+        expect(result.type).toBe(DataType.Object);
+        const val = result.value as any;
+        
+        // out_a: eigenvalues [2, 5]
+        expect(val.out_a.type).toBe(DataType.Array);
+        expect(val.out_a.value).toEqual([2, 5]);
+
+        // out_b: eigenvectors matrix (Identity for diagonal matrix)
+        expect(val.out_b.type).toBe(DataType.Array);
+        // mathjs might return Matrix object or flat array based on dehydration logic
+        // but it must be valid array/matrix data
+        expect(val.out_b.value).toBeDefined();
+    });
+
+    test('DT-06 (Array Calculus): Scalar modes (DET, TRACE)', async () => {
+        const inputs = { in_a: PayloadUtils.createArray([[1, 2], [3, 4]]) };
+
+        // 1. DET
+        const nodeDet = { id: 'n-det', type: 'DT-06', data: { op: 'DET' } };
+        const resDet = await NodeRegistry.evaluate(nodeDet as any, inputs);
+        expect(resDet.type).toBe(DataType.Scalar);
+        expect(resDet.value).toBe(-2);
+
+        // 2. TRACE
+        const nodeTrace = { id: 'n-tr', type: 'DT-06', data: { op: 'TRACE' } };
+        const resTrace = await NodeRegistry.evaluate(nodeTrace as any, inputs);
+        expect(resTrace.type).toBe(DataType.Scalar);
+        expect(resTrace.value).toBe(5);
     });
 
     test('DT-02 (ArrayExtract): Extract scalar from array', async () => {

@@ -211,7 +211,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'TRANSPOSE') result = math.transpose(hydrated);
             else if (op === 'TRACE') result = math.trace(hydrated);
             else if (op === 'EIGEN') result = math.eigs(hydrated);
-            else if (op === 'LUP') result = math.lup(hydrated);
+            else if (op === 'LUP' || op === 'LU') result = math.lup(hydrated);
             else if (op === 'QR') result = math.qr(hydrated);
             else result = hydrated;
 
@@ -223,13 +223,16 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 if (op === 'QR') {
                     multi.out_a = PayloadUtils.wrap(result.Q);
                     multi.out_b = PayloadUtils.wrap(result.R);
-                } else if (op === 'LUP') {
+                } else if (op === 'LUP' || op === 'LU') {
                     multi.out_a = PayloadUtils.wrap(result.L);
                     multi.out_b = PayloadUtils.wrap(result.U);
-                    multi.out_c = PayloadUtils.wrap(result.P);
+                    if (op === 'LUP') multi.out_c = PayloadUtils.wrap(result.P);
                 } else if (op === 'EIGEN') {
                     multi.out_a = PayloadUtils.wrap(result.values);
-                    multi.out_b = PayloadUtils.wrap(result.vectors);
+                    // Extract vectors from {value, vector} objects and join as a matrix
+                    const vectors = result.eigenvectors.map((ev: any) => ev.vector);
+                    // In mathjs, these are usually 1D. We want them as Columns in a Matrix.
+                    multi.out_b = PayloadUtils.wrap(math.transpose(math.matrix(vectors)));
                 } else {
                     // Fallback for any other objects
                     for (const [key, val] of Object.entries(result)) {
