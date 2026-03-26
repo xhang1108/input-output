@@ -10,20 +10,22 @@ import { RuntimeGuard } from '../../../calculus/RuntimeGuard';
 export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'DT-01': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const axis = Number(data.axis || 0);
+
         let items: any[] = [];
 
         // Support IOGL 2.0 Capsule handles: 'in', 'append', or numerical suffixes '[0]', '[1]'
-        // Also support 'in_0', 'in_1' for legacy nodes
-        Object.keys(inputs).sort((a, b) => {
-            // Sort by numerical suffix if available: [0], [1]...
+        const sortKeys = Object.keys(inputs).sort((a, b) => {
             const aNum = parseInt(a.match(/\d+/)?.[0] || '999');
             const bNum = parseInt(b.match(/\d+/)?.[0] || '999');
             return aNum - bNum;
-        }).forEach(key => {
+        });
+
+        sortKeys.forEach(key => {
             const val = inputs[key];
             if (!val) return;
 
-            // If it's a multi-link input (Array of payloads)
             if (Array.isArray(val)) {
                 val.forEach(p => items.push(PayloadUtils.hydrate(PayloadUtils.unwrap(p), math)));
             } else {
@@ -31,7 +33,32 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             }
         });
 
-        return PayloadUtils.createArray(items);
+        if (items.length === 0) return PayloadUtils.createArray([]);
+
+        try {
+            // Robust Concatenation: Coerce scalars and ensure min-dimensions for the target axis
+            const preparedItems = items.map(item => {
+                let val = item;
+                // If it's already an array or matrix, use it.
+                if (!Array.isArray(val) && !(val && val.isMatrix)) {
+                    val = [val]; // Coerce scalar to 1D
+                }
+
+                // If axis is 1 (Columns) or higher, but value is 1D, promote it to 2D
+                // This allows joining scalars/vectors horizontally.
+                // e.g. [1, 2] -> [[1, 2]] (row vector)
+                if (axis >= 1 && Array.isArray(val) && !Array.isArray(val[0])) {
+                    val = [val]; 
+                }
+                
+                return val;
+            });
+
+            const result = math.concat(...preparedItems, axis);
+            return PayloadUtils.createArray(result);
+        } catch (e: any) {
+            return PayloadUtils.createError(`Join Failed: ${e.message}`);
+        }
     },
 
     // DT-02: Array Extract

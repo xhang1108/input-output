@@ -82,38 +82,11 @@ describe('Linear Algebra & Array Nodes', () => {
         expect(result.value).toBe(21);
     });
 
-    test('DT-01 (ArrayBuilder): Combine scalars to array', async () => {
-        const node = {
-            id: 'n3',
-            type: 'DT-01',
-            data: { axis: 0, count: 3 } as any,
-            value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
-            isInDirtyChain: false,
-            position: { x: 0, y: 0 }
-        };
-
-        const inputs = {
-            in_a: [
-                PayloadUtils.createScalar(10),
-                PayloadUtils.createScalar(20),
-                PayloadUtils.createScalar(30)
-            ] as any
-        };
-
-        const result = await NodeRegistry.evaluate(node as any, inputs);
-        expect(result.type).toBe(DataType.Array);
-
-        // Output format could be JS array or MathJS matrix object, let's just check dehydration success
-        expect(result.value).toBeDefined();
-
-        // In mathjs dehydrated format, it will be { mathjs: 'Matrix', data: [...] } if it's a MathJS obj
-        // Or it will just be a plain array if it dehydrates to standard JS array (PayloadUtils unwraps arrays)
-    });
-    test('DT-01 (ArrayBuilder): Combine scalars to array using single Capsule Handle', async () => {
+    test('DT-01 (ArrayBuilder): Unified Join (Scalar to Vector)', async () => {
         const node = {
             id: 'n4',
             type: 'DT-01',
-            data: { axis: 0 } as any, // No count needed anymore
+            data: { axis: 0 } as any,
             value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
             isInDirtyChain: false,
             position: { x: 0, y: 0 }
@@ -122,22 +95,87 @@ describe('Linear Algebra & Array Nodes', () => {
         const inputs = {
             in_a: [
                 PayloadUtils.createScalar(10),
-                PayloadUtils.createScalar(20),
-                PayloadUtils.createScalar(30)
+                PayloadUtils.createScalar(20)
             ]
         };
 
         const result = await NodeRegistry.evaluate(node as any, inputs as any);
-        expect(result.type).toBe(DataType.Array);
-
-        // Output format should successfully dehydrate
-        expect(result.value).toBeDefined();
-
         const math = InputOutputEngine.getInstance().getMathInstance();
         const hydrated = PayloadUtils.hydrate(result.value, math);
-
-        // Assert the array contains exactly 10, 20, 30
         const arr = (hydrated as any).toArray ? (hydrated as any).toArray() : hydrated;
-        expect(arr).toEqual([10, 20, 30]);
+        expect(arr).toEqual([10, 20]);
+    });
+
+    test('DT-01 (ArrayBuilder): Unified Join (Vector to Vector)', async () => {
+        const node = {
+            id: 'n-concat-0',
+            type: 'DT-01',
+            data: { axis: 0 } as any,
+            value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            in_a: [
+                PayloadUtils.createArray([1, 2]),
+                PayloadUtils.createArray([3, 4])
+            ]
+        };
+
+        const result = await NodeRegistry.evaluate(node as any, inputs as any);
+        const math = InputOutputEngine.getInstance().getMathInstance();
+        const hydrated = PayloadUtils.hydrate(result.value, math);
+        const arr = (hydrated as any).toArray ? (hydrated as any).toArray() : hydrated;
+        expect(arr).toEqual([1, 2, 3, 4]);
+    });
+
+    test('DT-01 (ArrayBuilder): Unified Join (Columns)', async () => {
+        const node = {
+            id: 'n-concat-1',
+            type: 'DT-01',
+            data: { axis: 1 } as any,
+            value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            in_a: [
+                PayloadUtils.createArray([[1], [2]]),
+                PayloadUtils.createArray([[3], [4]])
+            ]
+        };
+
+        const result = await NodeRegistry.evaluate(node as any, inputs as any);
+        const math = InputOutputEngine.getInstance().getMathInstance();
+        const hydrated = PayloadUtils.hydrate(result.value, math);
+        const arr = (hydrated as any).toArray ? (hydrated as any).toArray() : hydrated;
+        expect(arr).toEqual([[1, 3], [2, 4]]);
+    });
+
+    test('DT-01 (ArrayBuilder): Scalars to Columns', async () => {
+        const node = {
+            id: 'n-scalar-cols',
+            type: 'DT-01',
+            data: { axis: 1 } as any,
+            value: { type: DataType.Scalar as any, value: 0, symbol: null, meta: {} },
+            isInDirtyChain: false,
+            position: { x: 0, y: 0 }
+        };
+
+        const inputs = {
+            in_a: [
+                PayloadUtils.createScalar(10),
+                PayloadUtils.createScalar(20)
+            ]
+        };
+
+        const result = await NodeRegistry.evaluate(node as any, inputs as any);
+        const math = InputOutputEngine.getInstance().getMathInstance();
+        const hydrated = PayloadUtils.hydrate(result.value, math);
+        const arr = (hydrated as any).toArray ? (hydrated as any).toArray() : hydrated;
+        // Should be [[10, 20]] (2D horizontal matrix)
+        expect(arr).toEqual([[10, 20]]);
     });
 });

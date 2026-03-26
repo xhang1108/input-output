@@ -608,20 +608,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: { axis: 0 },
-        opTokens: ['BUILD', 'CONCAT'],
         params: [
             {
-                id: 'op', label: 'Mode', type: 'select', options: [
-                    { label: 'Build Array', value: 'BUILD' },
-                    { label: 'Concatenate', value: 'CONCAT' }
+                id: 'axis', label: 'Direction', type: 'select', options: [
+                    { label: 'Rows', value: 0 },
+                    { label: 'Columns', value: 1 }
                 ]
-            },
-            {
-                id: 'axis', label: 'Concat Axis', type: 'select', options: [
-                    { label: 'Axis 0 (Rows)', value: 0 },
-                    { label: 'Axis 1 (Cols)', value: 1 }
-                ],
-                hidden: (d) => d.op !== 'CONCAT'
             }
         ]
     },
