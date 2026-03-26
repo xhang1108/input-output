@@ -22,7 +22,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             try { val = math.round(val, precision); } catch (e) {}
         }
         
-        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
+        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (original.meta?.unit);
         
         const payload = PayloadUtils.createScalar(val, extractedUnit);
         return {
@@ -46,7 +46,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             try { val = math.round(val, precision); } catch (e) {}
         }
         
-        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
+        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (original.meta?.unit);
         
         const payload = PayloadUtils.createScalar(val, extractedUnit);
         return {
@@ -59,10 +59,9 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const original = node.value || PayloadUtils.createString('');
         const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
         let val = rawVal !== undefined ? rawVal : PayloadUtils.unwrap(original);
-        const unit = (data.unit as string) || (original.meta?.unit);
         return {
             ...PayloadUtils.createString(String(val ?? '')),
-            meta: { ...original.meta, unit }
+            meta: { ...original.meta }
         };
     },
     'OT-01': (node, inputs) => {
@@ -105,7 +104,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
                 return PayloadUtils.createArray(dataVal);
             }
         }
-        const raw = data.rawExpression as string;
+        const raw = data.array as string;
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
@@ -136,7 +135,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IN-08': (node) => {
         let total = 0;
-        const digits = (node.data?.digits as number[]) || [0, 0, 0, 0, 0, 0, 0];
+        const digits = (node.data?.value as number[]) || [0, 0, 0, 0, 0, 0, 0];
         for (let i = 0; i < digits.length; i++) {
             total = total * 10 + digits[i];
         }

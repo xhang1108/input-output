@@ -27,8 +27,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'scalar', value: { type: 'scalar', value: 0, symbol: null, meta: {} } },
         params: [
-            { id: 'value', label: 'Value', type: 'number', step: 1 },
-            { id: 'unit', label: 'Unit', type: 'string', hint: 'e.g. apple, m, degC' }
+            { id: 'value', label: 'Value', type: 'number', step: 1 }
         ]
     },
     {
@@ -45,7 +44,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         },
         params: [
             { id: 'value', label: 'Value', type: 'number' },
-            { id: 'unit', label: 'Unit', type: 'string', hint: 'e.g. vibe, kg, s' },
             { id: 'min', label: 'Min', type: 'number' },
             { id: 'max', label: 'Max', type: 'number' },
             { id: 'step', label: 'Step', type: 'number', min: 0, hint: 'Drag increment' }
@@ -160,7 +158,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: {
-            rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]',
+            array: '[[0,0,0],[0,0,0],[0,0,0]]',
             width: 152,
             height: 160
         },
@@ -178,7 +176,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         handles: [
             { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] },
+        defaultData: { type: 'abacus', value: [0, 0, 0, 0, 0, 0, 0] },
         minWidth: 240,
         minHeight: 210,
         layoutMetadata: {
@@ -215,53 +213,40 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['rand', 'noise', 'white', 'gaussian', 'normal', 'uniform', 'probability', 'poisson', 'exponential'],
         handles: [
             {
-                id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar',
-                dynamicColor: (data) => {
-                    if (data.mode === 'matrix' || data.mode === 'vector') return 'array';
-                    return 'scalar';
-                }
+                id: 'out_a', type: 'source', variant: 'single', dataType: 'array'
             }
         ],
         defaultData: {
-            type: 'random',
-            mode: 'scalar',
-            distribution: 'Uniform',
+            mode: 'Uniform',
             isFloat: true,
             min: 0,
             max: 1,
             mean: 0,
             stdDev: 1,
             lambda: 1,
-            rows: 3,
-            cols: 3,
-            length: 100,
-            seed: Date.now()
+            rows: 1,
+            cols: 1
         },
         params: [
             {
-                id: 'distribution', label: 'Distribution', type: 'select', options: [
+                id: 'mode', label: 'Distribution', type: 'select', options: [
                     { label: 'Uniform', value: 'Uniform' },
                     { label: 'Normal (Gaussian)', value: 'Normal' },
-                    { label: 'Poisson', value: 'Poisson' },
-                    { label: 'Exponential', value: 'Exponential' }
+                    { label: 'Exponential', value: 'Exponential' },
+                    { label: 'Poisson', value: 'Poisson' }
                 ]
             },
-            {
-                id: 'mode', label: 'Output Mode', type: 'select', options: [
-                    { label: 'Scalar Value', value: 'scalar' },
-                    { label: 'Array (1D)', value: 'vector' },
-                    { label: 'Array (2D)', value: 'matrix' }
-                ]
-            },
-            { id: 'isFloat', label: 'Is Float', type: 'boolean', hidden: (d) => d.distribution === 'Poisson' },
-            { id: 'min', label: 'Min', type: 'number', hidden: (d) => d.distribution !== 'Uniform' },
-            { id: 'max', label: 'Max', type: 'number', hidden: (d) => d.distribution !== 'Uniform' },
-            { id: 'mean', label: 'Mean (μ)', type: 'number', hidden: (d) => d.distribution !== 'Normal' },
-            { id: 'stdDev', label: 'StdDev (σ)', type: 'number', min: 0, hidden: (d) => d.distribution !== 'Normal' },
-            { id: 'lambda', label: 'Lambda (λ)', type: 'number', min: 0.0001, hidden: (d) => d.distribution !== 'Poisson' && d.distribution !== 'Exponential' },
-            { id: 'length', label: 'Length', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'vector' },
-            { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'matrix' },
-            { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'matrix' }
+            { id: 'isFloat', label: 'Floating Point', type: 'boolean' },
+            { id: 'min', label: 'Min', type: 'number', hidden: (d: any) => d.mode !== 'Uniform' },
+            { id: 'max', label: 'Max', type: 'number', hidden: (d: any) => d.mode !== 'Uniform' },
+            { id: 'mean', label: 'Mean (μ)', type: 'number', hidden: (d: any) => d.mode !== 'Normal' },
+            { id: 'stdDev', label: 'StdDev (σ)', type: 'number', min: 0, hidden: (d: any) => d.mode !== 'Normal' },
+            { id: 'lambda', label: 'Lambda (λ)', type: 'number', min: 0.0001, hidden: (d: any) => {
+                const mode = String(d.mode || '').split(':')[0];
+                return mode !== 'Poisson' && mode !== 'Exponential' && mode !== 'Exp';
+            } },
+            { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1 },
+            { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1 }
         ]
     },
 

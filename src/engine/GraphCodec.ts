@@ -4,6 +4,7 @@ import { InjectableGraph } from './types';
 import { Edge } from '@xyflow/react';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { PayloadUtils } from '../utils/PayloadUtils';
+import { IOGL_MANIFEST } from '../iogl/manifest';
 
 interface IOGLNode {
     id: string;      // Internal unique ID (e.g. node_123)
@@ -252,13 +253,20 @@ class IOGLParser {
         if (idx >= tokens.length || tokens[idx].type !== 'ID') return null;
 
         let alias = tokens[idx].value;
+        let handle: string | undefined = undefined;
         idx++;
+
+        if (alias.includes('.')) {
+            const parts = alias.split('.');
+            alias = parts[0];
+            handle = '.' + parts[1];
+        }
 
         let handleSuffixObj = this.parseHandleSuffix(tokens, idx);
         let bracketSuffix = handleSuffixObj.suffix;
         idx = handleSuffixObj.nextIndex;
 
-        let handle: string | undefined = bracketSuffix ? bracketSuffix : undefined;
+        if (bracketSuffix) handle = (handle || '') + bracketSuffix;
 
         if (idx < tokens.length && tokens[idx].type === 'COLON') {
             idx++;
@@ -399,8 +407,8 @@ class IOGLParser {
                 value = GraphCodec.parseValue(valSegments[0].value);
             } else if (valSegments.length > 0) {
                 // If it's a series of tokens (e.g. JSON brackets), join them with space.
-                // parseValue is robust enough to handle the result.
-                const combined = valSegments.map(t => t.value).join(' ');
+                // Clean up spaces around colons to preserve identifiers like Uniform:Float.
+                const combined = valSegments.map(t => t.value).join(' ').replace(/\s*:\s*/g, ':');
                 value = GraphCodec.parseValue(combined);
             }
         }
@@ -441,14 +449,19 @@ export class GraphCodec {
             return valStr.slice(1, -1);
         }
 
-        // Try JSON Array or Object
-        if ((valStr.trim().startsWith('[') && valStr.trim().endsWith(']')) ||
-            (valStr.trim().startsWith('{') && valStr.trim().endsWith('}'))) {
-            try {
-                return JSON.parse(valStr);
-            } catch (e) {
-                return valStr;
-            }
+        // Try JSON Array/Object or Manual Array parsing
+        const trimmed = valStr.trim();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            try { return JSON.parse(trimmed); } catch(e) { /* fall through */ }
+
+            // Manual fallback for unquoted arrays: [val1, val2]
+            const inner = trimmed.substring(1, trimmed.length - 1).trim();
+            if (inner === '') return [];
+            return inner.split(',').map(s => GraphCodec.parseValue(s.trim()));
+        }
+
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try { return JSON.parse(trimmed); } catch(e) { return valStr; }
         }
 
         return valStr;
@@ -465,7 +478,8 @@ export class GraphCodec {
             const typeInfo = this.resolveType(cNode.category, cNode.opCode);
 
             if (!typeInfo) {
-                diagnostics.push(`Node "${cNode.alias}": Unknown category:opcode "${cNode.category}:${cNode.opCode}"`);
+                const msg = `Node "${cNode.alias}": Unknown category:opcode "${cNode.category}:${cNode.opCode}"`;
+                diagnostics.push(msg);
                 return;
             }
 
@@ -481,105 +495,45 @@ export class GraphCodec {
             // Set User-defined name as Label
             data.label = cNode.alias;
 
-            // If value is provided, override appropriate field with strict type validation
-            if (cNode.value !== undefined) {
-                let validValue = cNode.value;
+            // 💡 IOGL 3.0 Unified Data Mapping
+            const manifest = IOGL_MANIFEST[typeInfo.id];
+            if (manifest) {
+                const rawValue = cNode.value;
+                const values = Array.isArray(rawValue) ? rawValue : (rawValue !== undefined ? [rawValue] : []);
 
-                // Strict Type Validation
-                if (typeInfo.id === 'IN-01' || typeInfo.id === 'IN-02') {
-                    if (typeof cNode.value !== 'number') {
-                        diagnostics.push(`Node "${cNode.alias}": Value "${cNode.value}" is invalid for ${typeInfo.id}. Expected number. Defaulting to 0.`);
-                        validValue = 0;
-                    }
-                } else if (typeInfo.id === 'IN-05') { // Button
-                    if (typeof cNode.value !== 'boolean') {
-                        diagnostics.push(`Node "${cNode.alias}": Value "${cNode.value}" is invalid for ${typeInfo.id}. Expected boolean. Defaulting to false.`);
-                        validValue = false;
-                    }
-                } else if (typeInfo.id === 'IN-04') { // String
-                    validValue = String(cNode.value);
+                // 1. Handle Mode Selector
+                if (manifest.modeProperty && values.length > 0) {
+                    data[manifest.modeProperty] = values[0];
                 }
 
-                // Update cNode.value to the validated value so Brain gets the safe initialValue
-                cNode.value = validValue;
-
-                // Map to specific data field based on node type
-                if (typeInfo.id === 'IN-01') data.value = validValue;
-                else if (typeInfo.id === 'IN-02') data.value = validValue;
-                else if (typeInfo.id === 'IN-06') data.val = validValue;
-                else if (typeInfo.id === 'IN-05') data.value = validValue;
-                else if (typeInfo.id === 'IN-09') data.code = validValue;
-                else if (typeInfo.id === 'UT-01') data.markdown = validValue; // Sticky Node mapping (UI component uses 'markdown')
-                else if (typeInfo.id === 'IN-07') {
-                    // MatrixInputNode expects 2D array [[x, y, z]]. 
-                    // If we got 1D [x, y, z] wrap it.
-                    let matrixVal = validValue;
-                    if (Array.isArray(matrixVal) && matrixVal.length > 0 && !Array.isArray(matrixVal[0])) {
-                        matrixVal = [matrixVal];
-                    }
-                    data.rawExpression = typeof matrixVal === 'string' ? matrixVal : JSON.stringify(matrixVal);
-                }
-                else if (typeInfo.id.startsWith('IN')) data.value = validValue;
-
-                // SPECIAL: If the node is Random (IN-10) and the value suggests a mode, set it.
-                // This allows io:rand = "vector" to work directly.
-                if (typeInfo.id === 'IN-10' && typeof validValue === 'string') {
-                    if (['float', 'vector', 'matrix'].includes(validValue.toLowerCase())) {
-                        data.mode = validValue.toLowerCase();
-                    }
-                }
-
-                // SPECIAL: If value is a JSON object, merge it directly into data fields
-                if (typeof validValue === 'object' && validValue !== null && !Array.isArray(validValue)) {
-                    Object.assign(data, validValue);
-                }
-            }
-
-            // Override OpCode if specified (e.g. math:SUB)
-            // Even though resolveType might have found the definition, ensuring 'op' is set correctly is safe
-            if (cNode.opCode && (typeInfo.category === 'Math')) {
-                // Standardize OpCode to UpperCase for internal logic
-                data.op = cNode.opCode.toUpperCase();
-            }
-
-            // Data Family Mapping
-            if (cNode.opCode && typeInfo.category.includes('Data')) {
-                const op = cNode.opCode.toLowerCase();
-                if (typeInfo.id === 'DT-03') {
-                    const opMap: Record<string, string> = { 'sort (asc)': 'Sort (Asc)', 'sort': 'Sort (Asc)', 'sort (desc)': 'Sort (Desc)', 'reverse': 'Reverse', 'unique': 'Unique', 'clean': 'Clean' };
-                    if (opMap[op]) data.mode = opMap[op];
-                } else if (typeInfo.id === 'DT-04') {
-                    const opMap: Record<string, string> = { 'union': 'Union', 'intersection': 'Intersection', 'difference': 'Difference' };
-                    if (opMap[op]) data.mode = opMap[op];
-                } else if (typeInfo.id === 'DT-06') {
-                    if (op === 'combine') data.mode = 'combine';
-                    if (op === 'separate' || op === 'split') data.mode = 'separate';
-                    cNode.value = data.mode;
-                } else if (typeInfo.id === 'DT-05' || typeInfo.id === 'DT-07') {
-                    // Standardize Matrix/Vector OpCodes to Uppercase
-                    data.op = op.toUpperCase();
-                }
-            }
-
-            // Calculus Family Mapping
-            if (typeInfo.category === 'Calculus') {
-                if (cNode.value !== undefined) {
-                    const val = String(cNode.value);
-                    if (typeInfo.id === 'CL-02' && (val === 'definite' || val === 'indefinite')) {
-                        data.mode = val;
-                    } else if (typeInfo.id === 'CL-03') {
-                        data.approach = val;
+                // 2. Handle Positional Data (Extreme Array Merging)
+                const schema = manifest.data;
+                if (schema) {
+                    let dataKeys: string[] = [];
+                    if (Array.isArray(schema)) {
+                        dataKeys = schema;
                     } else {
-                        data.expression = val;
+                        // Context-aware schema (e.g. IN-10 based on mode)
+                        const currentMode = String(data[manifest.modeProperty || 'mode'] || '');
+                        dataKeys = schema[currentMode] || [];
+                    }
+
+                    const offset = manifest.modeProperty ? 1 : 0;
+                    dataKeys.forEach((key, i) => {
+                        if (values[i + offset] !== undefined) {
+                            data[key] = values[i + offset];
+                        }
+                    });
+                }
+            } else {
+                // Fallback for nodes not yet in manifest
+                if (cNode.value !== undefined) {
+                    if (typeof cNode.value === 'object' && !Array.isArray(cNode.value)) {
+                        Object.assign(data, cNode.value);
+                    } else {
+                        data.value = cNode.value;
                     }
                 }
-            }
-
-            // Logic Family Mapping
-            if (cNode.opCode && typeInfo.id === 'LG-01') {
-                data.op = cNode.opCode.toUpperCase();
-                // We keep the alias as the label, but for basic gates, maybe OP is clearer?
-                // User requirement said "NANID produced, we change node name"
             }
 
             graph.nodes.push({
@@ -674,8 +628,14 @@ export class GraphCodec {
 
         // 2. Common Math Aliases (MA-01 uses in_a, in_b)
         if (!isSource) {
-            // Standardize first input handle for Math/Logic/Calculus families
-            if (['a', 'in', 'in_a', 'expr'].includes(h)) {
+            // Handle positional aliases (.a, .b, [0])
+            if (h === '.a' || h === 'a' || h === 'in' || h === 'in_a') return 'in_a';
+            if (h === '.b' || h === 'b' || h === 'in_b') return 'in_b';
+            if (h === '.c' || h === 'c' || h === 'in_c') return 'in_c';
+            if (h === '.d' || h === 'd' || h === 'in_d') return 'in_d';
+
+            // Support standard in_a, in_b for Math/Logic/Calculus families
+            if (['expr'].includes(h)) {
                 if (typeId?.startsWith('MA-') || typeId?.startsWith('LG-') || typeId?.startsWith('CL-') || typeId?.startsWith('TR-') || typeId?.startsWith('DT-')) {
                     return 'in_a';
                 }
@@ -739,10 +699,12 @@ export class GraphCodec {
 
         // 4. Source aliases
         let resolved = h;
-        if (['val', 'ans', 'res', 'out', 'result', 'output', 'out_true'].includes(h)) {
+        if (['val', 'ans', 'res', 'out', 'result', 'output', 'out_true', '.a', 'a'].includes(h)) {
             resolved = 'out_a';
-        } else if (h === 'out_false') {
+        } else if (['out_false', '.b', 'b'].includes(h)) {
             resolved = 'out_b';
+        } else if (h === '.c' || h === 'c') {
+            resolved = 'out_c';
         }
 
         // Wireless link immunity for sources
@@ -800,6 +762,7 @@ export class GraphCodec {
             if (opLower === 'expression' || opLower === 'expr' || opLower === 'formula') return NODE_DEFINITIONS.find(d => d.id === 'IN-09');
             if (opLower === 'random' || opLower === 'rand' || opLower === 'noise') return NODE_DEFINITIONS.find(d => d.id === 'IN-10');
             if (opLower === 'distribution' || opLower === 'dist') return NODE_DEFINITIONS.find(d => d.id === 'IN-10');
+            if (opLower === 'unit') return NODE_DEFINITIONS.find(d => d.id === 'TR-01');
 
             if (opLower === 'res' || opLower === 'result') return NODE_DEFINITIONS.find(d => d.id === 'OT-01');
             if (opLower === 'status') return NODE_DEFINITIONS.find(d => d.id === 'OT-02');
