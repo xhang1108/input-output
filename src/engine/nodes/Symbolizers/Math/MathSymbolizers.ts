@@ -4,12 +4,21 @@ import { NodeSymbolizer } from '../../../NodeRegistry';
 export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     'MA-01': (node, inputs) => {
         const op = ((node.data || {}) as any).op || 'ADD';
-        const unaryOps = ['SIN', 'COS', 'TAN', 'SQRT', 'ABS'];
+        const unaryOps = ['SIN', 'COS', 'TAN', 'SQRT', 'ABS', 'NEG', 'SIGN', 'FACT', 'CBRT'];
+        const functionStyleOps = ['SIN', 'COS', 'TAN', 'SQRT', 'ABS', 'SIGN', 'CBRT'];
+
         if (unaryOps.includes(op)) {
-            return PayloadUtils.createSymbol('FunctionCall', {
-                name: op.toLowerCase(),
-                args: [inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
-            });
+            if (functionStyleOps.includes(op)) {
+                return PayloadUtils.createSymbol('FunctionCall', {
+                    name: op.toLowerCase(),
+                    args: [inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 })]
+                });
+            } else {
+                return PayloadUtils.createSymbol('UnaryExpression', {
+                    operator: op,
+                    argument: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 })
+                });
+            }
         }
         return PayloadUtils.createSymbol('BinaryExpression', {
             operator: op,

@@ -183,10 +183,8 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             let pts: any[] = [];
 
             try {
-                // 💡 Enhancement: Prioritize the 'symbol' if it's a Literal string (likely a formula like "x=3")
-                // This allows Plotting to handle "smart" Expression node outputs that are typed as Scalar but carry a formula.
-                const symbolFormula = (p.symbol?.type === 'Literal' && typeof p.symbol.value === 'string') ? p.symbol.value : null;
-                const activeFormula = (p.type === DataType.Symbolic && typeof parsed === 'string') ? parsed : symbolFormula;
+                // 💡 Enhancement: Unified formula extraction from symbol tree or value
+                const activeFormula = PayloadUtils.extractExprStr(p);
 
                 if (activeFormula && (p.type === DataType.Symbolic || p.type === DataType.Scalar)) {
                     pts = PlottingUtils.generateSymbolicPoints(activeFormula, minX, maxX, pointsCount);

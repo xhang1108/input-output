@@ -16,6 +16,7 @@ import { GridView } from './views/GridView';
 import { ColorView } from './views/ColorView';
 import { FormulaView } from './views/FormulaView';
 import { LatexView } from './views/LatexView';
+import { DisplayUtils } from '../../utils/DisplayUtils';
 
 export type ResultViewMode = 'auto' | 'text' | 'grid' | 'color' | 'formula' | 'latex';
 
@@ -76,7 +77,7 @@ export const ResultNode = memo((props: NodeProps) => {
         } else if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) && (rawValue as any).latex) {
             formulaStr = PayloadUtils.unwrap((rawValue as any).latex) as string;
         } else {
-            formulaStr = String(rawValue);
+            formulaStr = DisplayUtils.formatValue(rawValue);
         }
     }
 
@@ -97,7 +98,7 @@ export const ResultNode = memo((props: NodeProps) => {
         else if (effectiveMode === 'color') copyStr = (rawValue as any)?.hex || '';
         else if (effectiveMode === 'formula') copyStr = formulaStr;
         else if (effectiveMode === 'latex') copyStr = formulaStr;
-        else copyStr = typeof rawValue === 'string' ? rawValue : JSON.stringify(rawValue);
+        else copyStr = DisplayUtils.formatValue(rawValue);
 
         if (copyStr && copyStr !== '[object Object]') {
             navigator.clipboard.writeText(copyStr);
