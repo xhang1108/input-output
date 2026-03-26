@@ -33,6 +33,8 @@ import { ArrayExtractNode } from '../components/nodes/ArrayExtractNode';
 import { ArrayBuilderNode } from '../components/nodes/ArrayBuilderNode';
 import { VectorFieldNode } from '../components/nodes/VectorFieldNode';
 
+import { ArrayCalculusNode } from '../components/nodes/ArrayCalculusNode';
+
 // Specialized components removed in favor of GenericSelectorNode
 // import { MathNode } from '../components/nodes/MathNode';
 // import { LogNode } from '../components/nodes/LogNode';
@@ -86,7 +88,7 @@ export const nodeTypes = {
     'DT-04': GenericSelectorNode,
     'DT-05': VectorUtilsNode,
 
-    'DT-06': GenericSelectorNode,
+    'DT-06': ArrayCalculusNode,
 
     // ─── 6. Transform ───────────────────────────────────────
     'TR-01': UnitNode,

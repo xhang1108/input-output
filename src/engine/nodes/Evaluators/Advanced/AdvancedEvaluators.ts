@@ -10,20 +10,22 @@ import { RuntimeGuard } from '../../../calculus/RuntimeGuard';
 export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'DT-01': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
+        const data = (node.data || {}) as any;
+        const axis = Number(data.axis || 0);
+
         let items: any[] = [];
 
         // Support IOGL 2.0 Capsule handles: 'in', 'append', or numerical suffixes '[0]', '[1]'
-        // Also support 'in_0', 'in_1' for legacy nodes
-        Object.keys(inputs).sort((a, b) => {
-            // Sort by numerical suffix if available: [0], [1]...
+        const sortKeys = Object.keys(inputs).sort((a, b) => {
             const aNum = parseInt(a.match(/\d+/)?.[0] || '999');
             const bNum = parseInt(b.match(/\d+/)?.[0] || '999');
             return aNum - bNum;
-        }).forEach(key => {
+        });
+
+        sortKeys.forEach(key => {
             const val = inputs[key];
             if (!val) return;
 
-            // If it's a multi-link input (Array of payloads)
             if (Array.isArray(val)) {
                 val.forEach(p => items.push(PayloadUtils.hydrate(PayloadUtils.unwrap(p), math)));
             } else {
@@ -31,7 +33,32 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             }
         });
 
-        return PayloadUtils.createArray(items);
+        if (items.length === 0) return PayloadUtils.createArray([]);
+
+        try {
+            // Robust Concatenation: Coerce scalars and ensure min-dimensions for the target axis
+            const preparedItems = items.map(item => {
+                let val = item;
+                // If it's already an array or matrix, use it.
+                if (!Array.isArray(val) && !(val && val.isMatrix)) {
+                    val = [val]; // Coerce scalar to 1D
+                }
+
+                // If axis is 1 (Columns) or higher, but value is 1D, promote it to 2D
+                // This allows joining scalars/vectors horizontally.
+                // e.g. [1, 2] -> [[1, 2]] (row vector)
+                if (axis >= 1 && Array.isArray(val) && !Array.isArray(val[0])) {
+                    val = [val]; 
+                }
+                
+                return val;
+            });
+
+            const result = math.concat(...preparedItems, axis);
+            return PayloadUtils.createArray(result);
+        } catch (e: any) {
+            return PayloadUtils.createError(`Join Failed: ${e.message}`);
+        }
     },
 
     // DT-02: Array Extract
@@ -184,7 +211,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'TRANSPOSE') result = math.transpose(hydrated);
             else if (op === 'TRACE') result = math.trace(hydrated);
             else if (op === 'EIGEN') result = math.eigs(hydrated);
-            else if (op === 'LUP') result = math.lup(hydrated);
+            else if (op === 'LUP' || op === 'LU') result = math.lup(hydrated);
             else if (op === 'QR') result = math.qr(hydrated);
             else result = hydrated;
 
@@ -196,13 +223,16 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 if (op === 'QR') {
                     multi.out_a = PayloadUtils.wrap(result.Q);
                     multi.out_b = PayloadUtils.wrap(result.R);
-                } else if (op === 'LUP') {
+                } else if (op === 'LUP' || op === 'LU') {
                     multi.out_a = PayloadUtils.wrap(result.L);
                     multi.out_b = PayloadUtils.wrap(result.U);
-                    multi.out_c = PayloadUtils.wrap(result.P);
+                    if (op === 'LUP') multi.out_c = PayloadUtils.wrap(result.P);
                 } else if (op === 'EIGEN') {
                     multi.out_a = PayloadUtils.wrap(result.values);
-                    multi.out_b = PayloadUtils.wrap(result.vectors);
+                    // Extract vectors from {value, vector} objects and join as a matrix
+                    const vectors = result.eigenvectors.map((ev: any) => ev.vector);
+                    // In mathjs, these are usually 1D. We want them as Columns in a Matrix.
+                    multi.out_b = PayloadUtils.wrap(math.transpose(math.matrix(vectors)));
                 } else {
                     // Fallback for any other objects
                     for (const [key, val] of Object.entries(result)) {
@@ -729,27 +759,32 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // IN-09: Expert Node (Expression)
     'IN-09': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const code = String(data.code || '');
+        const code = String(data.code || '').trim();
         if (!code) return PayloadUtils.createError('No Expression');
 
         const engine = InputOutputEngine.getInstance();
         const math = engine.getMathInstance();
 
-        // 🧠 Smart Evaluation: Constant expressions become Scalars
         try {
+            // 💡 Smart Evaluation & Assignment Detection
+            const parsed = math.parse(code);
+            let metadata: any = {};
+
+            if (parsed && (parsed as any).isAssignmentNode) {
+                const node = parsed as any;
+                metadata.label = node.object?.name || node.name;
+            }
+
             const result = math.evaluate(code);
-            if (result !== undefined && result !== null) {
-                // Return Scalar if it's a numeric result
-                if (typeof result === 'number' || (result && typeof result === 'object' && (result.isBigNumber || result.isFraction || result.isUnit))) {
-                    const scalar = PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
-                    return {
-                        ...scalar,
-                        symbol: PayloadUtils.createSymbol('Literal', { value: code })
-                    };
-                }
+            if (result !== undefined && result !== null && typeof result !== 'function') {
+                // Use wrap() for robust type detection (Scalar/Array/Boolean/Unit)
+                const payload = PayloadUtils.wrap(result);
+                payload.symbol = PayloadUtils.createSymbol('Literal', { value: code });
+                payload.meta = { ...payload.meta, ...metadata };
+                return payload;
             }
         } catch (e: any) {
-            // Symbolic variables found, keep as Symbolic
+            // Fallback to Symbolic if variables are present
         }
 
         return PayloadUtils.createSymbolic(code);
