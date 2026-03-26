@@ -191,7 +191,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Expression',
         category: 'Input',
         handles: [
-            { id: 'out_a', type: 'source', variant: 'single', dataType: 'symbolic' }
+            { id: 'out_a', type: 'source', variant: 'single', dataType: 'any' }
         ],
         defaultData: {
             type: 'expression',

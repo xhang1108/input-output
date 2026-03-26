@@ -759,27 +759,32 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // IN-09: Expert Node (Expression)
     'IN-09': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const code = String(data.code || '');
+        const code = String(data.code || '').trim();
         if (!code) return PayloadUtils.createError('No Expression');
 
         const engine = InputOutputEngine.getInstance();
         const math = engine.getMathInstance();
 
-        // 🧠 Smart Evaluation: Constant expressions become Scalars
         try {
+            // 💡 Smart Evaluation & Assignment Detection
+            const parsed = math.parse(code);
+            let metadata: any = {};
+
+            if (parsed && (parsed as any).isAssignmentNode) {
+                const node = parsed as any;
+                metadata.label = node.object?.name || node.name;
+            }
+
             const result = math.evaluate(code);
-            if (result !== undefined && result !== null) {
-                // Return Scalar if it's a numeric result
-                if (typeof result === 'number' || (result && typeof result === 'object' && (result.isBigNumber || result.isFraction || result.isUnit))) {
-                    const scalar = PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
-                    return {
-                        ...scalar,
-                        symbol: PayloadUtils.createSymbol('Literal', { value: code })
-                    };
-                }
+            if (result !== undefined && result !== null && typeof result !== 'function') {
+                // Use wrap() for robust type detection (Scalar/Array/Boolean/Unit)
+                const payload = PayloadUtils.wrap(result);
+                payload.symbol = PayloadUtils.createSymbol('Literal', { value: code });
+                payload.meta = { ...payload.meta, ...metadata };
+                return payload;
             }
         } catch (e: any) {
-            // Symbolic variables found, keep as Symbolic
+            // Fallback to Symbolic if variables are present
         }
 
         return PayloadUtils.createSymbolic(code);
