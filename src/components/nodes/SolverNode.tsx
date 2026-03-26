@@ -74,9 +74,9 @@ export const SolverNode = memo((props: NodeProps) => {
     // Map extracted variables to menu items
     const detectedOptions: CategorizedMenuItem[] = useMemo(() => {
         const baseOptions: CategorizedMenuItem[] = [
-            { id: '', label: 'Auto (First found)', category: 'Automatic' }
+            { id: '', label: 'Auto', category: 'Automatic' }
         ];
-        
+
         const varOptions = variables.map(v => ({
             id: v,
             label: v,
@@ -94,23 +94,17 @@ export const SolverNode = memo((props: NodeProps) => {
                 </div>
 
                 <div className="w-full flex flex-col pt-2 border-t border-zinc-800/50">
-                    <NodeOpSelect 
-                        nodeId={id} 
-                        defId="CL-04" 
-                        paramId="variable" 
-                        data={data} 
+                    <NodeOpSelect
+                        nodeId={id}
+                        defId="CL-04"
+                        paramId="variable"
+                        data={data}
                         label="Solve For"
                         placeholder="Auto"
                         overrideOptions={detectedOptions}
                         width="36"
                     />
-                    
-                    {/* Fallback info when no variables are found */}
-                    {variables.length === 0 && (
-                        <div className="mt-1 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-[9px] text-amber-200/70 text-center animate-in fade-in slide-in-from-top-1">
-                            Connect Eq to see vars
-                        </div>
-                    )}
+
                 </div>
             </div>
         </BaseNode>

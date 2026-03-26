@@ -3,6 +3,7 @@ import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NodeEvaluator } from '../../../NodeRegistry';
 import { ColorUtils } from '../../../../utils/ColorUtils';
+import { PlottingUtils } from '../../../../utils/PlottingUtils';
 
 export const IOEvaluators: Record<string, NodeEvaluator> = {
     'IN-01': (node) => {
@@ -144,8 +145,6 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     'OT-03': (node, inputs) => {
         // OT-03: Graph Plot — Pure engine sampling.
         // Receives capsule inputs, runs sampling, returns computed plotPoints in meta.
-        import('../../../../utils/PlottingUtils').then(() => { }); // Ensure bundled
-        const { PlottingUtils } = require('../../../../utils/PlottingUtils');
         const data = (node.data || {}) as Record<string, unknown>;
         const minX = typeof data.minX === 'number' ? data.minX : -10;
         const maxX = typeof data.maxX === 'number' ? data.maxX : 10;
@@ -220,7 +219,11 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
 
         return {
             type: DataType.Object,
-            value: allPoints,
+            value: {
+                points: allPoints,
+                formula: payloadList[0]?.symbol?.value || payloadList[0]?.value || '', 
+                label: payloadList[0]?.meta?.label || 'Series 1'
+            },
             symbol: null,
             meta: {
                 plotPoints: allPoints,

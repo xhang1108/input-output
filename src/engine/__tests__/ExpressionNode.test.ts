@@ -47,7 +47,7 @@ describe('Expression Node (IN-09) Reproduction', () => {
         expect(result.value).toBe('y + 1');
     });
 
-    it('should detect assignment "x = 2" and set meta.label', async () => {
+    it('should detect assignment "x = 2" and set meta.label as Symbolic', async () => {
         const node = {
             id: 'test-node',
             type: 'IN-09',
@@ -57,16 +57,9 @@ describe('Expression Node (IN-09) Reproduction', () => {
             isInDirtyChain: true,
             position: { x: 0, y: 0 }
         };
-
         const result = await NodeRegistry.evaluate(node as any, {});
-        
-        expect(result.type).toBe(DataType.Scalar);
-        const val = PayloadUtils.unwrap(result);
-        if (typeof val === 'object' && val !== null && (val as any).mathjs === 'BigNumber') {
-            expect((val as any).value).toBe('2');
-        } else {
-            expect(val).toBe(2);
-        }
+        expect(result.type).toBe(DataType.Symbolic);
+        expect(result.value).toBe('x = 2');
         expect(result.meta?.label).toBe('x');
     });
 
