@@ -102,8 +102,8 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
                     // Contextual Match:
                     // 1. If dragging from an INPUT handle -> it can accept ANY output Node.
                     if (pendingConnection.handleType === 'target') return true;
-                    // 2. If dragging from an OUTPUT handle -> only match other Any inputs to keep specialized nodes clean.
-                    return isGenericColor(hColor);
+                    // 2. If dragging from an OUTPUT handle -> show all nodes with input handles.
+                    return true;
                 }
 
                 // Specific handles match same color OR any
