@@ -1,8 +1,13 @@
-
 import { InjectableGraph } from '../engine/types';
 import { IOGL_MANIFEST } from './manifest';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { IOGLUtils } from './IOGLUtils';
 
+/**
+ * 🛠️ IOGL 1.0 Encoder
+ * Converts internal Engine graph state into IOGL 1.0 script format.
+ * Utilizes IOGLUtils for standardized handle and value formatting.
+ */
 export class Encoder {
   public static encode(graph: InjectableGraph): string {
     let result = '';
@@ -38,21 +43,11 @@ export class Encoder {
             keys = schema;
           } else {
             const currentMode = String(data[manifest.modeProperty || 'mode'] || '');
-            keys = schema[currentMode] || [];
+            keys = (schema as any)[currentMode] || [];
           }
 
           const values = keys.map(key => {
-              const val = data[key];
-              let unwrapped = val;
-              // 1. Unwrap Payload if it's a NodePayload
-              if (val && typeof val === 'object' && 'type' in val && 'value' in val) {
-                  unwrapped = val.value;
-              }
-              // 2. If it's a color object, return its hex string representation for encoding
-              if (unwrapped && typeof unwrapped === 'object' && 'hex' in unwrapped) {
-                  return (unwrapped as any).hex;
-              }
-              return unwrapped;
+              return IOGLUtils.unwrapValue(data[key]);
           }).filter(v => v !== undefined);
 
           if (values.length > 0) {
@@ -90,26 +85,12 @@ export class Encoder {
       const sourceLabel = idToLabel.get(edge.source) || edge.source;
       const targetLabel = idToLabel.get(edge.target) || edge.target;
 
-      const sourceHandle = this.formatHandle(edge.sourceHandle || 'out_a', true);
-      const targetHandle = this.formatHandle(edge.targetHandle || 'in_a', false);
+      const sourceHandle = IOGLUtils.formatHandle(edge.sourceHandle || 'out_a');
+      const targetHandle = IOGLUtils.formatHandle(edge.targetHandle || 'in_a');
 
       result += `${sourceLabel}${sourceHandle} -> ${targetLabel}${targetHandle}\n`;
     }
 
     return result;
-  }
-
-  private static formatHandle(handle: string, isSource: boolean): string {
-    const h = handle.toLowerCase();
-    // Match in_a, out_b, in, out etc.
-    const match = h.match(/^(in|out)(_?([a-z]))?$/);
-    
-    if (match) {
-      // If it's just "in" or "out", prefix it with 'a'
-      const char = match[3] || 'a';
-      return `.${char}`;
-    }
-
-    return `:${handle}`; // Fallback to colon format for custom handles
   }
 }

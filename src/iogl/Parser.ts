@@ -1,4 +1,3 @@
-
 import { Lexer, Token, TokenType } from './Lexer';
 import { IOGL_MANIFEST } from './manifest';
 import { InjectableGraph } from '../engine/types';
@@ -6,7 +5,7 @@ import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { DataType, NodePayload } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
-import { ColorUtils } from '../utils/ColorUtils';
+import { IOGLUtils } from './IOGLUtils';
 
 interface RawNode {
   id: string; // The Type (e.g. IN-01)
@@ -127,12 +126,8 @@ export class Parser {
     ) {
       const t = this.current.type as TokenType;
       if (t === 'RAW_VALUE' || t === 'LBRACKET' || t === 'ID' || t === 'EQUALS' || t === 'NUMBER') {
-        // Handle explicit key=value in positional context if needed, but usually it's just values
         const val = this.parseValue();
         
-        // Smart Mode Detection:
-        // If it's the first positional item, and it's an ID, and the manifest has a modeProperty,
-        // and it's NOT already defined in the {} block... treat it as mode.
         if (positionalIdx === 0 && t === 'ID' && manifest?.modeProperty && props.mode === undefined) {
              props.mode = val;
         } else {
@@ -151,7 +146,6 @@ export class Parser {
     if (this.current.type === 'AT') {
       this.advance();
       this.hasExplicitPositions = true;
-      // Use a helper to consume numeric IDs (including negative signs)
       const parseNum = () => {
           let val = this.expect('NUMBER').value;
           const num = parseFloat(val);
@@ -167,12 +161,8 @@ export class Parser {
 
     const internalTempId = `t_${this.nodeCounter++}`;
     this.nodes.set(internalTempId, { id: typeId, label, props, x, y });
-    
-    // Map both label and typeId (if unique) to the internal ID
     if (label) this.labelToId.set(label, internalTempId);
-    this.labelToId.set(internalTempId, internalTempId); // Always map itself
-    
-    // Fallback: also map by typeId if it's the first one seen
+    this.labelToId.set(internalTempId, internalTempId);
     if (!this.labelToId.has(typeId)) {
         this.labelToId.set(typeId, internalTempId);
     }
@@ -182,7 +172,7 @@ export class Parser {
     if (this.current.type === 'RAW_VALUE' || this.current.type === 'NUMBER') {
         const val = this.current.value;
         this.advance();
-        return this.parseLiteral(val);
+        return IOGLUtils.parseLiteral(val);
     }
     
     if (this.current.type === 'LBRACKET') {
@@ -198,7 +188,7 @@ export class Parser {
             if ((type as string) === 'RAW_VALUE' || (type as string) === 'NUMBER') {
                 valStr += char;
             } else if ((type as string) === 'ID') {
-                valStr += `"${char}"`; // Treat IDs inside brackets as strings
+                valStr += `"${char}"`; 
             } else {
                 valStr += char;
             }
@@ -208,7 +198,6 @@ export class Parser {
         }
 
         try {
-            // Robust cleaning for numeric and string values in bracketed blocks
             const cleaned = valStr.replace(/([a-zA-Z0-9_\-\.]+)/g, (m) => {
                 if (m === 'true' || m === 'false' || m === 'null' || !isNaN(Number(m))) return m;
                 return `"${m}"`;
@@ -221,7 +210,7 @@ export class Parser {
 
     const val = this.current.value;
     this.advance();
-    return this.parseLiteral(val);
+    return IOGLUtils.parseLiteral(val);
   }
 
   private parseEdge() {
@@ -255,17 +244,6 @@ export class Parser {
     return { id, handle };
   }
 
-  private parseLiteral(val: string): any {
-    if (val === 'true') return true;
-    if (val === 'false') return false;
-    const n = parseFloat(val);
-    // Flexible numeric check: Valid number and matches standard numeric pattern
-    if (!isNaN(n) && isFinite(n) && /^[ \t]*[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?[ \t]*$/.test(val)) {
-        return n;
-    }
-    return val;
-  }
-
   private buildGraph(): InjectableGraph {
     const graph: InjectableGraph = { 
         nodes: [], 
@@ -277,7 +255,6 @@ export class Parser {
     // Step 1: Create all nodes
     let nodeIndex = 0;
     this.nodes.forEach((raw, tempId) => {
-      // Resolve Node Type (with Alias support)
       let def = NODE_DEFINITIONS.find(d => d.id === raw.id);
       if (!def) {
           def = NODE_DEFINITIONS.find(d => d.aliases?.includes(raw.id.toLowerCase()));
@@ -288,17 +265,13 @@ export class Parser {
         return;
       }
 
-      console.debug(`[IOGL Parser] Processing [${raw.label || 'anon'}] Type [${raw.id}] Props:`, raw.props);
-
       const finalId = generateNodeId(def.id);
       tempToFinal.set(tempId, finalId);
 
       const data = { ...def.defaultData, label: raw.label || def.label } as Record<string, any>;
-      
-      // Resolve Manifest (Case-Insensitive)
       const manifest = IOGL_MANIFEST[def.id] || IOGL_MANIFEST[def.id.toUpperCase()];
+      
       if (manifest) {
-        // Apply Mode
         if (raw.props.mode !== undefined) {
           const modeVal = raw.props.mode;
           const modeProp = manifest.modeProperty || 'mode';
@@ -309,12 +282,8 @@ export class Parser {
           }
         }
         
-        // Apply Positional Data
         if (raw.props.data !== undefined) {
-          const positionalData = Array.isArray(raw.props.data) 
-            ? raw.props.data 
-            : [raw.props.data];
-
+          const positionalData = Array.isArray(raw.props.data) ? raw.props.data : [raw.props.data];
           const schema = manifest.data;
           if (schema) {
             let keys: string[] = [];
@@ -332,75 +301,31 @@ export class Parser {
           }
         }
 
-        // --- Fidelity Guard: Auto-wrap values for Engine consumption ---
         if (manifest.wrapPayload) {
             const propName = typeof manifest.wrapPayload === 'string' ? manifest.wrapPayload : 'value';
-            const pt = manifest.payloadType || 'scalar';
+            const wrapped = IOGLUtils.wrapPayload(data, propName, manifest);
             
-            // Robust Check: If data[propName] is a raw value (not a NodePayload), we wrap it.
-            const val = data[propName];
-            const isPayload = val && typeof val === 'object' && !Array.isArray(val) && ('type' in val) && ('value' in val);
-            
-            if (val !== undefined && !isPayload) {
-                if (pt === 'boolean') {
-                    // Robust boolean conversion (supports 1, "true", true)
-                    const boolVal = val === true || val === 'true' || val === 1 || val === '1';
-                    data[propName] = PayloadUtils.wrap(boolVal);
-                } else if (pt === 'scalar') {
-                    data[propName] = PayloadUtils.createScalar(this.parseLiteral(String(val)));
-                } else if (pt === 'array') {
-                    // Ensure matrix string is parsed before validation
-                    let parsedVal = val;
-                    if (typeof val === 'string') {
-                        try {
-                            parsedVal = JSON.parse(val);
-                        } catch (e) {
-                            parsedVal = val; // Fallback to raw for validation check
-                        }
-                    }
-
-                    const checkNumeric = (arr: any): boolean => {
-                        if (!Array.isArray(arr)) {
-                            // Trim whitespace for string numbers
-                            const n = typeof arr === 'string' ? parseFloat(arr.trim()) : arr;
-                            return typeof n === 'number' && !isNaN(n);
-                        }
-                        return arr.every(item => checkNumeric(item));
-                    };
-
-                    if (!checkNumeric(parsedVal)) {
-                        const msg = `ERROR: Matrix [${raw.label || raw.id}] contains invalid non-numeric values (e.g. symbols). Injection blocked.`;
-                        this.diagnostics.push(msg);
-                        console.warn(`[IOGL Parser] ${msg}`, parsedVal);
-                        
-                        // Revert to defaultData for this property AND ensure it's wrapped correctly
-                        const defaultRaw = def?.defaultData?.[propName];
-                        const defaultParsed = typeof defaultRaw === 'string' ? JSON.parse(defaultRaw) : defaultRaw;
-                        data[propName] = PayloadUtils.createArray(defaultParsed);
-                    } else {
-                        data[propName] = PayloadUtils.createArray(parsedVal);
-                    }
-                } else if (pt === 'color') {
-                    data[propName] = ColorUtils.standardize(String(val));
-                } else if (pt === 'string') {
-                    data[propName] = PayloadUtils.createString(String(val));
-                }
+            if (wrapped === null) {
+                const msg = `ERROR: Matrix [${raw.label || raw.id}] contains invalid non-numeric values (e.g. symbols). Injection blocked.`;
+                this.diagnostics.push(msg);
+                const defaultRaw = def?.defaultData?.[propName];
+                const defaultParsed = typeof defaultRaw === 'string' ? JSON.parse(defaultRaw) : defaultRaw;
+                data[propName] = PayloadUtils.createArray(defaultParsed);
+            } else {
+                data[propName] = wrapped;
             }
         }
 
-        // Apply Fixed Data Injection
         if (manifest.fixedData) {
             Object.assign(data, manifest.fixedData);
         }
 
-        // Apply Auxiliary Props
         if (manifest.auxiliary) {
           manifest.auxiliary.forEach(key => {
             if (raw.props[key] !== undefined) data[key] = raw.props[key];
           });
         }
         
-        // Final direct prop application (backfill)
         Object.keys(raw.props).forEach(key => {
             if (key !== 'mode' && key !== 'data' && data[key] === undefined) {
                 data[key] = raw.props[key];
@@ -427,23 +352,18 @@ export class Parser {
     this.edges.forEach(raw => {
       const sourceTempId = this.labelToId.get(raw.source);
       const targetTempId = this.labelToId.get(raw.target);
-
-      if (!sourceTempId || !targetTempId) {
-        this.diagnostics.push(`Edge error: Node '${!sourceTempId ? raw.source : raw.target}' not found`);
-        return;
-      }
+      if (!sourceTempId || !targetTempId) return;
 
       const sourceId = tempToFinal.get(sourceTempId);
       const targetId = tempToFinal.get(targetTempId);
-      
       if (!sourceId || !targetId) return;
 
       graph.edges.push({
         id: generateEdgeId(),
         source: sourceId,
-        sourceHandle: this.resolveHandle(raw.sourceHandle, sourceTempId, true),
+        sourceHandle: IOGLUtils.resolveHandle(raw.sourceHandle, true),
         target: targetId,
-        targetHandle: this.resolveHandle(raw.targetHandle, targetTempId, false),
+        targetHandle: IOGLUtils.resolveHandle(raw.targetHandle, false),
         type: 'magnetic',
         data: { pathType: 'bezier', animate: false }
       });
@@ -453,17 +373,6 @@ export class Parser {
   }
 
   private resolveHandle(handle: string | undefined, tempId: string, isSource: boolean): string {
-    const h = (handle || '').toLowerCase();
-    
-    // Support .a, .b, .c, .d Dynamic Mapping
-    const match = h.match(/^([a-z]|out|in|val|res)$/);
-    if (match) {
-        let char = match[1];
-        // Normalize out/val/res/in to 'a'
-        if (char === 'out' || char === 'val' || char === 'res' || char === 'in') char = 'a';
-        return (isSource ? 'out_' : 'in_') + char;
-    }
-
-    return handle || (isSource ? 'out_a' : 'in_a');
+    return IOGLUtils.resolveHandle(handle, isSource);
   }
 }
