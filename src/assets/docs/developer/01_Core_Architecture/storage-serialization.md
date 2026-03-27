@@ -43,9 +43,9 @@ To optimize URL sharing and storage limits, the JSON string is compressed using 
 - **CLI Validation**: Validating graph integrity outside of the browser environment.
 
 ### Parsing Pipeline
-1. **Lexer**: Breaks the IOGL script into tokens (IDs, Arrows, opCodes).
-2. **Parser**: Reconstructs the node definitions and edge connections.
-3. **Resolver**: Maps IOGL aliases and opCodes to the internal `NodeRegistry` IDs and injects semantic metadata.
+1. **Lexer**: Breaks the IOGL script into tokens (IDs, Arrows, RAW_VALUES).
+2. **Parser**: Reconstructs the node definitions and edge connections using the `IOGL_MANIFEST`.
+3. **IOGLUtils**: Centralizes handle mapping (.a -> in_a) and data wrapping (Fidelity Guard) to ensure engine compatibility.
 
 ## 4. Architectural Guards
 - **Function Stripping**: To maintain security and JSON compatibility, all functions and transient UI states (like `saveStatus` or `actionLog`) are stripped during the serialization "Cleaning" phase.
