@@ -60,6 +60,9 @@ export class BrainWorkerProxy {
     private callbacks: WorkerProxyCallbacks;
     private evalsSinceLastHealth = 0;
     private readonly HEALTH_CHECK_INTERVAL = 50;
+    private retryCount = 0;
+    private readonly MAX_RETRIES = 3;
+    private isBlocked = false;
 
     // Reference to main-thread brain state for HEALTH validation
     private getMainThreadCounts: (() => { nodeCount: number; edgeCount: number }) | null = null;
@@ -73,6 +76,8 @@ export class BrainWorkerProxy {
     // ─── Worker Lifecycle ──────────────────────────────────────────
 
     private spawnWorker() {
+        if (this.isBlocked) return;
+        
         try {
             this.worker = new Worker(
                 new URL('./brain.worker.ts', import.meta.url),
@@ -80,6 +85,7 @@ export class BrainWorkerProxy {
             );
 
             this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+                this.retryCount = 0; // Reset on successful message
                 this.handleMessage(event.data);
             };
 
@@ -87,8 +93,27 @@ export class BrainWorkerProxy {
                 const message = (error as any).message || 'Unknown error';
                 const filename = (error as any).filename || '';
                 const lineno = (error as any).lineno || 0;
+                
                 console.error(`[BrainWorkerProxy] Worker crashed: ${message} at ${filename}:${lineno}`);
                 debugManager.trackWorkerError({ message, filename, lineno });
+
+                // Detect Ad-blocker / Network failures
+                const isNetworkError = message.includes('NetworkError') || 
+                                     message.toLowerCase().includes('failed to fetch') ||
+                                     message.toLowerCase().includes('importscripts');
+
+                if (isNetworkError) {
+                    this.retryCount++;
+                    console.warn(`[BrainWorkerProxy] Network/Loading error detected (Retry ${this.retryCount}/${this.MAX_RETRIES})`);
+                    
+                    if (this.retryCount >= this.MAX_RETRIES) {
+                        this.isBlocked = true;
+                        console.error('[BrainWorkerProxy] Persistent loading failure. Marking as BLOCKED.');
+                        this.callbacks.onError(this.epoch, 'ENGINE_BLOCKED');
+                        return;
+                    }
+                }
+
                 this.handleCrash();
             };
 

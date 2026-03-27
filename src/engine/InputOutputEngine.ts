@@ -1,6 +1,7 @@
 import { create, all } from 'mathjs';
 import { InputOutputEngineInterface } from './interfaces/InputOutputEngineInterface';
 import { MATH_CONFIG } from './mathConfig';
+import { MATH_ALIASES } from './mathAliases';
 
 export class InputOutputEngine implements InputOutputEngineInterface {
     private static instance: InputOutputEngine;
@@ -22,6 +23,18 @@ export class InputOutputEngine implements InputOutputEngineInterface {
             }
 
             console.log('[InputOutputEngine] Math instance ready. bignumber check:', typeof this.math.bignumber);
+
+            // 🧠 Register First-Class Math Aliases
+            // These are not "patches" but standard international/mathematical alternatives.
+            const aliases: any = {};
+            for (const [alias, primary] of Object.entries(MATH_ALIASES)) {
+                if (typeof this.math[primary] === 'function') {
+                    aliases[alias] = this.math[primary];
+                }
+            }
+            
+            this.math.import(aliases, { override: true });
+            console.log(`[InputOutputEngine] Registered ${Object.keys(aliases).length} math aliases.`);
         } catch (error) {
             console.error('[InputOutputEngine] Initialization failed CRITICALLY:', error);
             // Last resort: try to create without config

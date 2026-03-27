@@ -34,7 +34,7 @@ describe('Expression Node (IN-09) Reproduction', () => {
         const node = {
             id: 'test-node',
             type: 'IN-09',
-            data: { code: 'y + 1' }, // Changed x to y to avoid collision with potential scope if test runs in series
+            data: { code: 'y + 1' },
             value: undefined as any,
             selected: false,
             isInDirtyChain: true,
@@ -45,6 +45,45 @@ describe('Expression Node (IN-09) Reproduction', () => {
         
         expect(result.type).toBe(DataType.Symbolic);
         expect(result.value).toBe('y + 1');
+    });
+
+    it('should handle sin(x) correctly as Symbolic', async () => {
+        const node = {
+            id: 'test-node',
+            type: 'IN-09',
+            data: { code: 'sin(x)' },
+            value: undefined as any,
+            selected: false,
+            isInDirtyChain: true,
+            position: { x: 0, y: 0 }
+        };
+
+        const result = await NodeRegistry.evaluate(node as any, {});
+        
+        expect(result.type).toBe(DataType.Symbolic);
+        expect(result.value).toBe('sin(x)');
+    });
+
+    it('should evaluate sin(0) to 0 (Scalar)', async () => {
+        const node = {
+            id: 'test-node',
+            type: 'IN-09',
+            data: { code: 'sin(0)' },
+            value: undefined as any,
+            selected: false,
+            isInDirtyChain: true,
+            position: { x: 0, y: 0 }
+        };
+
+        const result = await NodeRegistry.evaluate(node as any, {});
+        
+        expect(result.type).toBe(DataType.Scalar);
+        const val: any = PayloadUtils.unwrap(result);
+        if (typeof val === 'object' && val !== null && val.mathjs === 'BigNumber') {
+            expect(val.value).toBe('0');
+        } else {
+            expect(Number(val)).toBe(0);
+        }
     });
 
     it('should detect assignment "x = 2" and set meta.label as Symbolic', async () => {
