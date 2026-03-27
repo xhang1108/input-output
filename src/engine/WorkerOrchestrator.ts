@@ -2,6 +2,7 @@ import { NodePayload } from '../types/payload';
 import { IncrementalPatch } from './SerializableGraph';
 import { NodeLogic } from './types';
 import { useAppStore } from '../store/useStore';
+import { toast } from 'sonner';
 
 /**
  * 🏗️ WorkerOrchestrator
@@ -46,6 +47,12 @@ export class WorkerOrchestrator {
                     onResults: this.callbacks.onResults,
                     onError: (epoch: number, error: string) => {
                         console.error('[WorkerOrchestrator] error:', error);
+                        if (error === 'ENGINE_BLOCKED') {
+                            toast.error('⚠️ Engine Loading Blocked', {
+                                description: 'Please check your Ad-blocker or network connection and refresh the page.',
+                                duration: 10000,
+                            });
+                        }
                         this.callbacks.emit('workerError', error);
                     },
                     onSyncing: () => this.callbacks.emit('workerSyncing', null),
