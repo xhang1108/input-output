@@ -61,7 +61,8 @@ interface BodyProps {
     onBackToProjects?: () => void;
     onProjectLoaded?: (meta: { title: string; visibility: 'private' | 'public'; userId: string }) => void;
     onForbidden?: () => void;
-    visibility?: 'private' | 'public';
+    visibility: 'private' | 'public' | undefined;
+    onVisibilityChange?: (visibility: 'private' | 'public') => void;
 }
 
 export function Body({
@@ -69,7 +70,8 @@ export function Body({
     onBackToProjects,
     onProjectLoaded,
     onForbidden,
-    visibility
+    visibility,
+    onVisibilityChange
 }: BodyProps) {
     const brain = useBrain();
     const { data: session } = useSession();
@@ -121,7 +123,8 @@ export function Body({
         permissionError,
         forkProject,
         isOwner,
-        isReadOnly
+        isReadOnly,
+        updateVisibility
     } = useProjectSave(projectId, setNodes, visibility);
 
     // Propagate metadata to parent
@@ -854,6 +857,7 @@ export function Body({
                     onBack={onBackToProjects || (() => { })}
                     onFork={forkProject}
                     visibility={visibility}
+                    onVisibilityChange={updateVisibility}
                 />
 
                 {/* Additive Selection Active Indicator */}

@@ -1,0 +1,16 @@
+# Matrix Operations (IOGL 1.0)
+
+# 1. Build a 2x3 Matrix
+[r1] IN-07 [[1,2,3]] @50,50
+[r2] IN-07 [[4,5,6]] @50,150
+[build] DT-01 Rows @300,100
+r1.a -> build.a
+r2.a -> build.a
+
+# 2. Matrix Inversion
+[inv] DT-06 INV @550,100
+build.a -> inv.a
+
+# 3. QR Decomposition
+[qr] DT-06 QR @800,100
+build.a -> qr.a

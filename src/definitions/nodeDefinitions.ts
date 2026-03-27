@@ -27,8 +27,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'scalar', value: { type: 'scalar', value: 0, symbol: null, meta: {} } },
         params: [
-            { id: 'value', label: 'Value', type: 'number', step: 1 },
-            { id: 'unit', label: 'Unit', type: 'string', hint: 'e.g. apple, m, degC' }
+            { id: 'value', label: 'Value', type: 'number', step: 1 }
         ]
     },
     {
@@ -45,7 +44,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         },
         params: [
             { id: 'value', label: 'Value', type: 'number' },
-            { id: 'unit', label: 'Unit', type: 'string', hint: 'e.g. vibe, kg, s' },
             { id: 'min', label: 'Min', type: 'number' },
             { id: 'max', label: 'Max', type: 'number' },
             { id: 'step', label: 'Step', type: 'number', min: 0, hint: 'Drag increment' }
@@ -160,7 +158,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: {
-            rawExpression: '[[0,0,0],[0,0,0],[0,0,0]]',
+            array: '[[0,0,0],[0,0,0],[0,0,0]]',
             width: 152,
             height: 160
         },
@@ -178,7 +176,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         handles: [
             { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { type: 'abacus', digits: [0, 0, 0, 0, 0, 0, 0] },
+        defaultData: { type: 'abacus', array: [0, 0, 0, 0, 0, 0, 0] },
         minWidth: 240,
         minHeight: 210,
         layoutMetadata: {
@@ -215,53 +213,40 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['rand', 'noise', 'white', 'gaussian', 'normal', 'uniform', 'probability', 'poisson', 'exponential'],
         handles: [
             {
-                id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar',
-                dynamicColor: (data) => {
-                    if (data.mode === 'matrix' || data.mode === 'vector') return 'array';
-                    return 'scalar';
-                }
+                id: 'out_a', type: 'source', variant: 'single', dataType: 'array'
             }
         ],
         defaultData: {
-            type: 'random',
-            mode: 'scalar',
-            distribution: 'Uniform',
+            mode: 'Uniform',
             isFloat: true,
             min: 0,
             max: 1,
             mean: 0,
             stdDev: 1,
             lambda: 1,
-            rows: 3,
-            cols: 3,
-            length: 100,
-            seed: Date.now()
+            rows: 1,
+            cols: 1
         },
         params: [
             {
-                id: 'distribution', label: 'Distribution', type: 'select', options: [
+                id: 'mode', label: 'Distribution', type: 'select', options: [
                     { label: 'Uniform', value: 'Uniform' },
                     { label: 'Normal (Gaussian)', value: 'Normal' },
-                    { label: 'Poisson', value: 'Poisson' },
-                    { label: 'Exponential', value: 'Exponential' }
+                    { label: 'Exponential', value: 'Exponential' },
+                    { label: 'Poisson', value: 'Poisson' }
                 ]
             },
-            {
-                id: 'mode', label: 'Output Mode', type: 'select', options: [
-                    { label: 'Scalar Value', value: 'scalar' },
-                    { label: 'Array (1D)', value: 'vector' },
-                    { label: 'Array (2D)', value: 'matrix' }
-                ]
-            },
-            { id: 'isFloat', label: 'Is Float', type: 'boolean', hidden: (d) => d.distribution === 'Poisson' },
-            { id: 'min', label: 'Min', type: 'number', hidden: (d) => d.distribution !== 'Uniform' },
-            { id: 'max', label: 'Max', type: 'number', hidden: (d) => d.distribution !== 'Uniform' },
-            { id: 'mean', label: 'Mean (μ)', type: 'number', hidden: (d) => d.distribution !== 'Normal' },
-            { id: 'stdDev', label: 'StdDev (σ)', type: 'number', min: 0, hidden: (d) => d.distribution !== 'Normal' },
-            { id: 'lambda', label: 'Lambda (λ)', type: 'number', min: 0.0001, hidden: (d) => d.distribution !== 'Poisson' && d.distribution !== 'Exponential' },
-            { id: 'length', label: 'Length', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'vector' },
-            { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'matrix' },
-            { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1, hidden: (d) => d.mode !== 'matrix' }
+            { id: 'isFloat', label: 'Floating Point', type: 'boolean' },
+            { id: 'min', label: 'Min', type: 'number', hidden: (d: any) => d.mode !== 'Uniform' },
+            { id: 'max', label: 'Max', type: 'number', hidden: (d: any) => d.mode !== 'Uniform' },
+            { id: 'mean', label: 'Mean (μ)', type: 'number', hidden: (d: any) => d.mode !== 'Normal' },
+            { id: 'stdDev', label: 'StdDev (σ)', type: 'number', min: 0, hidden: (d: any) => d.mode !== 'Normal' },
+            { id: 'lambda', label: 'Lambda (λ)', type: 'number', min: 0.0001, hidden: (d: any) => {
+                const mode = String(d.mode || '').split(':')[0];
+                return mode !== 'Poisson' && mode !== 'Exponential' && mode !== 'Exp';
+            } },
+            { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1 },
+            { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1 }
         ]
     },
 
@@ -274,11 +259,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'B' },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'ADD', label: 'Basic Math' },
+        defaultData: { mode: 'ADD', label: 'Basic Math' },
         aliases: ['basic math', 'arithmetic'],
         params: [
             {
-                id: 'op', label: 'Operation', type: 'select', options: [
+                id: 'mode', label: 'Operation', type: 'select', options: [
                     { label: 'Add (+)', value: 'ADD', category: 'Arithmetic', aliases: ['add', 'plus', '+'] },
                     { label: 'Subtract (−)', value: 'SUB', category: 'Arithmetic', aliases: ['sub', 'subtract', 'minus', '-'] },
                     { label: 'Multiply (×)', value: 'MUL', category: 'Arithmetic', aliases: ['mul', 'multiply', 'times', '*', 'x'] },
@@ -299,15 +284,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                 variant: 'single',
                 dataType: 'scalar',
                 label: 'In B',
-                hidden: (d) => ['ABS', 'NEG', 'SIGN'].includes(d.op as string)
+                hidden: (d) => ['ABS', 'NEG', 'SIGN'].includes(d.mode as string)
             },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'POW', label: 'Advanced Math' },
+        defaultData: { mode: 'POW', label: 'Advanced Math' },
         aliases: ['advanced math'],
         params: [
             {
-                id: 'op', label: 'Operation', type: 'select', options: [
+                id: 'mode', label: 'Operation', type: 'select', options: [
                     { label: 'Power (xⁿ)', value: 'POW', category: 'Exponents', aliases: ['pow', 'power', 'exp', '^'] },
                     { label: 'Square Root (√x)', value: 'SQRT', category: 'Exponents', aliases: ['sqrt', 'root', 'square root'] },
                     { label: 'Absolute Value (|x|)', value: 'ABS', category: 'Basic', aliases: ['abs', 'absolute', 'magnitude'] },
@@ -330,15 +315,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                 variant: 'single', 
                 dataType: 'scalar', 
                 label: 'Base',
-                hidden: (d) => d.op !== 'LOGN'
+                hidden: (d) => d.mode !== 'LOGN'
             },
             { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'LN' },
+        defaultData: { mode: 'LN' },
         aliases: ['log', 'exponential'],
         params: [
             {
-                id: 'op', label: 'Mode', type: 'select', options: [
+                id: 'mode', label: 'Mode', type: 'select', options: [
                     { label: 'Natural Log (ln)', value: 'LN', category: 'Logarithms', aliases: ['ln', 'natural log'] },
                     { label: 'Log Base 10 (log₁₀)', value: 'LOG10', category: 'Logarithms', aliases: ['log10', 'log'] },
                     { label: 'Log Base N (logₙ)', value: 'LOGN', category: 'Logarithms', aliases: ['logn', 'log base'] }
@@ -354,11 +339,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Angle' },
             { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'SIN' },
+        defaultData: { mode: 'SIN' },
         aliases: ['trig', 'circular', 'angular'],
         params: [
             {
-                id: 'op', label: 'Function', type: 'select', options: [
+                id: 'mode', label: 'Function', type: 'select', options: [
                     { label: 'Sine (sin)', value: 'SIN', category: 'Circular', aliases: ['sin', 'sine'] },
                     { label: 'Cosine (cos)', value: 'COS', category: 'Circular', aliases: ['cos', 'cosine'] },
                     { label: 'Tangent (tan)', value: 'TAN', category: 'Circular', aliases: ['tan', 'tangent'] },
@@ -380,11 +365,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Input' },
             { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'ROUND', precision: 0 },
+        defaultData: { mode: 'ROUND', precision: 0 },
         aliases: ['round', 'ceil', 'floor', 'trunc'],
         params: [
             {
-                id: 'op', label: 'Mode', type: 'select', options: [
+                id: 'mode', label: 'Mode', type: 'select', options: [
                     { label: 'Round (nearest)', value: 'ROUND', category: 'Rounding', aliases: ['round', 'nearest'] },
                     { label: 'Floor (↓)', value: 'FLOOR', category: 'Rounding', aliases: ['floor', 'down'] },
                     { label: 'Ceiling (↑)', value: 'CEIL', category: 'Rounding', aliases: ['ceil', 'ceiling', 'up'] },
@@ -432,7 +417,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                 variant: 'single', 
                 dataType: 'array', 
                 label: 'A',
-                dynamicColor: (d) => d.op === 'MOD' ? 'scalar' : 'array'
+                dynamicColor: (d) => d.mode === 'MOD' ? 'scalar' : 'array'
             },
             { 
                 id: 'in_b', 
@@ -441,8 +426,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                 variant: 'single', 
                 dataType: 'scalar', 
                 label: 'B',
-                hidden: (d) => d.op === 'ISPRIME',
-                dynamicColor: (d) => d.op === 'MOD' ? 'scalar' : 'array'
+                hidden: (d) => d.mode === 'ISPRIME',
+                dynamicColor: (d) => d.mode === 'MOD' ? 'scalar' : 'array'
             },
             { 
                 id: 'out_a', 
@@ -450,14 +435,14 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
                 position: Position.Right, 
                 variant: 'single', 
                 dataType: 'scalar',
-                dynamicColor: (d) => d.op === 'ISPRIME' ? 'array' : 'scalar'
+                dynamicColor: (d) => d.mode === 'ISPRIME' ? 'array' : 'scalar'
             }
         ],
-        defaultData: { op: 'GCD' },
+        defaultData: { mode: 'GCD' },
         aliases: ['divisibility', 'number theory'],
         params: [
             {
-                id: 'op', label: 'Operation', type: 'select', options: [
+                id: 'mode', label: 'Operation', type: 'select', options: [
                     { label: 'GCD', value: 'GCD', aliases: ['gcd', 'greatest common divisor', 'hcf'] },
                     { label: 'LCM', value: 'LCM', aliases: ['lcm', 'least common multiple'] },
                     { label: 'Modulo (A mod B)', value: 'MOD', aliases: ['mod', 'modulo', 'remainder', '%'] },
@@ -475,12 +460,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'r' },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'nCr' },
+        defaultData: { mode: 'nCr' },
         aliases: ['probability', 'counting'],
         opTokens: ['NCR', 'NPR', 'FACTORIAL'],
         params: [
             {
-                id: 'op', label: 'Operation', type: 'select', options: [
+                id: 'mode', label: 'Operation', type: 'select', options: [
                     { label: 'Combinations C(n,r)', value: 'nCr', aliases: ['ncr', 'combinations', 'choose'] },
                     { label: 'Permutations P(n,r)', value: 'nPr', aliases: ['npr', 'permutations'] },
                     { label: 'Factorial n!', value: 'FACTORIAL', aliases: ['factorial', 'fact', '!'] }
@@ -568,7 +553,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'symbolic', label: 'Eq', color: 'var(--color-symbolic)' },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'symbolic', color: 'var(--color-symbolic)' }
         ],
-        defaultData: { op: 'SOLVE', variable: 'x' },
+        defaultData: { mode: 'SOLVE', variable: 'x' },
         aliases: ['eqn', 'solve', 'equation', 'nerdamer', 'solver'],
         params: [
             { id: 'variable', label: 'Solve For', type: 'string', hint: 'Variable to solve for (e.g. x, y)' }
@@ -690,12 +675,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'array', label: 'B' },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'any' }
         ],
-        defaultData: { op: 'DOT' },
+        defaultData: { mode: 'DOT' },
         aliases: ['vector math', 'geometry'],
         opTokens: ['DOT', 'CROSS'],
         params: [
             {
-                id: 'op', label: 'Operation', type: 'select', options: [
+                id: 'mode', label: 'Operation', type: 'select', options: [
                     { label: 'Dot Product', value: 'DOT', category: 'Products', aliases: ['dot', 'dot product', 'inner product'] },
                     { label: 'Cross Product', value: 'CROSS', category: 'Products', aliases: ['cross', 'cross product', 'vector product'] },
                     { label: 'Norm (magnitude)', value: 'NORM', category: 'Metrics', aliases: ['norm', 'magnitude', 'length', 'abs'] },
@@ -711,12 +696,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' }
         ],
-        defaultData: { op: 'INV' },
+        defaultData: { mode: 'INV' },
         aliases: ['matrix math', 'linear algebra'],
         opTokens: ['DET', 'INV', 'TRANSPOSE', 'TRACE', 'QR', 'LU', 'LUP', 'EIGEN'],
         params: [
             {
-                id: 'op', label: 'Operation', type: 'select', options: [
+                id: 'mode', label: 'Operation', type: 'select', options: [
                     { label: 'Inverse (A⁻¹)', value: 'INV', category: 'Linear Algebra', aliases: ['inv', 'inverse', 'invert'] },
                     { label: 'Determinant (det A)', value: 'DET', category: 'Linear Algebra', aliases: ['det', 'determinant'] },
                     { label: 'Transpose (Aᵀ)', value: 'TRANSPOSE', category: 'Linear Algebra', aliases: ['transpose', 't', 'swap', 'flip'] },
@@ -869,11 +854,11 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'array' },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
-        defaultData: { op: 'Mean' },
+        defaultData: { mode: 'Mean' },
         opTokens: ['MEAN', 'MAX', 'MIN', 'STDDEV', 'MEDIAN', 'VARIANCE', 'SUM'],
         params: [
             {
-                id: 'op', label: 'Statistic', type: 'select', options: [
+                id: 'mode', label: 'Statistic', type: 'select', options: [
                     { label: 'Mean (average)', value: 'Mean', category: 'Central Tendency', aliases: ['avg', 'mean'] },
                     { label: 'Median', value: 'Median', category: 'Central Tendency', aliases: ['median'] },
                     { label: 'Sum', value: 'Sum', category: 'Central Tendency', aliases: ['total', 'sum'] },
@@ -896,10 +881,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'any', label: 'B' },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'boolean' }
         ],
-        defaultData: { op: 'AND', label: 'AND' },
+        defaultData: { mode: 'AND', label: 'AND' },
         params: [
             {
-                id: 'op', label: 'Gate Type', type: 'select', options: [
+                id: 'mode', label: 'Gate Type', type: 'select', options: [
                     { label: 'AND (&&)', value: 'AND', category: 'Boolean Gates', aliases: ['and', 'gate'] },
                     { label: 'OR (||)', value: 'OR', category: 'Boolean Gates', aliases: ['or', 'gate'] },
                     { label: 'NOT (!)', value: 'NOT', category: 'Boolean Gates', aliases: ['not', 'gate', 'inv'] },
@@ -937,6 +922,18 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out_b', type: 'source', variant: 'single', dataType: 'any', label: 'False' }
         ],
         defaultData: { type: 'logicSplit' }
+    },
+    {
+        id: 'LG-04',
+        label: 'Logic Value',
+        category: 'Logic & Flow',
+        handles: [
+            { id: 'out_a', type: 'source', variant: 'single', dataType: 'boolean' }
+        ],
+        defaultData: { value: true, label: 'Boolean' },
+        params: [
+            { id: 'value', label: 'Value', type: 'boolean' }
+        ]
     },
 
     // ─── 8. Output Family ──────────────────────────────────────────

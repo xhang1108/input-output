@@ -3,6 +3,7 @@ import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { InputOutputEngine } from '../../../InputOutputEngine';
 import { NodeEvaluator } from '../../../NodeRegistry';
 import { ColorUtils } from '../../../../utils/ColorUtils';
+import { PlottingUtils } from '../../../../utils/PlottingUtils';
 
 export const IOEvaluators: Record<string, NodeEvaluator> = {
     'IN-01': (node) => {
@@ -58,10 +59,11 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const original = node.value || PayloadUtils.createString('');
         const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
         let val = rawVal !== undefined ? rawVal : PayloadUtils.unwrap(original);
-        const unit = (data.unit as string) || (original.meta?.unit);
+        const meta = { ...original.meta } as any;
+        if (data.unit) meta.unit = String(data.unit);
         return {
             ...PayloadUtils.createString(String(val ?? '')),
-            meta: { ...original.meta, unit }
+            meta
         };
     },
     'OT-01': (node, inputs) => {
@@ -94,28 +96,25 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IN-07': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
+        
+        // 1. Check direct 'value' (from Parser or Stepwise propagation)
         const dataVal = data.value;
         if (dataVal !== undefined) {
-            if (typeof dataVal === 'object' && dataVal !== null) {
-                if ('type' in (dataVal as any) && 'value' in (dataVal as any)) return dataVal as any;
-                if ('mathjs' in (dataVal as any)) {
-                    return { type: DataType.Array, value: dataVal, symbol: null, meta: {} };
-                }
-                return PayloadUtils.createArray(dataVal);
-            }
+            return PayloadUtils.createArray(dataVal);
         }
-        const raw = data.rawExpression as string;
-        if (raw) {
-            try {
-                const parsed = JSON.parse(raw);
-                return PayloadUtils.createArray(parsed);
-            } catch (e) {
-                return PayloadUtils.createArray([]);
-            }
+        
+        // 2. Check 'array' property (Legacy or Positional Data)
+        const raw = data.array;
+        if (raw !== undefined) {
+             return PayloadUtils.createArray(raw);
         }
+        
+        // 3. Fallback to node.value (Stale cache)
         if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
             return node.value as any;
         }
+        
+        // 4. Ultimate Fallback: Default 3x3 Zero Matrix
         return PayloadUtils.createArray([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
     },
     'IN-03': (node) => {
@@ -135,7 +134,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IN-08': (node) => {
         let total = 0;
-        const digits = (node.data?.digits as number[]) || [0, 0, 0, 0, 0, 0, 0];
+        const digits = (node.data?.array as number[]) || [0, 0, 0, 0, 0, 0, 0];
         for (let i = 0; i < digits.length; i++) {
             total = total * 10 + digits[i];
         }
@@ -144,8 +143,6 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     'OT-03': (node, inputs) => {
         // OT-03: Graph Plot — Pure engine sampling.
         // Receives capsule inputs, runs sampling, returns computed plotPoints in meta.
-        import('../../../../utils/PlottingUtils').then(() => { }); // Ensure bundled
-        const { PlottingUtils } = require('../../../../utils/PlottingUtils');
         const data = (node.data || {}) as Record<string, unknown>;
         const minX = typeof data.minX === 'number' ? data.minX : -10;
         const maxX = typeof data.maxX === 'number' ? data.maxX : 10;
@@ -184,10 +181,8 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             let pts: any[] = [];
 
             try {
-                // 💡 Enhancement: Prioritize the 'symbol' if it's a Literal string (likely a formula like "x=3")
-                // This allows Plotting to handle "smart" Expression node outputs that are typed as Scalar but carry a formula.
-                const symbolFormula = (p.symbol?.type === 'Literal' && typeof p.symbol.value === 'string') ? p.symbol.value : null;
-                const activeFormula = (p.type === DataType.Symbolic && typeof parsed === 'string') ? parsed : symbolFormula;
+                // 💡 Enhancement: Unified formula extraction from symbol tree or value
+                const activeFormula = PayloadUtils.extractExprStr(p);
 
                 if (activeFormula && (p.type === DataType.Symbolic || p.type === DataType.Scalar)) {
                     pts = PlottingUtils.generateSymbolicPoints(activeFormula, minX, maxX, pointsCount);
@@ -220,7 +215,11 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
 
         return {
             type: DataType.Object,
-            value: allPoints,
+            value: {
+                points: allPoints,
+                formula: payloadList[0]?.symbol?.value || payloadList[0]?.value || '', 
+                label: payloadList[0]?.meta?.label || 'Series 1'
+            },
             symbol: null,
             meta: {
                 plotPoints: allPoints,

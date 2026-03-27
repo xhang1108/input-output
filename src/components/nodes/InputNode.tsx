@@ -9,11 +9,24 @@ export const InputNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
     const unwrappedValue = PayloadUtils.unwrap(data.value);
-    const [localValue, setLocalValue] = useState(String(unwrappedValue ?? ''));
+    
+    // [IOGL Telemetry] Track data flow into component
+    console.debug(`[InputNode:${id}:${data.label}] Data received:`, {
+        rawValue: data.value,
+        unwrapped: unwrappedValue,
+        dataType: data.type,
+        isStringNode: data.type === 'string'
+    });
+
+    const formatVal = (v: any) => (v === undefined || v === null) ? '' : String(v);
+    const [localValue, setLocalValue] = useState(() => formatVal(unwrappedValue));
     const [isFocused, setIsFocused] = useState(false);
 
     useEffect(() => {
-        if (!isFocused) setLocalValue(String(unwrappedValue ?? ''));
+        if (!isFocused) {
+            const nextVal = formatVal(unwrappedValue);
+            setLocalValue(prev => prev !== nextVal ? nextVal : prev);
+        }
     }, [unwrappedValue, isFocused]);
 
     const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

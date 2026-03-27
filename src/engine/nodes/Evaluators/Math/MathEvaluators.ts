@@ -46,7 +46,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const valA = getHydrated(payloadA);
         const valB = getHydrated(payloadB);
         const data = (node.data || {}) as Record<string, unknown>;
-        const op = (data.op as string || 'ADD').toUpperCase();
+        const op = (data.mode as string || data.op as string || 'ADD').toUpperCase();
 
         const extractValue = (v: unknown) => {
             if (v && typeof v === 'object' && !Array.isArray(v)) {
@@ -136,7 +136,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-08': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'nCr';
+        const op = data.mode || data.op || 'nCr';
 
         const valN = inputs['in_a'];
         const valR = inputs['in_b'];
@@ -163,7 +163,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
-        const op = data.op || 'ROUND';
+        const op = data.mode || data.op || 'ROUND';
         const prec = data.precision ?? 0;
         const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         try {
@@ -226,7 +226,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-07': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'GCD';
+        const op = data.mode || data.op || 'GCD';
 
         const collectNumbers = (p: NodePayload | NodePayload[] | undefined): any[] => {
             if (!p) return [];
@@ -312,7 +312,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
-        const op = data.op || 'SIN';
+        const op = data.mode || data.op || 'SIN';
         const angleMode = data.angleMode || 'RAD';
         let val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
 
@@ -343,7 +343,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
-        const op = data.op || 'LN';
+        const op = data.mode || data.op || 'LN';
         const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         try {
             let result;
@@ -364,27 +364,28 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     // IN-10: Unified Random Node (Professional Stochastic Generator)
     'IN-10': (node, inputs) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const distribution = (data.distribution as string || 'Uniform').toLowerCase();
-        const mode = (data.mode as string || 'float').toLowerCase(); // float, vector, matrix
-        const isFloat = data.isFloat !== false;
-        const seed = data.seed;
+        
+        // Decoupled Property Support (v3.0) with Backward Compatibility
+        let distribution = (data.mode as string || 'Uniform');
+        let isFloat = data.isFloat !== false; // Default to true for historical reasons
 
-        // Sampling parameters
+        const distKey = distribution.toLowerCase();
+        
+        // Sampling parameters helper
         const getNum = (key: string, def: number) => {
             const val = inputs[key] ? PayloadUtils.unwrap(inputs[key]) : data[key];
             return val !== undefined ? Number(val) : def;
         };
 
-        const rows = Math.max(1, Math.floor(getNum('rows', 3)));
-        const cols = Math.max(1, Math.floor(getNum('cols', 3)));
-        const length = Math.max(1, Math.floor(getNum('length', 3)));
+        const rows = Math.max(1, Math.floor(getNum('rows', 1)));
+        const cols = Math.max(1, Math.floor(getNum('cols', 1)));
 
-        // Initialize seeded random
-        const rng = seededRandom(Number(seed) || 0);
+        // Pure Random (Non-seeded per roadmap)
+        const rng = () => Math.random();
 
         // Core Generator Logic
         const sample = (): number => {
-            if (distribution === 'normal') {
+            if (distKey === 'normal') {
                 const mean = getNum('mean', 0);
                 const stdDev = getNum('stdDev', 1);
                 let u = 0, v = 0;
@@ -392,13 +393,13 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 while (v === 0) v = rng();
                 const res = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v) * stdDev + mean;
                 return isFloat ? res : Math.floor(res);
-            } else if (distribution === 'poisson') {
+            } else if (distKey === 'poisson') {
                 const lambda = getNum('lambda', 1);
                 const L = Math.exp(-lambda);
                 let p = 1.0, k = 0;
                 do { k++; p *= rng(); } while (p > L);
-                return k - 1;
-            } else if (distribution === 'exponential') {
+                return k - 1; // Poisson is always integer
+            } else if (distKey === 'exponential' || distKey === 'exp') {
                 const lambda = getNum('lambda', 1);
                 const res = -Math.log(rng()) / lambda;
                 return isFloat ? res : Math.floor(res);
@@ -411,11 +412,11 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             }
         };
 
-        // --- Passive Evaluation Strategy ---
-        // We only generate a NEW value if the node's parameters change.
+        // Cache Management: Ensure we re-sample only when configuration changes
         const currentDataHash = JSON.stringify({
-            distribution, mode, isFloat, seed,
-            rows, cols, length,
+            seed: data.seed,
+            distribution, isFloat,
+            rows, cols,
             params: {
                 min: getNum('min', 0), max: getNum('max', 1),
                 mean: getNum('mean', 0), stdDev: getNum('stdDev', 1),
@@ -430,15 +431,16 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         (node as any)._lastDataHash = currentDataHash;
 
         try {
-            if (mode === 'matrix') {
+            if (rows > 1 && cols > 1) {
                 const mat = Array.from({ length: rows }, () => Array.from({ length: cols }, sample));
                 return PayloadUtils.createArray(mat);
-            } else if (mode === 'vector' || mode === 'array') { // IN-11 used to return arrays
-                const count = mode === 'vector' ? length : getNum('param_n', 100);
-                const vec = Array.from({ length: count }, sample);
+            } else if (rows > 1 || cols > 1) {
+                const len = rows > 1 ? rows : cols;
+                const vec = Array.from({ length: len }, sample);
                 return PayloadUtils.createArray(vec);
             } else {
-                return PayloadUtils.createScalar(sample());
+                // Per user request: Even 1x1 is returned as an array [val] to match purple handle
+                return PayloadUtils.createArray([sample()]);
             }
         } catch (e: any) {
             return PayloadUtils.createError(`Random Failed: ${e.message}`);
@@ -543,7 +545,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'TR-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'Mean';
+        const op = data.mode || data.op || 'Mean';
         const valPayload = inputs['in_a'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);

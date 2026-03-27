@@ -24,7 +24,7 @@ export const AbacusNode = memo((props: NodeProps) => {
         }
     ], []);
 
-    const initialDigits: number[] = (data.digits as number[]) || Array(7).fill(0);
+    const initialDigits: number[] = (data.array as number[]) || Array(7).fill(0);
     const [digits, setDigits] = useState<number[]>(initialDigits);
 
     // Dynamic Width Calculation
@@ -63,10 +63,10 @@ export const AbacusNode = memo((props: NodeProps) => {
     }, [rodCount]);
 
     useEffect(() => {
-        if (data.digits && Array.isArray(data.digits)) {
-            setDigits(data.digits as number[]);
+        if (data.array && Array.isArray(data.array)) {
+            setDigits(data.array as number[]);
         }
-    }, [data.digits]);
+    }, [data.array]);
 
     const handleRodChange = (colIdx: number, delta: number) => {
         let newDigits = [...digits];
@@ -92,11 +92,11 @@ export const AbacusNode = memo((props: NodeProps) => {
         if (carry !== 0) return;
 
         setDigits(newDigits);
-        updateNodeData(id, { digits: newDigits });
-
+        updateNodeData(id, { array: newDigits });
+        
         brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
-            payload: { id, data: { digits: newDigits } }
+            payload: { id, data: { array: newDigits } }
         });
     };
 

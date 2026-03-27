@@ -18,10 +18,10 @@ describe('Plot Node (OT-03) Integration', () => {
 
         const exprResult = await NodeRegistry.evaluate(expressionNode as any, {});
         
-        // Sanity check for Expression Node output
-        expect(exprResult.type).toBe(DataType.Scalar);
-        expect(exprResult.symbol?.type).toBe('Literal');
-        expect(exprResult.symbol?.value).toBe('x = 2');
+        // Sanity check for Expression Node output (Now Symbolic per user request)
+        expect(exprResult.type).toBe(DataType.Symbolic);
+        expect(exprResult.value).toBe('x = 2');
+        expect(exprResult.meta?.label).toBe('x');
 
         // 2. Simulate Plot Node (OT-03) evaluating this input
         const plotNode = {

@@ -508,12 +508,46 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 }
             }
         });
-
         return () => cancelAnimationFrame(rafId);
     }, [actualId, isCloud, focusAndSelectAll, revealAfterPaint, brain]);
 
+    const updateVisibility = useCallback(async (newVisibility: 'private' | 'public') => {
+        if (!isCloud) {
+            toast.info('Local projects are always private', {
+                description: 'Save this project to the Cloud to enable public sharing.'
+            });
+            return;
+        }
+        if (isReadOnly) return;
+
+        setProjectMeta(prev => prev ? { ...prev, visibility: newVisibility } : null);
+        
+        // Immediate save to sync visibility
+        const settings = useAppStore.getState();
+        const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);
+        const title = projectMeta?.title || 'Untitled';
+
+        try {
+            const response = await fetch(`/api/graphs/${actualId}`, {
+                method: "PUT",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    payload: encoded,
+                    title,
+                    id: actualId,
+                    visibility: newVisibility
+                })
+            });
+            if (!response.ok) throw new Error("Failed to update visibility");
+            toast.success(`Project is now ${newVisibility}`);
+        } catch (e) {
+            toast.error('Failed to sync visibility to cloud');
+        }
+    }, [isCloud, isReadOnly, actualId, brain, projectMeta?.title]);
+
     return {
         saveProject,
+        updateVisibility,
         autoSave,
         loadProject,
         currentSlotId: currentSlotIdRef,

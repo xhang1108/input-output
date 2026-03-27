@@ -7,8 +7,9 @@ interface FloatingProjectControlsProps {
     isOwner: boolean;
     projectId: string;
     onBack: () => void;
-    onFork: (target: 'cloud' | 'local') => void;
-    visibility?: 'private' | 'public';
+    onFork: (targetType?: 'cloud' | 'local') => Promise<void>;
+    visibility: 'private' | 'public' | undefined;
+    onVisibilityChange?: (visibility: 'private' | 'public') => void;
 }
 
 export function FloatingProjectControls({ 
@@ -16,7 +17,8 @@ export function FloatingProjectControls({
     projectId, 
     onBack, 
     onFork,
-    visibility 
+    visibility,
+    onVisibilityChange
 }: FloatingProjectControlsProps) {
     const [isShareOpen, setIsShareOpen] = useState(false);
 
@@ -61,6 +63,11 @@ export function FloatingProjectControls({
                                         projectId={projectId}
                                         visibility={visibility || 'private'}
                                         onClose={() => setIsShareOpen(false)}
+                                        showTrigger={false}
+                                        isOpen={isShareOpen}
+                                        side="top"
+                                        align="center"
+                                        onVisibilityChange={onVisibilityChange}
                                     />
                                 </motion.div>
                             )}

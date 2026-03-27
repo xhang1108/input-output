@@ -15,12 +15,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
         let items: any[] = [];
 
-        // Support IOGL 2.0 Capsule handles: 'in', 'append', or numerical suffixes '[0]', '[1]'
-        const sortKeys = Object.keys(inputs).sort((a, b) => {
-            const aNum = parseInt(a.match(/\d+/)?.[0] || '999');
-            const bNum = parseInt(b.match(/\d+/)?.[0] || '999');
-            return aNum - bNum;
-        });
+        const sortKeys = Object.keys(inputs).sort();
 
         sortKeys.forEach(key => {
             const val = inputs[key];
@@ -48,9 +43,9 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 // This allows joining scalars/vectors horizontally.
                 // e.g. [1, 2] -> [[1, 2]] (row vector)
                 if (axis >= 1 && Array.isArray(val) && !Array.isArray(val[0])) {
-                    val = [val]; 
+                    val = [val];
                 }
-                
+
                 return val;
             });
 
@@ -66,18 +61,18 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
         const mode = data.indexMode || '1D';
-        
+
         const inPayload = inputs['in_a'];
         const indexPayload = inputs['in_b'];
-        
+
         if (!inPayload) return PayloadUtils.createError('No Input Vector/Matrix');
-        
+
         try {
             const arr = PayloadUtils.hydrate(PayloadUtils.unwrap(inPayload), math);
             const idxRaw = indexPayload ? PayloadUtils.hydrate(PayloadUtils.unwrap(indexPayload), math) : 0;
-            
+
             let result: any;
-            
+
             // Helper to get raw numeric values from hydrate result (handles mathjs objects)
             const getNumeric = (val: any): number => {
                 if (val === null || val === undefined) return 0;
@@ -129,7 +124,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 // Convert 1-based to 0-based
                 const r = rRaw - 1;
                 const c = cRaw - 1;
-                
+
                 if (arr && typeof arr === 'object' && (arr as any).isMatrix) {
                     result = math.subset(arr, math.index(r, c));
                 } else if (Array.isArray(arr)) {
@@ -138,7 +133,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                     result = 0;
                 }
             }
-            
+
             // Auto-unwrap 1x1 matrix results
             if (result && typeof result === 'object' && (result as any).isMatrix) {
                 const size = (result as any).size();
@@ -147,8 +142,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 }
             }
 
-            return (Array.isArray(result) || (result && typeof result === 'object' && (result as any).isMatrix)) 
-                ? PayloadUtils.createArray(PayloadUtils.dehydrate(result)) 
+            return (Array.isArray(result) || (result && typeof result === 'object' && (result as any).isMatrix))
+                ? PayloadUtils.createArray(PayloadUtils.dehydrate(result))
                 : PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
         } catch (e: any) {
             return PayloadUtils.createError(`Extract Failed: ${e.message}`);
@@ -165,11 +160,13 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
         if (arr.length === 0) return PayloadUtils.createArray([]);
         let result = [...arr];
-        if (mode === 'Sort (Asc)') result.sort((a, b) => Number(a) - Number(b));
-        else if (mode === 'Sort (Desc)') result.sort((a, b) => Number(b) - Number(a));
-        else if (mode === 'Reverse') result.reverse();
-        else if (mode === 'Unique') result = PayloadUtils.deduplicateResults(result);
-        else if (mode === 'Clean') result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
+        const modeLower = mode.toLowerCase();
+        if (modeLower.includes('asc')) result.sort((a, b) => Number(a) - Number(b));
+        else if (modeLower.includes('desc')) result.sort((a, b) => Number(b) - Number(a));
+        else if (modeLower === 'sort') result.sort((a, b) => Number(a) - Number(b));
+        else if (modeLower === 'reverse') result.reverse();
+        else if (modeLower === 'unique') result = PayloadUtils.deduplicateResults(result);
+        else if (modeLower === 'clean') result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
         return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
     },
 
@@ -190,9 +187,10 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const setA = new Set<string>(getArr('in_a').map((x: any) => String(x)));
         const setB = new Set<string>(getArr('in_b').map((x: any) => String(x)));
         let resultSet: string[] = [];
-        if (mode === 'Union') resultSet = Array.from(new Set<string>([...Array.from(setA), ...Array.from(setB)]));
-        else if (mode === 'Intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
-        else if (mode === 'Difference') resultSet = Array.from(setA).filter((x: string) => !setB.has(x));
+        const modeLower = mode.toLowerCase();
+        if (modeLower === 'union') resultSet = Array.from(new Set<string>([...Array.from(setA), ...Array.from(setB)]));
+        else if (modeLower === 'intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
+        else if (modeLower === 'difference') resultSet = Array.from(setA).filter((x: string) => !setB.has(x));
         const final = resultSet.map((x: string) => (isNaN(Number(x)) ? x : Number(x)));
         return PayloadUtils.createArray(final);
     },
@@ -202,7 +200,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'];
         if (!valPayload) return PayloadUtils.createError('No Input');
-        const data = (node.data || {}) as any, op = data.op || 'INV';
+        const data = (node.data || {}) as any;
+        const op = data.mode || data.op || 'INV';
         try {
             const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
             let result: any;
@@ -218,7 +217,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             // Handle multi-output objects (QR, LUP, EIGEN)
             if (result && typeof result === 'object' && !Array.isArray(result) && !(result as any).isMatrix && !(result as any).isBigNumber) {
                 const multi: Record<string, any> = {};
-                
+
                 // Position-aware mapping for decomposition/spectral results
                 if (op === 'QR') {
                     multi.out_a = PayloadUtils.wrap(result.Q);
@@ -236,8 +235,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 } else {
                     // Fallback for any other objects
                     for (const [key, val] of Object.entries(result)) {
-                        multi[key] = (Array.isArray(val) || (val as any)?.isMatrix) 
-                            ? PayloadUtils.createArray(PayloadUtils.dehydrate(val)) 
+                        multi[key] = (Array.isArray(val) || (val as any)?.isMatrix)
+                            ? PayloadUtils.createArray(PayloadUtils.dehydrate(val))
                             : PayloadUtils.createScalar(PayloadUtils.dehydrate(val));
                     }
                 }
@@ -252,7 +251,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'DT-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'DOT';
+        const op = data.mode || data.op || 'DOT';
         const valA = inputs['in_a'], valB = inputs['in_b'];
         if (!valA || !valB) return PayloadUtils.createError('Missing Inputs');
         try {
@@ -297,7 +296,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'AD-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'nCr';
+        const op = data.mode || data.op || 'nCr';
         const valN = inputs['in_a'], valR = inputs['in_b'];
         if (!valN || !valR) return PayloadUtils.createError('Missing Inputs');
         try {
@@ -317,12 +316,14 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-01': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x', order = Number(data.order) || 1;
-        let exprStr = PayloadUtils.extractExprStr(inputs['in_a']);
-        
+        const exprStr = PayloadUtils.extractExprStr(inputs['in_a']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
+        
         try {
             const svc = NerdamerService.getInstance();
-            return PayloadUtils.createSymbolic(svc.differentiate(exprStr, variable, order).text());
+            const text = svc.differentiate(exprStr, variable, order).text();
+            const num = Number(text);
+            return (!isNaN(num) && isFinite(num)) ? PayloadUtils.createScalar(num) : PayloadUtils.createSymbolic(text);
         } catch (e: any) { return PayloadUtils.createError(`Diff Failed: ${e.message}`); }
     },
 
@@ -330,13 +331,12 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'CL-02': (node, inputs) => {
         const data = (node.data || {}) as any;
         const variable = data.variable || 'x';
-        const mode = data.mode || 'indefinite';
+        const mode = (data.mode || 'indefinite').toLowerCase();
         const lower = PayloadUtils.unwrap(inputs['in_b']) ?? data.lower ?? '';
         const upper = PayloadUtils.unwrap(inputs['in_c']) ?? data.upper ?? '';
-        let exprStr = PayloadUtils.extractExprStr(inputs['in_a']);
+        const exprStr = PayloadUtils.extractExprStr(inputs['in_a']);
 
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) {
-            console.error(`[CL-02] No Expression Input. Keys in inputs: ${Object.keys(inputs).join(', ')}`);
             return PayloadUtils.createError('No Expression Input');
         }
         try {
@@ -350,7 +350,9 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 }
                 return PayloadUtils.createError(res.error || 'Integral Failed');
             }
-            return PayloadUtils.createSymbolic(svc.integrate(exprStr, variable).text());
+            const text = svc.integrate(exprStr, variable).text();
+            const num = Number(text);
+            return (!isNaN(num) && isFinite(num)) ? PayloadUtils.createScalar(num) : PayloadUtils.createSymbolic(text);
         } catch (e: any) { return PayloadUtils.createError(`Integral Failed: ${e.message}`); }
     },
 
@@ -370,30 +372,34 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 return;
             }
 
-            const raw = PayloadUtils.unwrap(payload);
-            const items = Array.isArray(raw) ? raw.map(String) : [String(raw)];
+            const valStr = PayloadUtils.extractExprStr(payload);
+            if (!valStr || valStr === 'null' || valStr === 'undefined' || valStr === '[object Object]') return;
 
-            items.forEach(val => {
-                if (val === null || val === undefined) return;
-                const valStr = String(val).trim();
-                
-                if (!valStr || valStr === 'null' || valStr === 'undefined' || valStr === '[object Object]') return;
+            // Priority 1: Use explicit label from metadata (if node is labeled)
+            const label = payload.meta?.label;
 
-                // Priority 1: Use explicit label from metadata (if node is labeled)
-                const label = payload.meta?.label;
-                
-                // If it's a numeric/string scalar and has a label, convert to equation
-                if (label && typeof label === 'string' && !valStr.includes('=') && !['in', 'expr', 'in_a', 'in_b'].includes(label)) {
-                    equations.push(`${label} = ${valStr}`);
-                } 
-                // Priority 2: Use key if it's not a generic handle (wireless links using node label)
-                else if (!(key === 'in' || key.startsWith('in_')) && !key.startsWith('append') && !valStr.includes('=')) {
-                    equations.push(`${key} = ${valStr}`);
+            // 1. System Handles: Internal position IDs (in_a, in_b...) or technical keys (append_).
+            // 2. User Variables: Anything else that looks like a valid math variable (x, apple, Eq).
+            const isSystemHandle = (s: string) => /^(in(_[a-z0-9]+)?|expr|append|out(_[a-z0-9]+)?)$/.test(s);
+            const isValidMathVar = (s: string) => /^[a-zA-Z_]\w*$/.test(s);
+
+            // Priority 1: Use explicit label from metadata (highest authority)
+            if (label && typeof label === 'string' && !valStr.includes('=') && isValidMathVar(label) && !isSystemHandle(label)) {
+                equations.push(`${label} = ${valStr}`);
+            }
+            // Priority 2: Use key if it's not a generic position ID
+            else if (!valStr.includes('=') && isValidMathVar(key) && !isSystemHandle(key)) {
+                equations.push(`${key} = ${valStr}`);
+            }
+            else {
+                const trimmed = valStr.trim();
+                // 💡 Fix: Skip raw numeric scalars without an assignment. 
+                // Pushing '6' as an equation makes Nerdamer think '6 = 0', which is a contradiction.
+                if (!trimmed.includes('=') && !isNaN(Number(trimmed))) {
+                    return; // Ignore raw numeric constants that aren't assigned to a variable
                 }
-                else {
-                    equations.push(valStr);
-                }
-            });
+                equations.push(valStr);
+            }
         };
 
         Object.keys(inputs).sort().forEach(key => processPayload(inputs[key], key));
@@ -456,68 +462,68 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 remainingEqs = next;
             }
 
-        // ─── Phase 2: Substitute scope into remaining equations ──────────
-        const prepareExpr = (eq: string) => {
-            const trimmed = eq.trim();
-            if (!trimmed.includes('=')) return trimmed;
-            const [lhs, rhs] = trimmed.split('=').map(s => s.trim());
-            return `(${lhs}) - (${rhs})`;
-        };
+            // ─── Phase 2: Substitute scope into remaining equations ──────────
+            const prepareExpr = (eq: string) => {
+                const trimmed = eq.trim();
+                if (!trimmed.includes('=')) return trimmed;
+                const [lhs, rhs] = trimmed.split('=').map(s => s.trim());
+                return `(${lhs}) - (${rhs})`;
+            };
 
-        // If targetVar is already in the scope, we're done immediately
-        if (targetVar && scope[targetVar] !== undefined) {
-            const val = Number(scope[targetVar]);
-            return !isNaN(val)
-                ? PayloadUtils.createArray([val])
-                : PayloadUtils.createArray([scope[targetVar]]);
-        }
+            // If targetVar is already in the scope, we're done immediately
+            if (targetVar && scope[targetVar] !== undefined) {
+                const val = Number(scope[targetVar]);
+                // 💡 Fix: Even early returns must be wrapped in an array for Solver consistency
+                const finalVal = !isNaN(val) ? val : String(scope[targetVar]);
+                return PayloadUtils.createArray([finalVal]);
+            }
 
-        // Substitute all known scope values into remaining equations
-        const substituted: string[] = remainingEqs.map(eq => {
-            let expr = prepareExpr(eq);
-            for (const [varName, value] of Object.entries(scope)) {
-                try { expr = nerd(expr).sub(varName, value).toString(); }
+            // Substitute all known scope values into remaining equations
+            const substituted: string[] = remainingEqs.map(eq => {
+                let expr = prepareExpr(eq);
+                for (const [varName, value] of Object.entries(scope)) {
+                    try { expr = nerd(expr).sub(varName, value).toString(); }
+                    catch { /* ignore */ }
+                }
+                return expr;
+            });
+
+            // Also include the original standardized equations in case no substitution was needed
+            const standardized: string[] =
+                substituted.length > 0 ? substituted : equations.map(prepareExpr);
+
+            // ─── Phase 3: Collect variables, auto-detect target, solve ────────
+            const allVars = new Set<string>();
+            standardized.forEach(eq => {
+                try { nerd(eq).variables().forEach((v: string) => allVars.add(v)); }
                 catch { /* ignore */ }
-            }
-            return expr;
-        });
+            });
 
-        // Also include the original standardized equations in case no substitution was needed
-        const standardized: string[] =
-            substituted.length > 0 ? substituted : equations.map(prepareExpr);
-
-        // ─── Phase 3: Collect variables, auto-detect target, solve ────────
-        const allVars = new Set<string>();
-        standardized.forEach(eq => {
-            try { nerd(eq).variables().forEach((v: string) => allVars.add(v)); }
-            catch { /* ignore */ }
-        });
-
-        if (!targetVar) {
-            const assignedConst = new Set<string>(Object.keys(scope));
-            const allVarsArr = Array.from(allVars);
-            const freeVars = allVarsArr.filter(v => !assignedConst.has(v));
-            targetVar = freeVars.length > 0 ? freeVars[0] : (allVarsArr[0] || 'x');
-        } else {
-            allVars.add(targetVar);
-        }
-
-        const varList = Array.from(allVars);
-
-        let resultObj: any;
-        if (standardized.length === 0) {
-            return PayloadUtils.createError('No solvable equations after substitution');
-        } else if (standardized.length === 1) {
-            resultObj = nerd(`solve(${standardized[0]}, ${targetVar})`);
-        } else {
-            const systemResults = nerd.solveEquations(standardized, varList);
-            if (Array.isArray(systemResults)) {
-                const match = systemResults.find((r: any) => Array.isArray(r) && r[0] === targetVar);
-                resultObj = match ? nerd(match[1]) : nerd('[]');
+            if (!targetVar) {
+                const assignedConst = new Set<string>(Object.keys(scope));
+                const allVarsArr = Array.from(allVars);
+                const freeVars = allVarsArr.filter(v => !assignedConst.has(v));
+                targetVar = freeVars.length > 0 ? freeVars[0] : (allVarsArr[0] || 'x');
             } else {
-                resultObj = nerd(systemResults);
+                allVars.add(targetVar);
             }
-        }
+
+            const varList = Array.from(allVars);
+
+            let resultObj: any;
+            if (standardized.length === 0) {
+                return PayloadUtils.createError('No solvable equations after substitution');
+            } else if (standardized.length === 1) {
+                resultObj = nerd(`solve(${standardized[0]}, ${targetVar})`);
+            } else {
+                const systemResults = nerd.solveEquations(standardized, varList);
+                if (Array.isArray(systemResults)) {
+                    const match = systemResults.find((r: any) => Array.isArray(r) && r[0] === targetVar);
+                    resultObj = match ? nerd(match[1]) : nerd('[]');
+                } else {
+                    resultObj = nerd(systemResults);
+                }
+            }
 
             if (!resultObj) return PayloadUtils.createError('No Result');
             const textResult = String(resultObj);
@@ -531,16 +537,27 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
              */
             const formatToken = (tok: string): string | number => {
                 const trimmed = tok.trim();
-                if (!trimmed) return trimmed;
+                if (!trimmed) return '';
 
-                // Contains alphabetic chars (symbolic/complex) — keep as-is
-                if (/[a-zA-Z]/.test(trimmed)) return trimmed;
+                // Contains alphabetic chars (symbolic/complex) — keep as-is, BUT check if it's just 'i'
+                if (/[a-zA-Z]/.test(trimmed) && trimmed !== 'i') return trimmed;
 
                 try {
-                    const num = Number(nerd(trimmed).evaluate().text('decimals'));
-                    if (isNaN(num) || !isFinite(num)) return trimmed;
+                    // nerdamer evaluate().text('decimals') can return non-numeric strings for complex values
+                    const evaluated = nerd(trimmed).evaluate().text('decimals');
+                    const num = Number(evaluated);
+                    
+                    if (isNaN(num) || !isFinite(num)) {
+                        // If it's a fraction string like "1/2", try to convert to decimal if it's simple
+                        if (trimmed.includes('/')) {
+                            const [n, d] = trimmed.split('/').map(Number);
+                            if (!isNaN(n) && !isNaN(d) && d !== 0) return parseFloat((n / d).toPrecision(8));
+                        }
+                        return trimmed;
+                    }
+
                     // If it's effectively an integer, return the integer
-                    if (Math.abs(num - Math.round(num)) < 1e-9) return Math.round(num);
+                    if (Math.abs(num - Math.round(num)) < 1e-10) return Math.round(num);
                     // Otherwise round to 8 significant figures
                     return parseFloat(num.toPrecision(8));
                 } catch {
@@ -559,12 +576,20 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             }
 
             if (tokens.length === 0) return PayloadUtils.createArray([]);
-            
+
             // Apply deduplication (epsilon-based) and sort by absolute value
             const finalTokens = PayloadUtils.deduplicateResults(tokens)
-                .sort((a, b) => Math.abs(Number(a)) - Math.abs(Number(b)))
+                .sort((a, b) => {
+                    const numA = Number(a);
+                    const numB = Number(b);
+                    if (isNaN(numA) || isNaN(numB)) return 0;
+                    return Math.abs(numA) - Math.abs(numB);
+                })
                 .slice(0, 6); // MAX_SOLUTIONS = 6
 
+            // 💡 Fix: Equation Solver should ALWAYS return an array of solutions, 
+            // even if there is only one root (e.g. [2]). 
+            // This ensures consistency for downstream Plot and Result nodes.
             return PayloadUtils.createArray(finalTokens);
         } catch (error: any) {
             console.error('[CL-04] Solve Exception:', error);
@@ -597,10 +622,10 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                         for (let y = min; y <= max + eps; y += step) {
                             const scope = { [var1]: x, [var2]: y };
                             samples.push([
-                                Number(x.toFixed(10)), 
-                                Number(y.toFixed(10)), 
-                                Number(fx(scope)), 
-                                Number(fy(scope)) 
+                                Number(x.toFixed(10)),
+                                Number(y.toFixed(10)),
+                                Number(fx(scope)),
+                                Number(fy(scope))
                             ]);
                         }
                     }
@@ -619,7 +644,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
                 const dx = svc.differentiate(exprStr, var1).text();
                 const dy = svc.differentiate(exprStr, var2).text();
-                
+
                 result = {
                     out_b: PayloadUtils.createSymbolic(`[${dx}, ${dy}]`),
                     out_a: PayloadUtils.createArray(sampleField(
@@ -661,9 +686,9 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 symbol: null,
                 meta: {}
             };
-        } catch (e: any) { 
+        } catch (e: any) {
             console.error('[TR-04] VectorField Error:', e);
-            return PayloadUtils.createError(`VectorField Failed: ${e.message}`); 
+            return PayloadUtils.createError(`VectorField Failed: ${e.message}`);
         }
     },
 
@@ -693,7 +718,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const approach = PayloadUtils.unwrap(inputs['in_b']) ?? data.approach ?? '0';
         const direction = data.direction || 'both';
         let exprStr = PayloadUtils.extractExprStr(inputs['in_a']);
-        
+
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
         try {
             const svc = NerdamerService.getInstance();
@@ -771,8 +796,14 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             let metadata: any = {};
 
             if (parsed && (parsed as any).isAssignmentNode) {
-                const node = parsed as any;
-                metadata.label = node.object?.name || node.name;
+                const asmt = parsed as any;
+                metadata.label = asmt.object?.name || asmt.name;
+
+                // 💡 Fix: Assignments (e.g., "orange=4") should remain Symbolic in the Expression node.
+                // This allows downstream Solvers to receive the full symbolic string.
+                const payload = PayloadUtils.createSymbolic(code);
+                payload.meta = { ...payload.meta, ...metadata };
+                return payload;
             }
 
             const result = math.evaluate(code);

@@ -1,0 +1,52 @@
+
+# --- IOGL 1.0 Complex Stress Test ---
+
+# 1. 物理模擬引擎 (Physics Simulation)
+[t_expr] IN-09 { data: "sin(t) * exp(-0.1*t)" } @50,100
+[ode_sys] CL-05 { mode: "RK4", data: [0, 20, 1.0, 0.05] } @300,100
+t_expr.a -> ode_sys.a
+
+
+# 2. 隨機噪聲注入 (Noise Injection)
+[noise] IN-10 { mode: "Normal", data: [0, 0.1, 100, 1] } @50,250
+[filter] MA-01 { mode: "ADD" } @500,200
+ode_sys.a -> filter.a
+noise.a -> filter.b
+
+
+# 3. 數據統計與矩陣變換 (Statistics & Matrices)
+[stats] TR-06 { mode: "Mean" } @750,150
+filter.a -> stats.a
+
+[rot_mat] MA-05 { mode: "Rotation", data: [45] } @300,350
+[data_vec] DT-01 { mode: "Cols" } @50,400
+data_vec.a -> rot_mat.a
+
+
+
+# 4. 多重輸出映射 (Multi-Output Mapping)
+[frac] MA-06 { mode: "Mixed" } @550,400
+[num_val] IN-01 { data: 5.5 } @300,500
+num_val.a -> frac.a
+
+
+
+
+# 5. 視覺化終端 (Visualization)
+[main_plot] OT-03 { data: [-10, 10, 200] } @1000,100
+filter.a -> main_plot.a
+
+[result] OT-01 @1000,300
+stats.a -> result.a
+
+
+
+# --- 連線別名測試 ---
+# 支持強類型別名映射
+frac.a -> result.a # Integer part
+frac.b -> result.a # Numerator
+frac.c -> result.a # Denominator
+# .a .b .c 映射到 out_a, out_b, out_c
+frac.a -> result.a
+frac.b -> result.a
+frac.c -> result.a

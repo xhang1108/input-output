@@ -1,4 +1,5 @@
 import { DataType, NodePayload, PayloadValue, ASTNode, Matrix, PayloadMetadata } from "../types/payload";
+import { DisplayUtils } from "./DisplayUtils";
 
 /**
  * 🛠️ Utility functions for creating and manipulating NodePayloads.
@@ -10,7 +11,7 @@ export const PayloadUtils = {
      * Auto-detects type (Scalar, String, Boolean, Array/Tensor).
      */
     wrap(value: unknown): NodePayload {
-        if (typeof value === 'object' && value !== null && 'type' in (value as any) && 'value' in (value as any)) {
+        if (value && typeof value === 'object' && 'type' in (value as any) && 'value' in (value as any)) {
             return value as NodePayload;
         }
 
@@ -120,6 +121,9 @@ export const PayloadUtils = {
      * Safe Scalar Creator
      */
     createScalar(value: PayloadValue, unit?: string): NodePayload {
+        if (value && typeof value === 'object' && 'type' in (value as any) && (value as any).type === DataType.Scalar) {
+            return value as NodePayload;
+        }
         return {
             type: DataType.Scalar,
             value: this.dehydrate(value),
@@ -144,6 +148,9 @@ export const PayloadUtils = {
      * Unified Array/Vector/Matrix Creator
      */
     createArray(value: unknown, unit?: string): NodePayload {
+        if (value && typeof value === 'object' && 'type' in (value as any) && (value as any).type === DataType.Array) {
+            return value as NodePayload;
+        }
         const dims = this.calculateDimensions(value);
         return {
             type: DataType.Array,
@@ -460,23 +467,41 @@ export const PayloadUtils = {
             case 'Literal':
                 return String(node.value);
             case 'Identifier':
-                // Expand if requested and value exists
-                if (options.expandSymbols && node.value !== undefined && node.value !== null) {
-                    return String(node.value);
+                // 💡 Smart Expansion: Expand if requested OR if it's an input node (IN-XX)
+                const isInputNode = node.sourceId?.startsWith('IN-');
+                if ((options.expandSymbols || isInputNode) && node.value !== undefined && node.value !== null) {
+                    // Use DisplayUtils to handle dehydrated MathJS objects recursively
+                    return DisplayUtils.formatValue(node.value);
                 }
                 return node.name || String(node.value);
-            case 'UnaryExpression':
-                return `${node.operator}${this.stringifySymbol(node.argument!, options)}`;
+            case 'UnaryExpression': {
+                const opMap: Record<string, string> = {
+                    NEG: '-', ABS: 'abs', SQRT: 'sqrt', FACT: '!', SIGN: 'sign', CBRT: 'cbrt'
+                };
+                const op = opMap[node.operator!] || (node.operator || '');
+                const isFunc = ['abs', 'sqrt', 'sign', 'cbrt'].includes(op);
+                const arg = this.stringifySymbol(node.argument!, options);
+                
+                if (op === '!') return `factorial(${arg})`; // Use function call for Factorial
+                return isFunc ? `${op}(${arg})` : `${op}${arg}`;
+            }
             case 'BinaryExpression': {
                 const left = this.stringifySymbol(node.left!, options);
                 const right = this.stringifySymbol(node.right!, options);
 
                 const opMap: Record<string, string> = {
                     ADD: '+', SUB: '-', MUL: '*', DIV: '/',
+                    POW: '^', MOD: '%',
                     AND: '&&', OR: '||',
                     EQ: '==', GT: '>', LT: '<', GTE: '>=', LTE: '<=', NEQ: '!='
                 };
-                const op = opMap[node.operator!] || node.operator;
+                let op = opMap[node.operator!] || node.operator;
+                
+                // Fallback for mis-categorized unary ops in binary tree (e.g. NEG with right=0)
+                if (node.operator === 'NEG') return `(-${left})`;
+                if (node.operator === 'ABS') return `abs(${left})`;
+                if (node.operator === 'SQRT') return `sqrt(${left})`;
+                if (node.operator === 'MOD') return `mod(${left}, ${right})`; // Use function for better compatibility
 
                 return `(${left} ${op} ${right})`;
             }
@@ -512,13 +537,27 @@ export const PayloadUtils = {
      */
     extractExprStr(payload: NodePayload | undefined): string | null {
         if (!payload) return null;
+        
+        // 1. For Symbolic types, the 'value' IS the expression string.
+        if (payload.type === DataType.Symbolic) {
+            const val = this.unwrap(payload);
+            if (typeof val === 'string') return val;
+        }
+
+        // 2. For other types (like Scalar), prioritize the symbolic derivation tree if present.
+        if (payload.symbol) {
+            const sym = this.stringifySymbol(payload.symbol);
+            if (sym && sym !== 'null') return sym;
+        }
+
+        // 3. Fallback to raw values
         const raw = this.unwrap(payload);
         if (typeof raw === 'string') return raw;
         if (typeof raw === 'number') return String(raw);
         if (raw && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)) {
             return String((raw as Record<string, unknown>).value);
         }
-        return String(raw);
+        return raw !== null && raw !== undefined ? String(raw) : null;
     },
 
     /**

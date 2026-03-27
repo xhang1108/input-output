@@ -23,7 +23,7 @@ export const LogicNode = memo((props: NodeProps) => {
             <NodeOpSelect
                 nodeId={props.id}
                 defId={props.type}
-                paramId="op"
+                paramId="mode"
                 data={props.data as Record<string, unknown>}
                 label="Operation"
                 width="48"
