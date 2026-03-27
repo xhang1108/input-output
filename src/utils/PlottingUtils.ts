@@ -16,9 +16,25 @@ export class PlottingUtils {
 
         let targetVar = 'x';
         let isXFunctionOfY = false;
+        let isParametric = false;
         let expressionToCompile = formula;
+        let expressionY = '';
 
-        if (formula.includes('=')) {
+        const cleanFormula = formula.trim();
+
+        // 🧠 Upgrade: Detect Parametric [x(t), y(t)] or (x(t), y(t))
+        if (cleanFormula.startsWith('[') && cleanFormula.endsWith(']')) {
+             const inner = cleanFormula.substring(1, cleanFormula.length - 1);
+             const parts = inner.split(',');
+             if (parts.length === 2) {
+                 expressionToCompile = parts[0].trim();
+                 expressionY = parts[1].trim();
+                 isParametric = true;
+                 targetVar = 't';
+             }
+        }
+
+        if (!isParametric && formula.includes('=')) {
             const parts = formula.split('=');
             if (parts.length === 2) {
                 const lhs = parts[0].trim();
@@ -42,43 +58,59 @@ export class PlottingUtils {
             }
         }
 
-        const vars = svc.getVariables(expressionToCompile);
+        const vars = isParametric 
+            ? [...svc.getVariables(expressionToCompile), ...svc.getVariables(expressionY)] 
+            : svc.getVariables(expressionToCompile);
 
         // Prioritize target variable mapping
         let orderedVars = [targetVar];
         for (const v of vars) {
-            if (v !== targetVar) orderedVars.push(v);
+            if (v !== targetVar && !orderedVars.includes(v)) orderedVars.push(v);
         }
 
-        const fn = svc.compileToFunction(expressionToCompile, orderedVars);
+        const fnX = svc.compileToFunction(expressionToCompile, orderedVars);
+        const fnY = isParametric ? svc.compileToFunction(expressionY, orderedVars) : null;
+
+        // For parametric, we usually want 0 to 2*PI if not specified
+        const start = isParametric ? 0 : minX;
+        const end = isParametric ? Math.PI * 2 : maxX;
+        const rangeStep = points > 1 ? (end - start) / (points - 1) : 0;
 
         for (let i = 0; i < points; i++) {
-            const independentVal = minX + i * step;
+            const tVal = start + i * rangeStep;
 
             // Build scope object
-            const scope: Record<string, number> = { [targetVar]: independentVal };
+            const scope: Record<string, number> = { [targetVar]: tVal };
             for (const v of orderedVars) {
-                if (v !== targetVar) scope[v] = 0; // Map unassigned vars to 0
+                if (v !== targetVar) scope[v] = 0; 
             }
 
-            let dependentVal: any;
+            let x: any;
+            let y: any;
             try {
-                dependentVal = fn(scope);
+                if (isParametric) {
+                    x = fnX(scope);
+                    y = fnY!(scope);
+                } else {
+                    const independentVal = tVal;
+                    const dependentVal = fnX(scope);
+                    if (isXFunctionOfY) {
+                        x = dependentVal;
+                        y = independentVal;
+                    } else {
+                        x = independentVal;
+                        y = dependentVal;
+                    }
+                }
             } catch (e) {
-                console.error('[PlottingUtils] fn execution error:', e);
-                dependentVal = NaN;
+                x = NaN;
+                y = NaN;
             }
 
-            // 1.2 Asymptote Handling (detect infinity/NaN)
-            if (typeof dependentVal !== 'number' || !Number.isFinite(dependentVal)) {
-                dependentVal = null;
-            }
-
-            if (isXFunctionOfY) {
-                result.push({ x: dependentVal, y: independentVal });
-            } else {
-                result.push({ x: independentVal, y: dependentVal });
-            }
+            const cleanX = typeof x === 'number' && Number.isFinite(x) ? x : null;
+            const cleanY = typeof y === 'number' && Number.isFinite(y) ? y : null;
+            
+            result.push({ x: cleanX as any, y: cleanY as any });
         }
 
         return result;

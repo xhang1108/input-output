@@ -784,11 +784,14 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     // IN-09: Expert Node (Expression)
     'IN-09': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const code = String(data.code || '').trim();
+        let code = String(data.code || '').trim();
         if (!code) return PayloadUtils.createError('No Expression');
 
         const engine = InputOutputEngine.getInstance();
         const math = engine.getMathInstance();
+
+        // 🔠 Normalize function names for case-insensitivity (e.g. SIN -> sin)
+        code = PayloadUtils.normalizeMathExpression(code, math);
 
         try {
             // 💡 Smart Evaluation & Assignment Detection

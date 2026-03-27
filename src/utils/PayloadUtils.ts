@@ -1,4 +1,5 @@
 import { DataType, NodePayload, PayloadValue, ASTNode, Matrix, PayloadMetadata } from "../types/payload";
+import { MATH_ALIASES } from "../engine/mathAliases";
 import { DisplayUtils } from "./DisplayUtils";
 
 /**
@@ -613,6 +614,74 @@ export const PayloadUtils = {
         }
 
         return payload; // Default: Return the full payload (e.g. for ResultNode views)
+    },
+
+    /**
+     * 🔠 Normalizes mathematical expressions by lowercasing known function names.
+     * Prevents case-sensitivity issues while preserving user variables.
+     */
+    _normRegexMap: new Map<any, RegExp>(),
+    normalizeMathExpression(expr: string, math: any): string {
+        if (!expr || typeof expr !== 'string' || !math) return expr;
+
+        // 🧠 Canonicalization: Map aliases to primary names (e.g. sgn -> sign)
+        // This ensures downstream engines like nerdamer see standard names.
+        let processed = expr;
+        for (const [alias, primary] of Object.entries(MATH_ALIASES)) {
+            processed = processed.replace(new RegExp(`\\b${alias}\\b`, 'gi'), primary);
+        }
+
+        let regex = this._normRegexMap.get(math);
+        if (!regex) {
+            const knownFunctions = Object.keys(math).filter(k => {
+                try {
+                    return typeof (math as any)[k] === 'function';
+                } catch {
+                    return false;
+                }
+            });
+            // Filter for standard math identifiers (starts with lowercase, alphanumeric)
+            const functionNames = knownFunctions.filter(name => /^[a-z][a-zA-Z0-9]*$/.test(name));
+            regex = new RegExp(`\\b(${functionNames.join('|')})\\b`, 'gi');
+            this._normRegexMap.set(math, regex);
+        }
+
+        // 🧠 Super Normalizer Logic
+        
+        // 1. Case Normalization (Standard Functions)
+        const normalized = processed.replace(regex, (match) => {
+            const lower = match.toLowerCase();
+            if (typeof (math as any)[lower] === 'function') {
+                return lower;
+            }
+            return match;
+        });
+
+        // 🔍 Get function names for subsequent patterns
+        const knownFunctions = Object.keys(math);
+        const fnList = knownFunctions.filter(name => /^[a-z][a-zA-Z0-9]*$/.test(name)).join('|') + '|atan|sign';
+
+        // 3. Parentheses Injection: "sin x" -> "sin(x)"
+        // Only if followed by simple identifier or number (avoid double wrapping)
+        let finalExpr = normalized.replace(new RegExp(`\\b(${fnList})\\s+([a-zA-Z0-9x.]+)(\\b|$)`, 'gi'), '$1($2)');
+        
+        // 4. Implicit Multiplication (Surgery)
+        // ) ( -> ) * ( , ) fn -> ) * fn
+        finalExpr = finalExpr.replace(/(\))(\s*)(\()/g, '$1 * $3');
+        finalExpr = finalExpr.replace(new RegExp(`(\\))(\s*)(${fnList}|[a-zA-Z0-9])\\b`, 'gi'), '$1 * $3');
+
+        // 5. 🧠 Smart Expression: Auto-append (x) to univariate naked functions (e.g. sin -> sin(x))
+        const clean = finalExpr.trim();
+        if (/^[a-z][a-zA-Z0-9]*$/.test(clean) && typeof (math as any)[clean] === 'function') {
+            try {
+                math.evaluate(`${clean}(1)`);
+                return `${clean}(x)`;
+            } catch {
+                return finalExpr;
+            }
+        }
+
+        return finalExpr;
     }
 };
 

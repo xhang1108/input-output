@@ -1,6 +1,7 @@
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeSymbolizer } from '../../../NodeRegistry';
 import { ASTNode } from '../../../../types/payload';
+import { InputOutputEngine } from '../../../InputOutputEngine';
 
 export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
     // DT-01: Array Builder
@@ -145,7 +146,11 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
     },
     // IN-09: Expert Node (Expression)
     'IN-09': (node, inputs) => {
-        const code = ((node.data || {}) as any).code || '';
-        return PayloadUtils.createSymbol('Literal', { value: code || 'Expert' });
+        const data = (node.data || {}) as any;
+        const code = data.code || '';
+        const engine = InputOutputEngine.getInstance();
+        const math = engine.getMathInstance();
+        const normalized = PayloadUtils.normalizeMathExpression(code, math);
+        return PayloadUtils.createSymbol('Literal', { value: normalized || 'Expert' });
     }
 };

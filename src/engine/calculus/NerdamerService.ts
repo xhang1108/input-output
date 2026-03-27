@@ -2,6 +2,7 @@ import nerdamer from 'nerdamer';
 import 'nerdamer/all';
 import { create, all } from 'mathjs';
 import { MATH_CONFIG } from '../mathConfig';
+import { PayloadUtils } from '../../utils/PayloadUtils';
 
 const math = create(all, { number: 'number' });
 
@@ -92,7 +93,8 @@ export class NerdamerService {
 
     /** Compute symbolic derivative: diff(expr, variable, order) */
     public differentiate(expr: string, variable: string, order: number = 1): any {
-        let result = this.nerdamer(`(${expr})`);
+        const normExpr = PayloadUtils.normalizeMathExpression(expr, math);
+        let result = this.nerdamer(`(${normExpr})`);
         for (let i = 0; i < order; i++) {
             result = this.nerdamer(`diff(${result.text()}, ${variable})`);
         }
@@ -101,13 +103,14 @@ export class NerdamerService {
 
     /** Compute symbolic integral: integrate(expr, variable) */
     public integrate(expr: string, variable: string): any {
-        return this.nerdamer(`integrate((${expr}), ${variable})`);
+        const normExpr = PayloadUtils.normalizeMathExpression(expr, math);
+        return this.nerdamer(`integrate((${normExpr}), ${variable})`);
     }
 
     /** Compute definite integral: defint(expr, lower, upper, variable) */
     public definiteIntegral(expr: string, variable: string, lower: string | number, upper: string | number): any {
         // Standard Nerdamer syntax: defint(expression, from, to, variable)
-        const cleanExpr = String(expr).trim();
+        const cleanExpr = PayloadUtils.normalizeMathExpression(String(expr).trim(), math);
         const cleanVar = String(variable).trim();
         const cmd = `defint((${cleanExpr}),${lower},${upper},${cleanVar})`;
         return this.nerdamer(cmd);
@@ -115,7 +118,8 @@ export class NerdamerService {
 
     /** Compute symbolic limit */
     public limit(expr: string, variable: string, approach: string): any {
-        return this.nerdamer(`limit((${expr}), ${variable}, ${approach})`);
+        const normExpr = PayloadUtils.normalizeMathExpression(expr, math);
+        return this.nerdamer(`limit((${normExpr}), ${variable}, ${approach})`);
     }
 
     // ─── AST-to-JS Compiler with LRU Cache ────────────────────────
@@ -137,7 +141,8 @@ export class NerdamerService {
 
         // Build the JS function from nerdamer expression
         try {
-            const nExpr = this.nerdamer(expr);
+            const normExpr = PayloadUtils.normalizeMathExpression(expr, math);
+            const nExpr = this.nerdamer(normExpr);
             const textExpr = nExpr.text();
 
             // 💡 Use MathJS for robust evaluation (handles ^ and math functions natively)
@@ -198,7 +203,8 @@ export class NerdamerService {
     /** Extract variables from a nerdamer expression */
     public getVariables(expr: string): string[] {
         try {
-            return this.nerdamer(expr).variables();
+            const normExpr = PayloadUtils.normalizeMathExpression(expr, math);
+            return this.nerdamer(normExpr).variables();
         } catch {
             return [];
         }
