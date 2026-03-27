@@ -1,0 +1,36 @@
+# IOGL 1.0 Standard Test Suite
+# This file serves as the gold standard for 3.0 syntax verification.
+
+# 1. Basic Nodes (Label-first, Implicit Category)
+[n1] IN-01 { data: 10 } @100,100
+[s1] IN-02 { data: [50, 0, 100, 1] } @100,200
+[c1] IN-03 { data: ["#3b82f6", "8bit"] } @100,300
+
+# 2. Math Nodes (Mode as Operation)
+[add] MA-01 { mode: "ADD" } @400,150
+[mul] MA-01 { mode: "MUL" } @400,250
+[pow] MA-02 { mode: "POW" } @400,350
+
+# 3. Complex Nodes (Contextual Positional Data)
+[rand] IN-10 { mode: "Normal", data: [0.5, 0, 1, 10, 10] } @100,450
+[ode] CL-05 { mode: "RK4", data: [0, 10, 1, 0.01] } @400,450
+[geo] TR-03 { mode: "Circle", data: [50] } @700,150
+
+# 4. Expert Nodes (No input handles for IN-09)
+[expr] IN-09 { data: "x^2 + y" } @100,550
+
+# 5. Wiring (Positional Shorthand)
+n1.a -> add.a
+s1.a -> add.b
+add.a -> mul.a
+c1.a -> mul.b
+
+# 6. Capsule Wiring (Automatic stacking)
+[builder] DT-01 { mode: "Rows" } @700,300
+add.a -> builder.a
+mul.a -> builder.a
+expr.a -> builder.a
+
+# 7. Metadata (Comments and whitespace)
+# This is a comment.
+# Layout: @X,Y is always absolute.

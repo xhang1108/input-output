@@ -30,8 +30,8 @@ export const IntegralNode = memo((props: NodeProps) => {
 
     const variable = (data.variable as string) || 'x';
     const mode = (data.mode as string) || 'indefinite';
-    const lower = (data.lower as string) || '';
-    const upper = (data.upper as string) || '';
+    const lower = (data.lower ?? '') as any;
+    const upper = (data.upper ?? '') as any;
 
     const handleVarSelect = useCallback((item: CategorizedMenuItem) => {
         updateNodeData(id, { variable: item.id });

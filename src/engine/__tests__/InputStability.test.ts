@@ -56,7 +56,7 @@ describe('Input Node Stability', () => {
 
         const result = await NodeRegistry.evaluate(node as any, {});
         const val = PayloadUtils.unwrap(result) as any;
-        expect(val.out_a).toBe('ff0000');
+        expect(val.out_a).toBe('#ff0000');
         expect(val.out_c).toEqual([1, 0, 0]);
     });
 

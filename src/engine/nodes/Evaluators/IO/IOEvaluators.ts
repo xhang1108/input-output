@@ -22,7 +22,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             try { val = math.round(val, precision); } catch (e) {}
         }
         
-        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (original.meta?.unit);
+        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
         
         const payload = PayloadUtils.createScalar(val, extractedUnit);
         return {
@@ -46,7 +46,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             try { val = math.round(val, precision); } catch (e) {}
         }
         
-        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (original.meta?.unit);
+        const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
         
         const payload = PayloadUtils.createScalar(val, extractedUnit);
         return {
@@ -59,9 +59,11 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const original = node.value || PayloadUtils.createString('');
         const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
         let val = rawVal !== undefined ? rawVal : PayloadUtils.unwrap(original);
+        const meta = { ...original.meta } as any;
+        if (data.unit) meta.unit = String(data.unit);
         return {
             ...PayloadUtils.createString(String(val ?? '')),
-            meta: { ...original.meta }
+            meta
         };
     },
     'OT-01': (node, inputs) => {
@@ -94,28 +96,25 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IN-07': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
+        
+        // 1. Check direct 'value' (from Parser or Stepwise propagation)
         const dataVal = data.value;
         if (dataVal !== undefined) {
-            if (typeof dataVal === 'object' && dataVal !== null) {
-                if ('type' in (dataVal as any) && 'value' in (dataVal as any)) return dataVal as any;
-                if ('mathjs' in (dataVal as any)) {
-                    return { type: DataType.Array, value: dataVal, symbol: null, meta: {} };
-                }
-                return PayloadUtils.createArray(dataVal);
-            }
+            return PayloadUtils.createArray(dataVal);
         }
-        const raw = data.array as string;
-        if (raw) {
-            try {
-                const parsed = JSON.parse(raw);
-                return PayloadUtils.createArray(parsed);
-            } catch (e) {
-                return PayloadUtils.createArray([]);
-            }
+        
+        // 2. Check 'array' property (Legacy or Positional Data)
+        const raw = data.array;
+        if (raw !== undefined) {
+             return PayloadUtils.createArray(raw);
         }
+        
+        // 3. Fallback to node.value (Stale cache)
         if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
             return node.value as any;
         }
+        
+        // 4. Ultimate Fallback: Default 3x3 Zero Matrix
         return PayloadUtils.createArray([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
     },
     'IN-03': (node) => {
@@ -135,7 +134,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IN-08': (node) => {
         let total = 0;
-        const digits = (node.data?.value as number[]) || [0, 0, 0, 0, 0, 0, 0];
+        const digits = (node.data?.array as number[]) || [0, 0, 0, 0, 0, 0, 0];
         for (let i = 0; i < digits.length; i++) {
             total = total * 10 + digits[i];
         }

@@ -41,7 +41,7 @@ export const TrigNode = memo((props: NodeProps) => {
                     <NodeOpSelect 
                         nodeId={id} 
                         defId="MA-04" 
-                        paramId="op" 
+                        paramId="mode" 
                         data={data} 
                         label="Function"
                     />

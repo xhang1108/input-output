@@ -44,7 +44,9 @@ export function useBrainUpdates(
                             // FIX: If it's an Input node, we often need the raw value specifically for the text box.
                             // Result nodes need the full payload for metadata.
                             const isInput = node.id.startsWith('IN-') || node.type?.startsWith('IN-');
-                            const newValue = isInput ? PayloadUtils.unwrap(rawPayload) : rawPayload;
+                            // SIGNAL FALLBACK: Use computed value if available, else use stored state (important for fresh imports)
+                            const sourceValue = rawPayload ?? node.data.value;
+                            const newValue = isInput ? PayloadUtils.unwrap(sourceValue) : sourceValue;
                             
                             if (node.data.value !== newValue) {
                                 changed = true;
@@ -88,7 +90,10 @@ export function useBrainUpdates(
                         }
 
                         const isInput = logicNode.id.startsWith('IN-') || logicNode.type?.startsWith('IN-');
-                        const finalValue = isInput ? PayloadUtils.unwrap(unwrappedValue) : unwrappedValue;
+                        
+                        // SIGNAL FALLBACK: Prioritize result signal, fallback to persistent data state
+                        const sourceVal = unwrappedValue ?? logicNode.data.value;
+                        const finalValue = isInput ? PayloadUtils.unwrap(sourceVal) : sourceVal;
 
                         // 1. Determine structural props (parentId and Origin)
                         const d = logicNode.data || {};

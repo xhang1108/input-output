@@ -1,0 +1,16 @@
+# Calculus Examples (IOGL 1.0)
+
+# 1. Derivative of x^2
+[expr] IN-09 "x^2" @50,50
+[diff] CL-01 x, 1 @300,50
+expr.a -> diff.a
+
+# 2. Definite Integral from 0 to 1
+[func] IN-09 "sin(x)" @50,150
+[integ] CL-02 definite, x, 0, 1 @300,150
+func.a -> integ.a
+
+# 3. ODE Solving (RK4)
+[ode_func] IN-09 "y * (1 - y/10)" @50,250
+[solver] CL-05 RK4, 0, 20, 0.1, 0.1 @300,250
+ode_func.a -> solver.a

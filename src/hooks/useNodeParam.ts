@@ -13,6 +13,7 @@ import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { CategorizedMenuItem } from '../components/ui/CategorizedMenu';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
+import { PayloadUtils } from '../utils/PayloadUtils';
 
 export interface UseNodeParamResult {
     /** Options in CategorizedMenu format, built from the definition. */
@@ -43,7 +44,12 @@ export function useNodeParam(
         aliases: opt.aliases,
     }));
 
-    const currentValue = String(data[paramId] ?? options[0]?.id ?? '');
+    const val = data[paramId];
+    // Backward compatibility: If we're looking for 'mode' but only 'op' exists, use it.
+    const rawVal = (paramId === 'mode' && val === undefined) ? data.op : val;
+    const effectiveValue = PayloadUtils.unwrap(rawVal);
+
+    const currentValue = String(effectiveValue ?? options[0]?.id ?? '');
     const currentLabel = options.find(o => o.id === currentValue)?.label ?? currentValue;
 
     const dispatch = useCallback(

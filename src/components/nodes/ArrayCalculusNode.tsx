@@ -13,7 +13,7 @@ import { HandleConfig, HandleDataType } from '../../types/NodeDefinition';
  */
 export const ArrayCalculusNode = memo((props: NodeProps) => {
     const { data } = props;
-    const op = (data.op as string) || 'INV';
+    const op = (data.mode as string) || (data.op as string) || 'INV';
 
     // ─── Dynamic Handle Logic ──────────────────────────────────────────
     const handles = useMemo<HandleConfig[]>(() => {
@@ -60,7 +60,7 @@ export const ArrayCalculusNode = memo((props: NodeProps) => {
                 <NodeOpSelect
                     nodeId={props.id}
                     defId={props.type}
-                    paramId="op"
+                    paramId="mode"
                     data={data as Record<string, unknown>}
                     placeholder="Search Operation..."
                     width="48"

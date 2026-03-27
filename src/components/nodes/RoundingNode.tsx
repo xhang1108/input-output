@@ -30,7 +30,7 @@ export const RoundingNode = memo((props: NodeProps) => {
                     <NodeOpSelect 
                         nodeId={id} 
                         defId="MA-05" 
-                        paramId="op" 
+                        paramId="mode" 
                         data={data} 
                         label="Rounding Mode"
                         width="44"

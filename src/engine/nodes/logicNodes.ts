@@ -8,7 +8,7 @@ export function registerLogicNodes() {
     NodeRegistry.register('LG-01', (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'AND';
+        const op = data.mode || data.op || 'AND';
         const getVal = (key: string) => {
             const p = inputs[key];
             if (!p) return null;
@@ -43,7 +43,8 @@ export function registerLogicNodes() {
             return PayloadUtils.createBoolean(result);
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     }, (node, inputs) => {
-        const op = ((node.data || {}) as any).op || 'AND';
+        const data = (node.data || {}) as any;
+        const op = data.mode || data.op || 'AND';
         const ops: any = { EQ: '==', GT: '>', LT: '<', GTE: '>=', LTE: '<=', NEQ: '!=', AND: '&&', OR: '||' };
         if (op === 'NOT') return PayloadUtils.createSymbol('UnaryExpression', { operator: '!', argument: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: false }) });
         if (ops[op]) return PayloadUtils.createSymbol('BinaryExpression', { operator: ops[op], left: inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 }), right: inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 }) });

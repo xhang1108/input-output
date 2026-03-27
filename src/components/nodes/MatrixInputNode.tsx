@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useRef } from 'react';
+import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import * as math from 'mathjs';
 import { BaseNode } from './BaseNode';
@@ -19,38 +19,51 @@ export const MatrixInputNode = memo((props: NodeProps) => {
     // --- Grid State Management ---
     const initialGrid = (() => {
         try {
-            const extract2DArray = (val: any): number[][] | null => {
+            const extract2DArray = (val: any): any[][] | null => {
+                if (typeof val === 'string') {
+                    try {
+                        const parsed = JSON.parse(val);
+                        if (Array.isArray(parsed) && Array.isArray(parsed[0])) return parsed;
+                    } catch (e) { return null; }
+                }
                 if (Array.isArray(val) && Array.isArray(val[0])) return val;
-                if (val && typeof val === 'object' && val.data && Array.isArray(val.data)) return val.data;
+                if (val && typeof val === 'object') {
+                    // 1. Direct Payload match (Standard for IOGL 1.0 / NodePayload)
+                    if (val.type === 'array' && Array.isArray(val.value)) return val.value;
+                    
+                    // 2. Property match (Mapped from manifest.ts)
+                    const arrayProp = val.array || val.value;
+                    if (arrayProp) {
+                        const unwrapped = typeof arrayProp === 'string' ? JSON.parse(arrayProp) : arrayProp;
+                        if (unwrapped?.type === 'array' && Array.isArray(unwrapped.value)) return unwrapped.value;
+                        if (Array.isArray(unwrapped)) return unwrapped;
+                    }
+                }
                 return null;
             };
 
-            if (data.rawExpression) {
-                try {
-                    const parsed = JSON.parse(data.rawExpression as string);
-                    const extracted = extract2DArray(parsed);
-                    if (extracted) return extracted;
-                } catch (e) { }
-            }
+            const extractedFromData = extract2DArray(data);
+            if (extractedFromData) return extractedFromData;
 
-            const extracted = extract2DArray(data.value || data);
-            if (extracted) return extracted;
         } catch (e) { }
         return [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-    })() as number[][];
+    })() as any[][];
 
     const [rows, setRows] = useState(initialGrid.length);
     const [cols, setCols] = useState(initialGrid[0]?.length || 1);
     const nodeRef = useRef<HTMLDivElement>(null);
 
     // Debounced Grid State & Sync
-    const [grid, setGrid] = useNodeDebounce<number[][]>(
+    const [grid, setGrid] = useNodeDebounce<any[][]>(
         id,
         initialGrid,
         useCallback((newGrid) => {
             try {
+                // We keep the raw grid for UI, and create a math instance (matrix) for the engine
+                // math.matrix handles strings/scalars gracefully.
                 const mat = math.matrix(newGrid);
                 return {
+                    array: newGrid,
                     value: mat,
                     rawExpression: JSON.stringify(newGrid),
                     label: 'Matrix',
@@ -64,6 +77,16 @@ export const MatrixInputNode = memo((props: NodeProps) => {
             }
         }, [])
     );
+
+    // Sync from props (External Hydration)
+    useEffect(() => {
+        const currentGrid = initialGrid;
+        if (JSON.stringify(currentGrid) !== JSON.stringify(grid)) {
+            setGrid(currentGrid);
+            setRows(currentGrid.length);
+            setCols(currentGrid[0]?.length || 1);
+        }
+    }, [initialGrid]);
 
     // Dimension management via unified hook
     const { width, height, onResize, onResizeStart, onResizeEnd } = useNodeDimensions({
@@ -91,11 +114,28 @@ export const MatrixInputNode = memo((props: NodeProps) => {
     });
 
     const updateCell = useCallback((r: number, c: number, val: string) => {
-        const num = parseFloat(val) || 0;
-        const newGrid = grid.map((row, ri) =>
-            ri === r ? row.map((col, ci) => ci === c ? num : col) : row
-        );
-        setGrid(newGrid);
+        if (val === '') {
+            const newGrid = grid.map((row, ri) =>
+                ri === r ? row.map((col, ci) => ci === c ? 0 : col) : row
+            );
+            setGrid(newGrid);
+            return;
+        }
+
+        const num = parseFloat(val);
+        if (!isNaN(num)) {
+            const newGrid = grid.map((row, ri) =>
+                ri === r ? row.map((col, ci) => ci === c ? num : col) : row
+            );
+            setGrid(newGrid);
+        } else {
+            // Keep the raw string for UI error state, but engine will see 0 if we were to sync now
+            // Actually, let's keep it as is, but UI will highlight it.
+            const newGrid = grid.map((row, ri) =>
+                ri === r ? row.map((col, ci) => ci === c ? val : col) : row
+            );
+            setGrid(newGrid);
+        }
     }, [grid, setGrid]);
 
     // Define Output Handle
@@ -121,13 +161,17 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                             {row.map((val, c) => (
                                 <div
                                     key={c}
-                                    className="w-10 h-8 bg-zinc-900/50 border border-zinc-800 rounded flex items-center justify-center"
+                                    className={`w-10 h-8 bg-zinc-900/50 border rounded flex items-center justify-center transition-colors ${
+                                        isNaN(parseFloat(String(val))) && String(val) !== '' 
+                                            ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]' 
+                                            : 'border-zinc-800'
+                                    }`}
                                 >
                                     <input
                                         type="text"
-                                        defaultValue={val}
+                                        value={val}
                                         onFocus={(e) => e.target.select()}
-                                        onBlur={(e) => updateCell(r, c, e.target.value)}
+                                        onChange={(e) => updateCell(r, c, e.target.value)}
                                         className="w-full h-full bg-transparent text-center text-[10px] text-zinc-300 outline-none font-mono"
                                     />
                                 </div>

@@ -1,0 +1,71 @@
+# IOGL 1.0 ALL-NODE BENCHMARK (Release Checklist)
+# This file contains one instance of every core node to verify parser/layout integrity.
+
+# --- 1. Inputs ---
+[num] IN-01 42 @0,0
+[slider] IN-02 50,0,100,1 @0,100
+[color] IN-03 "#ff0000" @0,200
+[str] IN-04 "Hello IOGL" @0,300
+[btn] IN-05 Sticky @0,400
+[pi] IN-06 pi @0,500
+[mat] IN-07 [[1,2],[3,4]] @0,600
+[expr] IN-09 "x + 1" @0,700
+[rand] IN-10 Normal, 0, 1, 10, 10 @0,800
+
+# --- 2. Math ---
+[add] MA-01 ADD @300,0
+num.a -> add.a
+pi.a -> add.b
+
+[pow] MA-02 POW @300,100
+add.a -> pow.a
+
+[log] MA-03 LN @300,200
+[trig] MA-04 SIN @300,300
+[round] MA-05 ROUND, 2 @300,400
+[frac] MA-06 Mixed @300,500
+[mod] MA-07 MOD @300,600
+[comb] MA-08 nCr @300,700
+
+# --- 3. Calculus ---
+[diff] CL-01 x, 1 @600,0
+expr.a -> diff.a
+
+[int] CL-02 indefinite, x @600,100
+[lim] CL-03 both, x, 0 @600,200
+[solve] CL-04 x @600,300
+[ode] CL-05 RK4, 0, 10, 1, 0.01 @600,400
+
+# --- 4. Data ---
+[build] DT-01 Rows @900,0
+num.a -> build.a
+pi.a -> build.a
+
+[ext] DT-02 1D, 0 @900,100
+[list] DT-03 "Sort (Asc)" @900,200
+[set] DT-04 Union @900,300
+[vec] DT-05 DOT @900,400
+[linalg] DT-06 INV @900,500
+
+# --- 5. Transform ---
+[unit] TR-01 "m/s" @1200,0
+[base] TR-02 16 @1200,100
+[geo] TR-03 Circle @1200,200
+[vfield] TR-04 gradient, -5, 5, 10, x, y @1200,300
+[smooth] TR-05 5 @1200,400
+[stat] TR-06 Mean @1200,500
+
+# --- 6. Logic & Output ---
+[gate] LG-01 AND @1500,0
+[switch] LG-02 @1500,100
+[split] LG-03 @1500,200
+[bool] LG-04 true @1500,300
+
+[res] OT-01 auto @1500,400
+[stat_node] OT-02 @1500,500
+[plot] OT-03 -10, 10, 100 @1500,600
+[dbg] OT-04 @1500,700
+
+# --- 7. Utility ---
+[note] UT-01 "Benchmark Note", default, md @1800,0
+[wire] UT-02 @1800,100

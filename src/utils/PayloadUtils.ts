@@ -11,7 +11,7 @@ export const PayloadUtils = {
      * Auto-detects type (Scalar, String, Boolean, Array/Tensor).
      */
     wrap(value: unknown): NodePayload {
-        if (typeof value === 'object' && value !== null && 'type' in (value as any) && 'value' in (value as any)) {
+        if (value && typeof value === 'object' && 'type' in (value as any) && 'value' in (value as any)) {
             return value as NodePayload;
         }
 
@@ -121,6 +121,9 @@ export const PayloadUtils = {
      * Safe Scalar Creator
      */
     createScalar(value: PayloadValue, unit?: string): NodePayload {
+        if (value && typeof value === 'object' && 'type' in (value as any) && (value as any).type === DataType.Scalar) {
+            return value as NodePayload;
+        }
         return {
             type: DataType.Scalar,
             value: this.dehydrate(value),
@@ -145,6 +148,9 @@ export const PayloadUtils = {
      * Unified Array/Vector/Matrix Creator
      */
     createArray(value: unknown, unit?: string): NodePayload {
+        if (value && typeof value === 'object' && 'type' in (value as any) && (value as any).type === DataType.Array) {
+            return value as NodePayload;
+        }
         const dims = this.calculateDimensions(value);
         return {
             type: DataType.Array,

@@ -15,17 +15,20 @@ export const ColorUtils = {
     standardize(input: any, depth: string = '8bit', unit?: string): NodePayload {
         const val = PayloadUtils.unwrap(input);
         
-        // 1. Already a structured color object?
+        // 1. Validating existing structure?
+        // We do NOT early return here anymore to ensure all aliases (hex, vec3) and '#' are injected.
         if (val && typeof val === 'object' && !Array.isArray(val) && (val as any).out_a) {
-            return PayloadUtils.wrap(val);
+            // Proceed to re-standardize to ensure hex/vec3 aliases are present
         }
 
         let hex = '#000000';
         let rNorm = 0, gNorm = 0, bNorm = 0;
 
-        // 2. Handle HEX String
-        if (typeof val === 'string' && (val.startsWith('#') || /^[0-9A-Fa-f]{6}$/.test(val))) {
-            hex = val.startsWith('#') ? val : '#' + val;
+        // 2. Handle HEX String (direct or from object)
+        const sourceHex = typeof val === 'string' ? val : (val && typeof val === 'object' && !Array.isArray(val) ? (val as any).out_a || (val as any).hex : null);
+        
+        if (typeof sourceHex === 'string' && (sourceHex.startsWith('#') || /^[0-9A-Fa-f]{6}$/.test(sourceHex))) {
+            hex = sourceHex.startsWith('#') ? sourceHex : '#' + sourceHex;
             rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
             gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
             bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
@@ -53,9 +56,14 @@ export const ColorUtils = {
         return {
             type: DataType.Color,
             value: {
-                out_a: hex.replace('#', ''),
+                // Positional mapping for IOGL 1.0 handles
+                out_a: hex,
                 out_b: [Math.round(rNorm * 255), Math.round(gNorm * 255), Math.round(bNorm * 255)],
-                out_c: [Number(rNorm.toFixed(3)), Number(gNorm.toFixed(3)), Number(bNorm.toFixed(3))]
+                out_c: [Number(rNorm.toFixed(3)), Number(gNorm.toFixed(3)), Number(bNorm.toFixed(3))],
+                // Backward compatibility for UI components (ColorNode.tsx, RedultNode.tsx)
+                hex: hex,
+                vec3: [Number(rNorm.toFixed(3)), Number(gNorm.toFixed(3)), Number(bNorm.toFixed(3))],
+                vec4: [Number(rNorm.toFixed(3)), Number(gNorm.toFixed(3)), Number(bNorm.toFixed(3)), 1]
             },
             symbol: null,
             meta: { role: 'color' }

@@ -763,21 +763,18 @@ export class Brain {
             const node = nodesToCheck.get(nodeId);
             if (!node) return null;
 
-
-
             // 2. Check instance data for dynamically generated handles (SY-05, etc.)
             if (node.data && Array.isArray(node.data.handles)) {
                 const handleFromData = node.data.handles.find((h: any) => h.id === handleId);
                 if (handleFromData) return handleFromData.type;
             }
 
-            // 3. SPECIAL: Expert Nodes (SY-05) dynamically bind any unknown name as target
             if (node.type === 'SY-05') {
                 if (handleId === 'out') return 'source';
                 return 'target';
             }
 
-            // 4. Check Static Definition
+            // 3. Check Static Definition
             const def = NODE_DEFINITIONS.find(d => d.id === node.type);
             if (!def) return null;
 
@@ -1094,7 +1091,8 @@ export class Brain {
 
             let initVal = n.value;
             if (initVal === undefined && n.data && n.data.value !== undefined) {
-                if (n.type.startsWith('IO-')) {
+                // Ensure both legacy IO and new IN family preserve their data.value as initial engine state
+                if (n.type.startsWith('IO-') || n.type.startsWith('IN-')) {
                     initVal = n.data.value;
                 }
             }
@@ -1236,7 +1234,8 @@ export class Brain {
             this.emit('graphChanged', null);
             // Phase 4.3: Conditional Auto-Layout
             // Massive graphs > 100 nodes skip auto-layout to prevent ELK from freezing the UI for seconds.
-            const shouldAutoLayout = !skipLayout && graph.nodes.length <= 100;
+            // Also skip if IOGL has explicit positions provided.
+            const shouldAutoLayout = !skipLayout && !graph.hasExplicitPositions && graph.nodes.length <= 100;
             if (shouldAutoLayout) {
                 this.emit('RE-LAYOUT', null);
             } else if (graph.nodes.length > 100) {

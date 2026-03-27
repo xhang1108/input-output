@@ -3,7 +3,8 @@ import { NodeSymbolizer } from '../../../NodeRegistry';
 
 export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     'MA-01': (node, inputs) => {
-        const op = ((node.data || {}) as any).op || 'ADD';
+        const data = (node.data || {}) as any;
+        const op = data.mode || data.op || 'ADD';
         const unaryOps = ['SIN', 'COS', 'TAN', 'SQRT', 'ABS', 'NEG', 'SIGN', 'FACT', 'CBRT'];
         const functionStyleOps = ['SIN', 'COS', 'TAN', 'SQRT', 'ABS', 'SIGN', 'CBRT'];
 
@@ -29,7 +30,7 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     'MA-02': (node, inputs) => (MathSymbolizers as any)['MA-01'](node, inputs),
     'MA-05': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const op = data.op || 'ROUND';
+        const op = data.mode || data.op || 'ROUND';
 
         let funcName = 'round';
         if (op === 'FLOOR') funcName = 'floor';
@@ -52,7 +53,7 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     'MA-12': (node, inputs) => (MathSymbolizers as any)['MA-06'](node, inputs),
     'MA-07': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const op = data.op || 'GCD';
+        const op = data.mode || data.op || 'GCD';
         const funcMap: any = { GCD: 'gcd', LCM: 'lcm', MOD: 'mod', IS_PRIME: 'isPrime' };
         const args = [inputs['in_a'] || PayloadUtils.createSymbol('Literal', { value: 0 })];
         if (op !== 'IS_PRIME') args.push(inputs['in_b'] || PayloadUtils.createSymbol('Literal', { value: 0 }));
@@ -60,20 +61,21 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     },
     'MA-03': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const op = data.op || 'LN';
+        const op = data.mode || data.op || 'LN';
         if (op === 'LOG10') return PayloadUtils.createSymbol('FunctionCall', { name: 'log10', args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
         if (op === 'LOGN') return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 }), inputs['in_b'] || inputs['base'] || PayloadUtils.createSymbol('Literal', { value: 10 })] });
         return PayloadUtils.createSymbol('FunctionCall', { name: 'log', args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
     'MA-04': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const op = data.op || 'SIN';
+        const op = data.mode || data.op || 'SIN';
         return PayloadUtils.createSymbol('FunctionCall', { name: op.toLowerCase(), args: [inputs['in_a'] || inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 0 })] });
     },
     'MA-17': (node, inputs) => (MathSymbolizers as any)['MA-04'](node, inputs),
     // TR-06: Statistics
     'TR-06': (node, inputs) => {
-        const op = ((node.data || {}) as any).op || 'Mean';
+        const data = (node.data || {}) as any;
+        const op = data.mode || data.op || 'Mean';
         return PayloadUtils.createSymbol('FunctionCall', {
             name: op.toLowerCase(),
             args: [inputs['data'] || PayloadUtils.createSymbol('Literal', { value: '[]' })]
@@ -91,7 +93,7 @@ export const MathSymbolizers: Record<string, NodeSymbolizer> = {
     // MA-08: Combinatorics
     'MA-08': (node, inputs) => {
         const data = (node.data || {}) as any;
-        const op = data.op || 'nCr';
+        const op = data.mode || data.op || 'nCr';
         
         const n = inputs['n'] || inputs['in_n'] || PayloadUtils.createSymbol('Literal', { value: 'n' });
         const r = inputs['r'] || inputs['in_r'] || PayloadUtils.createSymbol('Literal', { value: 'r' });

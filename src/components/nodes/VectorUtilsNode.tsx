@@ -14,7 +14,7 @@ const VECTOR_OP_OUTPUT: Record<string, 'scalar' | 'array'> = {
 
 export const VectorUtilsNode = memo((props: NodeProps) => {
     const { data } = props;
-    const op = (data.op as string) || 'DOT';
+    const op = (data.mode as string) || (data.op as string) || 'DOT';
 
     // Dynamic handles based on op: NORM only needs one input
     const handles = useMemo<any[]>(() => {
@@ -35,7 +35,7 @@ export const VectorUtilsNode = memo((props: NodeProps) => {
             <NodeOpSelect
                 nodeId={props.id}
                 defId={props.type}
-                paramId="op"
+                paramId="mode"
                 data={data as Record<string, unknown>}
                 label="Vector Op"
                 placeholder="Search Operation..."

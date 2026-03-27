@@ -7,7 +7,7 @@ import { NodeOpSelect } from './NodeOpSelect';
 
 export const CombinatoricsNode = memo((props: NodeProps) => {
     const { id, data } = props;
-    const op = (data.op as string) || 'nCr';
+    const op = (data.mode as string) || (data.op as string) || 'nCr';
 
 
     const handles: any[] = [
@@ -27,7 +27,7 @@ export const CombinatoricsNode = memo((props: NodeProps) => {
                 <NodeOpSelect
                     nodeId={id}
                     defId="MA-08"
-                    paramId="op"
+                    paramId="mode"
                     data={data}
                     label="Operation"
                     width="48"

@@ -83,6 +83,7 @@ export interface BrainEvent {
 }
 
 export interface InjectableGraph {
+    hasExplicitPositions?: boolean; // Signal from Parser to Brain to skip auto-layout
     nodes: {
         id: string;
         type: string;

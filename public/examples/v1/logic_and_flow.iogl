@@ -1,0 +1,19 @@
+# Logic & Flow Examples (IOGL 1.0)
+
+# 1. Nested Logic Gates
+[num1] IN-01 10 @50,50
+[num2] IN-01 20 @50,150
+[gt] LG-01 GT @300,100
+num1.a -> gt.a
+num2.a -> gt.b
+
+[btn] IN-05 Sticky @50,250
+[and] LG-01 AND @550,180
+gt.a -> and.a
+btn.a -> and.b
+
+# 2. Logic Switch
+[s1] LG-02 @800,180
+and.a -> s1.a
+num1.a -> s1.b
+num2.a -> s1.c

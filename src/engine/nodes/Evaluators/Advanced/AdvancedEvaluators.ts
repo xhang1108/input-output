@@ -15,12 +15,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
 
         let items: any[] = [];
 
-        // Support IOGL 2.0 Capsule handles: 'in', 'append', or numerical suffixes '[0]', '[1]'
-        const sortKeys = Object.keys(inputs).sort((a, b) => {
-            const aNum = parseInt(a.match(/\d+/)?.[0] || '999');
-            const bNum = parseInt(b.match(/\d+/)?.[0] || '999');
-            return aNum - bNum;
-        });
+        const sortKeys = Object.keys(inputs).sort();
 
         sortKeys.forEach(key => {
             const val = inputs[key];
@@ -165,11 +160,13 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         let arr: any[] = (hydrated && typeof hydrated === 'object' && 'toArray' in (hydrated as any)) ? (hydrated as any).toArray().flat(Infinity) : (Array.isArray(hydrated) ? hydrated.flat(Infinity) : [hydrated]);
         if (arr.length === 0) return PayloadUtils.createArray([]);
         let result = [...arr];
-        if (mode === 'Sort (Asc)') result.sort((a, b) => Number(a) - Number(b));
-        else if (mode === 'Sort (Desc)') result.sort((a, b) => Number(b) - Number(a));
-        else if (mode === 'Reverse') result.reverse();
-        else if (mode === 'Unique') result = PayloadUtils.deduplicateResults(result);
-        else if (mode === 'Clean') result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
+        const modeLower = mode.toLowerCase();
+        if (modeLower.includes('asc')) result.sort((a, b) => Number(a) - Number(b));
+        else if (modeLower.includes('desc')) result.sort((a, b) => Number(b) - Number(a));
+        else if (modeLower === 'sort') result.sort((a, b) => Number(a) - Number(b));
+        else if (modeLower === 'reverse') result.reverse();
+        else if (modeLower === 'unique') result = PayloadUtils.deduplicateResults(result);
+        else if (modeLower === 'clean') result = result.filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
         return PayloadUtils.createArray(PayloadUtils.dehydrate(result));
     },
 
@@ -190,9 +187,10 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const setA = new Set<string>(getArr('in_a').map((x: any) => String(x)));
         const setB = new Set<string>(getArr('in_b').map((x: any) => String(x)));
         let resultSet: string[] = [];
-        if (mode === 'Union') resultSet = Array.from(new Set<string>([...Array.from(setA), ...Array.from(setB)]));
-        else if (mode === 'Intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
-        else if (mode === 'Difference') resultSet = Array.from(setA).filter((x: string) => !setB.has(x));
+        const modeLower = mode.toLowerCase();
+        if (modeLower === 'union') resultSet = Array.from(new Set<string>([...Array.from(setA), ...Array.from(setB)]));
+        else if (modeLower === 'intersection') resultSet = Array.from(setA).filter((x: string) => setB.has(x));
+        else if (modeLower === 'difference') resultSet = Array.from(setA).filter((x: string) => !setB.has(x));
         const final = resultSet.map((x: string) => (isNaN(Number(x)) ? x : Number(x)));
         return PayloadUtils.createArray(final);
     },
@@ -202,7 +200,8 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'];
         if (!valPayload) return PayloadUtils.createError('No Input');
-        const data = (node.data || {}) as any, op = data.op || 'INV';
+        const data = (node.data || {}) as any;
+        const op = data.mode || data.op || 'INV';
         try {
             const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
             let result: any;
@@ -252,7 +251,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'DT-05': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'DOT';
+        const op = data.mode || data.op || 'DOT';
         const valA = inputs['in_a'], valB = inputs['in_b'];
         if (!valA || !valB) return PayloadUtils.createError('Missing Inputs');
         try {
@@ -297,7 +296,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
     'AD-03': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'nCr';
+        const op = data.mode || data.op || 'nCr';
         const valN = inputs['in_a'], valR = inputs['in_b'];
         if (!valN || !valR) return PayloadUtils.createError('Missing Inputs');
         try {

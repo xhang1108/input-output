@@ -46,7 +46,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const valA = getHydrated(payloadA);
         const valB = getHydrated(payloadB);
         const data = (node.data || {}) as Record<string, unknown>;
-        const op = (data.op as string || 'ADD').toUpperCase();
+        const op = (data.mode as string || data.op as string || 'ADD').toUpperCase();
 
         const extractValue = (v: unknown) => {
             if (v && typeof v === 'object' && !Array.isArray(v)) {
@@ -136,7 +136,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-08': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'nCr';
+        const op = data.mode || data.op || 'nCr';
 
         const valN = inputs['in_a'];
         const valR = inputs['in_b'];
@@ -163,7 +163,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
-        const op = data.op || 'ROUND';
+        const op = data.mode || data.op || 'ROUND';
         const prec = data.precision ?? 0;
         const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         try {
@@ -226,7 +226,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-07': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'GCD';
+        const op = data.mode || data.op || 'GCD';
 
         const collectNumbers = (p: NodePayload | NodePayload[] | undefined): any[] => {
             if (!p) return [];
@@ -312,7 +312,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
-        const op = data.op || 'SIN';
+        const op = data.mode || data.op || 'SIN';
         const angleMode = data.angleMode || 'RAD';
         let val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
 
@@ -343,7 +343,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
-        const op = data.op || 'LN';
+        const op = data.mode || data.op || 'LN';
         const val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
         try {
             let result;
@@ -369,13 +369,6 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         let distribution = (data.mode as string || 'Uniform');
         let isFloat = data.isFloat !== false; // Default to true for historical reasons
 
-        // Compatibility Layer: Parse "Distribution:Type" strings from legacy IOGL
-        if (distribution.includes(':')) {
-            const [distPart, typePart] = distribution.split(':');
-            distribution = distPart;
-            isFloat = typePart !== 'Int';
-        }
-        
         const distKey = distribution.toLowerCase();
         
         // Sampling parameters helper
@@ -552,7 +545,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'TR-06': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const data = (node.data || {}) as any;
-        const op = data.op || 'Mean';
+        const op = data.mode || data.op || 'Mean';
         const valPayload = inputs['in_a'];
         if (!valPayload) return PayloadUtils.createError('No Input');
         const hydrated = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
