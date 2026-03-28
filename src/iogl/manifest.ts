@@ -201,8 +201,8 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
       "Equal": "EQ", "NotEqual": "NEQ", "Greater": "GT", "Less": "LT"
     }
   },
-  "LG-02": { ...SINGLE_IN, ...SINGLE_OUT },
-  "LG-03": { ...SINGLE_IN, ...SINGLE_OUT },
+  "LG-02": { inputs: ["in_a", "in_b", "in_c"], outputs: ["out_a"] },
+  "LG-03": { inputs: ["in_a", "in_b"], outputs: ["out_a", "out_b"] },
   "OT-01": { ...SINGLE_IN, modeProperty: "viewMode", data: ["precision"] },
   "OT-02": { ...SINGLE_IN },
   "OT-03": { ...SINGLE_IN, data: ["minX", "maxX", "points"] },
