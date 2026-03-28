@@ -49,8 +49,6 @@ export const MatrixInputNode = memo((props: NodeProps) => {
         return [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
     })() as any[][];
 
-    const [rows, setRows] = useState(initialGrid.length);
-    const [cols, setCols] = useState(initialGrid[0]?.length || 1);
     const nodeRef = useRef<HTMLDivElement>(null);
 
     // Debounced Grid State & Sync
@@ -77,16 +75,9 @@ export const MatrixInputNode = memo((props: NodeProps) => {
             }
         }, [])
     );
+    const rows = grid.length;
+    const cols = grid[0]?.length || 1;
 
-    // Sync from props (External Hydration)
-    useEffect(() => {
-        const currentGrid = initialGrid;
-        if (JSON.stringify(currentGrid) !== JSON.stringify(grid)) {
-            setGrid(currentGrid);
-            setRows(currentGrid.length);
-            setCols(currentGrid[0]?.length || 1);
-        }
-    }, [initialGrid]);
 
     // Dimension management via unified hook
     const { width, height, onResize, onResizeStart, onResizeEnd } = useNodeDimensions({
@@ -98,19 +89,19 @@ export const MatrixInputNode = memo((props: NodeProps) => {
             h: Math.max(1, Math.round((screenH - 52) / 36)) * 36 + 52
         }),
         onResize: useCallback(({ width: newWidth, height: newHeight }: { width: number; height: number }) => {
+            const currentRows = grid.length;
+            const currentCols = grid[0]?.length || 1;
+
             const newCols = Math.max(1, Math.round((newWidth - 20) / 44));
             const newRows = Math.max(1, Math.round((newHeight - 52) / 36));
 
-            if (newRows === rows && newCols === cols) return;
-
-            setRows(newRows);
-            setCols(newCols);
+            if (newRows === currentRows && newCols === currentCols) return;
 
             const newGrid = Array(newRows).fill(0).map((_, r) =>
                 Array(newCols).fill(0).map((_, c) => grid[r]?.[c] ?? 0)
             );
             setGrid(newGrid);
-        }, [rows, cols, grid, setGrid])
+        }, [grid, setGrid])
     });
 
     const updateCell = useCallback((r: number, c: number, val: string) => {
