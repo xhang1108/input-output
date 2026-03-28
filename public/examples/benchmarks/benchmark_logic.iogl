@@ -13,7 +13,7 @@ Gate_AND.a -> Switch.a
 A.a -> Switch.b
 B.a -> Switch.c
 
-[V_True] LG-04 1 @450,450
+[V_True] IN-05 Sticky, true @450,450
 [V_Data] IN-01 500 @450,550
 [Split] LG-03 @550,500
 V_True.a -> Split.a

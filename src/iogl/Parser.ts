@@ -102,43 +102,42 @@ export class Parser {
 
     const typeId = this.expect('ID').value;
     const props: Record<string, any> = {};
-
-    if (this.current.type === 'LBRACE') {
-      this.advance();
-      while ((this.current.type as TokenType) !== 'RBRACE' && (this.current.type as TokenType) !== 'EOF') {
-        const key = this.expect('ID').value;
-        this.expect('COLON');
-        props[key] = this.parseValue();
-        if ((this.current.type as TokenType) === 'COMMA') this.advance();
-      }
-      this.expect('RBRACE');
-    }
-
-    // Support positional data (RAW_VALUE or LBRACKET)
-    let positionalIdx = 0;
     const manifest = IOGL_MANIFEST[typeId];
-    
+    let positionalIdx = 0;
+
+    // Parse interleaved property blocks and positional data
     while (
       (this.current.type as TokenType) !== 'AT' && 
       (this.current.type as TokenType) !== 'NEWLINE' && 
       (this.current.type as TokenType) !== 'EOF' && 
       (this.current.type as TokenType) !== 'ARROW'
     ) {
-      const t = this.current.type as TokenType;
-      if (t === 'RAW_VALUE' || t === 'LBRACKET' || t === 'ID' || t === 'EQUALS' || t === 'NUMBER') {
-        const val = this.parseValue();
-        
-        if (positionalIdx === 0 && t === 'ID' && manifest?.modeProperty && props.mode === undefined) {
-             props.mode = val;
-        } else {
-             if (!props.data) props.data = [];
-             props.data.push(val);
+      if (this.current.type === 'LBRACE') {
+        this.advance();
+        while ((this.current.type as TokenType) !== 'RBRACE' && (this.current.type as TokenType) !== 'EOF') {
+          const key = this.expect('ID').value;
+          this.expect('COLON');
+          props[key] = this.parseValue();
+          if ((this.current.type as TokenType) === 'COMMA') this.advance();
         }
-        
-        positionalIdx++;
-        if ((this.current.type as TokenType) === 'COMMA') this.advance();
+        this.expect('RBRACE');
       } else {
-        break;
+        const t = this.current.type as TokenType;
+        if (t === 'RAW_VALUE' || t === 'LBRACKET' || t === 'ID' || t === 'EQUALS' || t === 'NUMBER') {
+          const val = this.parseValue();
+          
+          if (positionalIdx === 0 && t === 'ID' && manifest?.modeProperty && props.mode === undefined) {
+               props.mode = val;
+          } else {
+               if (!props.data) props.data = [];
+               props.data.push(val);
+          }
+          
+          positionalIdx++;
+          if ((this.current.type as TokenType) === 'COMMA') this.advance();
+        } else {
+          break; // Unknown token type, bail out to AT parsing
+        }
       }
     }
 
@@ -273,13 +272,27 @@ export class Parser {
       
       if (manifest) {
         if (raw.props.mode !== undefined) {
-          const modeVal = raw.props.mode;
+          const modeVal = String(raw.props.mode);
           const modeProp = manifest.modeProperty || 'mode';
-          if (manifest.modeMapping && manifest.modeMapping[modeVal] !== undefined) {
-            data[modeProp] = manifest.modeMapping[modeVal];
-          } else {
-            data[modeProp] = modeVal;
+          let matchedMode: any = modeVal;
+          
+          const lowerMode = modeVal.toLowerCase();
+          const possibleDicts = [manifest.modeMapping, manifest.data, manifest.inputs, manifest.outputs];
+          for (const dict of possibleDicts) {
+              if (dict && !Array.isArray(dict) && typeof dict === 'object') {
+                  const match = Object.keys(dict).find(k => String(k).toLowerCase() === lowerMode);
+                  if (match) {
+                      matchedMode = match;
+                      break;
+                  }
+              }
           }
+
+          if (manifest.modeMapping && manifest.modeMapping[matchedMode] !== undefined) {
+              matchedMode = manifest.modeMapping[matchedMode];
+          }
+
+          data[modeProp] = matchedMode;
         }
         
         if (raw.props.data !== undefined) {
@@ -358,12 +371,42 @@ export class Parser {
       const targetId = tempToFinal.get(targetTempId);
       if (!sourceId || !targetId) return;
 
+      const sHandle = IOGLUtils.resolveHandle(raw.sourceHandle, true);
+      const tHandle = IOGLUtils.resolveHandle(raw.targetHandle, false);
+
+      // --- Handle Validation Logic (Ghost Link Prevention) ---
+      const sNode = graph.nodes.find(n => n.id === sourceId);
+      const tNode = graph.nodes.find(n => n.id === targetId);
+
+      if (sNode && tNode) {
+        const sMan = IOGL_MANIFEST[sNode.type] || IOGL_MANIFEST[sNode.type.toUpperCase()];
+        const tMan = IOGL_MANIFEST[tNode.type] || IOGL_MANIFEST[tNode.type.toUpperCase()];
+
+        if (sNode.data && sMan?.outputs) {
+          const modeProp = sMan.modeProperty || 'mode';
+          const modeVal = String(sNode.data[modeProp] || '');
+          const valid = Array.isArray(sMan.outputs) ? sMan.outputs : (sMan.outputs as any)[modeVal];
+          if (valid && !valid.includes(sHandle)) {
+            this.diagnostics.push(`Error at L${raw.line}: Node ${raw.source} (${sNode.type}) in mode '${modeVal}' does not have output handle '${sHandle}'`);
+          }
+        }
+
+        if (tNode.data && tMan?.inputs) {
+          const modeProp = tMan.modeProperty || 'mode';
+          const modeVal = String(tNode.data[modeProp] || '');
+          const valid = Array.isArray(tMan.inputs) ? tMan.inputs : (tMan.inputs as any)[modeVal];
+          if (valid && !valid.includes(tHandle)) {
+            this.diagnostics.push(`Error at L${raw.line}: Node ${raw.target} (${tNode.type}) in mode '${modeVal}' does not have input handle '${tHandle}'`);
+          }
+        }
+      }
+
       graph.edges.push({
         id: generateEdgeId(),
         source: sourceId,
-        sourceHandle: IOGLUtils.resolveHandle(raw.sourceHandle, true),
+        sourceHandle: sHandle,
         target: targetId,
-        targetHandle: IOGLUtils.resolveHandle(raw.targetHandle, false),
+        targetHandle: tHandle,
         type: 'magnetic',
         data: { pathType: 'bezier', animate: false }
       });

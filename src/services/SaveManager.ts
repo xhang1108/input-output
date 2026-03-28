@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import { v7 as uuidv7 } from 'uuid';
 import { Serializer, ProjectData } from '../engine/Serializer';
 import { Brain } from '../engine/Brain';
+import { InjectableGraph } from '../engine/types';
 
 // ─── Types ────────────────────────────────────────────
 
@@ -94,6 +95,41 @@ export class SaveManager {
         const newIndex = index.filter(s => s.id !== id);
         newIndex.push(meta);
         localStorage.setItem(INDEX_KEY, JSON.stringify(newIndex));
+
+        return id;
+    }
+
+    /**
+     * Efficiently save a template directly from a parsed graph, bypassing Engine overhead.
+     * Used for initial payload ingestion.
+     */
+    static saveTemplate(name: string, graph: InjectableGraph): string {
+        const id = uuidv7();
+        const now = Date.now();
+        const data: ProjectData = {
+            version: Serializer.VERSION,
+            mathPrecision: 64, // Default precision
+            settings: {},
+            graph
+        };
+
+        const encoded = Serializer.serializeData(data);
+        const meta: SaveSlotMeta = {
+            id,
+            name,
+            createdAt: now,
+            updatedAt: now,
+            nodeCount: graph.nodes.length,
+            edgeCount: graph.edges.length,
+            version: Serializer.VERSION,
+            visibility: 'private'
+        };
+
+        localStorage.setItem(SLOT_PREFIX + id, encoded);
+        
+        const index = this.list();
+        index.push(meta);
+        localStorage.setItem(INDEX_KEY, JSON.stringify(index));
 
         return id;
     }

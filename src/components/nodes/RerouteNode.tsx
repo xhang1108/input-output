@@ -14,41 +14,43 @@ export const RerouteNode = memo(({ selected }: NodeProps) => {
                 `}
             />
 
-            {/* Output Handle - Dominant layer for pulling connections */}
+            {/* Output Handle - Right half (50%) */}
             <Handle
                 type="source"
                 position={Position.Right}
                 id="out_a"
-                className="opacity-0 rounded-full border-none! bg-transparent!"
+                className="opacity-0 border-none! bg-transparent!"
                 style={{
                     position: 'absolute',
                     top: 0,
-                    left: 0,
-                    width: '100%',
+                    right: 0,
+                    width: '50%',
                     height: '100%',
                     transform: 'none',
                     zIndex: 100,
-                    margin: 0
+                    margin: 0,
+                    borderRadius: '0 9999px 9999px 0'
                 }}
             />
 
-            {/* Input Handle - Underlying layer for receiving connections */}
+            {/* Input Handle - Left half (50%) */}
             <Handle
                 type="target"
                 position={Position.Left}
                 id="in_a"
-                className="opacity-0 rounded-full border-none! bg-transparent!"
+                className="opacity-0 border-none! bg-transparent!"
                 style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    width: '100%',
+                    width: '50%',
                     height: '100%',
                     transform: 'none',
-                    zIndex: 50,
-                    margin: 0
+                    zIndex: 100,
+                    margin: 0,
+                    borderRadius: '9999px 0 0 9999px'
                 }}
-                isConnectableStart={false}
+                isConnectableStart={true}
             />
         </div>
     );

@@ -82,6 +82,29 @@ export class Encoder {
 
     // 2. Encode Edges
     for (const edge of graph.edges) {
+      const sNode = graph.nodes.find(n => n.id === edge.source);
+      const tNode = graph.nodes.find(n => n.id === edge.target);
+
+      // Fidelity check: Skip Ghost Links (handles that no longer exist for the current mode)
+      if (sNode && tNode) {
+        const sMan = IOGL_MANIFEST[sNode.type] || IOGL_MANIFEST[sNode.type.toUpperCase()];
+        const tMan = IOGL_MANIFEST[tNode.type] || IOGL_MANIFEST[tNode.type.toUpperCase()];
+
+        if (sMan?.outputs && sNode.data) {
+          const mProp = sMan.modeProperty || 'mode';
+          const mVal = String(sNode.data[mProp] || '');
+          const v = Array.isArray(sMan.outputs) ? sMan.outputs : (sMan.outputs as any)[mVal];
+          if (v && !v.includes(edge.sourceHandle)) continue;
+        }
+
+        if (tMan?.inputs && tNode.data) {
+          const mProp = tMan.modeProperty || 'mode';
+          const mVal = String(tNode.data[mProp] || '');
+          const v = Array.isArray(tMan.inputs) ? tMan.inputs : (tMan.inputs as any)[mVal];
+          if (v && !v.includes(edge.targetHandle)) continue;
+        }
+      }
+
       const sourceLabel = idToLabel.get(edge.source) || edge.source;
       const targetLabel = idToLabel.get(edge.target) || edge.target;
 

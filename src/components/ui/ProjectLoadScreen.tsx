@@ -363,6 +363,10 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     useEffect(() => {
         SaveManager.migrateLegacy();
         refreshLocal();
+
+        const handleUpdate = () => refreshLocal();
+        window.addEventListener('local-projects-updated', handleUpdate);
+        return () => window.removeEventListener('local-projects-updated', handleUpdate);
     }, [refreshLocal]);
 
     // Fetch for cloud graphs API

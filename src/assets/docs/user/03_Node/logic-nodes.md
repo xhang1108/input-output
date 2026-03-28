@@ -9,10 +9,13 @@ icon: Layers
 The Logic category contains the binary and decision-making operators of the I/O System.
 
 ## 1. Logic Gate (LG-01)
-The primary binary operator. It supports `AND`, `OR`, `XOR`, `NOR`, `NAND`, and `XNOR`.
+The primary operator for binary logic and value comparisons. It supports **13 modes** including `AND`, `OR`, `NOT`, `NAND`, `NOR`, `XOR`, `XNOR`, and comparison operators (`==`, `!=`, `>`, `<`, `>=`, `<=`).
+
+> [!IMPORTANT]
+> **Strict Binary Logic**: For logical gates (AND, OR, etc.), the system uses an *Active High* standard. A signal is only "True" if it is **exactly 1** or `true`. All other values (e.g. `2`, `0.5`) are treated as `false`.
 
 - **Inputs**: A, B
-- **Output**: The result of the boolean operation.
+- **Output**: The result of the operation (boolean).
 
 ```playground
 {
