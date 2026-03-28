@@ -8,6 +8,7 @@ import { NextAuthProvider } from './NextAuthProvider';
 import { ErrorBoundary } from './common/ErrorBoundary';
 import { debugManager } from '../debug/DebugManager';
 import { DebugOverlay } from './debug/DebugOverlay';
+import { useTemplateInitialization } from '../hooks/useTemplateInitialization';
 
 /**
  * AppProviders
@@ -45,6 +46,7 @@ function InternalProviders({ children }: { children: React.ReactNode }) {
     }, []);
 
     usePerformanceMonitor();
+    useTemplateInitialization();
 
     // During SSR, we render children as-is.
     // Client-only side-effect components (Toaster) are added after mount.
