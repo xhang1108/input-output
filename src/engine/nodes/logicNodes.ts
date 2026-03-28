@@ -77,11 +77,6 @@ export function registerLogicNodes() {
         });
     });
 
-    // LG-04: Toggle
-    NodeRegistry.register('LG-04', (node) => {
-        const data = (node.data || {}) as any;
-        return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(data.value));
-    }, (node) => PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap((node.data || {}).value) }));
 
     // IN-05: Button
     NodeRegistry.register('IN-05', (node) => {

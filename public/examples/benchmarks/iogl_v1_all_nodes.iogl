@@ -59,7 +59,6 @@ pi.a -> build.a
 [gate] LG-01 AND @1500,0
 [switch] LG-02 @1500,100
 [split] LG-03 @1500,200
-[bool] LG-04 true @1500,300
 
 [res] OT-01 auto @1500,400
 [stat_node] OT-02 @1500,500

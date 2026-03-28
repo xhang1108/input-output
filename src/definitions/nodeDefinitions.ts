@@ -923,18 +923,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'logicSplit' }
     },
-    {
-        id: 'LG-04',
-        label: 'Logic Value',
-        category: 'Logic & Flow',
-        handles: [
-            { id: 'out_a', type: 'source', variant: 'single', dataType: 'boolean' }
-        ],
-        defaultData: { value: true, label: 'Boolean' },
-        params: [
-            { id: 'value', label: 'Value', type: 'boolean' }
-        ]
-    },
 
     // ─── 8. Output Family ──────────────────────────────────────────
     {

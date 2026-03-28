@@ -124,7 +124,6 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   },
   "LG-02": {},
   "LG-03": {},
-  "LG-04": BOOLEAN_INPUT,
   "OT-01": { modeProperty: "viewMode", data: ["precision"] },
   "OT-02": {},
   "OT-03": { data: ["minX", "maxX", "points"] },
