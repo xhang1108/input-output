@@ -16,6 +16,10 @@ export interface IOGLSchema {
   payloadType?: 'scalar' | 'array' | 'color' | 'string' | 'boolean';
   /** Hidden properties to be injected regardless of IOGL input. */
   fixedData?: Record<string, any>;
+  /** Valid input handle IDs. Can be a fixed list or a mapping per mode. */
+  inputs?: string[] | Record<string, string[]>;
+  /** Valid output handle IDs. Can be a fixed list or a mapping per mode. */
+  outputs?: string[] | Record<string, string[]>;
 }
 
 /**
@@ -28,18 +32,22 @@ const BOOLEAN_INPUT: IOGLSchema = { data: ["value"], wrapPayload: "value", paylo
 const ARRAY_INPUT: IOGLSchema = { data: ["array"], wrapPayload: "array", payloadType: 'array' };
 const COLOR_INPUT: IOGLSchema = { data: ["value", "depth"], wrapPayload: "value", payloadType: 'color' };
 
+const SINGLE_OUT: IOGLSchema = { outputs: ["out_a"] };
+const SINGLE_IN: IOGLSchema = { inputs: ["in_a"] };
+
 /**
  * IOGL 1.0 Node Registry Manifest
  * Optimized for machine-reading and automated validation/parsing.
  */
 export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   // --- 1. Input Family ---
-  "IN-01": SCALAR_INPUT,
-  "IN-02": { data: ["value", "min", "max", "step"], wrapPayload: true, payloadType: 'scalar' },
-  "IN-03": COLOR_INPUT,
-  "IN-04": STRING_INPUT,
+  "IN-01": { ...SCALAR_INPUT, ...SINGLE_OUT },
+  "IN-02": { ...SINGLE_OUT, data: ["value", "min", "max", "step"], wrapPayload: true, payloadType: 'scalar' },
+  "IN-03": { ...COLOR_INPUT, ...SINGLE_OUT },
+  "IN-04": { ...STRING_INPUT, ...SINGLE_OUT },
   "IN-05": {
     ...MODE_ONLY,
+    ...SINGLE_OUT,
     data: {
       "Sticky": ["value"],
       "Momentary": []
@@ -47,12 +55,13 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
     wrapPayload: "value",
     payloadType: 'boolean'
   },
-  "IN-06": { modeProperty: "val", data: ["precision"] },
-  "IN-07": ARRAY_INPUT,
-  "IN-08": ARRAY_INPUT,
-  "IN-09": { data: ["code"] },
+  "IN-06": { ...SINGLE_OUT, modeProperty: "val", data: ["precision"] },
+  "IN-07": { ...ARRAY_INPUT, ...SINGLE_OUT },
+  "IN-08": { ...ARRAY_INPUT, ...SINGLE_OUT },
+  "IN-09": { ...SINGLE_OUT, data: ["code"] },
   "IN-10": {
     ...MODE_ONLY,
+    ...SINGLE_OUT,
     data: {
       "Uniform": ["min", "max", "rows", "cols"],
       "Uniform:Float": ["min", "max", "rows", "cols"],
@@ -67,30 +76,63 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   },
 
   // --- 2. Math Family ---
-  "MA-01": MODE_ONLY,
-  "MA-02": MODE_ONLY,
-  "MA-03": MODE_ONLY,
-  "MA-04": MODE_ONLY,
-  "MA-05": { ...MODE_ONLY, data: ["precision"] },
+  "MA-01": { ...MODE_ONLY, ...SINGLE_OUT },
+  "MA-02": {
+    ...MODE_ONLY,
+    ...SINGLE_OUT,
+    inputs: {
+      "ABS": ["in_a"],
+      "NEG": ["in_a"],
+      "SIGN": ["in_a"],
+      "POW": ["in_a", "in_b"],
+      "SQRT": ["in_a", "in_b"]
+    }
+  },
+  "MA-03": {
+    ...MODE_ONLY,
+    ...SINGLE_OUT,
+    inputs: {
+      "LN": ["in_a"],
+      "LOG10": ["in_a"],
+      "LOGN": ["in_a", "in_b"]
+    }
+  },
+  "MA-04": { ...MODE_ONLY, ...SINGLE_OUT },
+  "MA-05": { ...MODE_ONLY, ...SINGLE_OUT, data: ["precision"] },
   "MA-06": {
+    ...SINGLE_OUT,
     modeProperty: "mixed",
     modeMapping: { "Mixed": true, "Regular": false }
   },
-  "MA-07": MODE_ONLY,
-  "MA-08": MODE_ONLY,
+  "MA-07": {
+    ...MODE_ONLY,
+    ...SINGLE_OUT,
+    inputs: {
+      "GCD": ["in_a", "in_b"],
+      "LCM": ["in_a", "in_b"],
+      "MOD": ["in_a", "in_b"],
+      "ISPRIME": ["in_a"]
+    }
+  },
+  "MA-08": { ...MODE_ONLY, ...SINGLE_OUT },
 
   // --- 3. Calculus Family ---
-  "CL-01": { modeProperty: "variable", data: ["order"] },
+  "CL-01": { ...SINGLE_OUT, modeProperty: "variable", data: ["order"] },
   "CL-02": {
     ...MODE_ONLY,
+    ...SINGLE_OUT,
     data: {
       "indefinite": ["variable"],
       "definite": ["variable", "lower", "upper"]
+    },
+    inputs: {
+      "indefinite": ["in_a", "in_b", "in_c"],
+      "definite": ["in_a", "in_b", "in_c"]
     }
   },
-  "CL-03": { modeProperty: "direction", data: ["variable", "approach"] },
-  "CL-04": { modeProperty: "variable" },
-  "CL-05": { modeProperty: "method", data: ["t0", "tEnd", "y0", "stepSize"] },
+  "CL-03": { ...SINGLE_OUT, modeProperty: "direction", data: ["variable", "approach"] },
+  "CL-04": { ...SINGLE_OUT, modeProperty: "variable" },
+  "CL-05": { ...SINGLE_OUT, modeProperty: "method", data: ["t0", "tEnd", "y0", "stepSize"] },
 
   // --- 4. Data Family ---
   "DT-01": {
@@ -101,18 +143,54 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   "DT-03": { ...MODE_ONLY, data: ["order"] },
   "DT-04": MODE_ONLY,
   "DT-05": MODE_ONLY,
-  "DT-06": MODE_ONLY,
+  "DT-06": {
+    ...MODE_ONLY,
+    outputs: {
+      "INV": ["out_a"],
+      "DET": ["out_a"],
+      "TRANSPOSE": ["out_a"],
+      "TRACE": ["out_a"],
+      "QR": ["out_a", "out_b"],
+      "LU": ["out_a", "out_b"],
+      "LUP": ["out_a", "out_b", "out_c"],
+      "EIGEN": ["out_a", "out_b"]
+    }
+  },
 
   // --- 5. Transform Family ---
   "TR-01": {
+    ...SINGLE_OUT,
     data: ["customUnit"],
     fixedData: { unit: "CUSTOM" }
   },
-  "TR-02": { data: ["toBase"] },
-  "TR-03": { modeProperty: "shape" },
-  "TR-04": { ...MODE_ONLY, data: ["min", "max", "density", "var1", "var2"] },
-  "TR-05": { data: ["windowMode"] },
-  "TR-06": MODE_ONLY,
+  "TR-02": { ...SINGLE_OUT, data: ["toBase"] },
+  "TR-03": {
+    ...SINGLE_OUT,
+    modeProperty: "shape",
+    inputs: {
+      "Circle": ["in_a"],
+      "Quad": ["in_a", "in_b"],
+      "Triangle": ["in_a", "in_b"]
+    }
+  },
+  "TR-04": {
+    ...MODE_ONLY,
+    data: ["min", "max", "density", "var1", "var2"],
+    inputs: {
+      "gradient": ["in_a"],
+      "direct": ["in_b", "in_c"],
+      "divergence": ["in_b", "in_c"],
+      "curl": ["in_b", "in_c"]
+    },
+    outputs: {
+      "gradient": ["out_a", "out_b"],
+      "direct": ["out_a", "out_b"],
+      "divergence": ["out_b"],
+      "curl": ["out_b"]
+    }
+  },
+  "TR-05": { ...SINGLE_OUT, data: ["windowMode"] },
+  "TR-06": { ...MODE_ONLY, ...SINGLE_OUT },
 
   // --- 6. Logic / Output Family ---
   "LG-01": {
@@ -123,14 +201,14 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
       "Equal": "EQ", "NotEqual": "NEQ", "Greater": "GT", "Less": "LT"
     }
   },
-  "LG-02": {},
-  "LG-03": {},
-  "OT-01": { modeProperty: "viewMode", data: ["precision"] },
-  "OT-02": {},
-  "OT-03": { data: ["minX", "maxX", "points"] },
-  "OT-04": {},
+  "LG-02": { ...SINGLE_IN, ...SINGLE_OUT },
+  "LG-03": { ...SINGLE_IN, ...SINGLE_OUT },
+  "OT-01": { ...SINGLE_IN, modeProperty: "viewMode", data: ["precision"] },
+  "OT-02": { ...SINGLE_IN },
+  "OT-03": { ...SINGLE_IN, data: ["minX", "maxX", "points"] },
+  "OT-04": { ...SINGLE_IN },
 
   // --- 7. Utility Family ---
   "UT-01": { modeProperty: "bgColor", data: ["markdown", "textSize"] },
-  "UT-02": {}
+  "UT-02": { ...SINGLE_IN, ...SINGLE_OUT }
 };

@@ -358,12 +358,42 @@ export class Parser {
       const targetId = tempToFinal.get(targetTempId);
       if (!sourceId || !targetId) return;
 
+      const sHandle = IOGLUtils.resolveHandle(raw.sourceHandle, true);
+      const tHandle = IOGLUtils.resolveHandle(raw.targetHandle, false);
+
+      // --- Handle Validation Logic (Ghost Link Prevention) ---
+      const sNode = graph.nodes.find(n => n.id === sourceId);
+      const tNode = graph.nodes.find(n => n.id === targetId);
+
+      if (sNode && tNode) {
+        const sMan = IOGL_MANIFEST[sNode.type] || IOGL_MANIFEST[sNode.type.toUpperCase()];
+        const tMan = IOGL_MANIFEST[tNode.type] || IOGL_MANIFEST[tNode.type.toUpperCase()];
+
+        if (sNode.data && sMan?.outputs) {
+          const modeProp = sMan.modeProperty || 'mode';
+          const modeVal = String(sNode.data[modeProp] || '');
+          const valid = Array.isArray(sMan.outputs) ? sMan.outputs : (sMan.outputs as any)[modeVal];
+          if (valid && !valid.includes(sHandle)) {
+            this.diagnostics.push(`Error at L${raw.line}: Node ${raw.source} (${sNode.type}) in mode '${modeVal}' does not have output handle '${sHandle}'`);
+          }
+        }
+
+        if (tNode.data && tMan?.inputs) {
+          const modeProp = tMan.modeProperty || 'mode';
+          const modeVal = String(tNode.data[modeProp] || '');
+          const valid = Array.isArray(tMan.inputs) ? tMan.inputs : (tMan.inputs as any)[modeVal];
+          if (valid && !valid.includes(tHandle)) {
+            this.diagnostics.push(`Error at L${raw.line}: Node ${raw.target} (${tNode.type}) in mode '${modeVal}' does not have input handle '${tHandle}'`);
+          }
+        }
+      }
+
       graph.edges.push({
         id: generateEdgeId(),
         source: sourceId,
-        sourceHandle: IOGLUtils.resolveHandle(raw.sourceHandle, true),
+        sourceHandle: sHandle,
         target: targetId,
-        targetHandle: IOGLUtils.resolveHandle(raw.targetHandle, false),
+        targetHandle: tHandle,
         type: 'magnetic',
         data: { pathType: 'bezier', animate: false }
       });
