@@ -83,7 +83,7 @@ Below is the complete catalog of available nodes and their data schemas. Use thi
 | | **TR-04** | Vec Field | `{mode: "gradient\|direct\|divergence\|curl"} [min, max, dens]` |
 | | **TR-05** | Smoothing | `[windowSize]` |
 | | **TR-06** | Stats | `{mode: "Mean\|Median\|Sum\|Max\|Min\|StdDev\|Variance"}` |
-| **Logic** | **LG-01** | Gate | `{mode: "AND\|OR\|NOT\|XOR\|EQ\|NEQ\|GT\|LT\|GTE\|LTE"}` |
+| **Logic** | **LG-01** | Gate | `{mode: "AND|OR|NOT|NAND|NOR|XOR|XNOR|EQ|NEQ|GT|LT|GTE|LTE"}` |
 | | **LG-02** | Switch | No props |
 | | **LG-03** | Split | No props |
 | **Output** | **OT-01** | Result | `[precision] {mode: "auto\|text\|grid\|color\|formula\|latex"}` |
@@ -137,7 +137,7 @@ GOAL: Generate valid, optimized, and mathematically sound IOGL 1.0 scripts.
 - DT-01 (Builder): {"Rows|Cols"} (Multiplex handle) | DT-02 (Extract): [idx] {"1D|2D"}
 - DT-03 (List): {"Sort|Reverse|Unique|Clean"} | DT-04 (Set): {"Union|Intersection|Difference"}
 - DT-05 (Vector): {"DOT|CROSS|NORM|DISTANCE"} | DT-06 (MatrixOp): {"INV|QR|LUP|DET|TRANSPOSE|TRACE|EIGEN"}
-- LG-01 (Gate): {"AND|OR|NOT|XOR|EQ|NEQ|GT|LT"} | LG-02/03 (Switch/Split): No props
+- LG-01 (Gate): {"AND|OR|NOT|NAND|NOR|XOR|XNOR|EQ|NEQ|GT|LT|GTE|LTE"} | LG-02/03 (Switch/Split): No props
 
 [TRANSFORM & OUTPUT]
 - TR-01 (Unit): ["unitStr"] | TR-02 (Base): [targetBase]

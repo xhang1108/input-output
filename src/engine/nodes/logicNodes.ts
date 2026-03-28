@@ -23,21 +23,33 @@ export function registerLogicNodes() {
         const valB = getVal('in_b');
         const toBool = (v: unknown) => PayloadUtils.toBoolean(v, math);
         try {
+            const isHigh = (v: any) => {
+                try {
+                    return math.equal(v, 1) === true || v === true;
+                } catch {
+                    return false;
+                }
+            };
+
+            const highA = isHigh(valA);
+            const highB = isHigh(valB);
+            const areEqual = math.equal(valA, valB);
             let result: boolean;
+
             switch (op) {
                 case 'GT': result = math.larger(valA, valB); break;
                 case 'LT': result = math.smaller(valA, valB); break;
                 case 'GTE': result = math.largerEq(valA, valB); break;
                 case 'LTE': result = math.smallerEq(valA, valB); break;
-                case 'NEQ': result = !math.equal(valA, valB); break;
-                case 'EQ': result = math.equal(valA, valB); break;
-                case 'NOT': result = !toBool(valA); break;
-                case 'AND': result = toBool(valA) && toBool(valB); break;
-                case 'OR': result = toBool(valA) || toBool(valB); break;
-                case 'XOR': result = (toBool(valA) !== toBool(valB)); break;
-                case 'NAND': result = !(toBool(valA) && toBool(valB)); break;
-                case 'NOR': result = !(toBool(valA) || toBool(valB)); break;
-                case 'XNOR': result = (toBool(valA) === toBool(valB)); break;
+                case 'NEQ': result = !areEqual; break;
+                case 'EQ': result = areEqual; break;
+                case 'NOT': result = !highA; break;
+                case 'AND': result = highA && highB; break;
+                case 'OR': result = highA || highB; break;
+                case 'XOR': result = (highA !== highB); break;
+                case 'NAND': result = !(highA && highB); break;
+                case 'NOR': result = !(highA || highB); break;
+                case 'XNOR': result = (highA === highB); break;
                 default: result = false;
             }
             return PayloadUtils.createBoolean(result);

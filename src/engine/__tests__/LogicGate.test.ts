@@ -92,4 +92,41 @@ describe('Logic Gate (LG-01)', () => {
         expect(res.type).toBe(DataType.Error);
         expect(res.meta.error).toContain('Failed');
     });
+
+    it('should implement STRICT BINARY logic (User Requirement)', async () => {
+        // 1. AND: Only (1,1) is true
+        expect((await evaluate('AND', 1, 1)).value).toBe(true);
+        expect((await evaluate('AND', 2, 2)).value).toBe(false);
+        expect((await evaluate('AND', 1, 0)).value).toBe(false);
+
+        // 2. OR: Any 1 is true
+        expect((await evaluate('OR', 1, 0)).value).toBe(true);
+        expect((await evaluate('OR', 1, 2)).value).toBe(true); // 2 is false
+        expect((await evaluate('OR', 2, 0)).value).toBe(false);
+
+        // 3. XOR: Exactly one 1
+        expect((await evaluate('XOR', 1, 0)).value).toBe(true);
+        expect((await evaluate('XOR', 1, 1)).value).toBe(false);
+        expect((await evaluate('XOR', 2, 0)).value).toBe(false); // Neither is high
+
+        // 4. XNOR: Identity of High-Signals
+        expect((await evaluate('XNOR', 1, 1)).value).toBe(true);
+        expect((await evaluate('XNOR', 0, 0)).value).toBe(true);
+        expect((await evaluate('XNOR', 2, 2)).value).toBe(true); // Both are "not high"
+        expect((await evaluate('XNOR', 1, 0)).value).toBe(false);
+
+        // 5. NAND: Inverse of AND(isHigh)
+        expect((await evaluate('NAND', 1, 1)).value).toBe(false);
+        expect((await evaluate('NAND', 2, 2)).value).toBe(true); // NOT(false AND false) = true
+
+        // 6. NOR: Inverse of OR(isHigh)
+        expect((await evaluate('NOR', 1, 0)).value).toBe(false);
+        expect((await evaluate('NOR', 2, 0)).value).toBe(true); // Both are low, so NOR is true
+
+        // 7. Comparisons: Ignore high-signal logic, use value equality
+        expect((await evaluate('EQ', 2, 2)).value).toBe(true);
+        expect((await evaluate('NEQ', 2, 3)).value).toBe(true);
+        expect((await evaluate('GTE', 5, 5)).value).toBe(true);
+        expect((await evaluate('LTE', 3, 5)).value).toBe(true);
+    });
 });

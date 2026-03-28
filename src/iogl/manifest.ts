@@ -119,6 +119,7 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
     ...MODE_ONLY,
     modeMapping: {
       "And": "AND", "Or": "OR", "Not": "NOT", "Xor": "XOR",
+      "Nand": "NAND", "Nor": "NOR", "Xnor": "XNOR",
       "Equal": "EQ", "NotEqual": "NEQ", "Greater": "GT", "Less": "LT"
     }
   },
