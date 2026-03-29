@@ -1,6 +1,7 @@
 import { Edge } from '@xyflow/react';
 import { Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload, ResizeNodePayload, GraphState, NodeLogic } from './types';
 import { PayloadUtils } from '../utils/PayloadUtils';
+import { getUniqueLabel } from '../utils/labelUtils';
 
 export class TransactionManager {
     constructor() {}
@@ -32,12 +33,21 @@ export class TransactionManager {
             case 'ADD_NODE': {
                 const p = tx.payload as AddNodePayload;
                 const initialPayload = PayloadUtils.wrap(p.initialValue);
+                
+                // Label Uniqueness Check
+                let label = p.data?.label;
+                if (typeof label === 'string') {
+                    const existingLabels = Array.from(state.nodes.values())
+                        .map(n => n.data?.label)
+                        .filter(l => typeof l === 'string') as string[];
+                    label = getUniqueLabel(label, existingLabels);
+                }
 
                 const newNode: NodeLogic = {
                     id: p.id,
                     type: p.type || 'baseNode',
                     value: initialPayload,
-                    data: p.data || {},
+                    data: { ...p.data, label },
                     position: p.position || { x: 0, y: 0 },
                     isInDirtyChain: true,
                     selected: (p as any).selected || false,

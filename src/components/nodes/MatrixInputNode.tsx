@@ -68,7 +68,6 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                     array: newGrid,
                     value: mat,
                     rawExpression: JSON.stringify(newGrid),
-                    label: 'Matrix',
                     isMatrix: true,
                     rows: newGrid.length,
                     cols: newGrid[0]?.length || 1
@@ -176,7 +175,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
         handles,
         width,
         height,
-        label: `Matrix ${rows}×${cols}`
+        label: data.label || 'Array'
     };
 
     return (

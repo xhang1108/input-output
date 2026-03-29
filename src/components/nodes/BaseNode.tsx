@@ -27,6 +27,8 @@ DynamicNodeHandle.displayName = 'DynamicNodeHandle';
 export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?: React.ReactNode, style?: React.CSSProperties, hideDefaultHandles?: boolean, onDoubleClick?: (e: React.MouseEvent) => void, handleVariants?: Record<string, 'single' | 'capsule'> }>(({ id, data, selected, isConnectable, children, type, style, hideDefaultHandles, onDoubleClick, handleVariants }, ref) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [title, setTitle] = useState((data.label as string) || 'Node');
+    const [isError, setIsError] = useState(false);
+    const labelSetRef = useRef<Set<string>>(new Set());
     const inputRef = useRef<HTMLInputElement>(null);
     const { updateNodeData } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
@@ -65,16 +67,59 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     }, [isRenaming]);
 
     const handleRename = () => {
+        // Performance: Pre-scan all current node labels into a Set (O(1) lookup during typing)
+        const allLabels = Array.from(brain.getNodesMap().values())
+            .filter(n => n.id !== id) // Exclude self
+            .map(n => n.data?.label)
+            .filter(l => typeof l === 'string' && l.trim() !== '') as string[];
+        
+        labelSetRef.current = new Set(allLabels.map(l => l.toLowerCase()));
+        
+        setIsError(false);
         setIsRenaming(true);
     };
 
+    const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        const trimmed = val.trim();
+        setTitle(val);
+
+        // Validation: Empty or Duplicate
+        const invalid = trimmed === '' || labelSetRef.current.has(trimmed.toLowerCase());
+        setIsError(invalid);
+    };
+
     const handleSubmit = () => {
+        if (isError) return; // Prevent saving if invalid
         setIsRenaming(false);
         updateNodeData(id, { label: title });
     };
 
+    const handleBlur = () => {
+        if (isError) {
+            // "Blur-to-Revert": If input is invalid, revert to original and close
+            setTitle((data.label as string) || 'Node');
+            setIsError(false);
+        } else {
+            // If valid, treat blur as a commit
+            updateNodeData(id, { label: title });
+        }
+        setIsRenaming(false);
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') handleSubmit();
+        if (e.key === 'Enter') {
+            if (isError) {
+                e.preventDefault();
+            } else {
+                handleSubmit();
+            }
+        } else if (e.key === 'Escape') {
+            // Unconditional revert
+            setTitle((data.label as string) || 'Node');
+            setIsError(false);
+            setIsRenaming(false);
+        }
     };
 
     // ─── Smart Layout Constants ──────────────────────────────
@@ -236,10 +281,13 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                             ref={inputRef}
                             value={title}
                             onFocus={(e) => e.target.select()}
-                            onChange={(e) => setTitle(e.target.value)}
-                            onBlur={handleSubmit}
+                            onChange={onChange}
+                            onBlur={handleBlur}
                             onKeyDown={handleKeyDown}
-                            className="bg-transparent text-xs font-bold text-zinc-200 outline-none w-full"
+                            className={cn(
+                                "bg-transparent text-xs font-bold outline-none w-full border-b transition-colors duration-200",
+                                isError ? "text-red-400 border-red-500/50" : "text-zinc-200 border-transparent focus:border-zinc-500/50"
+                            )}
                         />
                     ) : (
                         <span className="text-xs font-bold text-zinc-300 select-none truncate">{title}</span>

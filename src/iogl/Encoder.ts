@@ -9,6 +9,12 @@ import { IOGLUtils } from './IOGLUtils';
  * Utilizes IOGLUtils for standardized handle and value formatting.
  */
 export class Encoder {
+  private static formatLabel(label: string): string {
+    if (!label) return '';
+    const needsBrackets = /[^a-zA-Z0-9_]/.test(label);
+    return needsBrackets ? `[${label}]` : label;
+  }
+
   public static encode(graph: InjectableGraph): string {
     let result = '';
     const idToLabel = new Map<string, string>();
@@ -32,7 +38,7 @@ export class Encoder {
             const mappingKey = Object.keys(manifest.modeMapping).find(k => manifest.modeMapping![k] === modeVal);
             if (mappingKey) modeVal = mappingKey;
           }
-          props.push(`mode: "${modeVal}"`);
+          props.push(`mode: ${JSON.stringify(modeVal)}`);
         }
 
         // Data Array & Positional Data (Extreme Merging)
@@ -53,8 +59,7 @@ export class Encoder {
           if (values.length > 0) {
             // Position-based encoding (Extreme Merging)
             values.forEach(v => {
-                const encoded = typeof v === 'string' ? `"${v}"` : JSON.stringify(v);
-                positionalData.push(encoded);
+                positionalData.push(JSON.stringify(v));
             });
           }
         }
@@ -73,7 +78,10 @@ export class Encoder {
       const propStr = props.length > 0 ? ` { ${props.join(', ')} }` : '';
       const x = Math.round(node.position.x);
       const y = Math.round(node.position.y);
-      const labelStr = label !== node.type ? `[${label}] ` : '';
+      
+      // Node Label logic: Only prefix if label differs or needs brackets
+      const hasSpecialChars = /[^a-zA-Z0-9_]/.test(label);
+      const labelStr = (label !== node.type || hasSpecialChars) ? `${this.formatLabel(label)} ` : '';
 
       result += `${labelStr}${node.type}${positionalStr}${propStr} @${x},${y}\n`;
     }
@@ -85,7 +93,6 @@ export class Encoder {
       const sNode = graph.nodes.find(n => n.id === edge.source);
       const tNode = graph.nodes.find(n => n.id === edge.target);
 
-      // Fidelity check: Skip Ghost Links (handles that no longer exist for the current mode)
       if (sNode && tNode) {
         const sMan = IOGL_MANIFEST[sNode.type] || IOGL_MANIFEST[sNode.type.toUpperCase()];
         const tMan = IOGL_MANIFEST[tNode.type] || IOGL_MANIFEST[tNode.type.toUpperCase()];
@@ -105,8 +112,11 @@ export class Encoder {
         }
       }
 
-      const sourceLabel = idToLabel.get(edge.source) || edge.source;
-      const targetLabel = idToLabel.get(edge.target) || edge.target;
+      const sLabelRaw = idToLabel.get(edge.source) || edge.source;
+      const tLabelRaw = idToLabel.get(edge.target) || edge.target;
+
+      const sourceLabel = this.formatLabel(sLabelRaw);
+      const targetLabel = this.formatLabel(tLabelRaw);
 
       const sourceHandle = IOGLUtils.formatHandle(edge.sourceHandle || 'out_a');
       const targetHandle = IOGLUtils.formatHandle(edge.targetHandle || 'in_a');

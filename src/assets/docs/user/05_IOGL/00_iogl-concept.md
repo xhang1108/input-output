@@ -25,6 +25,21 @@ A complete IOGL declaration follows a specific structural pattern:
 - **Props**: A JSON object containing properties like `mode` or `data`.
 - **Coordinates (@x,y)**: The absolute position of the node on the canvas.
 
+### 2.1 Handling Spaces & Special Characters (Crucial)
+
+> [!IMPORTANT]
+> Since IOGL uses spaces to separate components (Label, ID, Props), any label containing **spaces** or **special characters** (math symbols, dashes, etc.) MUST be wrapped in **Square Brackets** `[]`.
+
+| Scene | Invalid Syntax | Valid IOGL 1.0 Syntax |
+| :--- | :--- | :--- |
+| **Simple Name** | `price IN-01` | `price IN-01` (Brackets optional) |
+| **With Space** | `my price IN-01` | `[my price] IN-01` |
+| **Math Symbols** | `a + b MA-01` | `[a + b] MA-01` |
+| **Numeric Start** | `1st_node IN-01` | `[1st_node] IN-01` |
+
+> [!TIP]
+> The **IOGL Encoder** automatically adds these brackets for you when exporting from the canvas. The **IOGL Parser** handles both bracketed and unbracketed labels seamlessly.
+
 ### Extreme Merging (Positional Data)
 To reduce boilerplate, IOGL 1.0 supports **Positional Data**. You can provide values directly after the ID:
 ```iogl
@@ -42,7 +57,11 @@ SourceLabel.handle -> TargetLabel.handle
 
 ### Handle Integrity (Ghost Link Prevention)
 IOGL 1.0 enforces **Strict Handle Validation**. The handles available for a node can change based on its current `mode`.
-- **Validation**: If you reference a handle that doesn't exist for the current mode (e.g., trying to use `calc.b` while `calc` is in a single-output mode), the system will flag it as a **Ghost Link**.
+- **Validation**: The system prevents invalid connections (type mismatch or topological cycles).
+- **Naming Determinism**: 
+    - Labels containing spaces or special symbols MUST be wrapped in `[]` (e.g., `[Node A]`).
+    - The UI blocks empty strings, pure whitespace, and duplicate names.
+If you reference a handle that doesn't exist for the current mode (e.g., trying to use `calc.b` while `calc` is in a single-output mode), the system will flag it as a **Ghost Link**.
 - **Diagnostics**: Errors will appear in the system log, and the visual link will either disappear or show an error state to prevent invalid mathematical results.
 
 ---
@@ -189,12 +208,15 @@ GOAL: Generate valid, optimized, and mathematically sound IOGL 1.0 scripts.
 
 ### 4. EXAMPLE ARCHITECTURE
 "Requirement: Solve y = x^2 and plot from -10 to 10."
-[expr] IN-09 "x^2" @100,100
-[solv] CL-04 {mode:"x"} @350,100
-[res] OT-01 @600,100
-[plot] OT-03 -10, 10, 200 @600,300
 
-expr.a -> solv.a
-solv.a -> res.a
-expr.a -> plot.a
+```iogl
+[base expression] IN-09 "x^2" @100,100
+[target solver] CL-04 {mode:"x"} @350,100
+[final result] OT-01 @600,100
+[parabolic plot] OT-03 -10, 10, 200 @600,300
+
+[base expression].a -> [target solver].a
+[target solver].a -> [final result].a
+[base expression].a -> [parabolic plot].a
+```
 ```
