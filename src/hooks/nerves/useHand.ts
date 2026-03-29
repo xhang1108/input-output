@@ -835,6 +835,10 @@ export function useHand() {
         if (target.closest('.react-flow__handle') || target.closest('.react-flow__edge')) return;
         if (target.closest('.nodrag')) return; // Ignore custom drag if clicking on a protected area
 
+        // Block movement if clicking on interactive elements
+        const tagName = target.tagName.toUpperCase();
+        if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'A', 'LABEL'].includes(tagName)) return;
+
         // Note: React Flow uses button 1 for middle-click and 2 for right-click in panOnDrag
         // We allow these to pass through unless Ctrl+RightClick is used for cutting
         if ((e.button === 1 || e.button === 2) && !(e.ctrlKey && e.button === 2)) return;
