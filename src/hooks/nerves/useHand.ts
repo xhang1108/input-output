@@ -48,6 +48,7 @@ export function useHand() {
     const startFlowPos = useRef<XYPosition | null>(null);
     const centerRef = useRef<XYPosition | null>(null);
     const [axisLock, setAxisLock] = useState<'X' | 'Y' | null>(null);
+    const lastCancelTimestamp = useRef<number>(0);
 
     // Numeric Transform Buffer
     const [transformBuffer, setTransformBuffer] = useState<string>('');
@@ -819,11 +820,18 @@ export function useHand() {
         setTransformValue('');
     }, [getNodes, getAbsolutePosition, setNodes, pushHistory, setMode]);
 
-    const cancelGrab = useCallback(() => {
+    const cancelGrab = useCallback((suppressMenu: boolean = false) => {
+        if (suppressMenu) {
+            lastCancelTimestamp.current = Date.now();
+        }
+
         const positionsToRestore = new Map(initialPositions.current);
         const framesToRestore = new Map(initialFrameStates.current);
 
-        const idsToSelect = new Set<string>([...positionsToRestore.keys(), ...framesToRestore.keys()]);
+        if (positionsToRestore.size === 0 && framesToRestore.size === 0) {
+            setMode('IDLE');
+            return;
+        }
 
         setNodes(nodes => nodes.map(n => {
             // Restore Frames
@@ -851,7 +859,7 @@ export function useHand() {
         setAxisLock(null);
         setTransformBuffer('');
         setTransformValue('');
-    }, [setNodes]);
+    }, [setNodes, setMode]);
 
 
     // --- Event Handlers ---
@@ -926,7 +934,7 @@ export function useHand() {
         if (e.button === 0) {
             confirmGrab();
         } else if (e.button === 2) {
-            cancelGrab();
+            cancelGrab(true); // Right-click cancel suppresses next menu
         }
     }, [mode, confirmGrab, cancelGrab]);
 
@@ -1016,6 +1024,7 @@ export function useHand() {
         handleMouseMove,
         handleMouseDown,
         handleMouseUp,
+        lastCancelTimestamp,
         isResolvingTransform: () => isResolvingRef.current
     };
 }

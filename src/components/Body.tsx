@@ -194,6 +194,7 @@ export function Body({
         selectNode,
         handleTypeNum,
         isResolvingTransform,
+        lastCancelTimestamp,
         transformBuffer,
         transformValue
     } = useHand();
@@ -412,6 +413,31 @@ export function Body({
         setPendingConnection(null);
     }, [setShowPalette, setPendingConnection]);
 
+    const handleCancel = useCallback(() => {
+        // Layer 1: Cancel active transformation
+        if (mode !== 'IDLE') {
+            cancelGrab(false); // Keyboard Esc doesn't need to suppress next right-click as it's not a right-click
+            logAction('Cancel Transform (Esc)');
+            return;
+        }
+
+        // Layer 2: Deselect all nodes
+        const selectedCount = nodes.filter(n => n.selected).length;
+        if (selectedCount > 0) {
+            setNodes(nds => nds.map(n => ({ ...n, selected: false })));
+            logAction(`Deselect [${selectedCount}] (Esc)`);
+            return;
+        }
+
+        // Layer 3: Close UI Panels
+        if (showPalette || showNPanel) {
+            closePalette();
+            setShowNPanel(false);
+            logAction('Close Panels (Esc)');
+            return;
+        }
+    }, [mode, cancelGrab, nodes, setNodes, showPalette, showNPanel, closePalette, setShowNPanel, logAction]);
+
     // --- FEEL NERVES (Input Handling) ---
     const autoConfirm = useCallback((fn: (e: any) => void) => (e: any) => {
         if (mode !== 'IDLE') confirmGrab();
@@ -561,13 +587,7 @@ export function Body({
 
             // Confirmation & Navigation
             'system:confirm': () => { confirmGrab(); logAction('Confirm (Enter)'); },
-            'system:cancel': () => {
-                cancelGrab();
-                closePalette();
-                setShowNPanel(false);
-                setNodes(nds => nds.map(n => ({ ...n, selected: false })));
-                logAction('Cancel/Deselect (Esc)');
-            },
+            'system:cancel': () => { handleCancel(); },
 
             // Numeric Inputs for Transform (keep as literal keys for now as they are many)
             '0': () => handleTypeNum('0'),
@@ -683,8 +703,10 @@ export function Body({
 
                     onPaneContextMenu={(e) => {
                         e.preventDefault();
+                        if (Date.now() - lastCancelTimestamp.current < 100) return;
+
                         if (mode !== 'IDLE') {
-                            cancelGrab();
+                            cancelGrab(true);
                             return;
                         }
                         if (isReadOnly) return;
@@ -698,8 +720,10 @@ export function Body({
 
                     onNodeContextMenu={(e, node) => {
                         e.preventDefault();
+                        if (Date.now() - lastCancelTimestamp.current < 100) return;
+
                         if (mode !== 'IDLE') {
-                            cancelGrab();
+                            cancelGrab(true);
                             return;
                         }
                         if (isReadOnly) return;
