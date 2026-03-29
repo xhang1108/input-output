@@ -18,7 +18,7 @@ import { useSession } from 'next-auth/react';
 import { Plus } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { FormulaRenderer } from '../utils/FormulaRenderer';
 import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
 import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
@@ -50,6 +50,7 @@ import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useExampleListener } from '../hooks/useExampleListener';
 import { useAppStore } from '../store/useStore';
+import { useHistoryStore } from '../store/useHistoryStore';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { getDocInfo, hasDocForToken } from '../config/docRegistry';
@@ -74,7 +75,6 @@ export function Body({
     visibility,
     onVisibilityChange
 }: BodyProps) {
-    const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
     const brain = useBrain();
     const { data: session } = useSession();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -116,6 +116,13 @@ export function Body({
     // highlightedEdgeId and autoInsert managed by useAutoInsert
 
     const effectiveSnap = isSnapping || manualSnap;
+
+    const { 
+        interactionMode, 
+        isRestoring, 
+        push 
+    } = useHistoryStore();
+    const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
 
     const {
         saveProject,
@@ -429,10 +436,14 @@ export function Body({
                 swapConnections();
                 logAction('Swap Inputs (Alt+S)');
             }),
-            'layout:auto': autoConfirm(() => {
+            'layout:auto': (e: any) => {
                 if (isReadOnly) return;
+                if (mode !== 'IDLE' || isRestoring) {
+                    logAction('Layout manual override blocked (Busy)');
+                    return;
+                }
                 handleAutoLayout();
-            }),
+            },
             'canvas:focus-selected': (e) => {
                 if (mode === 'GRABBING' || mode === 'SCALING' || mode === 'ROTATING') {
                     handleTypeNum('.');

@@ -1,10 +1,11 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
 import { getLayoutedElements, LayoutAlgorithm, LayoutDirection } from './layoutEngine';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types';
+import { useHistoryExecutor } from './useHistoryExecutor';
 
 export function useAutoLayout(
     nodes: Node[],
@@ -17,6 +18,7 @@ export function useAutoLayout(
     const { fitView } = useReactFlow();
     const brain = useBrain();
     const { push, interactionMode, isRestoring } = useHistoryStore();
+    const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
 
     // 1. Manual Layout Trigger
     const handleAutoLayout = useCallback(async () => {
@@ -126,11 +128,42 @@ export function useAutoLayout(
     }, [nodes, edges, setNodes, setEdges, layoutAlgorithm, logAction, fitView, interactionMode, isRestoring, push]);
 
 
+    // --- Interaction & Queuing Logic (v4 Final) ---
+    const pendingLayoutRef = useRef(false);
+    const isBusyRef = useRef(false);
+
+    // Immediate reactive sync for the ref to avoid Effect latency
+    useEffect(() => {
+        isBusyRef.current = (interactionMode !== 'IDLE' || isRestoring);
+    }, [interactionMode, isRestoring]);
+
+    // Catch-up Effect: Trigger queued layout when returning to IDLE
+    useEffect(() => {
+        if (interactionMode === 'IDLE' && !isRestoring && pendingLayoutRef.current) {
+            pendingLayoutRef.current = false;
+            logAction('Executing pending structural layout...');
+            // Step into the next frame to ensure Brain state has fully committed from Hand orchestrator
+            requestAnimationFrame(() => {
+                handleAutoLayout();
+            });
+        }
+    }, [interactionMode, isRestoring, handleAutoLayout, logAction]);
+
     // 2. Brain Event Listener (RE-LAYOUT)
     useEffect(() => {
 
         // Listener for automatic layout requests (e.g. after IOGL import)
         const cleanupLayout = brain.on('RE-LAYOUT', async () => {
+            // Priority Guard: Check Ref + Direct Store peek for safety
+            const currentMode = useHistoryStore.getState().interactionMode;
+            if (isBusyRef.current || currentMode !== 'IDLE' || isRestoring) {
+                if (!pendingLayoutRef.current) {
+                    logAction('Brain Layout queued (Busy)');
+                }
+                pendingLayoutRef.current = true;
+                return;
+            }
+
             const brainNodes = Array.from(brain.getNodesMap().values());
             const brainEdges = brain.getEdges();
 
