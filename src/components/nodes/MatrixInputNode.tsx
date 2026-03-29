@@ -1,5 +1,7 @@
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { NodeProps, useReactFlow } from '@xyflow/react';
+import { useHistoryStore } from '../../store/useHistoryStore';
+import { Transaction } from '../../engine/types';
 import * as math from 'mathjs';
 import { BaseNode } from './BaseNode';
 import { ResizeHandle } from './ResizeHandle';
@@ -15,6 +17,8 @@ import { Brain } from '../../engine/Brain';
 export const MatrixInputNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const { updateNodeData } = useReactFlow();
+    const { push, isRestoring } = useHistoryStore();
+    const initialGridRef = useRef<any[][] | null>(null);
 
     // --- Grid State Management ---
     const initialGrid = (() => {
@@ -104,6 +108,39 @@ export const MatrixInputNode = memo((props: NodeProps) => {
         }, [grid, setGrid])
     });
 
+    const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+        // 深拷貝防線 (The Deep Copy Mandate)
+        initialGridRef.current = structuredClone(grid);
+        e.currentTarget.select();
+    }, [grid]);
+
+    const handleBlur = useCallback(() => {
+        const initial = initialGridRef.current;
+        if (initial && !isRestoring) {
+            // Check if grid actually changed (Zero-Delta Filter)
+            const changed = JSON.stringify(initial) !== JSON.stringify(grid);
+            if (changed) {
+                push({
+                    id: `edit_matrix_${id}_${Date.now()}`,
+                    description: `Edit Matrix ${rows}×${cols}`,
+                    forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { array: grid } } }],
+                    inverse: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { array: initial } } }]
+                });
+            }
+        }
+        initialGridRef.current = null;
+    }, [id, grid, rows, cols, push, isRestoring]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') {
+            const initial = initialGridRef.current;
+            if (initial) {
+                setGrid(initial);
+            }
+            e.currentTarget.blur();
+        }
+    }, [setGrid]);
+
     const updateCell = useCallback((r: number, c: number, val: string) => {
         if (val === '') {
             const newGrid = grid.map((row, ri) =>
@@ -161,7 +198,9 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                                     <input
                                         type="text"
                                         value={val}
-                                        onFocus={(e) => e.target.select()}
+                                        onFocus={handleFocus}
+                                        onBlur={handleBlur}
+                                        onKeyDown={handleKeyDown}
                                         onChange={(e) => updateCell(r, c, e.target.value)}
                                         className="w-full h-full bg-transparent text-center text-[10px] text-zinc-300 outline-none font-mono"
                                     />

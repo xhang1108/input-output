@@ -70,20 +70,6 @@ export function useEar(props: EarProps = {}) {
 
             const match = shortcuts[comboKey] || (modifiers.length === 0 ? shortcuts[key] : undefined);
 
-            // Undo (Ctrl+Z)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                brain.undo();
-                return;
-            }
-
-            // Redo (Ctrl+Y or Ctrl+Shift+Z)
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
-                e.preventDefault();
-                brain.redo();
-                return;
-            }
-
             if (match) {
                 const isFunction = typeof match === 'function';
                 const action = isFunction ? match : match.action;

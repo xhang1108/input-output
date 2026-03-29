@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
-import { useReactFlow, Node } from '@xyflow/react';
+import { useReactFlow, Node, Edge } from '@xyflow/react';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
 import { Transaction } from '../engine/types';
+import { useHistoryStore } from '../store/useHistoryStore';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { HandleConfig } from '../types/NodeDefinition';
 
@@ -14,32 +15,100 @@ import { HandleConfig } from '../types/NodeDefinition';
 export function useSelection() {
     const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
     const brain = useBrain();
+    const history = useHistoryStore();
     const config = brain.getPhysicsConfig();
 
     // --- Command: Delete Selected ---
     const deleteSelected = useCallback(() => {
         const nodes = getNodes();
-        const selectedNodeIds = new Set(nodes.filter(n => n.selected).map(n => n.id));
+        const edges = getEdges();
+        const selectedNodes = nodes.filter(n => n.selected);
+        const selectedIds = new Set(selectedNodes.map(n => n.id));
 
-        if (selectedNodeIds.size === 0) return;
+        if (selectedIds.size === 0) return;
 
-        setNodes(nds => nds.filter(n => !selectedNodeIds.has(n.id)));
-        setEdges(eds => eds.filter(e => !selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target)));
-    }, [getNodes, setNodes, setEdges]);
+        // Capture History
+        const forward: Transaction[] = [];
+        const inverse: Transaction[] = [];
+        const nodeIndices: Record<string, number> = {};
+
+        // 1. Process Nodes
+        selectedNodes.forEach(node => {
+            const index = nodes.indexOf(node);
+            nodeIndices[node.id] = index;
+
+            forward.push({ type: 'REMOVE_NODE', payload: node.id });
+            inverse.push({
+                type: 'ADD_NODE',
+                payload: {
+                    id: node.id,
+                    type: node.type,
+                    position: { ...node.position },
+                    data: { ...node.data },
+                    selected: node.selected
+                }
+            });
+        });
+
+        // 2. Process Edges
+        const edgesToRemove = edges.filter(e => selectedIds.has(e.source) || selectedIds.has(e.target));
+        edgesToRemove.forEach(edge => {
+            forward.push({ type: 'DISCONNECT', payload: edge.id });
+            inverse.push({
+                type: 'CONNECT',
+                payload: { ...edge }
+            });
+        });
+
+        // 3. Dispatch to Brain and UI
+        brain.applyTransaction({ type: 'BATCH', payload: forward });
+        setNodes(nds => nds.filter(n => !selectedIds.has(n.id)));
+        setEdges(eds => eds.filter(e => !selectedIds.has(e.source) && !selectedIds.has(e.target)));
+
+        // 4. Push to History
+        history.push({
+            id: `delete_${Date.now()}`,
+            description: `Delete ${selectedIds.size} items`,
+            forward,
+            inverse,
+            uiMetadata: {
+                restoredNodeIndices: nodeIndices
+            }
+        });
+    }, [getNodes, getEdges, setNodes, setEdges, brain, history]);
 
     // --- Command: Reset Selected Data (Backspace) ---
     const resetSelected = useCallback(() => {
-        setNodes(nds => nds.map(n => {
-            if (!n.selected) return n;
-            return {
-                ...n,
-                data: {
-                    ...n.data,
-                    label: n.type === 'frame' ? 'Frame' : 'Node'
-                }
-            };
-        }));
-    }, [setNodes]);
+        const nodes = getNodes();
+        const selectedNodes = nodes.filter(n => n.selected);
+        if (selectedNodes.length === 0) return;
+
+        const forward: Transaction[] = [];
+        const inverse: Transaction[] = [];
+
+        selectedNodes.forEach(node => {
+            const newLabel = node.type === 'frame' ? 'Frame' : 'Node';
+            if (node.data?.label !== newLabel) {
+                forward.push({ type: 'UPDATE_NODE_DATA', payload: { id: node.id, data: { label: newLabel } } });
+                inverse.push({ type: 'UPDATE_NODE_DATA', payload: { id: node.id, data: { label: node.data?.label } } });
+            }
+        });
+
+        if (forward.length > 0) {
+            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            setNodes(nds => nds.map(n => {
+                if (!n.selected) return n;
+                return { ...n, data: { ...n.data, label: n.type === 'frame' ? 'Frame' : 'Node' } };
+            }));
+
+            history.push({
+                id: `reset_${Date.now()}`,
+                description: `Reset ${selectedNodes.length} nodes`,
+                forward,
+                inverse
+            });
+        }
+    }, [getNodes, setNodes, brain, history]);
 
     // --- Command: Bundle / Unbundle Toggle (F key) ---
     const bundleSelected = useCallback(() => {
@@ -169,7 +238,32 @@ export function useSelection() {
                 }
             });
 
+            // --- Capture History Snapshots ---
+            const inverse: Transaction[] = [];
+            parentedNodes.forEach(node => {
+                inverse.push({
+                    type: 'MOVE_NODE',
+                    payload: { id: node.id, position: { ...node.position }, parentId: node.parentId }
+                });
+            });
+            affectedFrameIds.forEach(frameId => {
+                const f = nodes.find(n => n.id === frameId);
+                if (f) {
+                    inverse.push({
+                        type: 'ADD_NODE',
+                        payload: { ...f }
+                    });
+                }
+            });
+
             brain.applyTransaction({ type: 'BATCH', payload: txs });
+            
+            history.push({
+                id: `ungroup_${Date.now()}`,
+                description: `Ungroup ${parentedNodes.length} nodes`,
+                forward: txs,
+                inverse
+            });
             return;
         }
 

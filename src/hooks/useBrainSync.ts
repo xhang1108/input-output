@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
+import { useHistoryStore } from '../store/useHistoryStore';
 import deepEqual from 'fast-deep-equal';
 
 /**
@@ -13,12 +14,19 @@ import deepEqual from 'fast-deep-equal';
  */
 export function useBrainSync(nodes: Node[], edges: Edge[]) {
     const brain = useBrain();
+    const { isRestoring } = useHistoryStore();
     const prevNodesRef = useRef<Map<string, Node>>(new Map());
     const prevEdgesRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
+        // Guard 1: Skip if we are currently restoring from history
+        if (isRestoring) {
+            prevNodesRef.current = new Map(nodes.map(n => [n.id, { ...n }]));
+            prevEdgesRef.current = new Set(edges.map(e => e.id));
+            return;
+        }
 
-        // Guard: Skip transaction recording during relink drag
+        // Guard 2: Skip transaction recording during relink drag
         // The relink system removes edges from UI for visual feedback,
         // but the actual DISCONNECT+CONNECT should be atomic via useRelink's BATCH
         if (brain.isReconnecting) {

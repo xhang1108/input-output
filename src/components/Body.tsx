@@ -25,6 +25,7 @@ import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems
 import { useEar } from '../hooks/nerves/useEar';
 import { useHand } from '../hooks/nerves/useHand';
 import { useKnife } from '../hooks/useKnife';
+import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
 import { COMMAND_REGISTRY, getEarShortcuts, Platform } from '../config/shortcuts';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
@@ -73,6 +74,7 @@ export function Body({
     visibility,
     onVisibilityChange
 }: BodyProps) {
+    const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
     const brain = useBrain();
     const { data: session } = useSession();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -160,6 +162,7 @@ export function Body({
         logAction
     );
 
+    // Nerve Integration: useHand handles physical gestures and tools
     const {
         startGrab,
         startScale,
@@ -388,7 +391,6 @@ export function Body({
         onRelinkEnd(event, connectionState);
     }, [onRelinkEnd]);
 
-
     const relinkValue = {
         ...relinkState,
         edgeType, // Inject current edgeType into RelinkContext
@@ -541,6 +543,11 @@ export function Body({
             // Save
             'system:save': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project'); }),
 
+            // History
+            'system:undo': (e) => { e.preventDefault(); undo(); logAction('Undo'); },
+            'system:redo': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
+            'system:redo-alt': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
+
             // Confirmation & Navigation
             'system:confirm': () => { confirmGrab(); logAction('Confirm (Enter)'); },
             'system:cancel': () => {
@@ -578,7 +585,7 @@ export function Body({
                 }
             },
         }),
-        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, bundleSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
+        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, bundleSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
     });
 
 

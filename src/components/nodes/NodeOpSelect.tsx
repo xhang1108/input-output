@@ -15,6 +15,7 @@ import { memo, useCallback } from 'react';
 import { useBrain } from '../../context/BrainContext';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { useNodeParam } from '../../hooks/useNodeParam';
+import { useHistoryStore } from '../../store/useHistoryStore';
 import { CategorizedMenu, CategorizedMenuItem } from '../ui/CategorizedMenu';
 
 interface NodeOpSelectProps {
@@ -49,8 +50,9 @@ export const NodeOpSelect = memo(({
     overrideOptions,
 }: NodeOpSelectProps) => {
     const brain = useBrain();
+    const { push } = useHistoryStore();
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
-    const { options: staticOptions, currentValue, currentLabel: staticLabel, dispatch } = useNodeParam(nodeId, defId, paramId, data);
+    const { options: staticOptions, currentValue, currentLabel: staticLabel } = useNodeParam(nodeId, defId, paramId, data);
 
     const options = overrideOptions || staticOptions;
     
@@ -60,13 +62,25 @@ export const NodeOpSelect = memo(({
         : staticLabel;
 
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
-        brain.applyTransaction({
-            type: 'UPDATE_NODE_DATA',
-            payload: {
-                id: nodeId,
-                data: { [paramId]: item.id }
-            }
-        });
+        const newValue = item.id;
+        const previousValue = currentValue;
+
+        if (newValue !== previousValue) {
+            push({
+                id: `select_${nodeId}_${paramId}_${Date.now()}`,
+                description: `Change ${paramId}: ${item.label}`,
+                forward: [{ type: 'UPDATE_NODE_DATA', payload: { id: nodeId, data: { [paramId]: newValue } } }],
+                inverse: [{ type: 'UPDATE_NODE_DATA', payload: { id: nodeId, data: { [paramId]: previousValue } } }]
+            });
+
+            brain.applyTransaction({
+                type: 'UPDATE_NODE_DATA',
+                payload: {
+                    id: nodeId,
+                    data: { [paramId]: newValue }
+                }
+            });
+        }
 
         if (onSelect) {
             onSelect(item);

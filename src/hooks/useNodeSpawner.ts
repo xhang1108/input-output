@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useCallback, useState, useRef } from 'react';
-import { Node, Edge, addEdge } from '@xyflow/react';
+import { Node, Edge, addEdge, useReactFlow } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { useCanvasProjection } from './useCanvasProjection';
 import { getHandleColorByConfig } from '../utils/handleUtils';
+import { useHistoryStore } from '../store/useHistoryStore';
+import { useBrain } from '../context/BrainContext';
+import { Transaction } from '../engine/types';
 
 export interface PendingConnection {
     nodeId: string;
@@ -37,6 +40,9 @@ export function useNodeSpawner({
     const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
     const spawnCountRef = useRef(0);
     const { project, getCurrentZoom } = useCanvasProjection();
+    const { getNodes } = useReactFlow();
+    const brain = useBrain();
+    const history = useHistoryStore();
 
     // Reset spawn count when the palette is opened in a new location
     // Since palettePosition is re-set every time Shift+A or context menu is clicked
@@ -88,7 +94,29 @@ export function useNodeSpawner({
             },
         };
 
+        const forward: Transaction[] = [];
+        const inverse: Transaction[] = [];
+
+        // 1. Define Add Node Transaction
+        forward.push({
+            type: 'ADD_NODE',
+            payload: {
+                id: newNode.id,
+                type: newNode.type,
+                position: newNode.position,
+                data: newNode.data,
+                selected: true
+            }
+        });
+        inverse.push({ type: 'REMOVE_NODE', payload: newNode.id });
+
         setNodes((nds) => [...nds.map(n => ({ ...n, selected: false })), newNode]);
+
+        // Redo Z-Index Trap: Record current indices to preserve stacking order
+        const currentNodes = getNodes();
+        const nodeIndices: Record<string, number> = {
+            [newNode.id]: currentNodes.length
+        };
 
         // ... existing auto-link logic ...
         if (pendingConnection) {
@@ -113,13 +141,27 @@ export function useNodeSpawner({
                         data: { pathType: edgeType }
                     };
 
-                    setTimeout(() => {
-                        setEdges(eds => addEdge(newEdge, eds));
-                    }, 50);
+                    forward.push({ type: 'CONNECT', payload: newEdge });
+                    inverse.push({ type: 'DISCONNECT', payload: newEdge.id });
+
+                    // Execute edge creation
+                    setEdges(eds => addEdge(newEdge, eds));
                 }
             }
             setPendingConnection(null);
         }
+
+        // Finalize History & Engine Sync
+        brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+        history.push({
+            id: `spawn_${newNode.id}`,
+            description: `Spawn ${label}`,
+            forward,
+            inverse,
+            uiMetadata: {
+                restoredNodeIndices: nodeIndices
+            }
+        });
 
         return newNode;
     }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction, getCurrentZoom]);

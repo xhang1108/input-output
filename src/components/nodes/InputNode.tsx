@@ -1,12 +1,16 @@
-import { memo, useCallback, useState, useEffect } from 'react';
+import { memo, useCallback, useState, useEffect, useRef } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
+import { NodeProps, useReactFlow } from '@xyflow/react';
+import { useHistoryStore } from '../../store/useHistoryStore';
+import { Transaction } from '../../engine/types';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 
 export const InputNode = memo((props: NodeProps) => {
-    const { id, data } = props;
+    const { id, data, selected } = props;
+    const { updateNodeData } = useReactFlow();
+    const { push, isRestoring } = useHistoryStore();
+    const originalValue = useRef<any>(null);
     const brain = useBrain();
     const unwrappedValue = PayloadUtils.unwrap(data.value);
     
@@ -46,10 +50,46 @@ export const InputNode = memo((props: NodeProps) => {
         brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: val } } });
     }, [id, brain]);
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleDataFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+        originalValue.current = unwrappedValue;
+        setIsFocused(true);
+        e.currentTarget.select();
+    }, [unwrappedValue]);
+
+    const handleDataBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(false);
+        const currentVal = e.target.value;
+        const initialVal = originalValue.current;
+        
+        // Normalize comparing values
+        const currentParsed = data.type === 'string' ? currentVal : parseFloat(currentVal);
+        const initialParsed = initialVal;
+
+        if (initialParsed !== currentParsed && !isRestoring && !isNaN(currentParsed as any)) {
+            push({
+                id: `edit_input_${id}_${Date.now()}`,
+                description: `Edit Value: ${currentParsed}`,
+                forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: currentParsed } } }],
+                inverse: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: initialVal } } }]
+            });
+        }
+        originalValue.current = null;
+    }, [id, push, isRestoring, data.type]);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') {
+            const initial = originalValue.current;
+            if (initial !== null) {
+                setLocalValue(formatVal(initial));
+                brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: initial } } });
+            }
+            e.currentTarget.blur();
+            return;
+        }
+
         e.stopPropagation();
         if (e.key === 'Enter') {
-            (e.target as HTMLInputElement).blur();
+            e.currentTarget.blur();
         }
     };
 
@@ -59,7 +99,6 @@ export const InputNode = memo((props: NodeProps) => {
                 className="flex flex-col gap-2 p-1"
                 onPointerDown={(e) => e.stopPropagation()}
             >
-                <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Value</label>
                 {data.type === 'string' ? (
                     <input
                         type="text"
@@ -68,11 +107,8 @@ export const InputNode = memo((props: NodeProps) => {
                         placeholder="Text..."
                         value={localValue}
                         onChange={handleStringChange}
-                        onFocus={(e) => {
-                            setIsFocused(true);
-                            e.target.select();
-                        }}
-                        onBlur={() => setIsFocused(false)}
+                        onFocus={handleDataFocus}
+                        onBlur={handleDataBlur}
                         onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={handleKeyDown}
                     />
@@ -84,11 +120,8 @@ export const InputNode = memo((props: NodeProps) => {
                         placeholder="0.0"
                         value={localValue}
                         onChange={handleNumberChange}
-                        onFocus={(e) => {
-                            setIsFocused(true);
-                            e.target.select();
-                        }}
-                        onBlur={() => setIsFocused(false)}
+                        onFocus={handleDataFocus}
+                        onBlur={handleDataBlur}
                         onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={handleKeyDown}
                     />

@@ -13,6 +13,8 @@ import {
 } from '../utils/handleUtils';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { MagneticSnapState } from './useHandleMagnet';
+import { useHistoryStore } from '../store/useHistoryStore';
+import { Transaction } from '../engine/types';
 
 type UseRelinkProps = {
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
@@ -28,6 +30,7 @@ export function useRelink({
     onSmartLinkSearch
 }: UseRelinkProps) {
     const brain = useBrain();
+    const history = useHistoryStore();
     const edges = useStore((s) => s.edges);
     const [relinkState, setRelinkState] = useState<RelinkState>({
         active: false,
@@ -58,6 +61,9 @@ export function useRelink({
 
     const submitRelinkBatch = useCallback((newEdges: Edge[]) => {
         const removedIds = removedEdgeIds.current;
+        const beforeEdgeIds = edges.map(e => e.id);
+        const removedEdgesFull = edges.filter(e => removedIds.includes(e.id));
+        
         let updated = edges.filter(e => !removedIds.includes(e.id));
 
         for (const newEdge of newEdges) {
@@ -101,17 +107,29 @@ export function useRelink({
             }
         }
 
-        brain.applyTransaction({
-            type: 'BATCH',
-            payload: [
-                ...removedIds.map(eid => ({ type: 'DISCONNECT' as const, payload: eid })),
-                ...newEdges.map(e => ({ type: 'CONNECT' as const, payload: e })),
-                { type: 'REORDER_EDGES' as const, payload: updated.map(e => e.id) }
-            ]
+        const forward: Transaction[] = [
+            ...removedIds.map(eid => ({ type: 'DISCONNECT' as const, payload: eid })),
+            ...newEdges.map(e => ({ type: 'CONNECT' as const, payload: e })),
+            { type: 'REORDER_EDGES' as const, payload: updated.map(e => e.id) }
+        ];
+
+        const inverse: Transaction[] = [
+            ...newEdges.map(e => ({ type: 'DISCONNECT' as const, payload: e.id })),
+            ...removedEdgesFull.map(e => ({ type: 'CONNECT' as const, payload: e })),
+            { type: 'REORDER_EDGES' as const, payload: beforeEdgeIds }
+        ];
+
+        brain.applyTransaction({ type: 'BATCH', payload: forward });
+        
+        history.push({
+            id: `relink_${newEdges[0]?.id || Date.now()}`,
+            description: newEdges.length > 1 ? `Relinked ${newEdges.length} connections` : 'Modified connection',
+            forward,
+            inverse
         });
 
         setEdges(updated);
-    }, [edges, setEdges, brain]);
+    }, [edges, setEdges, brain, history]);
 
     const performRelink = useCallback((targetN: string, targetH: string | null) => {
         const state = relinkStateRef.current;

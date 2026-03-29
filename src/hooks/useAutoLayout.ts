@@ -3,6 +3,8 @@ import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
 import { getLayoutedElements, LayoutAlgorithm, LayoutDirection } from './layoutEngine';
+import { useHistoryStore } from '../store/useHistoryStore';
+import { Transaction } from '../engine/types';
 
 export function useAutoLayout(
     nodes: Node[],
@@ -14,9 +16,17 @@ export function useAutoLayout(
 ) {
     const { fitView } = useReactFlow();
     const brain = useBrain();
+    const { push, interactionMode, isRestoring } = useHistoryStore();
 
     // 1. Manual Layout Trigger
     const handleAutoLayout = useCallback(async () => {
+        // Interaction Collision Lock:
+        // Do not layout if user is dragging nodes or scale, or if a restoration is in progress.
+        if (interactionMode !== 'IDLE' || isRestoring) {
+            console.warn('[AutoLayout] Logic blocked: Interaction in progress');
+            return;
+        }
+
         const selectedNodes = nodes.filter(n => n.selected);
         const isPartial = selectedNodes.length > 0;
 
@@ -28,14 +38,16 @@ export function useAutoLayout(
             ? edges.filter(e => selectedNodes.some(n => n.id === e.source) && selectedNodes.some(n => n.id === e.target))
             : edges;
 
-        // Hierarchy Protection:
-        // If a node's parent is also in the layout set, we must exclude the child.
-        // ELK would layout them as siblings, but React Flow renders the child relatively.
-        // This causes "double movement" and visual detachment.
+        // Hierarchy Protection
         const layoutIdSet = new Set(nodesToLayout.map(n => n.id));
         nodesToLayout = nodesToLayout.filter(n => !n.parentId || !layoutIdSet.has(n.parentId));
 
         if (nodesToLayout.length === 0) return;
+
+        // Capture BEFORE Positions
+        const oldPositions = new Map<string, { x: number, y: number }>(
+            nodesToLayout.map(n => [n.id, { ...n.position }])
+        );
 
         // Calculate center for partial layout to preserve location
         let originalCenter = { x: 0, y: 0 };
@@ -66,19 +78,52 @@ export function useAutoLayout(
             }));
         }
 
-        if (isPartial) {
-            setNodes((nds) => nds.map(n => {
-                const found = finalNodes.find(ln => ln.id === n.id);
-                return found ? found : n;
-            }));
-            logAction('Layout Selected (L)');
-        } else {
-            setNodes([...finalNodes]);
-            setEdges([...layouted.edges]);
-            setTimeout(() => fitView({ duration: 800 }), 50); // Global focus
-            logAction('Layout Global (L)');
+        // --- History Generation (Zero-Delta Filter) ---
+        const forward: Transaction[] = [];
+        const inverse: Transaction[] = [];
+
+        finalNodes.forEach(newNode => {
+            const oldPos = oldPositions.get(newNode.id);
+            if (oldPos) {
+                // Only push if the displacement is significant (> 0.5 flow units)
+                const dx = newNode.position.x - oldPos.x;
+                const dy = newNode.position.y - oldPos.y;
+                if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+                    forward.push({ 
+                        type: 'MOVE_NODE', 
+                        payload: { id: newNode.id, position: { ...newNode.position } } 
+                    });
+                    inverse.push({ 
+                        type: 'MOVE_NODE', 
+                        payload: { id: newNode.id, position: { ...oldPos } } 
+                    });
+                }
+            }
+        });
+
+        // Trigger UI updates & Push history if changes actually happened
+        if (forward.length > 0) {
+            push({
+                id: `layout_${Date.now()}`,
+                description: isPartial ? 'AutoLayout Selection' : 'AutoLayout Global',
+                forward,
+                inverse
+            });
+
+            if (isPartial) {
+                setNodes((nds) => nds.map(n => {
+                    const found = finalNodes.find(ln => ln.id === n.id);
+                    return found ? found : n;
+                }));
+                logAction('Layout Selected (L)');
+            } else {
+                setNodes([...finalNodes]);
+                setEdges([...layouted.edges]);
+                setTimeout(() => fitView({ duration: 800 }), 50); // Global focus
+                logAction('Layout Global (L)');
+            }
         }
-    }, [nodes, edges, setNodes, setEdges, layoutAlgorithm, logAction, fitView]);
+    }, [nodes, edges, setNodes, setEdges, layoutAlgorithm, logAction, fitView, interactionMode, isRestoring, push]);
 
 
     // 2. Brain Event Listener (RE-LAYOUT)

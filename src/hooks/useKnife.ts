@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
-import { useReactFlow, XYPosition } from '@xyflow/react';
+import { useReactFlow, XYPosition, Edge } from '@xyflow/react';
 import { useCanvasProjection } from './useCanvasProjection';
+import { useHistoryStore } from '../store/useHistoryStore';
+import { Transaction } from '../engine/types';
 
 /**
  * useKnife
@@ -24,17 +26,22 @@ export function useKnife() {
     }, []);
 
     const endCut = useCallback(() => {
+        const { isRestoring, push } = useHistoryStore.getState();
+        if (isRestoring) return;
+
         const path = cutPathRef.current;
         if (path.length > 1) {
-            const edges = getEdges();
-            const nodes = getNodes();
-            const edgesToRemove: string[] = [];
+            // Fix: Use getEdges() to avoid Stale Closures (The Closure Trap)
+            const allEdges = getEdges();
+            const allNodes = getNodes();
+            const edgesToRemoveObjects: Edge[] = [];
+            const restoredEdgeIndices: Record<string, number> = {};
 
-            const projectedPath = path.map(p => project({ x: p.x, y: p.y }));
+            const projectedPath = path.map((p: XYPosition) => project({ x: p.x, y: p.y }));
 
-            edges.forEach(edge => {
-                const sourceNode = nodes.find(n => n.id === edge.source);
-                const targetNode = nodes.find(n => n.id === edge.target);
+            allEdges.forEach((edge, index) => {
+                const sourceNode = allNodes.find(n => n.id === edge.source);
+                const targetNode = allNodes.find(n => n.id === edge.target);
                 if (!sourceNode || !targetNode) return;
 
                 const sx = sourceNode.position.x + (sourceNode.measured?.width || 150);
@@ -46,14 +53,36 @@ export function useKnife() {
                     const p1 = projectedPath[i];
                     const p2 = projectedPath[i + 1];
                     if (linesIntersect(sx, sy, tx, ty, p1.x, p1.y, p2.x, p2.y)) {
-                        edgesToRemove.push(edge.id);
+                        edgesToRemoveObjects.push(edge);
+                        restoredEdgeIndices[edge.id] = index;
                         break;
                     }
                 }
             });
 
-            if (edgesToRemove.length > 0) {
-                setEdges(eds => eds.filter(e => !edgesToRemove.includes(e.id)));
+            // Zero-Hit Early Return: Prevent ghost history entries
+            if (edgesToRemoveObjects.length > 0) {
+                const forward: Transaction[] = edgesToRemoveObjects.map(e => ({
+                    type: 'DISCONNECT',
+                    payload: e.id
+                }));
+                const inverse: Transaction[] = edgesToRemoveObjects.map(e => ({
+                    type: 'CONNECT',
+                    payload: { ...e }
+                }));
+
+                // Push BATCH History with V10 Metadata
+                push({
+                    id: `knife_${Date.now()}`,
+                    description: `Knife Cut (${edgesToRemoveObjects.length} wires)`,
+                    forward,
+                    inverse,
+                    uiMetadata: { restoredEdgeIndices }
+                });
+
+                // Trigger UI update (Brain sync happens silently via useBrainSync)
+                const idsToRemove = edgesToRemoveObjects.map(e => e.id);
+                setEdges(eds => eds.filter(e => !idsToRemove.includes(e.id)));
             }
         }
 

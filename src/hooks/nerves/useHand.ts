@@ -4,6 +4,7 @@ import { useCanvasProjection } from '../useCanvasProjection';
 import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
 import { Transaction } from '../../engine/types';
+import { useHistoryStore, InteractionMode as HistoryMode } from '../../store/useHistoryStore';
 import { useClipboard } from '../useClipboard';
 import { useSelection } from '../useSelection';
 import { useKnife } from '../useKnife';
@@ -19,7 +20,15 @@ export function useHand() {
     const { getNodes, setNodes, getViewport, setViewport } = useReactFlow();
     const brain = useBrain();
     const { project } = useCanvasProjection();
-    const [mode, setMode] = useState<InteractionMode>('IDLE');
+    const { interactionMode, setInteractionMode, push: pushHistory } = useHistoryStore();
+    
+    // Internal UI local mode for rapid state (rAF loops)
+    const [mode, _setMode] = useState<HistoryMode>('IDLE');
+
+    const setMode = useCallback((newMode: HistoryMode) => {
+        _setMode(newMode);
+        setInteractionMode(newMode);
+    }, [setInteractionMode]);
 
     // --- Composed Hooks ---
     const { duplicateSelected, copyToClipboard, pasteFromClipboard } = useClipboard();
@@ -624,42 +633,40 @@ export function useHand() {
         // 1. Identify moved or resized nodes
         const movedNodeIds = new Set<string>();
         initialPositions.current.forEach((initPos, id) => {
-            const node = nodes.find(n => n.id === id);
+            const node = nodeMap.get(id);
             if (node) {
                 const initDim = initialDimensions.current.get(id);
                 const { w, h } = getSize(node);
                 const dw = initDim ? Math.abs(w - initDim.w) : 0;
                 const dh = initDim ? Math.abs(h - initDim.h) : 0;
-                if (Math.abs(node.position.x - initPos.x) > 0.5 || Math.abs(node.position.y - initPos.y) > 0.5 || dw > 0.5 || dh > 0.5) {
+                const dx = Math.abs(node.position.x - initPos.x);
+                const dy = Math.abs(node.position.y - initPos.y);
+
+                if (dx > 0.1 || dy > 0.1 || dw > 0.1 || dh > 0.1) {
                     movedNodeIds.add(id);
                 }
             }
         });
 
         if (movedNodeIds.size === 0) {
-            isResolvingRef.current = true;
-            setTimeout(() => { isResolvingRef.current = false; }, 100);
-
+            console.log(`[Hand] confirmGrab: No nodes moved significantly.`);
             setMode('IDLE');
-            initialPositions.current.clear();
-            initialDimensions.current.clear();
             startMousePos.current = null;
             return;
         }
 
-        // 2. Identify and Process Parents
+        // 2. Identify and Process Parents (Absolute detect)
         const frames = nodes.filter(n => n.type === 'frame');
         const affectedParents = new Set<string>();
         const plannedParentId = new Map<string, string | null>();
         const plannedDimensions = new Map<string, { w: number, h: number }>();
 
-        // Find parent for each moved node (absolute detect)
         movedNodeIds.forEach(id => {
-            const node = nodes.find(n => n.id === id);
+            const node = nodeMap.get(id);
             if (!node || node.type === 'frame') return;
 
             const oldParentId = node.parentId || null;
-            const absPos = brain.getAbsolutePosition(id);
+            const absPos = getAbsolutePosition(id, nodeMap);
             const { w, h } = getSize(node);
 
             // Detect new parent
@@ -703,7 +710,7 @@ export function useHand() {
 
         // 3. Reconcile Frame Bounds and Child Coordinates
         affectedParents.forEach(parentId => {
-            const parent = nodes.find(n => n.id === parentId);
+            const parent = nodeMap.get(parentId);
             if (!parent) return;
 
             const children = nodes.filter(n => {
@@ -720,7 +727,7 @@ export function useHand() {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             children.forEach(c => {
                 const { w, h } = getSize(c);
-                const cAbs = brain.getAbsolutePosition(c.id);
+                const cAbs = getAbsolutePosition(c.id, nodeMap);
                 minX = Math.min(minX, cAbs.x - w / 2); minY = Math.min(minY, cAbs.y - h / 2);
                 maxX = Math.max(maxX, cAbs.x + w / 2); maxY = Math.max(maxY, cAbs.y + h / 2);
             });
@@ -734,10 +741,9 @@ export function useHand() {
             txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: parentId, data: { width: Math.round(newWidth), height: Math.round(newHeight) } } });
 
             children.forEach(c => {
-                const cAbs = brain.getAbsolutePosition(c.id);
+                const cAbs = getAbsolutePosition(c.id, nodeMap);
                 const newRelativePos = { x: cAbs.x - newAbsTL_X, y: cAbs.y - newAbsTL_Y };
-                const initPos = initialPositions.current.get(c.id) || c.position;
-
+                
                 const movePayload: any = { id: c.id, position: newRelativePos };
                 if (plannedParentId.has(c.id)) movePayload.parentId = plannedParentId.get(c.id);
 
@@ -750,25 +756,25 @@ export function useHand() {
             });
         });
 
-        // 4. Final non-framed moved nodes
+        // 4. Final: Ensure all moved nodes are in txs (even if no frame logic applies)
         movedNodeIds.forEach(id => {
-            const node = nodes.find(n => n.id === id);
+            const node = nodeMap.get(id);
             if (!node || node.type === 'frame') return;
-            const actualParentId = plannedParentId.has(id) ? plannedParentId.get(id) : (node.parentId || null);
-
-            if (!actualParentId && node.parentId) {
-                // Detached from parent
-                const absPos = brain.getAbsolutePosition(id);
-                txs.push({ type: 'MOVE_NODE', payload: { id, position: absPos, parentId: null } });
-
-                if (plannedDimensions.has(id)) {
-                    const dim = plannedDimensions.get(id)!;
-                    txs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: dim.w, height: dim.h } } });
+            const alreadyInTxs = txs.some(t => t.type === 'MOVE_NODE' && (t.payload as any)?.id === id);
+            if (!alreadyInTxs) {
+                const actualParentId = plannedParentId.has(id) ? plannedParentId.get(id) : (node.parentId || null);
+                const absPos = getAbsolutePosition(id, nodeMap);
+                
+                // If it was just unparented or re-parented, record it explicitly
+                if (actualParentId !== node.parentId) {
+                    txs.push({ type: 'MOVE_NODE', payload: { id, position: node.position, parentId: actualParentId } });
+                } else {
+                    txs.push({ type: 'MOVE_NODE', payload: { id, position: node.position } });
                 }
-            } else if (actualParentId === node.parentId && movedNodeIds.has(id) && !affectedParents.has(node.parentId || '')) {
-                // Normal move within same (unaffected) parent OR outside
-                txs.push({ type: 'MOVE_NODE', payload: { id, position: node.position } });
-                if (plannedDimensions.has(id)) {
+            }
+            if (plannedDimensions.has(id)) {
+                const alreadyResized = txs.some(t => t.type === 'UPDATE_NODE_DATA' && (t.payload as any)?.id === id);
+                if (!alreadyResized) {
                     const dim = plannedDimensions.get(id)!;
                     txs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: dim.w, height: dim.h } } });
                 }
@@ -777,6 +783,25 @@ export function useHand() {
 
         if (txs.length > 0) {
             brain.applyTransaction({ type: 'BATCH', payload: txs });
+
+            const invTxs: Transaction[] = [];
+            initialPositions.current.forEach((initPos, id) => {
+                const initNode = nodes.find(n => n.id === id);
+                if (initNode) {
+                    invTxs.push({ type: 'MOVE_NODE', payload: { id, position: { ...initPos }, parentId: initNode.parentId || null } });
+                }
+            });
+            initialDimensions.current.forEach((initDim, id) => {
+                invTxs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: initDim.w, height: initDim.h } } });
+            });
+
+            console.log(`[Hand] Pushing history: Transform ${movedNodeIds.size} items`, { forward: txs, inverse: invTxs });
+            pushHistory({
+                id: `transform_${Date.now()}`,
+                description: `Transform ${movedNodeIds.size} items`,
+                forward: txs, 
+                inverse: invTxs
+            });
         }
 
         isResolvingRef.current = true;
@@ -792,7 +817,7 @@ export function useHand() {
         setAxisLock(null);
         setTransformBuffer('');
         setTransformValue('');
-    }, [getNodes, getAbsolutePosition, setNodes]);
+    }, [getNodes, getAbsolutePosition, setNodes, pushHistory, setMode]);
 
     const cancelGrab = useCallback(() => {
         const positionsToRestore = new Map(initialPositions.current);
