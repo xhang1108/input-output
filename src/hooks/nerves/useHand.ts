@@ -730,7 +730,7 @@ export function useHand() {
             const newAbsTL_X = minX - PAD, newAbsTL_Y = minY - PAD;
             const newWidth = (maxX + PAD) - newAbsTL_X, newHeight = (maxY + PAD) - newAbsTL_Y;
 
-            txs.push({ type: 'MOVE_NODE', payload: { id: parentId, position: { x: newAbsTL_X + newWidth / 2, y: newAbsTL_Y + newHeight / 2 }, oldPosition: parent.position } });
+            txs.push({ type: 'MOVE_NODE', payload: { id: parentId, position: { x: newAbsTL_X + newWidth / 2, y: newAbsTL_Y + newHeight / 2 } } });
             txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: parentId, data: { width: Math.round(newWidth), height: Math.round(newHeight) } } });
 
             children.forEach(c => {
@@ -738,7 +738,7 @@ export function useHand() {
                 const newRelativePos = { x: cAbs.x - newAbsTL_X, y: cAbs.y - newAbsTL_Y };
                 const initPos = initialPositions.current.get(c.id) || c.position;
 
-                const movePayload: any = { id: c.id, position: newRelativePos, oldPosition: initPos };
+                const movePayload: any = { id: c.id, position: newRelativePos };
                 if (plannedParentId.has(c.id)) movePayload.parentId = plannedParentId.get(c.id);
 
                 txs.push({ type: 'MOVE_NODE', payload: movePayload });
@@ -759,7 +759,7 @@ export function useHand() {
             if (!actualParentId && node.parentId) {
                 // Detached from parent
                 const absPos = brain.getAbsolutePosition(id);
-                txs.push({ type: 'MOVE_NODE', payload: { id, position: absPos, oldPosition: initialPositions.current.get(id)!, parentId: null } });
+                txs.push({ type: 'MOVE_NODE', payload: { id, position: absPos, parentId: null } });
 
                 if (plannedDimensions.has(id)) {
                     const dim = plannedDimensions.get(id)!;
@@ -767,7 +767,7 @@ export function useHand() {
                 }
             } else if (actualParentId === node.parentId && movedNodeIds.has(id) && !affectedParents.has(node.parentId || '')) {
                 // Normal move within same (unaffected) parent OR outside
-                txs.push({ type: 'MOVE_NODE', payload: { id, position: node.position, oldPosition: initialPositions.current.get(id)! } });
+                txs.push({ type: 'MOVE_NODE', payload: { id, position: node.position } });
                 if (plannedDimensions.has(id)) {
                     const dim = plannedDimensions.get(id)!;
                     txs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: dim.w, height: dim.h } } });

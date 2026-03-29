@@ -2,7 +2,6 @@ import { NodePayload } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { Edge } from '@xyflow/react';
 import { GraphState, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload } from './types';
-import { HistoryManager } from './HistoryManager';
 import { NodeRegistry } from './NodeRegistry'; // Static Import
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { getHandleVariant, isProbablyInputHandle } from '../utils/handleUtils';
@@ -335,7 +334,6 @@ export class Brain {
             edges: [],
         };
         this.topology.clear();
-        this.transactionManager.clearHistory();
         this.pendingPatch = { dirtyChainNodeIds: [] };
         if (this.worker.isEnabled()) {
             this.worker.getProxy()?.clearState();
@@ -584,9 +582,6 @@ export class Brain {
     /** Flag to suppress useBrainSync during relink drag (prevents circular history corruption) */
     public isReconnecting = false;
 
-    /** Flag to suppress useBrainSync MOVE_NODE/RESIZE_NODE during undo/redo (prevents Brain position being overwritten by stale React Flow state) */
-    public isUndoing = false;
-
     /** Flag to suppress useBrainSync UPDATE_NODE_DATA during an active resize drag.
      * Set to true in onResizeStart, false after onResizeEnd commits the atomic BATCH.
      * Prevents the intermediate updateNodeData calls from polluting history. */
@@ -613,36 +608,10 @@ export class Brain {
     }
 
 
-    // --- History Management (Rule #1) ---
-    public undo() {
-        this.isUndoing = true;
-        try {
-            this.transactionManager.undo((tx, record, silent) => this.applyTransaction(tx, record, silent));
-            this.emit('graphChanged', null);
-        } finally {
-            // Reset flag after a short delay so useBrainUpdates can finish its sync
-            // before useBrainSync processes the resulting React Flow node changes
-            setTimeout(() => { this.isUndoing = false; }, 50);
-        }
-    }
-
-    public redo() {
-        this.isUndoing = true;
-        try {
-            this.transactionManager.redo((tx, record, silent) => this.applyTransaction(tx, record, silent));
-            this.emit('graphChanged', null);
-        } finally {
-            setTimeout(() => { this.isUndoing = false; }, 50);
-        }
-    }
 
     // --- Transaction Handling ---
 
-    public applyTransaction(tx: Transaction, record: boolean = true, silent: boolean = false): { success: boolean; reason?: string } {
-        if (record) {
-            const inverseTx = this.transactionManager.createInverseTransaction(tx, this.state);
-            this.transactionManager.recordTransaction(tx, inverseTx);
-        }
+    public applyTransaction(tx: Transaction, silent: boolean = false): { success: boolean; reason?: string } {
 
         const res = this.transactionManager.applyTransaction(tx, this.state, {
             onNodeAdded: (node) => {
@@ -1174,10 +1143,6 @@ export class Brain {
             // We use a custom BATCH apply to capture individual errors
             const tx = { type: 'BATCH' as const, payload: allTxs };
 
-            // Generate inverse for the entire batch
-            const inverseTx = this.transactionManager.createInverseTransaction(tx, this.state);
-            this.transactionManager.recordTransaction(tx, inverseTx);
-
             // Helper to yield control to the browser for a paint
             const yieldToPaint = () => new Promise(r => {
                 if (typeof requestAnimationFrame !== 'undefined') {
@@ -1194,7 +1159,7 @@ export class Brain {
             // Apply Nodes manually silently in chunks
             for (let i = 0; i < nodeTxs.length; i += CHUNK_SIZE) {
                 const chunk = nodeTxs.slice(i, i + CHUNK_SIZE);
-                chunk.forEach(t => this.applyTransaction(t, false, true));
+                chunk.forEach(t => this.applyTransaction(t, true));
                 processed += chunk.length;
 
                 if (onProgress) onProgress(processed, totalTxs);
@@ -1213,7 +1178,7 @@ export class Brain {
             for (let i = 0; i < edgeTxs.length; i += CHUNK_SIZE) {
                 const chunk = edgeTxs.slice(i, i + CHUNK_SIZE);
                 chunk.forEach(t => {
-                    const res = this.applyTransaction(t, false, true);
+                    const res = this.applyTransaction(t, true);
                     if (!res.success) {
                         const payload = t.payload as Edge;
                         diagnostics.push(`Failed to connect ${payload.source}:${payload.sourceHandle} to ${payload.target}:${payload.targetHandle} - ${res.reason}`);
@@ -1274,6 +1239,10 @@ export class Brain {
     ): Promise<string[]> {
         return this.injectNodes(graph, clear, false, onProgress);
     }
+
+    /** No-op stubs to prevent crashes from existing UI calls */
+    public undo(): void {}
+    public redo(): void {}
 }
 
 

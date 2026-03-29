@@ -12,7 +12,7 @@ The Input-Output engine is structured with a clear separation of concerns betwee
 The **Brain** (`src/engine/Brain.ts`) is the central source of truth for the system.
 - **State Management**: Orchestrates the `GraphState` and provides the primary API for all graph mutations.
 - **Calculation Orchestration**: Manages the dependency graph and triggers evaluation cycles.
-- **Transaction Handling**: Interacts with the `TransactionManager` to record undoable actions and generate history patches.
+- **Transaction Handling**: Interacts with the `TransactionManager` to apply atomic graph changes and manage serialization.
 - **Offloading**: Communicates with Web Workers via the `BrainWorkerProxy` for asynchronous evaluation.
 
 ## 2. Sensory Hooks (Interaction Layer)
@@ -37,11 +37,11 @@ To guarantee a 120 FPS experience, the system separates transient input from per
 
 ### Transient Updates (Interaction)
 - **Context**: Continuous user actions such as dragging a node or adjusting a slider.
-- **Behavior**: The Interaction Layer updates the UI state immediately. These high-frequency updates are not committed to the `TransactionManager` to avoid historical noise.
+- **Behavior**: The Interaction Layer updates the UI state immediately. These high-frequency updates are not committed to the `TransactionManager` to avoid unnecessary processing cycles.
 
 ### Committed Transactions (Persistence)
 - **Context**: Finalized actions like `onDragStop` or `onSliderRelease`.
-- **Behavior**: The final state of the interaction is committed as an **Atomic Transaction** to the Brain, triggering a full history patch and graph synchronization.
+- **Behavior**: The final state of the interaction is committed as an **Atomic Transaction** to the Brain, triggering graph synchronization.
 
 > [!NOTE]
-> This separation allows for zero-latency interactions while maintaining a perfect, engineer-grade record of all deliberate graph modifications.
+> This separation allows for zero-latency interactions while maintaining persistent, engineer-grade graph modifications.

@@ -129,49 +129,4 @@ describe('Coordinate Normalization', () => {
         const absPos = brain.getAbsolutePosition('c1');
         expect(absPos).toEqual({ x: 10, y: 10 });
     });
-
-    it('should maintain absolute position consistency during undo/redo', () => {
-        // 1. Setup
-        brain.applyTransaction({
-            type: 'ADD_NODE',
-            payload: {
-                id: 'p1',
-                type: 'frame',
-                position: { x: 100, y: 100 },
-                data: { width: 200, height: 200 }
-            }
-        });
-        brain.applyTransaction({
-            type: 'ADD_NODE',
-            payload: {
-                id: 'c1',
-                position: { x: 50, y: 50 },
-                parentId: 'p1'
-            }
-        });
-
-        const initialAbs = brain.getAbsolutePosition('c1'); // {50, 50}
-
-        // 2. Move parent
-        brain.applyTransaction({
-            type: 'MOVE_NODE',
-            payload: {
-                id: 'p1',
-                position: { x: 300, y: 300 }
-            }
-        });
-
-        const movedAbs = brain.getAbsolutePosition('c1'); // {300-100+50, 300-100+50} = {250, 250}
-        expect(movedAbs).not.toEqual(initialAbs);
-
-        // 3. Undo
-        brain.undo();
-        expect(brain.getAbsolutePosition('c1')).toEqual(initialAbs);
-        expect(brain.getNode('p1')?.position).toEqual({ x: 100, y: 100 });
-
-        // 4. Redo
-        brain.redo();
-        expect(brain.getAbsolutePosition('c1')).toEqual(movedAbs);
-        expect(brain.getNode('p1')?.position).toEqual({ x: 300, y: 300 });
-    });
 });

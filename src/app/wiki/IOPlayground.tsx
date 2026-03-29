@@ -106,13 +106,13 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
                         height: n.height || def?.minHeight || 40,
                         data: n.data
                     }
-                }, false, true); // No history, silent registration
+                }, true); // Silent registration
             }
         });
 
         if (iogl) {
             initialEdges.forEach(e => {
-                brain.applyTransaction({ type: 'CONNECT', payload: e }, false, true);
+                brain.applyTransaction({ type: 'CONNECT', payload: e }, true);
             });
         }
 
@@ -122,7 +122,7 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
                 brain.applyTransaction({
                     type: 'UPDATE_NODE_DATA',
                     payload: { id: n.id, data: { _kick: Date.now() } }
-                }, false, false); // Silent: false triggers eval propagation
+                }, false); // Silent: false triggers eval propagation
             });
         }, 50);
 
@@ -200,7 +200,7 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
                             height: node.height || node.measured?.height || node.data.height
                         } 
                     }
-                }, false, true);
+                }, true);
             });
         }
     }, [nodes, namespace, brain]);

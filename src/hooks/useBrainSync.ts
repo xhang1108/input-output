@@ -27,15 +27,6 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
             return;
         }
 
-        // Guard: Skip MOVE_NODE / data syncs during Undo/Redo
-        // When Brain.undo() fires, useBrainUpdates pushes the restored position back to React Flow.
-        // useBrainSync would immediately see a position diff and re-write the OLD position back to Brain,
-        // cancelling the Undo. isUndoing flag prevents this race condition.
-        if (brain.isUndoing) {
-            prevNodesRef.current = new Map(nodes.map(n => [n.id, { ...n }]));
-            prevEdgesRef.current = new Set(edges.map(e => e.id));
-            return;
-        }
 
         // Fix: HMR Safety - ensure prevNodesRef is a Map
         if (!(prevNodesRef.current instanceof Map)) {
@@ -101,14 +92,11 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
 
             // Sync Position (Phase 1.4)
             if (node.position && (!prevNode || !prevNode.position || Math.abs(node.position.x - prevNode.position.x) > 0.5 || Math.abs(node.position.y - prevNode.position.y) > 0.5)) {
-                // Determine old position. If none, assume 0,0 
-                const oldPos = prevNode?.position || { x: 0, y: 0 };
                 syncTxs.push({
                     type: 'MOVE_NODE',
                     payload: {
                         id: node.id,
-                        position: node.position,
-                        oldPosition: oldPos
+                        position: node.position
                     }
                 });
             }

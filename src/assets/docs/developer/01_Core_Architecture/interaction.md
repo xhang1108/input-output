@@ -14,12 +14,12 @@ The system distinguishes between **Transient** maneuvers and **Persistent** stat
 ### Transient Interaction (Interaction Layer)
 - **Context**: Real-time maneuvers like dragging a node across the canvas, resizing a frame, or sliding a value.
 - **Latency**: 0ms. Handled entirely within the UI layer (React Flow) and the `Interaction Layer` hooks.
-- **Behavior**: These updates provide immediate visual feedback. They are **not** committed to the `HistoryManager` to avoid bloating the undo/redo stack with intermediate coordinate noise.
+- **Behavior**: These updates provide immediate visual feedback. They are **not** committed to the `TransactionManager` to avoid intermediate coordinate noise.
 
 ### Committed Transactions (Core Engine)
 - **Context**: Finalized actions such as `onDragStop`, `onSliderRelease`, or formal property committing.
 - **Behavior**: Upon completion of a gesture, the final state is committed to the **Brain** as an **Atomic Transaction**.
-- **History**: Every commitment generates a JSON patch, recording the action for full Undo/Redo fidelity and IOGL serialization.
+- **History**: Every commitment generates a JSON patch, recording the action for IOGL serialization and persistence.
 
 ## 2. Coordination (The Transaction Lifecycle)
 1. **Gesture Start**: `useHand` captures the initial state of the affected nodes.

@@ -17,57 +17,6 @@ describe('State Orchestration (Integration)', () => {
         brain.dispose();
     });
 
-    describe('Undo/Redo Stability', () => {
-        it('should maintain perfect state consistency through a complex transaction sequence', async () => {
-            // 1. Initial Step: Add two nodes
-            brain.applyTransaction({
-                type: 'ADD_NODE',
-                payload: { id: 'A', type: 'IN-01', position: { x: 0, y: 0 }, data: { value: 10 } }
-            });
-            brain.applyTransaction({
-                type: 'ADD_NODE',
-                payload: { id: 'B', type: 'MA-01', position: { x: 200, y: 0 }, data: { op: 'ADD' } }
-            });
-
-            const stateAfterAdd = JSON.stringify(Array.from(brain.getNodesMap().values()));
-
-            // 2. Connect them
-            brain.applyTransaction({
-                type: 'CONNECT',
-                payload: { id: 'e1', source: 'A', sourceHandle: 'out', target: 'B', targetHandle: 'in_a' }
-            });
-
-            // 3. Move them
-            brain.applyTransaction({
-                type: 'MOVE_NODE',
-                payload: { id: 'A', position: { x: 50, y: 50 } }
-            });
-
-            // 4. Undo Move
-            brain.undo();
-            expect(brain.getNode('A')?.position).toEqual({ x: 0, y: 0 });
-
-            // 5. Undo Connect
-            brain.undo();
-            expect(brain.getEdges()).toHaveLength(0);
-
-            // 6. Undo Add B
-            brain.undo();
-            expect(brain.getNodesMap().size).toBe(1);
-
-            // 7. Redo Add B
-            brain.redo();
-            expect(brain.getNodesMap().size).toBe(2);
-
-            // 8. Undo everything back to empty
-            brain.undo(); // Undo Redo
-            brain.undo(); // Undo Add B
-            brain.undo(); // Undo Add A
-            
-            expect(brain.getNodesMap().size).toBe(0);
-            expect(brain.getEdges()).toHaveLength(0);
-        });
-    });
 
     describe('Node Muting & Signal Flow', () => {
         it('should correctly deactivate downstream edges when a source node is muted', async () => {
