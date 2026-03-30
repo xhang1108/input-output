@@ -2,6 +2,7 @@ import { Edge } from '@xyflow/react';
 import { Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload, ResizeNodePayload, GraphState, NodeLogic } from './types';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { getUniqueLabel } from '../utils/labelUtils';
+import deepEqual from 'fast-deep-equal';
 
 export class TransactionManager {
     constructor() {}
@@ -64,6 +65,7 @@ export class TransactionManager {
                 if (node) {
                     node.value = PayloadUtils.wrap(p.value);
                     node.isInDirtyChain = true;
+                    node.lastUpdatedProperty = 'value';
                     hooks.onNodeDataUpdated?.(p.id);
                     return { success: true };
                 }
@@ -120,11 +122,20 @@ export class TransactionManager {
                 const p = tx.payload as MoveNodePayload;
                 const node = state.nodes.get(p.id);
                 if (node) {
-                    node.position = p.position;
-                    if (p.parentId !== undefined) {
-                        node.parentId = p.parentId;
+                    // DEADZONE GUARD: Ignore microscopic movements (< 0.5px) to prevent 
+                    // floating point oscillations from triggering unnecessary re-evaluations.
+                    const dx = Math.abs(node.position.x - p.position.x);
+                    const dy = Math.abs(node.position.y - p.position.y);
+                    const hasMovedSignificantly = dx > 0.5 || dy > 0.5;
+
+                    if (hasMovedSignificantly || node.parentId !== p.parentId) {
+                        node.position = p.position;
+                        if (p.parentId !== undefined) {
+                            node.parentId = p.parentId;
+                        }
+                        node.lastUpdatedProperty = 'position';
+                        hooks.onNodeMoved?.(p.id);
                     }
-                    hooks.onNodeMoved?.(p.id);
                     return { success: true };
                 }
                 return { success: false, reason: 'Node not found' };
@@ -139,6 +150,7 @@ export class TransactionManager {
                     // Sync to data object as well, as many functional components 
                     // (like MatrixInputNode) use data.width/height as the primary reference
                     node.data = { ...node.data, width: p.width, height: p.height };
+                    node.lastUpdatedProperty = 'dimensions';
                     hooks.onNodeDataUpdated?.(p.id); // Trigger visual update
                     return { success: true };
                 }
@@ -153,9 +165,14 @@ export class TransactionManager {
                     if (selected !== undefined) {
                         tNode.selected = !!selected;
                     }
-                    tNode.data = { ...tNode.data, ...remainingData };
-                    tNode.isInDirtyChain = true;
-                    hooks.onNodeDataUpdated?.(p.id);
+
+                    // Deep Equal Guard: Only mark dirty if data content actually changed
+                    if (Object.keys(remainingData).length > 0 && !deepEqual(tNode.data, { ...tNode.data, ...remainingData })) {
+                        tNode.data = { ...tNode.data, ...remainingData };
+                        tNode.isInDirtyChain = true;
+                        tNode.lastUpdatedProperty = `data:${Object.keys(remainingData).join(',')}`;
+                        hooks.onNodeDataUpdated?.(p.id);
+                    }
                     return { success: true };
                 }
                 return { success: false, reason: 'Node not found' };

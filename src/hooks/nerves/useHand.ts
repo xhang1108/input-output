@@ -571,6 +571,14 @@ export function useHand() {
             return;
         }
 
+        // Panning Guard: If middle-click (1) or space+left-click (0 with specific class)
+        // We also check for the flow pane specifically to avoid node-click triggering this.
+        const isMiddleClick = e.button === 1;
+        const isFlowPane = target.classList.contains('react-flow__pane');
+        if (isMiddleClick || (e.button === 0 && isFlowPane)) {
+            brain.setInteracting(true);
+        }
+
         if (e.button === 0) {
             const nodeElement = target.closest('.react-flow__node');
             if (nodeElement) {
@@ -645,9 +653,11 @@ export function useHand() {
             endCut();
             setMode('IDLE');
         } else {
+            // End of any interaction (including panning/dragging)
+            brain.setInteracting(false);
             handleModalMouseUp(e);
         }
-    }, [mode, endCut, handleModalMouseUp, selectNode]);
+    }, [mode, endCut, handleModalMouseUp, selectNode, brain]);
 
     // Prevent context menu during transform modes to allow right-click cancel
     useEffect(() => {
@@ -659,6 +669,17 @@ export function useHand() {
         window.addEventListener('contextmenu', handleContextMenu);
         return () => window.removeEventListener('contextmenu', handleContextMenu);
     }, [mode]);
+
+    // Failsafe: Cleanup interaction guard on global blur or mouse leave
+    useEffect(() => {
+        const resetGuard = () => brain.setInteracting(false);
+        window.addEventListener('blur', resetGuard);
+        window.addEventListener('mouseleave', resetGuard);
+        return () => {
+            window.removeEventListener('blur', resetGuard);
+            window.removeEventListener('mouseleave', resetGuard);
+        };
+    }, [brain]);
 
     const handleTypeNum = useCallback((char: string) => {
         if (!['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) return;
