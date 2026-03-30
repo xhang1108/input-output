@@ -23,6 +23,7 @@ export type ASTNode = {
     name?: string;
     value?: number | string | boolean;
     unit?: string; // Symbolic unit
+    meta?: Record<string, any>; // [1.2.0] Extra metadata for rendering (e.g. log base)
 };
 export type Matrix = unknown;  // Will be mathjs.Matrix in Phase 2.3
 

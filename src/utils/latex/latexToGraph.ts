@@ -1,184 +1,175 @@
+import * as math from 'mathjs';
+import { Transaction, TransactionType } from '../../engine/types';
+import { LATEX_REGISTRY, findConfigByLatex } from './latexRegistry';
 
-import { parseTex } from 'tex-math-parser';
-import { generateNodeId } from '@/utils/idGenerator';
-import { Transaction } from '@/engine/types';
-import { NODE_DEFINITIONS } from '@/definitions/nodeDefinitions';
+const generateNodeId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 6)}`;
 
-// Define MathJS AST Types (Simplified)
-interface MathNode {
-    isNode: boolean;
-    type: string;
-    mathjs?: string;
-    value?: number | string; // ConstantNode
-    name?: string; // SymbolNode
-    fn?: { name: string } | string; // FunctionNode, OperatorNode can have fn as string
-    op?: string; // OperatorNode
-    args?: MathNode[]; // OperatorNode, FunctionNode
-    content?: MathNode; // ParenthesisNode
+/**
+ * 🛡️ [V4.2.1] MathJS Friendly Pre-processor
+ * Strips LaTeX syntax and reformats for standard MathJS expression parsing.
+ * Uses space padding to help lexer distinguish operators.
+ */
+function preProcessForMathJS(latex: string): string {
+    let raw = (latex || '').trim();
+
+    // 1. Bracket & Structural Flattening
+    raw = raw.replace(/\\left\(/g, '(').replace(/\\right\)/g, ')')
+        .replace(/\\left\[/g, '[').replace(/\\right\]/g, ']')
+        .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '(($1)/($2))')
+        .replace(/\\sqrt\{([^}]*)\}/g, 'sqrt($1)');
+
+    // 2. Heavy Operator Protection
+    raw = raw.replace(/\\int\s*([a-z0-9]+)/gi, 'int(($1))')
+        .replace(/\\int\s*\((.*?)\)/g, 'int(($1))')
+        .replace(/\\nabla\s*([a-z0-9]+)/gi, 'nabla(($1))')
+        .replace(/\\nabla\s*\((.*?)\)/g, 'nabla(($1))')
+        .replace(/\\geq|>=/g, ' >= ')
+        .replace(/\\leq|<=/g, ' <= ')
+        .replace(/\\neq/g, ' != ')
+        .replace(/\\cdot|\\times/g, ' * ');
+
+    // 3. Final Sweep of remaining commands
+    raw = raw.replace(/\\([a-z]+)/gi, ' $1 ') // Add spaces around remaining commands like \pi
+        .replace(/\\/g, ''); // Strip remaining backslashes
+
+    // Only convert '=' to '-' if it's NOT part of a logical operator already handled
+    if (!raw.includes('>=') && !raw.includes('<=') && !raw.includes('!=')) {
+        raw = raw.replace(/=/g, ' - ');
+    }
+
+    raw = raw.replace(/d[x-z|t|y]\b/g, ''); // Clear dx, dt symbols
+
+    return raw;
 }
 
-/**
- * Maps MathJS operators/functions and symbols to Input-Output Operator Strings
- */
-const OP_MAP: Record<string, string> = {
-    // Functions
-    'add': 'ADD',
-    'subtract': 'SUB',
-    'multiply': 'MUL',
-    'divide': 'DIV',
-    'pow': 'POW',
-    'sqrt': 'SQRT',
-    'abs': 'ABS',
-    'sin': 'SIN',
-    'cos': 'COS',
-    'tan': 'TAN',
-    'log': 'LOG',
-    'ln': 'LN',
-
-    // Symbols
-    '+': 'ADD',
-    '-': 'SUB',
-    '*': 'MUL',
-    '/': 'DIV',
-    '^': 'POW',
-};
-
-/**
- * Parses LaTeX string and generates Input-Output Transactions to build the graph.
- * 
- * @param latex The LaTeX string to parse.
- * @param startPos The position to start placing nodes (approximate).
- * @returns An array of Transactions to apply to the Brain.
- */
 export function parseLatexToGraph(latex: string, startPos: { x: number, y: number }): Transaction[] {
+    const cleanMath = preProcessForMathJS(latex);
+
+    if (!cleanMath) {
+        throw new Error('LaTeX formula is empty.');
+    }
+
+    console.log('[LatexToGraph] V4.2.1 Ready String:', cleanMath);
+
+    let rootAst: any;
     try {
-        const rootAst = parseTex(latex);
-        const transactions: Transaction[] = [];
-        const symbolMap = new Map<string, string>(); // Symbol Name -> Node ID
+        rootAst = math.parse(cleanMath);
+    } catch (e: any) {
+        console.error('[LatexToGraph] MathJS Parse Failed:', e);
+        throw new Error(e.message || String(e));
+    }
 
-        // Helper to add node transaction
-        const addNodeTransaction = (id: string, type: string, position: { x: number, y: number }, data: any = {}, initialValue?: any) => {
-            const definition = NODE_DEFINITIONS.find(def => def.id === type);
-            const handles = definition?.handles || [];
+    const nodeTransactions: Transaction[] = [];
+    const edgeTransactions: Transaction[] = [];
+    const symbolMap = new Map<string, string>();
+    const astIdMap = new WeakMap<any, string>();
 
-            transactions.push({
+    /**
+     * Recursive AST Traversal - [V4.2.1 Atomic Continuity]
+     */
+    function processNode(node: any, depth: number, offset: number): string {
+        if (astIdMap.has(node)) return astIdMap.get(node)!;
+
+        const id = generateNodeId('LATEX');
+        astIdMap.set(node, id);
+
+        const currentPos = { x: startPos.x + depth * 300, y: startPos.y + offset * 180 };
+
+        // 1. Handle Operators, Functions & Relational comparisons
+        if (node.isOperatorNode || node.isFunctionNode || node.isRelationalNode) {
+            const opName = node.isOperatorNode ? node.op : (node.isRelationalNode ? node.conditionals[0] : node.name);
+            const args = node.isRelationalNode ? node.params : node.args;
+
+            const config = findConfigByLatex(opName || '');
+            const nodeType = config?.type || 'MA-01';
+
+            nodeTransactions.push({
                 type: 'ADD_NODE',
                 payload: {
-                    id,
-                    type,
-                    position,
-                    data: { ...data, handles },
-                    initialValue
+                    id, type: nodeType, position: currentPos,
+                    data: {
+                        label: config?.label || opName,
+                        op: config?.op || opName,
+                        ...(config?.initialData || {})
+                    }
                 }
             });
-        };
 
-        // Recursive traversal
-        // Returns the Node ID representing the result of this AST node
-        const traverse = (node: MathNode, level: number, offset: number): string => {
-            const currentPos = {
-                x: startPos.x + (offset * 250),
-                y: startPos.y + (level * 150)
-            };
+            args.forEach((arg: any, idx: number) => {
+                const childId = processNode(arg, depth - 1, offset + idx);
+                const targetHandle = (config?.handleMapping && config.handleMapping[idx]) || (idx === 0 ? 'in_a' : 'in_b');
 
-            const nodeTypeTag = node.mathjs || node.type;
+                edgeTransactions.push({
+                    type: 'CONNECT',
+                    payload: { id: `e_${childId}_${id}`, source: childId, target: id, sourceHandle: 'out_a', targetHandle }
+                });
+            });
+            return id;
+        }
 
-            if (nodeTypeTag === 'ConstantNode') {
-                const id = generateNodeId('IN-01');
-                const val = typeof node.value === 'string' ? parseFloat(node.value) : (node.value ?? 0);
-                addNodeTransaction(id, 'IN-01', currentPos, { label: String(val), value: val, type: 'scalar' }, val);
-                return id;
-            }
-
-            if (nodeTypeTag === 'SymbolNode') {
-                const name = node.name || 'x';
-                // Deduplicate Symbols
-                if (symbolMap.has(name)) {
-                    return symbolMap.get(name)!;
+        // 2. Constant Nodes (Numbers)
+        if (node.isConstantNode) {
+            nodeTransactions.push({
+                type: 'ADD_NODE',
+                payload: {
+                    id, type: 'IN-01', position: currentPos,
+                    data: { label: String(node.value), value: node.value, type: 'scalar' }
                 }
-                const id = generateNodeId('IN-01');
-                symbolMap.set(name, id);
-                addNodeTransaction(id, 'IN-01', currentPos, { label: name, value: 0, type: 'scalar' }, 0);
-                return id;
-            }
+            });
+            return id;
+        }
 
-            if (nodeTypeTag === 'ParenthesisNode' && node.content) {
-                return traverse(node.content, level, offset);
-            }
+        // 3. Symbol Nodes (Variables & Multi-char Constants like pi)
+        if (node.isSymbolNode) {
+            const name = node.name;
+            const config = findConfigByLatex(name);
+            const isConstant = config?.type === 'IN-06';
 
-            if (nodeTypeTag === 'OperatorNode' || nodeTypeTag === 'FunctionNode') {
-                let opName = 'add';
-                if (typeof node.fn === 'string') {
-                    opName = node.fn;
-                } else if (typeof node.fn === 'object' && node.fn.name) {
-                    opName = node.fn.name;
-                } else if (node.op) { // Fallback for operator nodes that might use 'op'
-                    opName = node.op;
+            if (!isConstant && symbolMap.has(name)) return symbolMap.get(name)!;
+            if (!isConstant) symbolMap.set(name, id);
+
+            nodeTransactions.push({
+                type: 'ADD_NODE',
+                payload: {
+                    id, type: isConstant ? 'IN-06' : 'IN-01',
+                    position: currentPos,
+                    data: {
+                        label: isConstant ? (config?.label || name) : name,
+                        op: isConstant ? config?.op : undefined,
+                        value: 0, type: 'scalar'
+                    }
                 }
+            });
+            return id;
+        }
 
-                let ioOp = 'ADD';
-                switch (opName) {
-                    case 'add': ioOp = 'ADD'; break;
-                    case 'subtract': ioOp = 'SUB'; break;
-                    case 'multiply': ioOp = 'MUL'; break;
-                    case 'divide': ioOp = 'DIV'; break;
-                    case 'pow': ioOp = 'POW'; break;
-                    case 'sin': ioOp = 'SIN'; break;
-                    case 'cos': ioOp = 'COS'; break;
-                    case 'tan': ioOp = 'TAN'; break;
-                    case 'sqrt': ioOp = 'SQRT'; break;
-                    case 'abs': ioOp = 'ABS'; break;
-                    case 'log': ioOp = 'LOG'; break; // Added log to switch
-                    case 'ln': ioOp = 'LN'; break; // Added ln to switch
-                    default: ioOp = OP_MAP[opName] || 'ADD'; break; // Fallback to OP_MAP for other cases
-                }
+        // 4. Parenthesis (Passthrough)
+        if (node.isParenthesisNode) {
+            const childId = processNode(node.content, depth, offset);
+            astIdMap.set(node, childId);
+            return childId;
+        }
 
-                let nodeType = 'MA-01'; // Default Math
-                if (ioOp === 'LOG' || ioOp === 'LN') nodeType = 'MA-16';
-
-                const id = generateNodeId(nodeType);
-                addNodeTransaction(id, nodeType, currentPos, { op: ioOp, label: ioOp });
-
-                // Process Children
-                if (node.args) {
-                    (node.args || []).map((arg: any, i: number) => {
-                        const sourceId = traverse(arg, level + 1, offset + i);
-
-                        let targetHandle = 'in_a';
-                        if (nodeType === 'MA-16') { // LOG, LN
-                            targetHandle = i === 0 ? 'in' : 'base';
-                        } else if (['ADD', 'SUB', 'MUL', 'DIV', 'POW'].includes(ioOp)) {
-                            targetHandle = i === 0 ? 'in_a' : 'in_b';
-                        } else {
-                            // Unary fallback (SIN, COS, SQRT, ABS etc. using MA-01)
-                            targetHandle = 'in_a';
-                        }
-
-                        transactions.push({
-                            type: 'CONNECT',
-                            payload: {
-                                id: generateNodeId('EDGE'),
-                                source: sourceId,
-                                target: id,
-                                sourceHandle: 'out',
-                                targetHandle: targetHandle
-                            }
-                        });
-                    });
-                }
-                return id;
-            }
-
-            console.warn('Unhandled AST Node:', node);
-            return '';
-        };
-
-        traverse(rootAst as unknown as MathNode, 0, 0);
-        return transactions;
-
-    } catch (e) {
-        console.error('LaTeX Parse Error:', e);
-        return [];
+        return id;
     }
-}
 
+    const rootNodeId = processNode(rootAst, 0, 0);
+
+    // 🛡️ [V1.0] Auto-Attach Result Node
+    if (rootNodeId) {
+        const resultId = generateNodeId('RESULT');
+        nodeTransactions.push({
+            type: 'ADD_NODE',
+            payload: {
+                id: resultId, type: 'OT-01', position: { x: startPos.x + 400, y: startPos.y },
+                data: { label: 'Result', mode: 'auto' }
+            }
+        });
+        edgeTransactions.push({
+            type: 'CONNECT',
+            payload: { id: `e_${rootNodeId}_${resultId}`, source: rootNodeId, target: resultId, sourceHandle: 'out_a', targetHandle: 'in_a' }
+        });
+    }
+
+    return [...nodeTransactions, ...edgeTransactions];
+}

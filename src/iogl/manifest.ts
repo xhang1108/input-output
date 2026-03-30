@@ -33,7 +33,7 @@ const ARRAY_INPUT: IOGLSchema = { data: ["array"], wrapPayload: "array", payload
 const COLOR_INPUT: IOGLSchema = { data: ["value", "depth"], wrapPayload: "value", payloadType: 'color' };
 
 const SINGLE_OUT: IOGLSchema = { outputs: ["out_a"] };
-const SINGLE_IN: IOGLSchema = { inputs: ["in_a"] };
+const SINGLE_IN: IOGLSchema = { inputs: ["in_a", "in_b"] };
 
 /**
  * IOGL 1.0 Node Registry Manifest
@@ -76,7 +76,7 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   },
 
   // --- 2. Math Family ---
-  "MA-01": { ...MODE_ONLY, ...SINGLE_OUT },
+  "MA-01": { ...MODE_ONLY, ...SINGLE_OUT, inputs: ["in_a", "in_b"] },
   "MA-02": {
     ...MODE_ONLY,
     ...SINGLE_OUT,

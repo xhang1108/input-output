@@ -117,10 +117,10 @@ export function Body({
 
     const effectiveSnap = isSnapping || manualSnap;
 
-    const { 
-        interactionMode, 
-        isRestoring, 
-        push 
+    const {
+        interactionMode,
+        isRestoring,
+        push
     } = useHistoryStore();
     const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
 
@@ -766,7 +766,7 @@ export function Body({
                     minZoom={0.1}
                     maxZoom={4}
                 >
-                   <Background color="#555" gap={20} size={1} />
+                    <Background color="#555" gap={20} size={1} />
                     {showDebugStats && <DebugOverlay mode={mode} />}
 
 

@@ -59,10 +59,11 @@ export class BrainWorkerProxy {
     private auditLog: AuditEntry[] = [];
     private callbacks: WorkerProxyCallbacks;
     private evalsSinceLastHealth = 0;
-    private readonly HEALTH_CHECK_INTERVAL = 50;
+    private readonly HEALTH_CHECK_INTERVAL = 200; // Increased to reduce jitter
     private retryCount = 0;
     private readonly MAX_RETRIES = 3;
     private isBlocked = false;
+    private evalDebounceTimer: any = null;
 
     // Reference to main-thread brain state for HEALTH validation
     private getMainThreadCounts: (() => { nodeCount: number; edgeCount: number }) | null = null;
@@ -97,18 +98,10 @@ export class BrainWorkerProxy {
                 console.error(`[BrainWorkerProxy] Worker crashed: ${message} at ${filename}:${lineno}`);
                 debugManager.trackWorkerError({ message, filename, lineno });
 
-                // Detect Ad-blocker / Network failures
-                const isNetworkError = message.includes('NetworkError') || 
-                                     message.toLowerCase().includes('failed to fetch') ||
-                                     message.toLowerCase().includes('importscripts');
-
-                if (isNetworkError) {
+                if (message.includes('NetworkError') || message.toLowerCase().includes('failed to fetch')) {
                     this.retryCount++;
-                    console.warn(`[BrainWorkerProxy] Network/Loading error detected (Retry ${this.retryCount}/${this.MAX_RETRIES})`);
-                    
                     if (this.retryCount >= this.MAX_RETRIES) {
                         this.isBlocked = true;
-                        console.error('[BrainWorkerProxy] Persistent loading failure. Marking as BLOCKED.');
                         this.callbacks.onError(this.epoch, 'ENGINE_BLOCKED');
                         return;
                     }
@@ -117,12 +110,6 @@ export class BrainWorkerProxy {
                 this.handleCrash();
             };
 
-            this.worker.onmessageerror = (error) => {
-                console.error('[BrainWorkerProxy] Message error:', error);
-                this.handleCrash();
-            };
-
-            // Send INIT with shared config
             this.send({ type: 'INIT', msgId: this.nextMsgId(), config: MATH_CONFIG });
         } catch (error) {
             console.error('[BrainWorkerProxy] Failed to spawn Worker:', error);
@@ -131,26 +118,19 @@ export class BrainWorkerProxy {
 
     private handleCrash() {
         console.warn('[BrainWorkerProxy] Respawning Worker...');
-        debugManager.trackWorkerError('Worker crashed (Respawning)');
         this.pendingRequest = false;
         this.queuedPatch = null;
+        if (this.evalDebounceTimer) clearTimeout(this.evalDebounceTimer);
         
-        // Notify main thread that a crash occurred so locks (like isRecalculating) can be released
         this.callbacks.onError(this.epoch, 'Worker crashed unexpectedly');
 
-        // Terminate old worker
         if (this.worker) {
             try { this.worker.terminate(); } catch { /* ignore */ }
             this.worker = null;
         }
 
-        // Respawn
         this.spawnWorker();
-
-        // Request full sync from Brain
-        if (this.requestFullSync) {
-            this.requestFullSync();
-        }
+        if (this.requestFullSync) this.requestFullSync();
     }
 
     // ─── Message Sending ───────────────────────────────────────────
@@ -178,15 +158,11 @@ export class BrainWorkerProxy {
 
             case 'RESULT': {
                 this.pendingRequest = false;
-
-                // Stale guard: discard if epoch doesn't match
                 if (msg.epoch < this.epoch) {
-                    // Process queued patch if any
                     this.flushQueue();
                     return;
                 }
 
-                // Hydrate results: convert dehydrated payloads back to NodePayload
                 const patches = new Map<string, NodePayload>();
                 for (const [id, sp] of Object.entries(msg.patches)) {
                     patches.set(id, {
@@ -199,17 +175,14 @@ export class BrainWorkerProxy {
 
                 const latencyMs = this.requestStartTime ? Date.now() - this.requestStartTime : 0;
                 this.requestStartTime = null;
-
                 this.callbacks.onResults(patches, latencyMs);
 
-                // Periodic HEALTH check
                 this.evalsSinceLastHealth++;
                 if (this.evalsSinceLastHealth >= this.HEALTH_CHECK_INTERVAL) {
                     this.requestHealthCheck();
                     this.evalsSinceLastHealth = 0;
                 }
 
-                // Process queued patch if any
                 this.flushQueue();
                 break;
             }
@@ -235,29 +208,36 @@ export class BrainWorkerProxy {
     /** Increment epoch and request evaluation with incremental patch */
     public requestEval(patch: IncrementalPatch) {
         this.epoch++;
+        this.queuedPatch = patch;
 
-        if (this.pendingRequest) {
-            // Coalesce: keep only the latest patch
-            this.queuedPatch = patch;
-            return;
-        }
+        if (this.pendingRequest) return;
 
-        this.pendingRequest = true;
-        this.requestStartTime = Date.now();
-        this.send({
-            type: 'EVAL',
-            msgId: this.nextMsgId(),
-            epoch: this.epoch,
-            patches: patch,
-        });
+        // [V5.3.0] Debounce evaluation to prevent storming
+        if (this.evalDebounceTimer) clearTimeout(this.evalDebounceTimer);
+        this.evalDebounceTimer = setTimeout(() => {
+            if (this.pendingRequest) return;
+            
+            this.pendingRequest = true;
+            this.requestStartTime = Date.now();
+            const currentPatch = this.queuedPatch || patch;
+            this.queuedPatch = null;
+
+            this.send({
+                type: 'EVAL',
+                msgId: this.nextMsgId(),
+                epoch: this.epoch,
+                patches: currentPatch,
+            });
+        }, 32); 
     }
 
     /** Atomic full-sync + eval: replace graph then compute dirty nodes */
     public syncAndEval(snapshot: SerializedGraphSnapshot, dirtyChainNodeIds: string[]) {
+        if (this.evalDebounceTimer) clearTimeout(this.evalDebounceTimer);
         this.epoch++;
         this.pendingRequest = true;
         this.requestStartTime = Date.now();
-        this.queuedPatch = null; // Clear any queued incremental patches
+        this.queuedPatch = null; 
         this.send({
             type: 'SYNC_AND_EVAL',
             msgId: this.nextMsgId(),
@@ -279,7 +259,6 @@ export class BrainWorkerProxy {
         });
     }
 
-    /** Update worker math configuration (precision) */
     public updateConfig(precision: MathPrecision) {
         this.send({
             type: 'UPDATE_CONFIG',
@@ -288,19 +267,17 @@ export class BrainWorkerProxy {
         });
     }
 
-    /** Clear all Worker state (project switch) */
     public clearState() {
         this.pendingRequest = false;
         this.queuedPatch = null;
+        if (this.evalDebounceTimer) clearTimeout(this.evalDebounceTimer);
         this.send({ type: 'CLEAR_STATE', msgId: this.nextMsgId() });
     }
 
-    /** Get current epoch */
     public getEpoch(): number {
         return this.epoch;
     }
 
-    /** Register references for HEALTH validation */
     public registerHealthRefs(
         getCounts: () => { nodeCount: number; edgeCount: number },
         fullSync: () => void
@@ -309,35 +286,27 @@ export class BrainWorkerProxy {
         this.requestFullSync = fullSync;
     }
 
-    /** Export audit log for debugging */
     public getAuditLog(): AuditEntry[] {
         return [...this.auditLog];
     }
 
-    /** Terminate and cleanup the Worker */
     public dispose() {
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
         }
+        if (this.evalDebounceTimer) clearTimeout(this.evalDebounceTimer);
     }
 
     // ─── Internal Helpers ──────────────────────────────────────────
 
-    /**
-     * Helper to strip functions and non-serializable values from objects 
-     * before sending across postMessage.
-     */
     private static sanitizeData(obj: any): any {
         if (obj === null || typeof obj !== 'object') return obj;
         if (Array.isArray(obj)) return obj.map(v => BrainWorkerProxy.sanitizeData(v));
 
         const result: Record<string, any> = {};
         for (const [key, value] of Object.entries(obj)) {
-            // Skip functions
             if (typeof value === 'function') continue;
-
-            // Recursively sanitize objects and arrays
             if (value !== null && typeof value === 'object') {
                 result[key] = BrainWorkerProxy.sanitizeData(value);
             } else {
@@ -357,14 +326,7 @@ export class BrainWorkerProxy {
 
     private requestHealthCheck() {
         if (!this.getMainThreadCounts) return;
-
-        // Pick 3 random node IDs for hash sampling
-        const counts = this.getMainThreadCounts();
-        // We don't have direct access to node IDs here — Brain will provide via getCounts
-        this.send({
-            type: 'HEALTH_CHECK',
-            msgId: this.nextMsgId(),
-        });
+        this.send({ type: 'HEALTH_CHECK', msgId: this.nextMsgId() });
     }
 
     private validateHealth(msg: Extract<WorkerResponse, { type: 'HEALTH' }>) {
@@ -372,27 +334,16 @@ export class BrainWorkerProxy {
         const mainCounts = this.getMainThreadCounts();
 
         if (msg.nodeCount !== mainCounts.nodeCount || msg.edgeCount !== mainCounts.edgeCount) {
-            console.warn(
-                `[BrainWorkerProxy] HEALTH mismatch! ` +
-                `Main: ${mainCounts.nodeCount}N/${mainCounts.edgeCount}E, ` +
-                `Worker: ${msg.nodeCount}N/${msg.edgeCount}E. Forcing SYNC_GRAPH.`
-            );
-            if (this.requestFullSync) {
-                this.requestFullSync();
-            }
+            console.warn(`[BrainWorkerProxy] HEALTH mismatch! Main: ${mainCounts.nodeCount}N/${mainCounts.edgeCount}E, Worker: ${msg.nodeCount}N/${msg.edgeCount}E. Forcing SYNC_GRAPH.`);
+            if (this.requestFullSync) this.requestFullSync();
         }
     }
 
     private pushAudit(direction: 'OUT' | 'IN', type: string, msgId: number, epoch: number) {
         this.auditLog.push({ direction, type, msgId, epoch, timestamp: Date.now() });
-        if (this.auditLog.length > AUDIT_LOG_SIZE) {
-            this.auditLog.shift();
-        }
+        if (this.auditLog.length > AUDIT_LOG_SIZE) this.auditLog.shift();
     }
 
-    // ─── Serialization Helpers (Static) ────────────────────────────
-
-    /** Serialize a Brain NodeLogic into a Worker-safe SerializedNodeLogic */
     static serializeNode(node: NodeLogic): import('./SerializableGraph').SerializedNodeLogic {
         return {
             id: node.id,
@@ -400,15 +351,14 @@ export class BrainWorkerProxy {
             value: node.value ? {
                 type: node.value.type,
                 value: PayloadUtils.dehydrate(node.value.value),
-                symbol: PayloadUtils.dehydrate(node.value.symbol) as import('../types/payload').ASTNode | null,
-                meta: PayloadUtils.dehydrate(node.value.meta) as Record<string, unknown>,
+                symbol: PayloadUtils.dehydrate(node.value.symbol) as any,
+                meta: PayloadUtils.dehydrate(node.value.meta) as any,
             } : null,
             data: BrainWorkerProxy.sanitizeData(node.data) || {},
             isInDirtyChain: !!node.isInDirtyChain,
         };
     }
 
-    /** Serialize a React Flow Edge into a Worker-safe SerializedEdge */
     static serializeEdge(edge: Edge): import('./SerializableGraph').SerializedEdge {
         return {
             id: edge.id,
@@ -419,11 +369,7 @@ export class BrainWorkerProxy {
         };
     }
 
-    /** Build a full graph snapshot from Brain state */
-    static buildSnapshot(
-        nodesMap: Map<string, NodeLogic>,
-        edges: Edge[]
-    ): SerializedGraphSnapshot {
+    static buildSnapshot(nodesMap: Map<string, NodeLogic>, edges: Edge[]): SerializedGraphSnapshot {
         return {
             nodes: Array.from(nodesMap.values()).map(n => BrainWorkerProxy.serializeNode(n)),
             edges: edges.map(e => BrainWorkerProxy.serializeEdge(e)),

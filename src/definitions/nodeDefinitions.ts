@@ -247,6 +247,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'B' },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
+        inputs: ['in_a', 'in_b'],
         defaultData: { mode: 'ADD', label: 'Basic Math' },
         aliases: ['basic math', 'arithmetic'],
         params: [
@@ -276,6 +277,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
+        inputs: ['in_a', 'in_b'],
         defaultData: { mode: 'POW', label: 'Advanced Math' },
         aliases: ['advanced math'],
         params: [
@@ -307,6 +309,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             },
             { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
+        inputs: ['in_a', 'in_b'],
         defaultData: { mode: 'LN' },
         aliases: ['log', 'exponential'],
         params: [
@@ -353,6 +356,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Input' },
             { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
+        inputs: ['in_a'],
         defaultData: { mode: 'ROUND', precision: 0 },
         aliases: ['round', 'ceil', 'floor', 'trunc'],
         params: [
@@ -448,6 +452,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_b', type: 'target', variant: 'single', dataType: 'scalar', label: 'r' },
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
+        inputs: ['in_a', 'in_b'],
         defaultData: { mode: 'nCr' },
         aliases: ['probability', 'counting'],
         opTokens: ['NCR', 'NPR', 'FACTORIAL'],

@@ -51,6 +51,7 @@ export interface NodeDefinition {
     params?: NodeParameter[];
     opTokens?: string[];     // Used for implicit IOGL operation mapping
     aliases?: string[];      // Quick search terms for NodePicker (e.g. 'd/dx')
+    inputs?: string[];       // [1.2.0] Deterministic input handle order for LaTeX and Serializer
     draggable?: boolean;    // Optional. If false, node cannot be dragged directly. Default: true
     layoutMetadata?: {
         uiOrigin: [number, number];       // React Flow rendering origin

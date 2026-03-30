@@ -102,3 +102,12 @@ export interface InjectableGraph {
         data?: Record<string, unknown>;
     }[];
 }
+
+/**
+ * 🛡️ [V1.0] Master Project Data format for serialization.
+ */
+export interface ProjectData extends InjectableGraph {
+    version?: string;
+    timestamp?: number;
+    viewport?: { x: number; y: number; zoom: number };
+}
