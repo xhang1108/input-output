@@ -97,14 +97,20 @@ export function useHand() {
 
     const getPivot = (nodes: Node[], nodeMap: Map<string, Node>): XYPosition => {
         let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
         nodes.forEach(n => {
             const absPos = getAbsolutePosition(n.id, nodeMap);
             minX = Math.min(minX, absPos.x);
             minY = Math.min(minY, absPos.y);
+            maxX = Math.max(maxX, absPos.x);
+            maxY = Math.max(maxY, absPos.y);
         });
         
-        // Pivot is now the absolute Top-Left (Red-Dot of Red-Dots)
-        return { x: minX, y: minY };
+        // Pivot is now the absolute BBox Center of Top-Left (Red-Dot) points
+        return { 
+            x: (minX + maxX) / 2, 
+            y: (minY + maxY) / 2 
+        };
     };
 
     const applyScale = useCallback((scaleFactor: number) => {
