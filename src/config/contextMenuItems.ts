@@ -18,6 +18,7 @@ interface ContextMenuActions {
     detachSelected: () => void;
     deleteSelected: () => void;
     viewSpecs: () => void;
+    alignSelectedNodes: (axis: 'X' | 'Y') => void;
     logAction: (msg: string) => void;
 }
 
@@ -27,6 +28,8 @@ export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: nu
         { label: 'Reset View', action: () => actions.resetView() },
         { label: 'Paste', shortcut: 'Ctrl+V', action: () => actions.pasteFromClipboard() },
         { label: 'Select All', shortcut: 'A', action: () => actions.selectAll() },
+        { label: 'Align Left', action: () => actions.alignSelectedNodes('X') },
+        { label: 'Align Top', action: () => actions.alignSelectedNodes('Y') },
     ];
 }
 

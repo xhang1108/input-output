@@ -1,6 +1,7 @@
 import { Brain } from './Brain';
 import { InjectableGraph } from './types';
 import LZString from 'lz-string';
+import { GeometryUtils } from '../utils/GeometryUtils';
 
 export interface ProjectData {
     version: string;
@@ -10,7 +11,7 @@ export interface ProjectData {
 }
 
 export class Serializer {
-    public static readonly VERSION = '1.0.0';
+    public static readonly VERSION = '1.1.0';
 
     /**
      * Serializes the current graph and settings into a compressed URL-safe string.
@@ -44,11 +45,44 @@ export class Serializer {
         try {
             const jsonString = LZString.decompressFromEncodedURIComponent(encoded);
             if (!jsonString) return null;
-            return JSON.parse(jsonString) as ProjectData;
+            const data = JSON.parse(jsonString) as ProjectData;
+
+            // ─── Coordinate Migration (Version 1.0.0 -> 1.1.0) ───
+            // If the version is below 1.1.0, we assume positions are Center-based.
+            // We need to migrate them to Top-Left ([0, 0]).
+            const version = data.version || '1.0.0';
+            if (this.isLegacyVersion(version, '1.1.0')) {
+                console.log(`[Serializer] Migrating graph from ${version} to ${this.VERSION} (Coordinate Refactor)`);
+                if (data.graph && data.graph.nodes) {
+                    data.graph.nodes = data.graph.nodes.map(node => {
+                        const measured = {
+                            width: typeof node.data?.width === 'number' ? node.data.width : undefined,
+                            height: typeof node.data?.height === 'number' ? node.data.height : undefined
+                        };
+                        const newPos = GeometryUtils.migratePosition(node.position, measured);
+                        return { ...node, position: newPos };
+                    });
+                }
+                data.version = this.VERSION;
+            }
+
+            return data;
         } catch (e) {
             console.error('[Serializer] Failed to deserialize data:', e);
             return null;
         }
+    }
+
+    private static isLegacyVersion(current: string, target: string): boolean {
+        const c = current.split('.').map(Number);
+        const t = target.split('.').map(Number);
+        for (let i = 0; i < Math.max(c.length, t.length); i++) {
+            const cv = c[i] || 0;
+            const tv = t[i] || 0;
+            if (cv < tv) return true;
+            if (cv > tv) return false;
+        }
+        return false;
     }
 
     private static cleanSettings(settings: Record<string, unknown>): Record<string, unknown> {

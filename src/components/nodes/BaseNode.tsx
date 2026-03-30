@@ -30,8 +30,9 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     const [isError, setIsError] = useState(false);
     const labelSetRef = useRef<Set<string>>(new Set());
     const inputRef = useRef<HTMLInputElement>(null);
-    const { updateNodeData } = useReactFlow();
+    const { updateNodeData, setNodes } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
+    const node = useStore((s: ReactFlowState) => s.nodeLookup.get(id));
     const targetConnections = useNodeConnections({ handleType: 'target' });
     const sourceConnections = useNodeConnections({ handleType: 'source' });
     const connections = [...targetConnections, ...sourceConnections];
@@ -59,6 +60,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
         return unsubscribe;
     }, [id, brain]);
 
+    // ─── Capsule Expansion Compensation (REMOVED) ───
     useEffect(() => {
         if (isRenaming && inputRef.current) {
             inputRef.current.focus();
@@ -219,7 +221,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
      * Calculate Y position for a specific handle or fallback to first.
      */
     const getHandleY = (handles: HandleConfig[], preferredIds: string[]) => {
-        if (handles.length === 0) return `calc(${NODE_LAYOUT.headerH}px + (100% - ${NODE_LAYOUT.headerH}px) / 2)`;
+        if (handles.length === 0) return `${NODE_LAYOUT.headerH + 20}px`; // Fixed top offset, no centering
 
         const target = handles.find(h => preferredIds.includes(h.id)) || handles[0];
 
@@ -246,6 +248,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                 background: 'var(--node-bg)',
                 opacity: visualState?.muted ? 0.4 : 1,
                 filter: visualState?.muted ? 'grayscale(0.4)' : 'none',
+                transformOrigin: '0 0',
                 ...style
             }}
             onDoubleClick={onDoubleClick}
@@ -304,8 +307,8 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             </div>
 
             {/* Content Body — overflow-hidden here clips Sticky Note text without affecting Handles */}
-            <div className="p-3 flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden rounded-b-xl">
-                {children ? children : (
+            <div className="p-2 flex-1 flex flex-col items-start justify-start min-h-0 min-w-0 overflow-hidden rounded-b-xl">
+               {children ? children : (
                     <div className="text-[10px] text-zinc-500 font-mono">ID: {id}</div>
                 )}
             </div>

@@ -204,6 +204,50 @@ export function useSelection() {
         }
     }, [getNodes, getEdges]);
 
+    const alignSelectedNodes = useCallback((axis: 'X' | 'Y') => {
+        const nodes = getNodes();
+        const selected = nodes.filter(n => n.selected);
+        if (selected.length < 2) return;
+
+        // 1. Find the Absolute Minimum (The Anchor)
+        const positions = selected.map(n => n.position);
+        const minVal = Math.min(...positions.map(p => axis === 'X' ? p.x : p.y));
+
+        const forward: Transaction[] = [];
+        const inverse: Transaction[] = [];
+
+        // 2. Build Transitions (Strictly Red-Dot to Anchor)
+        selected.forEach(node => {
+            const newPos = {
+                x: axis === 'X' ? minVal : node.position.x,
+                y: axis === 'Y' ? minVal : node.position.y
+            };
+
+            // Precision check
+            if (Math.abs(newPos.x - node.position.x) > 0.1 || Math.abs(newPos.y - node.position.y) > 0.1) {
+                forward.push({ type: 'MOVE_NODE', payload: { id: node.id, position: newPos } });
+                inverse.push({ type: 'MOVE_NODE', payload: { id: node.id, position: { ...node.position } } });
+            }
+        });
+
+        if (forward.length > 0) {
+            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            
+            // Sync UI
+            setNodes(nds => nds.map(n => {
+                const tx = forward.find(f => (f.payload as { id: string }).id === n.id);
+                return tx ? { ...n, position: (tx.payload as { position: { x: number, y: number } }).position } : n;
+            }));
+
+            history.push({
+                id: `align_${Date.now()}`,
+                description: `Align ${axis === 'X' ? 'Left' : 'Top'} (${selected.length} nodes)`,
+                forward,
+                inverse
+            });
+        }
+    }, [getNodes, setNodes, brain, history, brain.applyTransaction]);
+
     // --- Selection Helpers ---
     const clearSelection = useCallback(() => {
         setNodes(nds => nds.map(n => ({ ...n, selected: false })));
@@ -233,6 +277,7 @@ export function useSelection() {
 
         detachSelected,
         swapConnections,
+        alignSelectedNodes,
         clearSelection,
         selectNode,
     };

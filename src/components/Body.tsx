@@ -189,6 +189,7 @@ export function Body({
         cutPath,
         swapConnections,
         detachSelected,
+        alignSelectedNodes,
         clearSelection,
         selectNode,
         handleTypeNum,
@@ -688,8 +689,6 @@ export function Body({
                     // Explicitly disable native edge updates to prioritize our Relink system
                     edgesReconnectable={false}
 
-                    nodeOrigin={[0.5, 0.5]}
-                    snapToGrid={effectiveSnap}
                     selectionKeyCode={null}
                     multiSelectionKeyCode={['Shift']}
 
@@ -762,11 +761,12 @@ export function Body({
 
                     // Snapping Logic
 
+                    nodeOrigin={[0, 0]}
                     snapGrid={effectiveSnap ? [20, 20] : undefined} // Only provide grid when enabled
                     minZoom={0.1}
                     maxZoom={4}
                 >
-                    <Background color="#555" gap={20} size={1} />
+                   <Background color="#555" gap={20} size={1} />
                     {showDebugStats && <DebugOverlay mode={mode} />}
 
 
@@ -811,6 +811,7 @@ export function Body({
                                     detachSelected,
                                     deleteSelected,
                                     viewSpecs: () => { }, // Canvas has no specs
+                                    alignSelectedNodes,
                                     logAction,
                                 }, contextMenu.x, contextMenu.y)
                                 : (() => {
@@ -839,6 +840,7 @@ export function Body({
                                         copyToClipboard,
                                         detachSelected,
                                         deleteSelected,
+                                        alignSelectedNodes,
                                         logAction,
                                     }, hasSpecs);
                                 })()

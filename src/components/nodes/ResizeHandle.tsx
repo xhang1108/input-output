@@ -45,113 +45,12 @@ export const ResizeHandle = memo(({
     // When resizing starts, if the node is in Center Origin [0.5, 0.5],
     // we must shift its position to [0, 0] (top-left) to ensure 
     // visual stability while the user drags the handle.
-    const injectResizeStart = useCallback(() => {
-        const node = getNode(id);
-        if (!node) return;
-
-        // Only swap if it's currently at center origin AND definition doesn't specify [0, 0]
-        const currentOrigin = node.origin || [0.5, 0.5];
-        const definition = NODE_DEFINITIONS.find(d => d.id === node.type);
-        const nativeOrigin = definition?.layoutMetadata?.uiOrigin || [0.5, 0.5];
-
-        // Skip swap if it's already top-left anchored natively
-        if (nativeOrigin[0] === 0 && nativeOrigin[1] === 0) {
-            onResizeStart?.();
-            return;
-        }
-
-        if (currentOrigin[0] === 0.5 && currentOrigin[1] === 0.5) {
-            const w = node.measured?.width ?? node.width ?? 0;
-            const h = node.measured?.height ?? node.height ?? 0;
-
-            // Calculate Top-Left position from Center position
-            const newPos = {
-                x: node.position.x - w * 0.5,
-                y: node.position.y - h * 0.5
-            };
-
-            setNodes(nds => nds.map(n => n.id === id ? {
-                ...n,
-                origin: [0, 0] as [number, number],
-                position: newPos
-            } : n));
-        }
-        onResizeStart?.();
-    }, [id, getNode, setNodes, onResizeStart]);
-
-    const injectResizeEnd = useCallback((dims: ResizeDimensions) => {
-        const { zoom } = getViewport();
-        const node = getNode(id);
-        const definition = NODE_DEFINITIONS.find(d => d.id === node?.type);
-
-        // Use metadata limits if available, otherwise default to reasonable minimums
-        const minW = definition?.minWidth ?? 80;
-        const minH = definition?.minHeight ?? 40;
-
-        // Compensate dimensions for zoom before passing to consumer
-        const compensatedDims = {
-            ...dims,
-            screenW: Math.max(minW, dims.screenW / zoom),
-            screenH: Math.max(minH, dims.screenH / zoom),
-            deltaX: dims.deltaX / zoom,
-            deltaY: dims.deltaY / zoom
-        };
-
-        if (!node) {
-            onResizeEnd?.(compensatedDims);
-            return;
-        }
-
-        // Restore Center Origin [0.5, 0.5] if it was natively centered
-        const currentOrigin = node.origin || [0, 0];
-        const nativeOrigin = definition?.layoutMetadata?.uiOrigin || [0.5, 0.5];
-
-        if (currentOrigin[0] === 0 && currentOrigin[1] === 0 && nativeOrigin[0] === 0.5) {
-            const w = node.measured?.width ?? node.width ?? 0;
-            const h = node.measured?.height ?? node.height ?? 0;
-
-            // Calculate Center position from Top-Left position
-            const newPos = {
-                x: node.position.x + w * 0.5,
-                y: node.position.y + h * 0.5
-            };
-
-            setNodes(nds => nds.map(n => n.id === id ? {
-                ...n,
-                origin: [0.5, 0.5] as [number, number],
-                position: newPos
-            } : n));
-        }
-
-        // The actual brain.resizeNode is now handled by useNodeDimensions
-        // where it has access to the component-specific snapped dimensions (onProject).
-
-        onResizeEnd?.(compensatedDims);
-    }, [id, getNode, getViewport, setNodes, onResizeEnd]);
-
-    const injectOnResize = useCallback((dims: ResizeDimensions) => {
-        const { zoom } = getViewport();
-        const node = getNode(id);
-        const definition = NODE_DEFINITIONS.find(d => d.id === node?.type);
-
-        // Use metadata limits if available, otherwise default to reasonable minimums
-        const minW = definition?.minWidth ?? 80;
-        const minH = definition?.minHeight ?? 40;
-
-        onResize({
-            ...dims,
-            screenW: Math.max(minW, dims.screenW / zoom),
-            screenH: Math.max(minH, dims.screenH / zoom),
-            deltaX: dims.deltaX / zoom,
-            deltaY: dims.deltaY / zoom
-        });
-    }, [id, getNode, onResize, getViewport]);
-
     const { handleResizeStart, isResizing } = useFlexibleResize({
         targetRef,
-        onResize: injectOnResize,
-        onResizeStart: injectResizeStart,
-        onResizeEnd: injectResizeEnd
+        onResize,
+        onResizeStart,
+        onResizeEnd,
+        zoom: getViewport().zoom
     });
 
     // Determine cursor and rotation based on position

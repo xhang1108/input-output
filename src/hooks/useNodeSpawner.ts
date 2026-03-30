@@ -54,25 +54,11 @@ export function useNodeSpawner({
     const spawnNode = useCallback((type: string, label: string, extraData?: unknown, isContinuous?: boolean, screenPos?: { x: number, y: number }): Node | null => {
         logAction(`Spawn Node: ${type}`);
 
-        let offsetX = 0;
-        let offsetY = 0;
-
-        if (isContinuous) {
-            // Adjust offset by current zoom level so the visual distance remains constant
-            const zoom = getCurrentZoom();
-            const currentCount = spawnCountRef.current;
-            // Base clearance is in screen pixels (250px overlay)
-            // Cascade steps are in scaled flow pixels (40 * zoom)
-            offsetX = 250 + (currentCount * 40 * zoom);
-            offsetY = (currentCount * 40 * zoom);
-            spawnCountRef.current += 1;
-        }
-
         const basePos = screenPos || palettePosition;
 
         const flowPos = project({
-            x: basePos.x + offsetX,
-            y: basePos.y + offsetY
+            x: basePos.x,
+            y: basePos.y
         });
 
         const newId = generateNodeId(type);

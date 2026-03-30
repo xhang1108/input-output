@@ -47,16 +47,18 @@ export function useAutoInsert({
             return;
         }
 
-        // 1. Get Node Center and Bounds
-        const w = node.measured?.width || 150;
-        const h = node.measured?.height || 50;
-        const padding = 10; // Extra magnetic pull region
-        const cx = node.position.x;
-        const cy = node.position.y;
-        const left = cx - w / 2 - padding;
-        const top = cy - h / 2 - padding;
-        const right = cx + w / 2 + padding;
-        const bottom = cy + h / 2 + padding;
+        // 1. Get Sensing Center via Red-Dot Offset (Absolute Truth)
+        const SENSING_OFFSET_X = 60; 
+        const SENSING_OFFSET_Y = 40;
+        const padding = 15; // Detection radius
+        
+        const cx = node.position.x + SENSING_OFFSET_X;
+        const cy = node.position.y + SENSING_OFFSET_Y;
+        
+        const left = cx - padding;
+        const top = cy - padding;
+        const right = cx + padding;
+        const bottom = cy + padding;
 
         let bestEdge: string | null = null;
         let minCenterDist = Infinity;

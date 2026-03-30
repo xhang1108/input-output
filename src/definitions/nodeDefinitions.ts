@@ -163,11 +163,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             height: 160
         },
         minWidth: 64,
-        minHeight: 88,
-        layoutMetadata: {
-            uiOrigin: [0, 0],
-            physicalAnchor: [0, 0]
-        }
+        minHeight: 88
     },
     {
         id: 'IN-08',
@@ -178,11 +174,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'abacus', array: [0, 0, 0, 0, 0, 0, 0] },
         minWidth: 240,
-        minHeight: 210,
-        layoutMetadata: {
-            uiOrigin: [0, 0],
-            physicalAnchor: [0, 0]
-        }
+        minHeight: 210
     },
     {
         id: 'IN-09',
@@ -196,10 +188,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             code: '1 + 2'
         },
         minWidth: 200,
-        layoutMetadata: {
-            uiOrigin: [0, 0],
-            physicalAnchor: [0, 0]
-        },
         params: [
             { id: 'code', label: 'Expression', type: 'string', hint: 'Math e.g. 1 + 2' }
         ]
@@ -1011,10 +999,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         aliases: ['annotation', 'note', 'text', 'markdown'],
         minWidth: 150,
         minHeight: 100,
-        layoutMetadata: {
-            uiOrigin: [0, 0],
-            physicalAnchor: [0, 0]
-        },
         params: [
             { id: 'markdown', label: 'Content', type: 'textarea', hint: 'Supports Markdown & GFM alerts' },
             {

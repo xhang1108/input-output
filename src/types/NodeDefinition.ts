@@ -38,8 +38,8 @@ export interface NodeParameter {
     hidden?: (data: Record<string, unknown>) => boolean; // Optional callback to hide the field based on node data
 }
 
-export const DEFAULT_UI_ORIGIN: [number, number] = [0.5, 0.5];
-export const DEFAULT_PHYSICAL_ANCHOR: [number, number] = [0.5, 0.5];
+export const DEFAULT_UI_ORIGIN: [number, number] = [0, 0];
+export const DEFAULT_PHYSICAL_ANCHOR: [number, number] = [0, 0];
 
 // Node definition - central registry entry for a node type
 export interface NodeDefinition {
