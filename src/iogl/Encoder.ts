@@ -11,8 +11,8 @@ import { IOGLUtils } from './IOGLUtils';
 export class Encoder {
   private static formatLabel(label: string): string {
     if (!label) return '';
-    const needsBrackets = /[^a-zA-Z0-9_]/.test(label);
-    return needsBrackets ? `[${label}]` : label;
+    // IOGL 1.0 Law: Labels MUST be bracketed at all times for consistency.
+    return `[${label}]`;
   }
 
   public static encode(graph: InjectableGraph): string {
@@ -79,9 +79,8 @@ export class Encoder {
       const x = Math.round(node.position.x);
       const y = Math.round(node.position.y);
       
-      // Node Label logic: Only prefix if label differs or needs brackets
-      const hasSpecialChars = /[^a-zA-Z0-9_]/.test(label);
-      const labelStr = (label !== node.type || hasSpecialChars) ? `${this.formatLabel(label)} ` : '';
+      // IOGL 1.1 Law: All nodes MUST have bracketed labels in output
+      const labelStr = `${this.formatLabel(label)} `;
 
       result += `${labelStr}${node.type}${positionalStr}${propStr} @${x},${y}\n`;
     }

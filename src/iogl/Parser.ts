@@ -19,7 +19,7 @@ interface RawEdge {
   source: string;
   sourceHandle?: string;
   target: string;
-  targetHandle: string;
+  targetHandle?: string;
   line: number;
 }
 
@@ -115,13 +115,16 @@ export class Parser {
 
   private parseNode() {
     let label: string | undefined;
+    let rawLabel: string | undefined;
+    
     if (this.current.type === 'BRACKETED_ID') {
-      label = this.current.value.substring(1, this.current.value.length - 1);
+      rawLabel = this.current.value;
+      label = rawLabel.substring(1, rawLabel.length - 1);
       this.advance();
     } else if (this.current.type === 'LBRACKET') {
-      // Fallback for empty or legacy brackets
       this.advance();
       label = this.expect('ID').value;
+      rawLabel = `[${label}]`;
       this.expect('RBRACKET');
     }
 
@@ -146,6 +149,17 @@ export class Parser {
           if ((this.current.type as TokenType) === 'COMMA') this.advance();
         }
         this.expect('RBRACE');
+      } else if (this.current.type === 'LPAREN') {
+        this.advance();
+        const val = this.parseValue();
+        if (positionalIdx === 0 && manifest?.modeProperty && props.mode === undefined) {
+             props.mode = val;
+        } else {
+             if (!props.data) props.data = [];
+             props.data.push(val);
+        }
+        positionalIdx++;
+        this.expect('RPAREN');
       } else {
         const t = this.current.type as TokenType;
         if (t === 'RAW_VALUE' || t === 'BRACKETED_ID' || t === 'ID' || t === 'EQUALS' || t === 'NUMBER') {
@@ -184,27 +198,32 @@ export class Parser {
     }
 
     const internalTempId = `t_${this.nodeCounter++}`;
+    this.nodes.set(internalTempId, { id: typeId, label, props, x, y });
+    this.labelToId.set(internalTempId, internalTempId);
+
     if (label) {
       if (this.labelMap.has(label)) {
         const original = this.labelMap.get(label)!;
         this.diagnostics.push({
           severity: 'Warning',
-          message: `Label '[${label}]' at line ${this.current.line} (col ${this.current.col}) overwrites the one at line ${original.line} (col ${original.col}).`,
+          message: `Label '${rawLabel}' at line ${this.current.line} overwrites the one at line ${original.line}.`,
           source: 'IOGL-Parser',
           range: {
             start: { line: this.current.line, character: this.current.col },
-            end: { line: this.current.line, character: this.current.col + label.length + 2 }
+            end: { line: this.current.line, character: this.current.col + (label?.length || 0) + 2 }
           }
         });
       }
       this.labelMap.set(label, { line: this.current.line, col: this.current.col });
       this.labelToId.set(label, internalTempId);
-    }
-
-    this.nodes.set(internalTempId, { id: typeId, label, props, x, y });
-    this.labelToId.set(internalTempId, internalTempId);
-    if (!this.labelToId.has(typeId)) {
-        this.labelToId.set(typeId, internalTempId);
+      if (rawLabel) {
+        this.labelToId.set(rawLabel, internalTempId);
+      }
+    } else {
+        // Fallback: If no alias, allow referencing by TypeId (e.g. IN-01 -> OT-01)
+        if (!this.labelToId.has(typeId)) {
+            this.labelToId.set(typeId, internalTempId);
+        }
     }
   }
 
@@ -246,37 +265,63 @@ export class Parser {
       source: sourceRef.id,
       sourceHandle: sourceRef.handle,
       target: targetRef.id,
-      targetHandle: targetRef.handle || 'in_a',
+      targetHandle: targetRef.handle,
       line: this.current.line
     });
   }
 
   private parseRef(): { id: string; handle?: string } {
-    let idCandidate: string;
+    let rawId: string;
+    let handle: string | undefined;
     
+    // Strict IOGL 1.1: Node aliases MUST be bracketed
     if (this.current.type === 'BRACKETED_ID') {
-      // Strip brackets for the ID/Alias
-      idCandidate = this.current.value.substring(1, this.current.value.length - 1);
+      rawId = this.current.value; // Store the full '[Label]' for lookup
       this.advance();
     } else {
-      idCandidate = this.expect('ID').value;
+      // Error: Bare identifiers are not allowed for linking
+      this.diagnostics.push({
+        severity: 'Error',
+        message: `Node reference '${this.current.value}' must be bracketed like '[${this.current.value}]'`,
+        source: 'IOGL-Parser',
+        range: {
+          start: { line: this.current.line, character: this.current.col },
+          end: { line: this.current.line, character: this.current.col + this.current.value.length }
+        }
+      });
+      rawId = this.current.value;
+      this.advance();
     }
     
-    let id = idCandidate;
-    let handle: string | undefined;
-
-    if (idCandidate.includes('.')) {
-      const parts = idCandidate.split('.');
-      id = parts[0];
-      handle = parts[1];
-    } else if (this.current.type === 'COLON') {
-      this.advance();
-      handle = this.expect('ID').value;
-    } else if (this.current.type === 'ID' && this.current.value.startsWith('.')) {
-      // Handle the case where the dot is part of the next ID token (e.g. [Label].a)
+    // Handle Accessor: Strictly '.' notation
+    if (this.current.type === 'ID' && this.current.value.startsWith('.')) {
       handle = this.current.value.substring(1);
       this.advance();
+    } else if (this.current.type === 'COLON') {
+      // Deprecated COLON: Throw error but attempt recovery
+      const next = this.lexer.peek();
+      this.diagnostics.push({
+        severity: 'Error',
+        message: `Colon syntax ':' is deprecated. Please use dot notation like '[node].${next.value}'`,
+        source: 'IOGL-Parser',
+        range: {
+          start: { line: this.current.line, character: this.current.col },
+          end: { line: this.current.line, character: this.current.col + 1 }
+        }
+      });
+      this.advance();
+      if (this.current.type === 'ID') {
+          handle = this.current.value;
+          this.advance();
+      }
     }
+
+    // Resolve the internal ID from the Label or Alias
+    // Strip brackets for internal label lookup if needed
+    const lookupKey = rawId.startsWith('[') && rawId.endsWith(']') 
+        ? rawId.substring(1, rawId.length - 1) 
+        : rawId;
+    const id = this.labelToId.get(lookupKey) || rawId;
 
     return { id, handle };
   }
@@ -440,9 +485,11 @@ export class Parser {
           const modeVal = String(sNode.data[modeProp] || '');
           const valid = Array.isArray(sMan.outputs) ? sMan.outputs : (sMan.outputs as any)[modeVal];
           if (valid && !valid.includes(sHandle)) {
+            const hName = sHandle.startsWith('out_') ? sHandle.substring(4) : sHandle;
+            const msg = `Node ${raw.source} (${sNode.type}) does not have output handle '.${hName}'`;
             this.diagnostics.push({
               severity: 'Error',
-              message: `Node ${raw.source} (${sNode.type}) in mode '${modeVal}' does not have output handle '${sHandle}'`,
+              message: msg,
               source: 'IOGL-Parser',
               range: {
                 start: { line: raw.line, character: 0 },
@@ -457,9 +504,10 @@ export class Parser {
           const modeVal = String(tNode.data[modeProp] || '');
           const valid = Array.isArray(tMan.inputs) ? tMan.inputs : (tMan.inputs as any)[modeVal];
           if (valid && !valid.includes(tHandle)) {
+            const hName = tHandle.startsWith('in_') ? tHandle.substring(3) : tHandle;
             this.diagnostics.push({
               severity: 'Error',
-              message: `Node ${raw.target} (${tNode.type}) in mode '${modeVal}' does not have input handle '${tHandle}'`,
+              message: `Node ${raw.target} (${tNode.type}) does not have input handle '.${hName}'`,
               source: 'IOGL-Parser',
               range: {
                 start: { line: raw.line, character: 0 },

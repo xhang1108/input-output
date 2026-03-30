@@ -30,9 +30,10 @@ export class IOGLUtils {
      * Supports positional syntax (e.g. .a) and internal prefixed syntax (e.g. in_a, out_a).
      */
     public static resolveHandle(handle: string | undefined, isSource: boolean): string {
-        const h = (handle || '').toLowerCase();
+        let h = (handle || '').toLowerCase();
+        if (h.startsWith('.')) h = h.substring(1);
         
-        // Match .a, .b, .c, .d etc.
+        // Match a, b, c, d or shorthands
         const match = h.match(/^([a-z]|out|in|val|res)$/);
         if (match) {
             let char = match[1];
@@ -40,6 +41,8 @@ export class IOGLUtils {
             if (['out', 'val', 'res', 'in'].includes(char)) char = 'a';
             return (isSource ? 'out_' : 'in_') + char;
         }
+
+        if (h.startsWith('in_') || h.startsWith('out_')) return h;
 
         return handle || (isSource ? 'out_a' : 'in_a');
     }
