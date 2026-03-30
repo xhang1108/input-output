@@ -177,7 +177,6 @@ export function Body({
         confirmGrab,
         cancelGrab,
         duplicateSelected,
-        bundleSelected,
         copyToClipboard,
         pasteFromClipboard,
         deleteSelected,
@@ -505,14 +504,7 @@ export function Body({
                     logAction('Duplicate Selected (Shift+D)');
                 }
             }),
-            'nodes:bundle': (e: any) => {
-                if (mode === 'IDLE') {
-                    if (isReadOnly) return;
-                    e.preventDefault();
-                    bundleSelected();
-                    logAction('Frame Selected (F)');
-                }
-            },
+
 
             // Node Operations
             'nodes:delete': () => {
@@ -616,7 +608,7 @@ export function Body({
                 }
             },
         }),
-        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, bundleSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
+        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
     });
 
 

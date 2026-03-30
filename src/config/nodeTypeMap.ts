@@ -1,6 +1,6 @@
 import { BaseNode } from '../components/nodes/BaseNode';
 import { SolverNode } from '../components/nodes/SolverNode';
-import { FrameNode } from '../components/nodes/FrameNode';
+
 import { InputNode } from '../components/nodes/InputNode';
 import { UnitNode } from '../components/nodes/UnitNode';
 import { GenericSelectorNode } from '../components/nodes/GenericSelectorNode';
@@ -115,7 +115,7 @@ export const nodeTypes = {
 
     // ─── Fallback & Special ─────────────────────────────────
     'baseNode': BaseNode,
-    'frame': FrameNode,
+
     'IN-03': ColorNode,     // New Color ID
 };
 

@@ -87,7 +87,7 @@ export function useSelection() {
         const inverse: Transaction[] = [];
 
         selectedNodes.forEach(node => {
-            const newLabel = node.type === 'frame' ? 'Frame' : 'Node';
+            const newLabel = 'Node';
             if (node.data?.label !== newLabel) {
                 forward.push({ type: 'UPDATE_NODE_DATA', payload: { id: node.id, data: { label: newLabel } } });
                 inverse.push({ type: 'UPDATE_NODE_DATA', payload: { id: node.id, data: { label: node.data?.label } } });
@@ -98,7 +98,7 @@ export function useSelection() {
             brain.applyTransaction({ type: 'BATCH', payload: forward });
             setNodes(nds => nds.map(n => {
                 if (!n.selected) return n;
-                return { ...n, data: { ...n.data, label: n.type === 'frame' ? 'Frame' : 'Node' } };
+                return { ...n, data: { ...n.data, label: 'Node' } };
             }));
 
             history.push({
@@ -110,228 +110,7 @@ export function useSelection() {
         }
     }, [getNodes, setNodes, brain, history]);
 
-    // --- Command: Bundle / Unbundle Toggle (F key) ---
-    const bundleSelected = useCallback(() => {
-        const nodes = getNodes();
-        const selectedNonFrame = nodes.filter(n => n.selected && n.type !== 'frame');
-        if (selectedNonFrame.length === 0) return;
 
-        // Check if any selected nodes are already parented → Ungroup
-        const parentedNodes = selectedNonFrame.filter(n => n.parentId);
-        if (parentedNodes.length > 0) {
-            // --- UNGROUP: detach from frame ---
-            const txs: Transaction[] = [];
-            const affectedFrameIds = new Set<string>();
-
-            parentedNodes.forEach(node => {
-                // Find parent frame to convert relative → absolute position
-                const parentFrame = nodes.find(n => n.id === node.parentId);
-                const frameWidth = Number(parentFrame?.data?.width ?? parentFrame?.measured?.width ?? parentFrame?.width ?? 0);
-                const frameHeight = Number(parentFrame?.data?.height ?? parentFrame?.measured?.height ?? parentFrame?.height ?? 0);
-
-                const frameTL_X = (parentFrame?.position.x ?? 0) - frameWidth / 2;
-                const frameTL_Y = (parentFrame?.position.y ?? 0) - frameHeight / 2;
-
-                const absX = frameTL_X + node.position.x;
-                const absY = frameTL_Y + node.position.y;
-
-                if (node.parentId) affectedFrameIds.add(node.parentId);
-
-                // Clear parentId
-                txs.push({
-                    type: 'UPDATE_NODE_DATA',
-                    payload: { id: node.id, data: { parentId: null } }
-                });
-                // Move to absolute position
-                txs.push({
-                    type: 'MOVE_NODE',
-                    payload: {
-                        id: node.id,
-                        position: { x: absX, y: absY },
-                        oldPosition: { ...node.position }
-                    }
-                });
-            });
-
-            // 5. Update frames: Resize or Delete
-            affectedFrameIds.forEach(frameId => {
-                const parentFrame = nodes.find(n => n.id === frameId);
-                if (!parentFrame) return;
-
-                const remainingChildren = nodes.filter(
-                    n => n.parentId === frameId && !parentedNodes.some(p => p.id === n.id)
-                );
-
-                if (remainingChildren.length === 0) {
-                    txs.push({ type: 'REMOVE_NODE', payload: frameId });
-                } else {
-                    // Recalculate Frame Bounds
-                    let minX = Infinity, minY = Infinity;
-                    let maxX = -Infinity, maxY = -Infinity;
-
-                    remainingChildren.forEach(child => {
-                        const w = child.measured?.width ?? child.width ?? 150;
-                        const h = child.measured?.height ?? child.height ?? 50;
-                        minX = Math.min(minX, child.position.x - w / 2);
-                        minY = Math.min(minY, child.position.y - h / 2);
-                        maxX = Math.max(maxX, child.position.x + w / 2);
-                        maxY = Math.max(maxY, child.position.y + h / 2);
-                    });
-
-                    const PAD = config.layout.nodePadding;
-                    const TOP_PAD = config.layout.frameTopPadding;
-
-                    const targetLeft = minX - PAD;
-                    const targetTop = minY - TOP_PAD;
-                    const newWidth = (maxX + PAD) - targetLeft;
-                    const newHeight = (maxY + PAD) - targetTop;
-
-                    const oldFrameWidth = Number(parentFrame.data?.width ?? parentFrame.measured?.width ?? parentFrame.width ?? 0);
-                    const oldFrameHeight = Number(parentFrame.data?.height ?? parentFrame.measured?.height ?? parentFrame.height ?? 0);
-                    const oldFrameTL_X = parentFrame.position.x - oldFrameWidth / 2;
-                    const oldFrameTL_Y = parentFrame.position.y - oldFrameHeight / 2;
-
-                    const newFrameTL_X = oldFrameTL_X + targetLeft;
-                    const newFrameTL_Y = oldFrameTL_Y + targetTop;
-
-                    const newAbsCenterX = newFrameTL_X + newWidth / 2;
-                    const newAbsCenterY = newFrameTL_Y + newHeight / 2;
-
-                    // 1. Move/Resize Frame
-                    txs.push({
-                        type: 'MOVE_NODE',
-                        payload: {
-                            id: frameId,
-                            position: {
-                                x: newAbsCenterX,
-                                y: newAbsCenterY
-                            },
-                            oldPosition: { ...parentFrame.position }
-                        }
-                    });
-
-                    txs.push({
-                        type: 'UPDATE_NODE_DATA',
-                        payload: {
-                            id: frameId,
-                            data: {
-                                width: Math.round(newWidth),
-                                height: Math.round(newHeight)
-                            }
-                        }
-                    });
-
-                    // 2. Shift Children (to stay in place absolute)
-                    remainingChildren.forEach(child => {
-                        txs.push({
-                            type: 'MOVE_NODE',
-                            payload: {
-                                id: child.id,
-                                position: {
-                                    x: child.position.x - targetLeft,
-                                    y: child.position.y - targetTop
-                                },
-                                oldPosition: { ...child.position }
-                            }
-                        });
-                    });
-                }
-            });
-
-            // --- Capture History Snapshots ---
-            const inverse: Transaction[] = [];
-            parentedNodes.forEach(node => {
-                inverse.push({
-                    type: 'MOVE_NODE',
-                    payload: { id: node.id, position: { ...node.position }, parentId: node.parentId }
-                });
-            });
-            affectedFrameIds.forEach(frameId => {
-                const f = nodes.find(n => n.id === frameId);
-                if (f) {
-                    inverse.push({
-                        type: 'ADD_NODE',
-                        payload: { ...f }
-                    });
-                }
-            });
-
-            brain.applyTransaction({ type: 'BATCH', payload: txs });
-            
-            history.push({
-                id: `ungroup_${Date.now()}`,
-                description: `Ungroup ${parentedNodes.length} nodes`,
-                forward: txs,
-                inverse
-            });
-            return;
-        }
-
-        // --- GROUP: create new frame ---
-        const selectedNodes = selectedNonFrame.filter(n => !n.parentId);
-        if (selectedNodes.length === 0) return;
-
-        // 1. Calculate bounding box with safe dimension fallbacks
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
-
-        selectedNodes.forEach(node => {
-            const w = node.measured?.width ?? node.width ?? 150;
-            const h = node.measured?.height ?? node.height ?? 50;
-            minX = Math.min(minX, node.position.x - w / 2);
-            minY = Math.min(minY, node.position.y - h / 2);
-            maxX = Math.max(maxX, node.position.x + w / 2);
-            maxY = Math.max(maxY, node.position.y + h / 2);
-        });
-
-        // 2. Add padding (extra top for label)
-        const config = brain.getPhysicsConfig();
-        const PAD = config.layout.nodePadding;
-        const TOP_PAD = config.layout.frameTopPadding;
-
-        const targetLeft = minX - PAD;
-        const targetTop = minY - TOP_PAD;
-        const width = (maxX + PAD) - targetLeft;
-        const height = (maxY + PAD) - targetTop;
-        const frameId = generateNodeId('frame');
-
-        const frameCenterX = targetLeft + width / 2;
-        const frameCenterY = targetTop + height / 2;
-
-        // 3. Build Brain transactions
-        const txs: Transaction[] = [];
-
-        txs.push({
-            type: 'ADD_NODE',
-            payload: {
-                id: frameId,
-                type: 'frame',
-                position: { x: frameCenterX, y: frameCenterY },
-                width: Math.round(width),
-                height: Math.round(height),
-                style: { width: Math.round(width), height: Math.round(height) },
-                data: { label: 'Frame', width: Math.round(width), height: Math.round(height) },
-                initialValue: { type: 'void', value: null, symbol: null }
-            }
-        });
-
-        selectedNodes.forEach(node => {
-            txs.push({
-                type: 'UPDATE_NODE_DATA',
-                payload: { id: node.id, data: { parentId: frameId } }
-            });
-            txs.push({
-                type: 'MOVE_NODE',
-                payload: {
-                    id: node.id,
-                    position: { x: node.position.x - targetLeft, y: node.position.y - targetTop },
-                    oldPosition: { ...node.position }
-                }
-            });
-        });
-
-        brain.applyTransaction({ type: 'BATCH', payload: txs });
-    }, [getNodes]);
 
     // --- Command: Detach / Ungroup (Alt + G or Drag Out) ---
     // Note: 'detachSelected' mainly handled Edges in original code (Alt+Drag).
@@ -451,7 +230,7 @@ export function useSelection() {
     return {
         deleteSelected,
         resetSelected,
-        bundleSelected,
+
         detachSelected,
         swapConnections,
         clearSelection,
