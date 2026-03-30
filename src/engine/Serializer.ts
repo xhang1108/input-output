@@ -8,7 +8,7 @@ import { ProjectData } from './types';
  * Legacy migration logic has been removed as per V1.0 stabilization.
  */
 export class Serializer {
-    private static readonly VERSION = '1.0.0';
+    public static readonly VERSION = '1.0.0';
 
     /**
      * 🛡️ [V1.0] Serializes the project data into a compressed URL-safe string.

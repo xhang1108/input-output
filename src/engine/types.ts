@@ -109,5 +109,7 @@ export interface InjectableGraph {
 export interface ProjectData extends InjectableGraph {
     version?: string;
     timestamp?: number;
+    mathPrecision?: number;
+    settings?: Record<string, any>;
     viewport?: { x: number; y: number; zoom: number };
 }

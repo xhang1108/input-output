@@ -1,8 +1,7 @@
-import { nanoid } from 'nanoid';
-import { v7 as uuidv7 } from 'uuid';
-import { Serializer, ProjectData } from '../engine/Serializer';
+
+import { Serializer } from '../engine/Serializer';
 import { Brain } from '../engine/Brain';
-import { InjectableGraph } from '../engine/types';
+import { ProjectData, InjectableGraph } from '../engine/types';
 
 // ─── Types ────────────────────────────────────────────
 
@@ -66,11 +65,17 @@ export class SaveManager {
             throw new Error(`Save limit reached (max ${MAX_SLOTS}). Delete an old save first.`);
         }
 
-        const id = slotId ?? uuidv7();
-        const encoded = Serializer.serialize(brain, settings);
-
-        // Extract metadata from brain state
+        const id = slotId ?? crypto.randomUUID();
         const graph = brain.toInjectable();
+        const projectData: ProjectData = {
+            version: Serializer.VERSION,
+            mathPrecision: 64, 
+            settings: settings as any,
+            nodes: graph.nodes,
+            edges: graph.edges
+        };
+        const encoded = Serializer.serialize(projectData);
+
         const now = Date.now();
 
         const meta: SaveSlotMeta = {
@@ -104,13 +109,13 @@ export class SaveManager {
      * Used for initial payload ingestion.
      */
     static saveTemplate(name: string, graph: InjectableGraph): string {
-        const id = uuidv7();
+        const id = crypto.randomUUID();
         const now = Date.now();
         const data: ProjectData = {
             version: Serializer.VERSION,
-            mathPrecision: 64, // Default precision
+            mathPrecision: 64, 
             settings: {},
-            graph
+            ...graph
         };
 
         const encoded = Serializer.serializeData(data);
@@ -245,15 +250,15 @@ export class SaveManager {
         if (!data) return null;
 
         // Create a new slot from the legacy autosave
-        const id = uuidv7();
+        const id = crypto.randomUUID();
         const now = Date.now();
         const meta: SaveSlotMeta = {
             id,
             name: 'Recovered Project',
             createdAt: now,
             updatedAt: now,
-            nodeCount: data.graph?.nodes?.length ?? 0,
-            edgeCount: data.graph?.edges?.length ?? 0,
+            nodeCount: data.nodes?.length ?? 0,
+            edgeCount: data.edges?.length ?? 0,
             version: data.version ?? Serializer.VERSION,
         };
 

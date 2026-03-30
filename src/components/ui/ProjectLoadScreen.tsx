@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from "next-auth/react";
-import { v7 as uuidv7 } from 'uuid';
+
 import {
     Plus, Trash2, Pencil, Check, X,
     Box, GitBranch, Clock, Cloud, HardDrive,
@@ -633,7 +633,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     const canCreateCloud = !!session && cloudSlots.length < 20;
 
     const handleNewProjectLogic = () => {
-        const id = uuidv7();
+        const id = crypto.randomUUID();
         setLoadingId('new-project');
         if (canCreateCloud) {
             onNewProject(`cloud:${id}?new=1`);

@@ -44,9 +44,7 @@ export async function createGraph(
     // Default title from timestamp
     const defaultTitle = title || `Untitled Graph ${new Date().toLocaleDateString()}`;
 
-    // Use provided ID or generate explicit UUIDv7
-    const { v7: uuidv7 } = await import('uuid');
-    const rawId = providedId ? providedId.replace(/^(cloud:)+/gi, '') : uuidv7();
+    const rawId = providedId ? providedId.replace(/^(cloud:)+/gi, '') : crypto.randomUUID();
     const newId = `cloud:${rawId}`;
 
     // Check limit ONLY if this is a truly new record (ID not in DB)
