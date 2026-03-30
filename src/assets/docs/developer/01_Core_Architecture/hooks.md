@@ -14,7 +14,7 @@ The Input-Output engine utilizes a structured set of React hooks to interface be
 These hooks handle raw browser events and translate them into engine-compatible coordinates and commands.
 - **useHand**: Orchestrates manual node manipulation including dragging, scaling, and rotating.
 - **useEye**: Manages viewport state, camera movement, and spatial focus (React Flow integration).
-- **useEar**: Global keyboard event listener for dispatching system-wide commands (Undo, Redo, Delete).
+- **useEar**: Global keyboard event listener for dispatching system-wide commands (Delete, Select All, etc.).
 - **useMouth**: Handles Data I/O, including IOGL blueprint imports and project exports.
 - **useNose**: Validates port types and edge connectivity during interactive linking.
 
@@ -52,4 +52,4 @@ Utility hooks for structural graph operations.
 ---
 
 > [!NOTE]
-> Any action that modifies the graph topology or node values must be committed as a **Committed Transaction** to the Brain to ensure data consistency and history integrity.
+> Any action that modifies the graph topology or node values must be committed as a **Committed Transaction** to the Brain to ensure data consistency and system integrity.

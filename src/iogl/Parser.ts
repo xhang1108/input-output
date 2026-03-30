@@ -23,13 +23,26 @@ interface RawEdge {
   line: number;
 }
 
+export interface Range {
+  start: { line: number; character: number };
+  end: { line: number; character: number };
+}
+
+export interface Diagnostic {
+  severity: 'Error' | 'Warning';
+  message: string;
+  source: string;
+  range: Range;
+}
+
 export class Parser {
   private lexer: Lexer;
   private current: Token;
   private nodes: Map<string, RawNode> = new Map();
   private edges: RawEdge[] = [];
   private labelToId: Map<string, string> = new Map(); // Label/Alias -> InternalTempID
-  private diagnostics: string[] = [];
+  private labelMap: Map<string, { line: number; col: number }> = new Map(); // Track original label definitions
+  private diagnostics: Diagnostic[] = [];
   private nodeCounter = 0;
   private hasExplicitPositions = false;
 
@@ -44,7 +57,15 @@ export class Parser {
 
   private expect(type: TokenType): Token {
     if (this.current.type !== type) {
-      this.diagnostics.push(`Error at L${this.current.line}:C${this.current.col}: Expected ${type}, got ${this.current.type} ('${this.current.value}')`);
+      this.diagnostics.push({
+        severity: 'Error',
+        message: `Expected ${type}, got ${this.current.type} ('${this.current.value}')`,
+        source: 'IOGL-Parser',
+        range: {
+            start: { line: this.current.line, character: this.current.col },
+            end: { line: this.current.line, character: this.current.col + (this.current.value?.length || 0) }
+        }
+      });
     }
     const tok = this.current;
     this.advance();
@@ -55,7 +76,7 @@ export class Parser {
     while (this.current.type === 'NEWLINE') this.advance();
   }
 
-  public parse(): { graph: InjectableGraph; diagnostics: string[] } {
+  public parse(): { graph: InjectableGraph; diagnostics: Diagnostic[] } {
     while ((this.current.type as TokenType) !== 'EOF') {
       this.skipLineEnd();
       if ((this.current.type as TokenType) === 'EOF') break;
@@ -94,7 +115,11 @@ export class Parser {
 
   private parseNode() {
     let label: string | undefined;
-    if (this.current.type === 'LBRACKET') {
+    if (this.current.type === 'BRACKETED_ID') {
+      label = this.current.value.substring(1, this.current.value.length - 1);
+      this.advance();
+    } else if (this.current.type === 'LBRACKET') {
+      // Fallback for empty or legacy brackets
       this.advance();
       label = this.expect('ID').value;
       this.expect('RBRACKET');
@@ -123,7 +148,7 @@ export class Parser {
         this.expect('RBRACE');
       } else {
         const t = this.current.type as TokenType;
-        if (t === 'RAW_VALUE' || t === 'LBRACKET' || t === 'ID' || t === 'EQUALS' || t === 'NUMBER') {
+        if (t === 'RAW_VALUE' || t === 'BRACKETED_ID' || t === 'ID' || t === 'EQUALS' || t === 'NUMBER') {
           const val = this.parseValue();
           
           if (positionalIdx === 0 && t === 'ID' && manifest?.modeProperty && props.mode === undefined) {
@@ -159,8 +184,24 @@ export class Parser {
     }
 
     const internalTempId = `t_${this.nodeCounter++}`;
+    if (label) {
+      if (this.labelMap.has(label)) {
+        const original = this.labelMap.get(label)!;
+        this.diagnostics.push({
+          severity: 'Warning',
+          message: `Label '[${label}]' at line ${this.current.line} (col ${this.current.col}) overwrites the one at line ${original.line} (col ${original.col}).`,
+          source: 'IOGL-Parser',
+          range: {
+            start: { line: this.current.line, character: this.current.col },
+            end: { line: this.current.line, character: this.current.col + label.length + 2 }
+          }
+        });
+      }
+      this.labelMap.set(label, { line: this.current.line, col: this.current.col });
+      this.labelToId.set(label, internalTempId);
+    }
+
     this.nodes.set(internalTempId, { id: typeId, label, props, x, y });
-    if (label) this.labelToId.set(label, internalTempId);
     this.labelToId.set(internalTempId, internalTempId);
     if (!this.labelToId.has(typeId)) {
         this.labelToId.set(typeId, internalTempId);
@@ -174,36 +215,20 @@ export class Parser {
         return IOGLUtils.parseLiteral(val);
     }
     
-    if (this.current.type === 'LBRACKET') {
-        let depth = 0;
-        let valStr = '';
-        while ((this.current.type as TokenType) !== 'EOF') {
-            const char = this.current.value;
-            const type = this.current.type;
-
-            if ((type as string) === 'LBRACKET') depth++;
-            if ((type as string) === 'RBRACKET') depth--;
-            
-            if ((type as string) === 'RAW_VALUE' || (type as string) === 'NUMBER') {
-                valStr += char;
-            } else if ((type as string) === 'ID') {
-                valStr += `"${char}"`; 
-            } else {
-                valStr += char;
-            }
-
-            this.advance();
-            if (depth === 0) break;
-        }
+    if (this.current.type === 'BRACKETED_ID') {
+        const valStr = this.current.value;
+        this.advance();
 
         try {
+            // Attempt cleaning and parsing (supporting non-quoted IDs inside matrices)
             const cleaned = valStr.replace(/([a-zA-Z0-9_\-\.]+)/g, (m) => {
                 if (m === 'true' || m === 'false' || m === 'null' || !isNaN(Number(m))) return m;
                 return `"${m}"`;
             });
             return JSON.parse(cleaned);
         } catch (e) {
-            return valStr;
+            // Fallback to literal parsing or raw string
+            return IOGLUtils.parseLiteral(valStr);
         }
     }
 
@@ -227,7 +252,16 @@ export class Parser {
   }
 
   private parseRef(): { id: string; handle?: string } {
-    let idCandidate = this.expect('ID').value;
+    let idCandidate: string;
+    
+    if (this.current.type === 'BRACKETED_ID') {
+      // Strip brackets for the ID/Alias
+      idCandidate = this.current.value.substring(1, this.current.value.length - 1);
+      this.advance();
+    } else {
+      idCandidate = this.expect('ID').value;
+    }
+    
     let id = idCandidate;
     let handle: string | undefined;
 
@@ -238,6 +272,10 @@ export class Parser {
     } else if (this.current.type === 'COLON') {
       this.advance();
       handle = this.expect('ID').value;
+    } else if (this.current.type === 'ID' && this.current.value.startsWith('.')) {
+      // Handle the case where the dot is part of the next ID token (e.g. [Label].a)
+      handle = this.current.value.substring(1);
+      this.advance();
     }
 
     return { id, handle };
@@ -260,7 +298,15 @@ export class Parser {
       }
       
       if (!def) {
-        this.diagnostics.push(`Unknown Node Type: ${raw.id}`);
+        this.diagnostics.push({
+          severity: 'Error',
+          message: `Unknown Node Type: ${raw.id}`,
+          source: 'IOGL-Parser',
+          range: {
+            start: { line: 0, character: 0 }, // Global error
+            end: { line: 0, character: 0 }
+          }
+        });
         return;
       }
 
@@ -319,8 +365,15 @@ export class Parser {
             const wrapped = IOGLUtils.wrapPayload(data, propName, manifest);
             
             if (wrapped === null) {
-                const msg = `ERROR: Matrix [${raw.label || raw.id}] contains invalid non-numeric values (e.g. symbols). Injection blocked.`;
-                this.diagnostics.push(msg);
+                this.diagnostics.push({
+                  severity: 'Error',
+                  message: `Matrix [${raw.label || raw.id}] contains invalid non-numeric values (e.g. symbols). Injection blocked.`,
+                  source: 'IOGL-Parser',
+                  range: {
+                    start: { line: 0, character: 0 },
+                    end: { line: 0, character: 0 }
+                  }
+                });
                 const defaultRaw = def?.defaultData?.[propName];
                 const defaultParsed = typeof defaultRaw === 'string' ? JSON.parse(defaultRaw) : defaultRaw;
                 data[propName] = PayloadUtils.createArray(defaultParsed);
@@ -387,7 +440,15 @@ export class Parser {
           const modeVal = String(sNode.data[modeProp] || '');
           const valid = Array.isArray(sMan.outputs) ? sMan.outputs : (sMan.outputs as any)[modeVal];
           if (valid && !valid.includes(sHandle)) {
-            this.diagnostics.push(`Error at L${raw.line}: Node ${raw.source} (${sNode.type}) in mode '${modeVal}' does not have output handle '${sHandle}'`);
+            this.diagnostics.push({
+              severity: 'Error',
+              message: `Node ${raw.source} (${sNode.type}) in mode '${modeVal}' does not have output handle '${sHandle}'`,
+              source: 'IOGL-Parser',
+              range: {
+                start: { line: raw.line, character: 0 },
+                end: { line: raw.line, character: 0 }
+              }
+            });
           }
         }
 
@@ -396,7 +457,15 @@ export class Parser {
           const modeVal = String(tNode.data[modeProp] || '');
           const valid = Array.isArray(tMan.inputs) ? tMan.inputs : (tMan.inputs as any)[modeVal];
           if (valid && !valid.includes(tHandle)) {
-            this.diagnostics.push(`Error at L${raw.line}: Node ${raw.target} (${tNode.type}) in mode '${modeVal}' does not have input handle '${tHandle}'`);
+            this.diagnostics.push({
+              severity: 'Error',
+              message: `Node ${raw.target} (${tNode.type}) in mode '${modeVal}' does not have input handle '${tHandle}'`,
+              source: 'IOGL-Parser',
+              range: {
+                start: { line: raw.line, character: 0 },
+                end: { line: raw.line, character: 0 }
+              }
+            });
           }
         }
       }

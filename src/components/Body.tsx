@@ -18,13 +18,14 @@ import { useSession } from 'next-auth/react';
 import { Plus } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { FormulaRenderer } from '../utils/FormulaRenderer';
 import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
 import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
 import { useEar } from '../hooks/nerves/useEar';
 import { useHand } from '../hooks/nerves/useHand';
 import { useKnife } from '../hooks/useKnife';
+import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
 import { COMMAND_REGISTRY, getEarShortcuts, Platform } from '../config/shortcuts';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
@@ -49,6 +50,7 @@ import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useExampleListener } from '../hooks/useExampleListener';
 import { useAppStore } from '../store/useStore';
+import { useHistoryStore } from '../store/useHistoryStore';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { getDocInfo, hasDocForToken } from '../config/docRegistry';
@@ -115,6 +117,13 @@ export function Body({
 
     const effectiveSnap = isSnapping || manualSnap;
 
+    const { 
+        interactionMode, 
+        isRestoring, 
+        push 
+    } = useHistoryStore();
+    const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
+
     const {
         saveProject,
         autoSave,
@@ -160,6 +169,7 @@ export function Body({
         logAction
     );
 
+    // Nerve Integration: useHand handles physical gestures and tools
     const {
         startGrab,
         startScale,
@@ -167,7 +177,6 @@ export function Body({
         confirmGrab,
         cancelGrab,
         duplicateSelected,
-        bundleSelected,
         copyToClipboard,
         pasteFromClipboard,
         deleteSelected,
@@ -184,6 +193,7 @@ export function Body({
         selectNode,
         handleTypeNum,
         isResolvingTransform,
+        lastCancelTimestamp,
         transformBuffer,
         transformValue
     } = useHand();
@@ -388,7 +398,6 @@ export function Body({
         onRelinkEnd(event, connectionState);
     }, [onRelinkEnd]);
 
-
     const relinkValue = {
         ...relinkState,
         edgeType, // Inject current edgeType into RelinkContext
@@ -402,6 +411,31 @@ export function Body({
         setShowPalette(false);
         setPendingConnection(null);
     }, [setShowPalette, setPendingConnection]);
+
+    const handleCancel = useCallback(() => {
+        // Layer 1: Cancel active transformation
+        if (mode !== 'IDLE') {
+            cancelGrab(false); // Keyboard Esc doesn't need to suppress next right-click as it's not a right-click
+            logAction('Cancel Transform (Esc)');
+            return;
+        }
+
+        // Layer 2: Deselect all nodes
+        const selectedCount = nodes.filter(n => n.selected).length;
+        if (selectedCount > 0) {
+            setNodes(nds => nds.map(n => ({ ...n, selected: false })));
+            logAction(`Deselect [${selectedCount}] (Esc)`);
+            return;
+        }
+
+        // Layer 3: Close UI Panels
+        if (showPalette || showNPanel) {
+            closePalette();
+            setShowNPanel(false);
+            logAction('Close Panels (Esc)');
+            return;
+        }
+    }, [mode, cancelGrab, nodes, setNodes, showPalette, showNPanel, closePalette, setShowNPanel, logAction]);
 
     // --- FEEL NERVES (Input Handling) ---
     const autoConfirm = useCallback((fn: (e: any) => void) => (e: any) => {
@@ -427,10 +461,14 @@ export function Body({
                 swapConnections();
                 logAction('Swap Inputs (Alt+S)');
             }),
-            'layout:auto': autoConfirm(() => {
+            'layout:auto': (e: any) => {
                 if (isReadOnly) return;
+                if (mode !== 'IDLE' || isRestoring) {
+                    logAction('Layout manual override blocked (Busy)');
+                    return;
+                }
                 handleAutoLayout();
-            }),
+            },
             'canvas:focus-selected': (e) => {
                 if (mode === 'GRABBING' || mode === 'SCALING' || mode === 'ROTATING') {
                     handleTypeNum('.');
@@ -466,14 +504,7 @@ export function Body({
                     logAction('Duplicate Selected (Shift+D)');
                 }
             }),
-            'nodes:bundle': (e: any) => {
-                if (mode === 'IDLE') {
-                    if (isReadOnly) return;
-                    e.preventDefault();
-                    bundleSelected();
-                    logAction('Frame Selected (F)');
-                }
-            },
+
 
             // Node Operations
             'nodes:delete': () => {
@@ -541,15 +572,14 @@ export function Body({
             // Save
             'system:save': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project'); }),
 
+            // History
+            'system:undo': (e) => { e.preventDefault(); undo(); logAction('Undo'); },
+            'system:redo': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
+            'system:redo-alt': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
+
             // Confirmation & Navigation
             'system:confirm': () => { confirmGrab(); logAction('Confirm (Enter)'); },
-            'system:cancel': () => {
-                cancelGrab();
-                closePalette();
-                setShowNPanel(false);
-                setNodes(nds => nds.map(n => ({ ...n, selected: false })));
-                logAction('Cancel/Deselect (Esc)');
-            },
+            'system:cancel': () => { handleCancel(); },
 
             // Numeric Inputs for Transform (keep as literal keys for now as they are many)
             '0': () => handleTypeNum('0'),
@@ -578,7 +608,7 @@ export function Body({
                 }
             },
         }),
-        deps: [startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, bundleSelected, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
+        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
     });
 
 
@@ -665,8 +695,10 @@ export function Body({
 
                     onPaneContextMenu={(e) => {
                         e.preventDefault();
+                        if (Date.now() - lastCancelTimestamp.current < 100) return;
+
                         if (mode !== 'IDLE') {
-                            cancelGrab();
+                            cancelGrab(true);
                             return;
                         }
                         if (isReadOnly) return;
@@ -680,8 +712,10 @@ export function Body({
 
                     onNodeContextMenu={(e, node) => {
                         e.preventDefault();
+                        if (Date.now() - lastCancelTimestamp.current < 100) return;
+
                         if (mode !== 'IDLE') {
-                            cancelGrab();
+                            cancelGrab(true);
                             return;
                         }
                         if (isReadOnly) return;

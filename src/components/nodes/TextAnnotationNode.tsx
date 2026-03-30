@@ -5,6 +5,8 @@ import { ResizeHandle } from './ResizeHandle';
 import { useNodeDimensions } from './hooks/useNodeDimensions';
 import { useContentMetrics } from './hooks/useContentMetrics';
 import ReactMarkdown from 'react-markdown';
+import { useHistoryStore } from '../../store/useHistoryStore';
+import { Transaction } from '../../engine/types';
 import remarkGfm from 'remark-gfm';
 
 /**
@@ -15,7 +17,9 @@ import remarkGfm from 'remark-gfm';
 export const TextAnnotationNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
     const { updateNodeData, getNode } = useReactFlow();
+    const { push, isRestoring } = useHistoryStore();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const originalValue = useRef<string | null>(null);
     const nodeRef = useRef<HTMLDivElement>(null);
 
     // Dimension management via unified hook
@@ -42,9 +46,38 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         updateNodeData(id, { markdown: e.target.value });
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Escape') {
+            const initial = originalValue.current;
+            if (initial !== null) {
+                updateNodeData(id, { markdown: initial });
+            }
+            e.currentTarget.blur();
+        }
+    };
+
+    const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+        const currentValue = e.target.value; // Stale State Defense: Direct DOM Access
+        const initialValue = originalValue.current;
+        
+        if (initialValue !== null && initialValue !== currentValue && !isRestoring) {
+            push({
+                id: `edit_${id}_${Date.now()}`,
+                description: 'Edit Text',
+                forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: currentValue } } }],
+                inverse: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: initialValue } } }]
+            });
+        }
+        originalValue.current = null;
+        updateNodeData(id, { isEditing: false });
+    }, [id, push, isRestoring, updateNodeData]);
+
     const toggleEdit = useCallback(() => {
-        updateNodeData(id, { isEditing: !isEditing });
-    }, [id, isEditing, updateNodeData]);
+        if (!isEditing) {
+            originalValue.current = (data.markdown as string) || '';
+            updateNodeData(id, { isEditing: true });
+        }
+    }, [id, isEditing, updateNodeData, data.markdown]);
 
     useEffect(() => {
         if (isEditing && textareaRef.current) {
@@ -60,13 +93,17 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
             style={{ width, height }}
             onDoubleClick={toggleEdit}
         >
-            <div className="flex-1 w-full h-full min-h-0 min-w-0 select-none cursor-text overflow-hidden prose prose-invert prose-sm max-w-none prose-headings:mb-1 prose-p:mb-1 flex flex-col pt-1">
+            <div 
+                className="flex-1 w-full h-full min-h-0 min-w-0 select-none cursor-text overflow-hidden prose prose-invert prose-sm max-w-none prose-headings:mb-1 prose-p:mb-1 flex flex-col pt-1 nodrag"
+                onPointerDown={(e) => e.stopPropagation()}
+            >
                 {isEditing ? (
                     <textarea
                         ref={textareaRef}
                         value={(data.markdown as string) || ''}
                         onChange={handleTextChange}
-                        onBlur={toggleEdit}
+                        onKeyDown={handleKeyDown}
+                        onBlur={handleBlur}
                         className="flex-1 w-full h-full min-h-0 min-w-0 bg-transparent outline-none resize-none font-mono text-[10px] text-zinc-300 leading-relaxed overflow-hidden"
                         placeholder="Type markdown here..."
                     />

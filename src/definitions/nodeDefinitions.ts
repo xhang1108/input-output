@@ -152,7 +152,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     },
     {
         id: 'IN-07',
-        label: 'Array Input',
+        label: 'Array',
         category: 'Input',
         handles: [
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'array' }

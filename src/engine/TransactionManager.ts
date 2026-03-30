@@ -1,167 +1,10 @@
 import { Edge } from '@xyflow/react';
 import { Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload, ResizeNodePayload, GraphState, NodeLogic } from './types';
-import { HistoryManager } from './HistoryManager';
 import { PayloadUtils } from '../utils/PayloadUtils';
-import { IncrementalPatch } from './SerializableGraph';
-import { NodePayload } from '../types/payload';
+import { getUniqueLabel } from '../utils/labelUtils';
 
 export class TransactionManager {
-    private history: HistoryManager;
-
-    constructor() {
-        this.history = new HistoryManager();
-    }
-
-    public clearHistory() {
-        this.history.clear();
-    }
-
-    public undo(applyTx: (tx: Transaction, record: boolean, silent: boolean) => void): Transaction | null {
-        const entry = this.history.undo();
-        if (entry) {
-            applyTx(entry.undo, false, true);
-            return entry.undo;
-        }
-        return null;
-    }
-
-    public redo(applyTx: (tx: Transaction, record: boolean, silent: boolean) => void): Transaction | null {
-        const entry = this.history.redo();
-        if (entry) {
-            applyTx(entry.do, false, true);
-            return entry.do;
-        }
-        return null;
-    }
-
-    public recordTransaction(tx: Transaction, inverseTx: Transaction | null) {
-        if (inverseTx) {
-            this.history.push({ do: tx, undo: inverseTx });
-        }
-    }
-
-    /**
-     * Generates the inverse transaction for Undo.
-     * Needs readonly access to current state to build restore payloads.
-     */
-    public createInverseTransaction(tx: Transaction, state: GraphState): Transaction | null {
-        switch (tx.type) {
-            case 'ADD_NODE':
-                return { type: 'REMOVE_NODE', payload: (tx.payload as AddNodePayload).id };
-
-            case 'REMOVE_NODE': {
-                const id = tx.payload as string;
-                const node = state.nodes.get(id);
-                if (!node) return null;
-
-                const addNodeTx: Transaction = {
-                    type: 'ADD_NODE',
-                    payload: {
-                        id: node.id,
-                        initialValue: node.value,
-                        type: node.type,
-                        data: { ...node.data },
-                        position: node.position,
-                        parentId: node.parentId
-                    } as AddNodePayload
-                };
-
-                const connectedEdges = state.edges.filter(
-                    e => e.source === (tx.payload as string) || e.target === (tx.payload as string)
-                );
-
-                if (connectedEdges.length === 0) {
-                    return addNodeTx;
-                }
-
-                return {
-                    type: 'BATCH',
-                    payload: [
-                        addNodeTx,
-                        ...connectedEdges.map(e => ({
-                            type: 'CONNECT' as const,
-                            payload: { ...e }
-                        }))
-                    ]
-                };
-            }
-
-            case 'CONNECT':
-                return { type: 'DISCONNECT', payload: (tx.payload as Edge).id };
-
-            case 'DISCONNECT': {
-                const edge = state.edges.find(e => e.id === (tx.payload as string));
-                if (!edge) return null;
-                return { type: 'CONNECT', payload: { ...edge } };
-            }
-
-            case 'MOVE_NODE': {
-                const p = tx.payload as MoveNodePayload;
-                const node = state.nodes.get(p.id);
-                if (!node) return null;
-                const restorePos = p.oldPosition || node.position || { x: 0, y: 0 };
-
-                return {
-                    type: 'MOVE_NODE',
-                    payload: {
-                        id: node.id,
-                        position: restorePos,
-                        parentId: node.parentId
-                    }
-                };
-            }
-
-            case 'RESIZE_NODE': {
-                const p = tx.payload as ResizeNodePayload;
-                const node = state.nodes.get(p.id);
-                if (!node) return null;
-                const restoreSize = p.oldSize || {
-                    width: node.measured?.width ?? node.width ?? 0,
-                    height: node.measured?.height ?? node.height ?? 0
-                };
-
-                return {
-                    type: 'RESIZE_NODE',
-                    payload: {
-                        id: node.id,
-                        width: restoreSize.width,
-                        height: restoreSize.height
-                    }
-                };
-            }
-
-            case 'UPDATE_NODE_DATA': {
-                const p = tx.payload as { id: string, data: Record<string, unknown> };
-                const node = state.nodes.get(p.id);
-                if (!node) return null;
-                const oldData: Record<string, unknown> = {};
-                for (const key in p.data) {
-                    oldData[key] = node.data[key];
-                }
-                return {
-                    type: 'UPDATE_NODE_DATA',
-                    payload: { id: node.id, data: oldData }
-                };
-            }
-
-            case 'BATCH': {
-                const inverses = (tx.payload as Transaction[])
-                    .map(t => this.createInverseTransaction(t, state))
-                    .reverse(); // Apply in reverse order
-                return { type: 'BATCH', payload: inverses };
-            }
-
-            case 'REORDER_EDGES': {
-                return {
-                    type: 'REORDER_EDGES',
-                    payload: state.edges.map(e => e.id)
-                };
-            }
-
-            default:
-                return null;
-        }
-    }
+    constructor() {}
 
     /**
      * Applies a transaction to the GraphState.
@@ -190,12 +33,21 @@ export class TransactionManager {
             case 'ADD_NODE': {
                 const p = tx.payload as AddNodePayload;
                 const initialPayload = PayloadUtils.wrap(p.initialValue);
+                
+                // Label Uniqueness Check
+                let label = p.data?.label;
+                if (typeof label === 'string') {
+                    const existingLabels = Array.from(state.nodes.values())
+                        .map(n => n.data?.label)
+                        .filter(l => typeof l === 'string') as string[];
+                    label = getUniqueLabel(label, existingLabels);
+                }
 
                 const newNode: NodeLogic = {
                     id: p.id,
                     type: p.type || 'baseNode',
                     value: initialPayload,
-                    data: p.data || {},
+                    data: { ...p.data, label },
                     position: p.position || { x: 0, y: 0 },
                     isInDirtyChain: true,
                     selected: (p as any).selected || false,

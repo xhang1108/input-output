@@ -61,7 +61,7 @@ export function useBrainUpdates(
                     return changed ? nextNodes : currentNodes;
                 });
             } else {
-                // Full topology sync (structure changes, undo/redo, etc.)
+                // Full topology sync (structure changes, layout, etc.)
                 const brainNodes = brain.getNodesMap();
 
                 setNodes(currentNodes => {

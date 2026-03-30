@@ -103,7 +103,7 @@ export const AbacusNode = memo((props: NodeProps) => {
     const nodeData = {
         ...data,
         handles,
-        label: `Abacus ${digits.length} Digits`
+        label: data.label || 'Abacus'
     };
 
     return (

@@ -4,6 +4,7 @@ import { useCanvasProjection } from '../useCanvasProjection';
 import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
 import { Transaction } from '../../engine/types';
+import { useHistoryStore, InteractionMode as HistoryMode } from '../../store/useHistoryStore';
 import { useClipboard } from '../useClipboard';
 import { useSelection } from '../useSelection';
 import { useKnife } from '../useKnife';
@@ -19,12 +20,20 @@ export function useHand() {
     const { getNodes, setNodes, getViewport, setViewport } = useReactFlow();
     const brain = useBrain();
     const { project } = useCanvasProjection();
-    const [mode, setMode] = useState<InteractionMode>('IDLE');
+    const { interactionMode, setInteractionMode, push: pushHistory } = useHistoryStore();
+    
+    // Internal UI local mode for rapid state (rAF loops)
+    const [mode, _setMode] = useState<HistoryMode>('IDLE');
+
+    const setMode = useCallback((newMode: HistoryMode) => {
+        _setMode(newMode);
+        setInteractionMode(newMode);
+    }, [setInteractionMode]);
 
     // --- Composed Hooks ---
     const { duplicateSelected, copyToClipboard, pasteFromClipboard } = useClipboard();
     const {
-        deleteSelected, resetSelected, bundleSelected,
+        deleteSelected, resetSelected,
         detachSelected, swapConnections,
         clearSelection, selectNode,
     } = useSelection();
@@ -34,11 +43,12 @@ export function useHand() {
     const initialPositions = useRef<Map<string, XYPosition>>(new Map());
     const initialAbsolutePositions = useRef<Map<string, XYPosition>>(new Map());
     const initialDimensions = useRef<Map<string, { w: number, h: number }>>(new Map());
-    const initialFrameStates = useRef<Map<string, Node>>(new Map());
+
     const startMousePos = useRef<XYPosition | null>(null);
     const startFlowPos = useRef<XYPosition | null>(null);
     const centerRef = useRef<XYPosition | null>(null);
     const [axisLock, setAxisLock] = useState<'X' | 'Y' | null>(null);
+    const lastCancelTimestamp = useRef<number>(0);
 
     // Numeric Transform Buffer
     const [transformBuffer, setTransformBuffer] = useState<string>('');
@@ -55,88 +65,20 @@ export function useHand() {
     // Autopan
     const mousePosRef = useRef<XYPosition | null>(null);
     const rafRef = useRef<number | null>(null);
-    const modifiedFrameIds = useRef<Set<string>>(new Set());
-    const initialParentPositions = useRef<Map<string, XYPosition>>(new Map());
-    const initialFrameChildrenStates = useRef<Map<string, Node>>(new Map());
+
 
     // --- Transform Helpers ---
     const getAbsolutePosition = useCallback(function getAbs(nodeId: string, nodeMap: Map<string, Node>): XYPosition {
         const node = nodeMap.get(nodeId);
         if (!node) return { x: 0, y: 0 };
-        if (!node.parentId) return node.position;
-
-        const parentPos = getAbs(node.parentId, nodeMap);
-        const parentNode = nodeMap.get(node.parentId);
-        const parentW = Number(parentNode?.measured?.width ?? parentNode?.width ?? parentNode?.data?.width ?? 0);
-        const parentH = Number(parentNode?.measured?.height ?? parentNode?.height ?? parentNode?.data?.height ?? 0);
-
-        return {
-            x: parentPos.x - parentW / 2 + node.position.x,
-            y: parentPos.y - parentH / 2 + node.position.y
-        };
+        return node.position;
     }, []);
 
-    const updateParentFrames = useCallback((nodeMap: Map<string, Node>, affectedParentIds: Set<string>) => {
-        affectedParentIds.forEach(parentId => {
-            const parent = nodeMap.get(parentId);
-            if (!parent || parent.type !== 'frame') return;
 
-            const children = Array.from(nodeMap.values()).filter(n => n.parentId === parentId);
-            if (children.length === 0) return;
-
-            let minAbsX = Infinity, minAbsY = Infinity;
-            let maxAbsX = -Infinity, maxAbsY = -Infinity;
-
-            const oldWidth = Number(parent.measured?.width ?? parent.width ?? parent.data?.width ?? 0);
-            const oldHeight = Number(parent.measured?.height ?? parent.height ?? parent.data?.height ?? 0);
-            const parentTL_X = parent.position.x - oldWidth / 2, parentTL_Y = parent.position.y - oldHeight / 2;
-
-            children.forEach(child => {
-                const w = Number(child.measured?.width ?? child.width ?? 150), h = Number(child.measured?.height ?? child.height ?? 50);
-                const absCX = parentTL_X + child.position.x, absCY = parentTL_Y + child.position.y;
-                minAbsX = Math.min(minAbsX, absCX - w / 2); minAbsY = Math.min(minAbsY, absCY - h / 2);
-                maxAbsX = Math.max(maxAbsX, absCX + w / 2); maxAbsY = Math.max(maxAbsY, absCY + h / 2);
-            });
-
-            const config = brain.getPhysicsConfig();
-            const PAD = config.layout.nodePadding, TOP_PAD = config.layout.frameTopPadding;
-            const newAbsTL_X = minAbsX - PAD, newAbsTL_Y = minAbsY - TOP_PAD;
-            const newW = (maxAbsX + PAD) - newAbsTL_X, newH = (maxAbsY + PAD) - newAbsTL_Y;
-            const newAbsCX = newAbsTL_X + newW / 2, newAbsCY = newAbsTL_Y + newH / 2;
-
-            const diffX = newAbsCX - parent.position.x, diffY = newAbsCY - parent.position.y;
-            const diffW = newW - oldWidth, diffH = newH - oldHeight;
-
-            if (Math.abs(diffX) > 0.01 || Math.abs(diffY) > 0.01 || Math.abs(diffW) > 0.01 || Math.abs(diffH) > 0.01) {
-                if (!initialFrameStates.current.has(parentId)) {
-                    initialFrameStates.current.set(parentId, { ...parent });
-                    children.forEach(c => { if (!initialPositions.current.has(c.id)) initialFrameChildrenStates.current.set(c.id, { ...c }); });
-                }
-                modifiedFrameIds.current.add(parentId);
-
-                const newParent = {
-                    ...parent,
-                    position: { x: newAbsCX, y: newAbsCY },
-                    width: newW, height: newH, measured: { width: newW, height: newH },
-                    style: { ...parent.style, width: newW, height: newH },
-                    data: { ...parent.data, width: newW, height: newH }
-                };
-                nodeMap.set(parentId, newParent);
-
-                const shiftX = newAbsTL_X - parentTL_X, shiftY = newAbsTL_Y - parentTL_Y;
-                if (Math.abs(shiftX) > 0.01 || Math.abs(shiftY) > 0.01) {
-                    children.forEach(child => {
-                        nodeMap.set(child.id, { ...child, position: { x: child.position.x - shiftX, y: child.position.y - shiftY } });
-                    });
-                }
-            }
-        });
-    }, []);
 
     const applyMove = useCallback((dx: number, dy: number) => {
         setNodes((currentNodes) => {
             const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
-            const affectedParentIds = new Set<string>();
 
             // 1. Update Moved Nodes
             initialPositions.current.forEach((initPos, id) => {
@@ -144,16 +86,12 @@ export function useHand() {
                 if (node) {
                     const newPos = { x: initPos.x + dx, y: initPos.y + dy };
                     nodeMap.set(id, { ...node, position: newPos, measured: node.measured });
-                    if (node.parentId) affectedParentIds.add(node.parentId);
                 }
             });
 
-            // 2. Real-time Frame Auto-Resize
-            updateParentFrames(nodeMap, affectedParentIds);
-
             return Array.from(nodeMap.values());
         });
-    }, [setNodes, updateParentFrames]);
+    }, [setNodes]);
 
     const getCentroid = (nodes: Node[], nodeMap: Map<string, Node>): XYPosition => {
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -225,49 +163,15 @@ export function useHand() {
                 }
             });
 
-            const affectedParentIds = new Set<string>();
-
-            // 2. Apply updates, converting back to relative if needed
+            // 2. Apply updates
             const updatedNodes = nodes.map(node => {
                 const newAbsPos = newAbsolutePositions.get(node.id);
                 if (!newAbsPos) return node;
 
-                let finalPos = newAbsPos;
-
-                if (node.parentId) {
-                    // Check if parent is also being scaled (and thus has a new absolute pos)
-                    // or if we should use its current absolute pos
-                    // Calculate parent absolute Top-Left
-                    let parentAbs: XYPosition;
-                    let parentW: number, parentH: number;
-
-                    if (newAbsolutePositions.has(node.parentId)) {
-                        parentAbs = newAbsolutePositions.get(node.parentId)!;
-                        const newDims = newDimensions.get(node.parentId);
-                        const parentNode = nodeMap.get(node.parentId);
-                        parentW = newDims?.w ?? Number(parentNode?.measured?.width ?? parentNode?.width ?? parentNode?.data?.width ?? 0);
-                        parentH = newDims?.h ?? Number(parentNode?.measured?.height ?? parentNode?.height ?? parentNode?.data?.height ?? 0);
-                    } else {
-                        parentAbs = getAbsolutePosition(node.parentId, nodeMap);
-                        const parentNode = nodeMap.get(node.parentId);
-                        parentW = Number(parentNode?.measured?.width ?? parentNode?.width ?? parentNode?.data?.width ?? 0);
-                        parentH = Number(parentNode?.measured?.height ?? parentNode?.height ?? parentNode?.data?.height ?? 0);
-                    }
-
-                    const parentTL_X = parentAbs.x - parentW / 2;
-                    const parentTL_Y = parentAbs.y - parentH / 2;
-
-                    finalPos = {
-                        x: newAbsPos.x - parentTL_X,
-                        y: newAbsPos.y - parentTL_Y
-                    };
-                    affectedParentIds.add(node.parentId);
-                }
-
                 const newDims = newDimensions.get(node.id);
                 const newNode = {
                     ...node,
-                    position: finalPos,
+                    position: newAbsPos,
                     ...(newDims ? {
                         width: Math.round(newDims.w),
                         height: Math.round(newDims.h),
@@ -284,18 +188,13 @@ export function useHand() {
                     } : {})
                 };
 
-                // Update map for subsequent frame resize logic
                 nodeMap.set(node.id, newNode);
                 return newNode;
             });
 
-            // 3. Real-time Frame Auto-Resize
-            updateParentFrames(nodeMap, affectedParentIds);
-
-            // Return updated values from map to ensure frames are included
-            return Array.from(nodeMap.values());
+            return updatedNodes;
         });
-    }, [setNodes, axisLock, getAbsolutePosition, updateParentFrames]);
+    }, [setNodes, axisLock, getAbsolutePosition]);
 
     const applyRotate = useCallback((angleRad: number) => {
         const center = centerRef.current;
@@ -332,55 +231,22 @@ export function useHand() {
                 });
             });
 
-            const affectedParentIds = new Set<string>();
-
-            // 2. Apply updates, converting back to relative
+            // 2. Apply updates
             const updatedNodes = nodes.map(node => {
                 const newAbsPos = newAbsolutePositions.get(node.id);
                 if (!newAbsPos) return node;
 
-                let finalPos = newAbsPos;
-
-                if (node.parentId) {
-                    let parentAbs: XYPosition;
-                    let parentW: number, parentH: number;
-
-                    if (newAbsolutePositions.has(node.parentId)) {
-                        parentAbs = newAbsolutePositions.get(node.parentId)!;
-                        const parentNode = nodeMap.get(node.parentId);
-                        parentW = Number(parentNode?.measured?.width ?? parentNode?.width ?? parentNode?.data?.width ?? 0);
-                        parentH = Number(parentNode?.measured?.height ?? parentNode?.height ?? parentNode?.data?.height ?? 0);
-                    } else {
-                        parentAbs = getAbsolutePosition(node.parentId, nodeMap);
-                        const parentNode = nodeMap.get(node.parentId);
-                        parentW = Number(parentNode?.measured?.width ?? parentNode?.width ?? parentNode?.data?.width ?? 0);
-                        parentH = Number(parentNode?.measured?.height ?? parentNode?.height ?? parentNode?.data?.height ?? 0);
-                    }
-
-                    const parentTL_X = parentAbs.x - parentW / 2;
-                    const parentTL_Y = parentAbs.y - parentH / 2;
-
-                    finalPos = {
-                        x: newAbsPos.x - parentTL_X,
-                        y: newAbsPos.y - parentTL_Y
-                    };
-                    affectedParentIds.add(node.parentId);
-                }
-
                 const newNode = {
                     ...node,
-                    position: finalPos
+                    position: newAbsPos
                 };
                 nodeMap.set(node.id, newNode);
                 return newNode;
             });
 
-            // 3. Real-time Frame Auto-Resize
-            updateParentFrames(nodeMap, affectedParentIds);
-
-            return Array.from(nodeMap.values());
+            return updatedNodes;
         });
-    }, [setNodes, getAbsolutePosition, updateParentFrames]);
+    }, [setNodes, getAbsolutePosition]);
 
 
     // --- Interaction Core ---
@@ -495,17 +361,13 @@ export function useHand() {
 
     // --- Interaction Triggers ---
     const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[], isExplicit: boolean = false) => {
-        modifiedFrameIds.current.clear();
-        initialParentPositions.current.clear();
-        initialFrameStates.current.clear();
-        initialFrameChildrenStates.current.clear();
         const nodes = getNodes();
         let selected: Node[] = [];
 
         if (overrideNodes) {
-            selected = overrideNodes.filter(n => n.type !== 'frame');
+            selected = overrideNodes;
         } else {
-            selected = nodes.filter(n => n.selected && n.type !== 'frame');
+            selected = nodes.filter(n => n.selected);
         }
 
         // Filter out Reroute nodes if not an explicit G move or override nodes
@@ -519,16 +381,7 @@ export function useHand() {
             detachSelected();
         }
 
-        initialPositions.current = new Map(selected.map((n) => {
-            // Capture parent position if exists
-            if (n.parentId) {
-                const parent = nodes.find(p => p.id === n.parentId);
-                if (parent) {
-                    initialParentPositions.current.set(n.parentId, { ...parent.position });
-                }
-            }
-            return [n.id, { ...n.position }];
-        }));
+        initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
         initialAbsolutePositions.current.clear();
         startMousePos.current = mousePos;
         startFlowPos.current = project(mousePos);
@@ -538,7 +391,7 @@ export function useHand() {
 
     const startScale = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
-        const selected = nodes.filter(n => n.selected && n.type !== 'frame');
+        const selected = nodes.filter(n => n.selected);
         if (selected.length === 0) return;
 
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
@@ -569,7 +422,7 @@ export function useHand() {
 
     const startRotate = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
-        const selected = nodes.filter(n => n.selected && n.type !== 'frame');
+        const selected = nodes.filter(n => n.selected);
         if (selected.length === 0) return;
 
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
@@ -624,159 +477,57 @@ export function useHand() {
         // 1. Identify moved or resized nodes
         const movedNodeIds = new Set<string>();
         initialPositions.current.forEach((initPos, id) => {
-            const node = nodes.find(n => n.id === id);
+            const node = nodeMap.get(id);
             if (node) {
                 const initDim = initialDimensions.current.get(id);
                 const { w, h } = getSize(node);
                 const dw = initDim ? Math.abs(w - initDim.w) : 0;
                 const dh = initDim ? Math.abs(h - initDim.h) : 0;
-                if (Math.abs(node.position.x - initPos.x) > 0.5 || Math.abs(node.position.y - initPos.y) > 0.5 || dw > 0.5 || dh > 0.5) {
+                const dx = Math.abs(node.position.x - initPos.x);
+                const dy = Math.abs(node.position.y - initPos.y);
+
+                if (dx > 0.1 || dy > 0.1 || dw > 0.1 || dh > 0.1) {
                     movedNodeIds.add(id);
                 }
             }
         });
 
         if (movedNodeIds.size === 0) {
-            isResolvingRef.current = true;
-            setTimeout(() => { isResolvingRef.current = false; }, 100);
-
+            console.log(`[Hand] confirmGrab: No nodes moved significantly.`);
             setMode('IDLE');
-            initialPositions.current.clear();
-            initialDimensions.current.clear();
             startMousePos.current = null;
             return;
         }
 
-        // 2. Identify and Process Parents
-        const frames = nodes.filter(n => n.type === 'frame');
-        const affectedParents = new Set<string>();
-        const plannedParentId = new Map<string, string | null>();
-        const plannedDimensions = new Map<string, { w: number, h: number }>();
-
-        // Find parent for each moved node (absolute detect)
+        // 2. Build transactions simple
         movedNodeIds.forEach(id => {
-            const node = nodes.find(n => n.id === id);
-            if (!node || node.type === 'frame') return;
-
-            const oldParentId = node.parentId || null;
-            const absPos = brain.getAbsolutePosition(id);
-            const { w, h } = getSize(node);
-
-            // Detect new parent
-            let targetFrame: Node | undefined;
-            let targetArea = Infinity;
-            frames.forEach(f => {
-                if (f.id === id) return;
-                const { w: fw, h: fh } = getSize(f);
-                if (absPos.x >= f.position.x - fw / 2 && absPos.x <= f.position.x + fw / 2 &&
-                    absPos.y >= f.position.y - fh / 2 && absPos.y <= f.position.y + fh / 2) {
-                    if (fw * fh < targetArea) { targetArea = fw * fh; targetFrame = f; }
-                }
-            });
-
-            // Sticky logic
-            let newParentId = targetFrame ? targetFrame.id : null;
-            if (oldParentId && !newParentId) {
-                const op = nodes.find(p => p.id === oldParentId);
-                if (op) {
-                    const { w: ow, h: oh } = getSize(op);
-                    const pad = 100;
-                    if (absPos.x >= op.position.x - ow / 2 - pad && absPos.x <= op.position.x + ow / 2 + pad &&
-                        absPos.y >= op.position.y - oh / 2 - pad && absPos.y <= op.position.y + oh / 2 + pad) {
-                        newParentId = oldParentId;
-                    }
-                }
-            }
-
-            if (newParentId !== oldParentId) {
-                plannedParentId.set(id, newParentId);
-                if (oldParentId) affectedParents.add(oldParentId);
-                if (newParentId) affectedParents.add(newParentId);
-            }
-
-            // Record dimensions
-            const initDim = initialDimensions.current.get(id);
-            if (initDim && (Math.abs(w - initDim.w) > 0.5 || Math.abs(h - initDim.h) > 0.5)) {
-                plannedDimensions.set(id, { w: Math.round(w), h: Math.round(h) });
-            }
-        });
-
-        // 3. Reconcile Frame Bounds and Child Coordinates
-        affectedParents.forEach(parentId => {
-            const parent = nodes.find(n => n.id === parentId);
-            if (!parent) return;
-
-            const children = nodes.filter(n => {
-                if (n.id === parentId) return false;
-                const actualParentId = plannedParentId.has(n.id) ? plannedParentId.get(n.id) : n.parentId;
-                return actualParentId === parentId;
-            });
-
-            if (children.length === 0) {
-                txs.push({ type: 'REMOVE_NODE', payload: parentId });
-                return;
-            }
-
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            children.forEach(c => {
-                const { w, h } = getSize(c);
-                const cAbs = brain.getAbsolutePosition(c.id);
-                minX = Math.min(minX, cAbs.x - w / 2); minY = Math.min(minY, cAbs.y - h / 2);
-                maxX = Math.max(maxX, cAbs.x + w / 2); maxY = Math.max(maxY, cAbs.y + h / 2);
-            });
-
-            const config = brain.getPhysicsConfig();
-            const PAD = config.layout.nodePadding;
-            const newAbsTL_X = minX - PAD, newAbsTL_Y = minY - PAD;
-            const newWidth = (maxX + PAD) - newAbsTL_X, newHeight = (maxY + PAD) - newAbsTL_Y;
-
-            txs.push({ type: 'MOVE_NODE', payload: { id: parentId, position: { x: newAbsTL_X + newWidth / 2, y: newAbsTL_Y + newHeight / 2 }, oldPosition: parent.position } });
-            txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: parentId, data: { width: Math.round(newWidth), height: Math.round(newHeight) } } });
-
-            children.forEach(c => {
-                const cAbs = brain.getAbsolutePosition(c.id);
-                const newRelativePos = { x: cAbs.x - newAbsTL_X, y: cAbs.y - newAbsTL_Y };
-                const initPos = initialPositions.current.get(c.id) || c.position;
-
-                const movePayload: any = { id: c.id, position: newRelativePos, oldPosition: initPos };
-                if (plannedParentId.has(c.id)) movePayload.parentId = plannedParentId.get(c.id);
-
-                txs.push({ type: 'MOVE_NODE', payload: movePayload });
-
-                if (plannedDimensions.has(c.id)) {
-                    const dim = plannedDimensions.get(c.id)!;
-                    txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: c.id, data: { width: dim.w, height: dim.h } } });
-                }
-            });
-        });
-
-        // 4. Final non-framed moved nodes
-        movedNodeIds.forEach(id => {
-            const node = nodes.find(n => n.id === id);
-            if (!node || node.type === 'frame') return;
-            const actualParentId = plannedParentId.has(id) ? plannedParentId.get(id) : (node.parentId || null);
-
-            if (!actualParentId && node.parentId) {
-                // Detached from parent
-                const absPos = brain.getAbsolutePosition(id);
-                txs.push({ type: 'MOVE_NODE', payload: { id, position: absPos, oldPosition: initialPositions.current.get(id)!, parentId: null } });
-
-                if (plannedDimensions.has(id)) {
-                    const dim = plannedDimensions.get(id)!;
-                    txs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: dim.w, height: dim.h } } });
-                }
-            } else if (actualParentId === node.parentId && movedNodeIds.has(id) && !affectedParents.has(node.parentId || '')) {
-                // Normal move within same (unaffected) parent OR outside
-                txs.push({ type: 'MOVE_NODE', payload: { id, position: node.position, oldPosition: initialPositions.current.get(id)! } });
-                if (plannedDimensions.has(id)) {
-                    const dim = plannedDimensions.get(id)!;
-                    txs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: dim.w, height: dim.h } } });
-                }
-            }
+            const node = nodeMap.get(id);
+            if (!node) return;
+            
+            txs.push({ type: 'MOVE_NODE', payload: { id, position: node.position } });
         });
 
         if (txs.length > 0) {
             brain.applyTransaction({ type: 'BATCH', payload: txs });
+
+            const invTxs: Transaction[] = [];
+            initialPositions.current.forEach((initPos, id) => {
+                const initNode = nodes.find(n => n.id === id);
+                if (initNode) {
+                    invTxs.push({ type: 'MOVE_NODE', payload: { id, position: { ...initPos }, parentId: initNode.parentId || null } });
+                }
+            });
+            initialDimensions.current.forEach((initDim, id) => {
+                invTxs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: initDim.w, height: initDim.h } } });
+            });
+
+            console.log(`[Hand] Pushing history: Transform ${movedNodeIds.size} items`, { forward: txs, inverse: invTxs });
+            pushHistory({
+                id: `transform_${Date.now()}`,
+                description: `Transform ${movedNodeIds.size} items`,
+                forward: txs, 
+                inverse: invTxs
+            });
         }
 
         isResolvingRef.current = true;
@@ -785,20 +536,27 @@ export function useHand() {
         setMode('IDLE');
         initialPositions.current.clear();
         initialDimensions.current.clear();
-        initialFrameStates.current.clear();
+
         startMousePos.current = null;
         startFlowPos.current = null;
         centerRef.current = null;
         setAxisLock(null);
         setTransformBuffer('');
         setTransformValue('');
-    }, [getNodes, getAbsolutePosition, setNodes]);
+    }, [getNodes, getAbsolutePosition, setNodes, pushHistory, setMode]);
 
-    const cancelGrab = useCallback(() => {
+    const cancelGrab = useCallback((suppressMenu: boolean = false) => {
+        if (suppressMenu) {
+            lastCancelTimestamp.current = Date.now();
+        }
+
         const positionsToRestore = new Map(initialPositions.current);
-        const framesToRestore = new Map(initialFrameStates.current);
+        const framesToRestore = new Map(); // Empty stub
 
-        const idsToSelect = new Set<string>([...positionsToRestore.keys(), ...framesToRestore.keys()]);
+        if (positionsToRestore.size === 0 && framesToRestore.size === 0) {
+            setMode('IDLE');
+            return;
+        }
 
         setNodes(nodes => nodes.map(n => {
             // Restore Frames
@@ -819,14 +577,14 @@ export function useHand() {
         setMode('IDLE');
         initialPositions.current.clear();
         initialDimensions.current.clear();
-        initialFrameStates.current.clear();
+
         startMousePos.current = null;
         startFlowPos.current = null;
         centerRef.current = null;
         setAxisLock(null);
         setTransformBuffer('');
         setTransformValue('');
-    }, [setNodes]);
+    }, [setNodes, setMode]);
 
 
     // --- Event Handlers ---
@@ -834,6 +592,10 @@ export function useHand() {
         const target = e.target as HTMLElement;
         if (target.closest('.react-flow__handle') || target.closest('.react-flow__edge')) return;
         if (target.closest('.nodrag')) return; // Ignore custom drag if clicking on a protected area
+
+        // Block movement if clicking on interactive elements
+        const tagName = target.tagName.toUpperCase();
+        if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'A', 'LABEL'].includes(tagName)) return;
 
         // Note: React Flow uses button 1 for middle-click and 2 for right-click in panOnDrag
         // We allow these to pass through unless Ctrl+RightClick is used for cutting
@@ -897,7 +659,7 @@ export function useHand() {
         if (e.button === 0) {
             confirmGrab();
         } else if (e.button === 2) {
-            cancelGrab();
+            cancelGrab(true); // Right-click cancel suppresses next menu
         }
     }, [mode, confirmGrab, cancelGrab]);
 
@@ -973,7 +735,7 @@ export function useHand() {
         confirmGrab,
         cancelGrab,
         duplicateSelected,
-        bundleSelected,
+
         copyToClipboard,
         pasteFromClipboard,
         deleteSelected,
@@ -987,6 +749,7 @@ export function useHand() {
         handleMouseMove,
         handleMouseDown,
         handleMouseUp,
+        lastCancelTimestamp,
         isResolvingTransform: () => isResolvingRef.current
     };
 }

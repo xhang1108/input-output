@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
+import { useHistoryStore } from '../store/useHistoryStore';
 import deepEqual from 'fast-deep-equal';
 
 /**
@@ -13,12 +14,19 @@ import deepEqual from 'fast-deep-equal';
  */
 export function useBrainSync(nodes: Node[], edges: Edge[]) {
     const brain = useBrain();
+    const { isRestoring } = useHistoryStore();
     const prevNodesRef = useRef<Map<string, Node>>(new Map());
     const prevEdgesRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
+        // Guard 1: Skip if we are currently restoring from history
+        if (isRestoring) {
+            prevNodesRef.current = new Map(nodes.map(n => [n.id, { ...n }]));
+            prevEdgesRef.current = new Set(edges.map(e => e.id));
+            return;
+        }
 
-        // Guard: Skip transaction recording during relink drag
+        // Guard 2: Skip transaction recording during relink drag
         // The relink system removes edges from UI for visual feedback,
         // but the actual DISCONNECT+CONNECT should be atomic via useRelink's BATCH
         if (brain.isReconnecting) {
@@ -27,15 +35,6 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
             return;
         }
 
-        // Guard: Skip MOVE_NODE / data syncs during Undo/Redo
-        // When Brain.undo() fires, useBrainUpdates pushes the restored position back to React Flow.
-        // useBrainSync would immediately see a position diff and re-write the OLD position back to Brain,
-        // cancelling the Undo. isUndoing flag prevents this race condition.
-        if (brain.isUndoing) {
-            prevNodesRef.current = new Map(nodes.map(n => [n.id, { ...n }]));
-            prevEdgesRef.current = new Set(edges.map(e => e.id));
-            return;
-        }
 
         // Fix: HMR Safety - ensure prevNodesRef is a Map
         if (!(prevNodesRef.current instanceof Map)) {
@@ -101,14 +100,11 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
 
             // Sync Position (Phase 1.4)
             if (node.position && (!prevNode || !prevNode.position || Math.abs(node.position.x - prevNode.position.x) > 0.5 || Math.abs(node.position.y - prevNode.position.y) > 0.5)) {
-                // Determine old position. If none, assume 0,0 
-                const oldPos = prevNode?.position || { x: 0, y: 0 };
                 syncTxs.push({
                     type: 'MOVE_NODE',
                     payload: {
                         id: node.id,
-                        position: node.position,
-                        oldPosition: oldPos
+                        position: node.position
                     }
                 });
             }

@@ -67,24 +67,15 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         });
     }, []);
 
-    // Helper: Focus on all nodes and select them
-    const focusAndSelectAll = useCallback((options: { duration?: number } = {}) => {
+    const fitViewToScene = useCallback((options: { duration?: number } = {}) => {
         const { duration = 0 } = options;
-
-        // Step 1: Immediate Select All
-        setNodes((nds: any[]) => nds.map(n => ({ ...n, selected: true })));
-
-        // Step 2: Ensure React Flow has processed node positions
         requestAnimationFrame(() => {
-            // Step 3: Fit view with padding
             fitView({ duration, padding: 0.2, includeHiddenNodes: false });
-
-            // Step 4: Double check after paint (handles async node measurements)
             setTimeout(() => {
                 fitView({ duration: Math.max(0, duration - 100), padding: 0.2 });
             }, 100);
         });
-    }, [setNodes, fitView]);
+    }, [fitView]);
 
     const isOwner = !isCloud || (session?.user?.id !== undefined && projectMeta?.userId === session.user.id);
     const isReadOnly = isCloud && (session?.user?.id === undefined || (projectMeta !== null && projectMeta.userId !== session.user.id));
@@ -112,7 +103,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 settings as unknown as Record<string, unknown>,
                 currentSlotIdRef.current || (isCloud ? `cloud:${actualId}` : undefined)
             );
-            
+
             // Clarify log: this is a local save to a cloud-prefixed slot
             console.log(`[useProjectSave] Local backup updated ${isCloud ? '(Cloud Slot)' : ''}. Slot: ${id}. Size: ${Math.round(encoded.length / 1024)}KB`);
             currentSlotIdRef.current = id;
@@ -194,7 +185,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 // SUCCESS: Cloud is confirmed
                 hasSyncedRef.current = true;
                 setSaveStatus('CLOUD_SYNCED');
-                
+
                 // CRITICAL: Use correct storage ID with prefix
                 const storageId = `cloud:${actualId}`;
                 SaveManager.updateMeta(storageId, { syncStatus: 'synced' });
@@ -317,10 +308,10 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         if (data.graph) {
             brain.injectNodes(data.graph, true).then(() => {
                 toast.success('Project loaded successfully');
-                focusAndSelectAll({ duration: 400 });
+                fitViewToScene({ duration: 400 });
             });
         }
-    }, [focusAndSelectAll, brain]);
+    }, [fitViewToScene, brain]);
 
     // Initial Load — delayed to ensure useBrainUpdates listener is registered first
     useEffect(() => {
@@ -331,7 +322,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             if (actualId === 'new' || isBrandNew) {
                 console.log(`[useProjectSave] Brand new project detected (${actualId === 'new' ? 'ID:new' : 'URL:new'}).`);
                 hasSyncedRef.current = false;
-                
+
                 // NEW: Initialize metadata for ownership detection if session exists
                 if (session?.user?.id) {
                     setProjectMeta({
@@ -340,7 +331,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                         userId: session.user.id
                     });
                 }
-                
+
                 brain.injectNodes({ nodes: [], edges: [] }, true).then(() => {
                     setIsLoaded(true);
                 });
@@ -361,7 +352,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                                 if (diagnostics && diagnostics.length > 0) {
                                     console.warn("[useProjectSave] Injection diagnostics:", diagnostics);
                                 }
-                                focusAndSelectAll({ duration: 0 });
+                                fitViewToScene({ duration: 0 });
                                 revealAfterPaint();
                             });
                         } else {
@@ -388,14 +379,14 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                                 if (localData) {
                                     console.log("[useProjectSave] Project 404 on server, but found local backup. Using backup.");
                                     hasSyncedRef.current = false;
-                                    return { 
-                                        payload: Serializer.serializeData(localData), 
+                                    return {
+                                        payload: Serializer.serializeData(localData),
                                         title: SaveManager.getMeta(currentSlotIdRef.current!)?.name || "Untitled",
                                         userId: session?.user?.id, // Inject current user ID to restore ownership
-                                        __fromLocal: true 
+                                        __fromLocal: true
                                     };
                                 }
-                                
+
                                 hasSyncedRef.current = false;
                                 return { __isNew: true };
                             }
@@ -462,7 +453,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                     })
                     .catch(e => {
                         clearTimeout(timeoutId);
-                        
+
                         // Error Recovery: If cloud fetch fails (offline/timeout), check for local backup
                         const localData = currentSlotIdRef.current ? SaveManager.load(currentSlotIdRef.current) : null;
                         if (localData) {
@@ -494,7 +485,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
                     if (data.graph) {
                         brain.injectNodes(data.graph, true, true).then(() => {
-                            focusAndSelectAll({ duration: 0 });
+                            fitViewToScene({ duration: 0 });
                             revealAfterPaint();
                         });
                     } else {
@@ -509,7 +500,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             }
         });
         return () => cancelAnimationFrame(rafId);
-    }, [actualId, isCloud, focusAndSelectAll, revealAfterPaint, brain]);
+    }, [actualId, isCloud, fitViewToScene, revealAfterPaint, brain]);
 
     const updateVisibility = useCallback(async (newVisibility: 'private' | 'public') => {
         if (!isCloud) {
@@ -521,7 +512,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         if (isReadOnly) return;
 
         setProjectMeta(prev => prev ? { ...prev, visibility: newVisibility } : null);
-        
+
         // Immediate save to sync visibility
         const settings = useAppStore.getState();
         const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);

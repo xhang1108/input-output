@@ -1,0 +1,770 @@
+Original Diagnostics: [
+  {
+    "severity": "Warning",
+    "message": "Label '[Pay per year]' at line 8 (col 47) overwrites the one at line 3 (col 47).",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 8,
+        "character": 47
+      },
+      "end": {
+        "line": 8,
+        "character": 61
+      }
+    }
+  },
+  {
+    "severity": "Warning",
+    "message": "Label '[Basic Math]' at line 12 (col 45) overwrites the one at line 10 (col 44).",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 12,
+        "character": 45
+      },
+      "end": {
+        "line": 12,
+        "character": 57
+      }
+    }
+  },
+  {
+    "severity": "Warning",
+    "message": "Label '[Pay per year]' at line 13 (col 48) overwrites the one at line 8 (col 47).",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 13,
+        "character": 48
+      },
+      "end": {
+        "line": 13,
+        "character": 62
+      }
+    }
+  },
+  {
+    "severity": "Warning",
+    "message": "Label '[Basic Math]' at line 15 (col 45) overwrites the one at line 12 (col 45).",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 15,
+        "character": 45
+      },
+      "end": {
+        "line": 15,
+        "character": 57
+      }
+    }
+  },
+  {
+    "severity": "Warning",
+    "message": "Label '[Basic Math]' at line 27 (col 45) overwrites the one at line 15 (col 45).",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 27,
+        "character": 45
+      },
+      "end": {
+        "line": 27,
+        "character": 57
+      }
+    }
+  },
+  {
+    "severity": "Warning",
+    "message": "Label '[Basic Math]' at line 30 (col 45) overwrites the one at line 27 (col 45).",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 30,
+        "character": 45
+      },
+      "end": {
+        "line": 30,
+        "character": 57
+      }
+    }
+  },
+  {
+    "severity": "Warning",
+    "message": "Label '[Basic Math]' at line 33 (col 44) overwrites the one at line 30 (col 45).",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 33,
+        "character": 44
+      },
+      "end": {
+        "line": 33,
+        "character": 56
+      }
+    }
+  },
+  {
+    "severity": "Warning",
+    "message": "Label '[Number]' at line 34 (col 28) overwrites the one at line 28 (col 29).",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 34,
+        "character": 28
+      },
+      "end": {
+        "line": 34,
+        "character": 36
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Payment.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 37,
+        "character": 9
+      },
+      "end": {
+        "line": 37,
+        "character": 18
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 37,
+        "character": 19
+      },
+      "end": {
+        "line": 37,
+        "character": 21
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got NUMBER ('12')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 38,
+        "character": 1
+      },
+      "end": {
+        "line": 38,
+        "character": 3
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('months.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 38,
+        "character": 4
+      },
+      "end": {
+        "line": 38,
+        "character": 12
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 38,
+        "character": 13
+      },
+      "end": {
+        "line": 38,
+        "character": 15
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('per')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 39,
+        "character": 5
+      },
+      "end": {
+        "line": 39,
+        "character": 8
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('per')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 40,
+        "character": 5
+      },
+      "end": {
+        "line": 40,
+        "character": 8
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Age.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 41,
+        "character": 9
+      },
+      "end": {
+        "line": 41,
+        "character": 14
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 41,
+        "character": 15
+      },
+      "end": {
+        "line": 41,
+        "character": 17
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('of')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 42,
+        "character": 5
+      },
+      "end": {
+        "line": 42,
+        "character": 7
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Math.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 43,
+        "character": 7
+      },
+      "end": {
+        "line": 43,
+        "character": 13
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 43,
+        "character": 14
+      },
+      "end": {
+        "line": 43,
+        "character": 16
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('per')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 44,
+        "character": 5
+      },
+      "end": {
+        "line": 44,
+        "character": 8
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('the')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 45,
+        "character": 9
+      },
+      "end": {
+        "line": 45,
+        "character": 12
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Age.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 46,
+        "character": 9
+      },
+      "end": {
+        "line": 46,
+        "character": 14
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 46,
+        "character": 15
+      },
+      "end": {
+        "line": 46,
+        "character": 17
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('per')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 47,
+        "character": 5
+      },
+      "end": {
+        "line": 47,
+        "character": 8
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Math.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 48,
+        "character": 7
+      },
+      "end": {
+        "line": 48,
+        "character": 13
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 48,
+        "character": 14
+      },
+      "end": {
+        "line": 48,
+        "character": 16
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('per')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 49,
+        "character": 5
+      },
+      "end": {
+        "line": 49,
+        "character": 8
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('the')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 50,
+        "character": 9
+      },
+      "end": {
+        "line": 50,
+        "character": 12
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('of')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 51,
+        "character": 5
+      },
+      "end": {
+        "line": 51,
+        "character": 7
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Math.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 52,
+        "character": 7
+      },
+      "end": {
+        "line": 52,
+        "character": 13
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 52,
+        "character": 14
+      },
+      "end": {
+        "line": 52,
+        "character": 16
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Payment.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 65,
+        "character": 9
+      },
+      "end": {
+        "line": 65,
+        "character": 18
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 65,
+        "character": 19
+      },
+      "end": {
+        "line": 65,
+        "character": 21
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Math.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 67,
+        "character": 7
+      },
+      "end": {
+        "line": 67,
+        "character": 13
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 67,
+        "character": 14
+      },
+      "end": {
+        "line": 67,
+        "character": 16
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Math.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 68,
+        "character": 7
+      },
+      "end": {
+        "line": 68,
+        "character": 13
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 68,
+        "character": 14
+      },
+      "end": {
+        "line": 68,
+        "character": 16
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Annual')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 69,
+        "character": 10
+      },
+      "end": {
+        "line": 69,
+        "character": 16
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('per')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 70,
+        "character": 5
+      },
+      "end": {
+        "line": 70,
+        "character": 8
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Math.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 71,
+        "character": 7
+      },
+      "end": {
+        "line": 71,
+        "character": 13
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 71,
+        "character": 14
+      },
+      "end": {
+        "line": 71,
+        "character": 16
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('earns')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 72,
+        "character": 7
+      },
+      "end": {
+        "line": 72,
+        "character": 12
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('Math.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 74,
+        "character": 7
+      },
+      "end": {
+        "line": 74,
+        "character": 13
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 74,
+        "character": 14
+      },
+      "end": {
+        "line": 74,
+        "character": 16
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got NUMBER ('12')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 75,
+        "character": 1
+      },
+      "end": {
+        "line": 75,
+        "character": 3
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('months.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 75,
+        "character": 4
+      },
+      "end": {
+        "line": 75,
+        "character": 12
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 75,
+        "character": 13
+      },
+      "end": {
+        "line": 75,
+        "character": 15
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got NUMBER ('12')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 76,
+        "character": 1
+      },
+      "end": {
+        "line": 76,
+        "character": 3
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ARROW, got ID ('months.a')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 76,
+        "character": 4
+      },
+      "end": {
+        "line": 76,
+        "character": 12
+      }
+    }
+  },
+  {
+    "severity": "Error",
+    "message": "Expected ID, got ARROW ('->')",
+    "source": "IOGL-Parser",
+    "range": {
+      "start": {
+        "line": 76,
+        "character": 13
+      },
+      "end": {
+        "line": 76,
+        "character": 15
+      }
+    }
+  }
+]
+Updated Diagnostics: []
+Original Edges: 11
+Updated Edges: 39

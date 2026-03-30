@@ -3,6 +3,7 @@ export type TokenType =
   | 'LBRACKET' | 'RBRACKET'  // []
   | 'LBRACE' | 'RBRACE'      // {}
   | 'ID'                     // Labels, Node IDs, Handle IDs
+  | 'BRACKETED_ID'           // [Label with spaces] or [[Matrix]]
   | 'COLON'                  // :
   | 'AT'                     // @
   | 'COMMA'                  // ,
@@ -65,9 +66,15 @@ export class Lexer {
         continue;
       }
 
+      // 2. Bracketed Identifier (Priority over singles)
+      if (char === '[') {
+        this.tokens.push(this.readBracketedID());
+        continue;
+      }
+
       // Single-character tokens
       const singles: Record<string, TokenType> = {
-        '[': 'LBRACKET', ']': 'RBRACKET',
+        ']': 'RBRACKET',
         '{': 'LBRACE', '}': 'RBRACE',
         ':': 'COLON', '@': 'AT',
         ',': 'COMMA', '=': 'EQUALS'
@@ -143,6 +150,37 @@ export class Lexer {
     }
     if (this.input[this.pos] === '"') this.advanceChars(1);
     return { type: 'RAW_VALUE', value: val, line: startLine, col: startCol };
+  }
+
+  private readBracketedID(): Token {
+    const startLine = this.line;
+    const startCol = this.col;
+    let val = '';
+    let depth = 0;
+    
+    // Consume characters until balanced brackets are reached
+    while (this.pos < this.input.length) {
+      const char = this.input[this.pos];
+      val += char;
+      
+      if (char === '[') {
+        depth++;
+      } else if (char === ']') {
+        depth--;
+      }
+      
+      this.advanceChars(1);
+      if (depth === 0) break;
+    }
+
+    if (depth > 0) {
+      // Basic error reporting - following user recommendation
+      console.error(`Lexer Error: Unclosed bracket starting at L${startLine}:C${startCol}`);
+      // Return as ID to avoid total crash, though it will likely fail parser
+      return { type: 'ID', value: val, line: startLine, col: startCol };
+    }
+
+    return { type: 'BRACKETED_ID', value: val, line: startLine, col: startCol };
   }
 
   private readIdentifier(): Token {

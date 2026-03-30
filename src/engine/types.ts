@@ -61,7 +61,6 @@ export interface AddNodePayload {
 export interface MoveNodePayload {
     id: string;
     position: { x: number; y: number };
-    oldPosition?: { x: number; y: number };
     parentId?: string;
 }
 
@@ -74,7 +73,6 @@ export interface ResizeNodePayload {
     id: string;
     width: number;
     height: number;
-    oldSize?: { width: number; height: number };
 }
 
 export interface BrainEvent {

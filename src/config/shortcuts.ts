@@ -134,6 +134,24 @@ export const COMMAND_REGISTRY: ShortcutDefinition[] = [
         category: 'System',
         keys: { default: 'escape' }
     },
+    {
+        id: 'system:undo',
+        label: 'Undo',
+        category: 'System',
+        keys: { default: 'ctrl+z', mac: 'cmd+z' }
+    },
+    {
+        id: 'system:redo',
+        label: 'Redo',
+        category: 'System',
+        keys: { default: 'ctrl+y', mac: 'cmd+y' }
+    },
+    {
+        id: 'system:redo-alt',
+        label: 'Redo (Alt)',
+        category: 'System',
+        keys: { default: 'ctrl+shift+z', mac: 'cmd+shift+z' }
+    },
 ];
 
 /**

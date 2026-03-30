@@ -267,7 +267,7 @@ export class BrainWorkerProxy {
         });
     }
 
-    /** Send full graph snapshot (project load, crash recovery, batch undo) */
+    /** Send full graph snapshot (project load, crash recovery) */
     public syncGraph(snapshot: SerializedGraphSnapshot) {
         this.callbacks.onSyncing();
         this.pendingRequest = false;

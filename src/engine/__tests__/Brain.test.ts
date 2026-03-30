@@ -104,29 +104,6 @@ describe('Brain', () => {
             expect(brain.getNodeBoundingBox('N3')).toBeNull();
         });
 
-        it('updateNodeBoundingBox should not add to undo history', () => {
-            brain.applyTransaction({
-                type: 'ADD_NODE',
-                payload: { id: 'N4', type: 'UI-01', position: { x: 0, y: 0 }, data: {} }
-            });
-
-            // Undo the ADD_NODE to get back to empty
-            brain.undo();
-            expect(brain.getNodesMap().size).toBe(0);
-
-            // Re-add the node
-            brain.applyTransaction({
-                type: 'ADD_NODE',
-                payload: { id: 'N4', type: 'UI-01', position: { x: 0, y: 0 }, data: {} }
-            });
-
-            // Write bounding box — should NOT pollute history
-            brain.updateNodeBoundingBox('N4', { width: 200, height: 100 });
-
-            // Undo should remove the ADD_NODE, not the bounding box write
-            brain.undo();
-            expect(brain.getNodesMap().size).toBe(0);
-        });
     });
 
     describe('Layout Authority', () => {
