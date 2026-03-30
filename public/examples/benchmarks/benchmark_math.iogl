@@ -10,44 +10,44 @@
 [V4_2] IN-01 4.2 @0,500
 
 [Add] MA-01 ADD @200,50
-V10.a -> Add.a
-V5.a -> Add.b
+[V10].a -> [Add].a
+[V5].a -> [Add].b
 
 [Sub] MA-01 SUB @400,50
-Add.a -> Sub.a
-V3.a -> Sub.b
+[Add].a -> [Sub].a
+[V3].a -> [Sub].b
 
 [Mul] MA-01 MUL @600,50
-Sub.a -> Mul.a
-V2.a -> Mul.b
+[Sub].a -> [Mul].a
+[V2].a -> [Mul].b
 
 [Div] MA-01 DIV @800,50
-Mul.a -> Div.a
-V4.a -> Div.b
+[Mul].a -> [Div].a
+[V4].a -> [Div].b
 
 [NCR] MA-08 nCr @200,700
-V5.a -> NCR.a
-V2.a -> NCR.b
+[V5].a -> [NCR].a
+[V2].a -> [NCR].b
 
 [GCD] MA-07 GCD @250,800
-V12.a -> GCD.a
-V18.a -> GCD.b
+[V12].a -> [GCD].a
+[V18].a -> [GCD].b
 
 [Mod] MA-07 MOD @300,700
-V5.a -> Mod.a
-V2.a -> Mod.b
+[V5].a -> [Mod].a
+[V2].a -> [Mod].b
 
 [Fraction] MA-06 Regular @300,900
-V4_2.a -> Fraction.a
+[V4_2].a -> [Fraction].a
 
 [Res_Arith] OT-01 @1000,50
-Div.a -> Res_Arith.a
+[Div].a -> [Res_Arith].a
 
 [Res_NCR] OT-01 @400,700
-NCR.a -> Res_NCR.a
+[NCR].a -> [Res_NCR].a
 
 [Res_GCD] OT-01 @400,800
-GCD.a -> Res_GCD.a
+[GCD].a -> [Res_GCD].a
 
 [Res_Mod] OT-01 @400,900
-Mod.a -> Res_Mod.a
+[Mod].a -> [Res_Mod].a

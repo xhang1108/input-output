@@ -4,27 +4,27 @@
 
 # Derivatives
 [D1] CL-01 x @300,0
-Formula.a -> D1.a
+[Formula].a -> [D1].a
 
 [D2] CL-01 x @600,0
-D1.a -> D2.a
+[D1].a -> [D2].a
 
 # Integral
 [Int] CL-02 definite @300,200
 [L0] IN-01 0 @0,200
 [L2] IN-01 2 @0,300
-Formula.a -> Int.a
-L0.a -> Int.b
-L2.a -> Int.c
+[Formula].a -> [Int].a
+[L0].a -> [Int].b
+[L2].a -> [Int].c
 
 # Limit
 [Lim] CL-03 0 @300,400
-Formula.a -> Lim.a
+[Formula].a -> [Lim].a
 
 # Solver
 [Eq] IN-09 "x^2 - 4 = 0" @0,600
 [Solve] CL-04 x @300,600
-Eq.a -> Solve.a
+[Eq].a -> [Solve].a
 
 # Results
 [Res_D2] OT-01 @900,0
@@ -32,7 +32,7 @@ Eq.a -> Solve.a
 [Res_Lim] OT-01 @600,400
 [Res_Solve] OT-01 @600,600
 
-D2.a -> Res_D2.a
-Int.a -> Res_Int.a
-Lim.a -> Res_Lim.a
-Solve.a -> Res_Solve.a
+[D2].a -> [Res_D2].a
+[Int].a -> [Res_Int].a
+[Lim].a -> [Res_Lim].a
+[Solve].a -> [Res_Solve].a
