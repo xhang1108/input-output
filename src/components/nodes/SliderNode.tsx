@@ -1,29 +1,27 @@
-import { memo, useCallback, useState, useEffect, useRef } from 'react';
+import { memo, useCallback, useState, useRef } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { Settings2 } from 'lucide-react';
+import { useNodeDebounce } from './hooks/useNodeDebounce';
 
 export const SliderNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
 
-    // Internal state for immediate UI feedback
-    // Unwrap payload to get numeric value
+    // Internal state for immediate UI feedback (Snappy UX)
+    // Synchronizes with Brain after 100ms delay (Perf Law #4)
     const initialValue = Number(PayloadUtils.unwrap(data.value)) || 0;
-    const [localValue, setLocalValue] = useState(initialValue);
+    const [localValue, setLocalValue] = useNodeDebounce<number>(
+        id,
+        initialValue,
+        (val) => ({ value: val }),
+        100
+    );
 
     const [showSettings, setShowSettings] = useState(false);
     const isInteracting = useRef(false);
-
-    // Sync internal state with external value changes (e.g. from N Panel)
-    useEffect(() => {
-        if (!isInteracting.current) {
-            setLocalValue(initialValue);
-        }
-    }, [initialValue]);
 
     const { updateNodeData } = useReactFlow();
 
@@ -35,14 +33,8 @@ export const SliderNode = memo((props: NodeProps) => {
         const val = parseFloat(e.target.value);
         if (!isNaN(val)) {
             setLocalValue(val);
-
-            // Send to Brain. Brain handles debouncing the heavy calculation.
-            brain.applyTransaction({
-                type: 'UPDATE_NODE_DATA',
-                payload: { id, data: { value: val } }
-            });
         }
-    }, [id, brain]);
+    }, [setLocalValue]);
 
     const handleSettingChange = (key: string, value: string) => {
         const numVal = parseFloat(value);

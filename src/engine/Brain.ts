@@ -82,6 +82,11 @@ export class Brain {
                 node.value = payload;
                 node.isInDirtyChain = false;
                 this.dirtyNodes.delete(id);
+            } else {
+                // Async Pollution Check: Node was deleted before result arrived.
+                // Explicitly clear from tracking sets to prevent infinite recalculation loops.
+                this.dirtyNodes.delete(id);
+                this.worker.getFreshlyUpdated().delete(id);
             }
         }
         this.isRecalculating = false;
@@ -204,6 +209,18 @@ export class Brain {
             }
 
             if (this.isRecalculating) return;
+
+            // Heartbeat Self-Purge: Force removal of deleted node IDs from calculation queue.
+            // This is the "Safety Invariant" that prevents ALL infinite loops from stale state.
+            if (this.dirtyNodes.size > 0) {
+                this.dirtyNodes = new Set([...this.dirtyNodes].filter(id => this.state.nodes.has(id)));
+                // Also sync isInDirtyChain property for consistency (defensive)
+                for (const node of this.state.nodes.values()) {
+                    if (node.isInDirtyChain && !this.dirtyNodes.has(node.id)) {
+                        node.isInDirtyChain = false;
+                    }
+                }
+            }
 
             // O(1) dirty check
             const hasDirty = this.dirtyNodes.size > 0 || this.worker.getFreshlyUpdated().size > 0;
@@ -693,6 +710,11 @@ export class Brain {
                 this.pendingPatch.removedNodeIds.push(id);
                 if (!this.pendingPatch.removedEdgeIds) this.pendingPatch.removedEdgeIds = [];
                 cascadeEdges.forEach(e => this.pendingPatch.removedEdgeIds!.push(e.id));
+
+                // Cleanup Tracking Sets & Topology (Root Cause Fix)
+                this.dirtyNodes.delete(id);
+                this.worker.getFreshlyUpdated().delete(id);
+                this.topology.removeNode(id);
             },
             onEdgeRemoved: (edgeToRemove) => {
                 this.updateAdjacency(edgeToRemove, 'REMOVE');

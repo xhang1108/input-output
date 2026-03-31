@@ -7,6 +7,8 @@ import {
     useEdgesState,
     Node,
     Edge,
+    NodeChange,
+    EdgeChange,
     SelectionMode,
     ConnectionMode,
     ConnectionLineType,
@@ -200,14 +202,14 @@ export function Body({
     } = useHand();
 
     // Intercept React Flow node changes to prevent native deselection during operation
-    const onNodesChangeSafe = useCallback((changes: any[]) => {
+    const onNodesChangeSafe = useCallback((changes: NodeChange[]) => {
         // Block destructive/structural changes for non-owners, but allow 'add' for ephemeral experiments
         const isDestructive = changes.some(c => c.type === 'remove' || c.type === 'position' || c.type === 'dimensions');
         if (isReadOnly && isDestructive) return;
 
         if (isResolvingTransform() || ['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
-            const filtered = changes.filter(c => c.type !== 'select');
-            if (filtered.length > 0) onNodesChange(filtered);
+            const filtered = (changes as any[]).filter(c => c.type !== 'select');
+            if (filtered.length > 0) onNodesChange(filtered as any[]);
             return;
         }
 
@@ -222,21 +224,42 @@ export function Body({
                 return c;
             });
 
-            onNodesChange(enforcedChanges);
-            autoSave();
+            onNodesChange(enforcedChanges as any[]);
+            
+            // Selection changes should NOT trigger auto-save (noise reduction)
             return;
         }
 
-        onNodesChange(changes);
-        if (!isReadOnly) autoSave();
-    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, nodes, autoSave, isReadOnly]);
+        onNodesChange(changes as any[]);
 
-    const onEdgesChangeSafe = useCallback((changes: any[]) => {
-        const isDestructive = changes.some(c => c.type === 'remove');
+        // --- Bulletproof Auto-Save Whitelisting ---
+        // 1. dimensions: Ignored (Echoes of rendering/layout, already handled by RESIZE_NODE tx)
+        // 2. select: Ignored (Purely UI state)
+        // 3. position: Only save when dragging ends (dragging === false)
+        // 4. add/remove: Always save structural changes
+        const hasStructuralChange = (changes as any[]).some(c => 
+            c.type === 'add' || 
+            c.type === 'remove' || 
+            (c.type === 'position' && c.dragging === false)
+        );
+
+        if (hasStructuralChange && !isReadOnly && !isRestoring) {
+            autoSave();
+        }
+    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, nodes, autoSave, isReadOnly, isRestoring]);
+
+    const onEdgesChangeSafe = useCallback((changes: EdgeChange[]) => {
+        const isDestructive = (changes as any[]).some(c => c.type === 'remove');
         if (isReadOnly && isDestructive) return;
-        onEdgesChange(changes);
-        if (!isReadOnly) autoSave();
-    }, [onEdgesChange, autoSave, isReadOnly]);
+        
+        onEdgesChange(changes as any[]);
+
+        // Strict Edge Whitelisting: Only add/remove trigger auto-save
+        const hasStructuralChange = (changes as any[]).some(c => c.type === 'add' || c.type === 'remove');
+        if (hasStructuralChange && !isReadOnly && !isRestoring) {
+            autoSave();
+        }
+    }, [onEdgesChange, autoSave, isReadOnly, isRestoring]);
 
     // --- Canvas Reset ---
     const clearMemory = useCallback(() => {
@@ -576,17 +599,27 @@ export function Body({
             // History
             'system:undo': (e) => {
                 e.preventDefault();
+                autoSave.cancel(); // Defuse pending saves before restoration
                 if (mode !== 'IDLE') {
                     cancelGrab(true);
                     logAction('Cancel + Undo');
                 } else {
                     logAction('Undo');
                 }
-                // Small delay to ensure state propagates if we just cancelled
-                setTimeout(() => undo(), 10);
+                undo();
             },
-            'system:redo': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
-            'system:redo-alt': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
+            'system:redo': (e) => { 
+                e.preventDefault(); 
+                autoSave.cancel(); 
+                redo(); 
+                logAction('Redo'); 
+            },
+            'system:redo-alt': (e) => { 
+                e.preventDefault(); 
+                autoSave.cancel(); 
+                redo(); 
+                logAction('Redo'); 
+            },
 
             // Confirmation & Navigation
             'system:confirm': () => { confirmGrab(); logAction('Confirm (Enter)'); },

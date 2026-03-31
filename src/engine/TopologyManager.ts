@@ -65,6 +65,28 @@ export class TopologyManager {
         edges.forEach(edge => this.updateAdjacency(edge, 'ADD'));
     }
 
+    public removeNode(nodeId: string) {
+        // 1. Deep Housecleaning: Remove nodeId from other nodes' adjacency lists 
+        // as a safety fallback (even if edges were already removed via e, REMOVE)
+        for (const [source, targets] of this.adjacency.entries()) {
+            if (targets.includes(nodeId)) {
+                this.adjacency.set(source, targets.filter(id => id !== nodeId));
+            }
+        }
+
+        // 2. Deep Housecleaning: Remove nodeId from other nodes' reverse adjacency lists
+        for (const [target, inputs] of this.reverseAdjacency.entries()) {
+            const filtered = inputs.filter(i => i.nodeId !== nodeId);
+            if (filtered.length !== inputs.length) {
+                this.reverseAdjacency.set(target, filtered);
+            }
+        }
+
+        // 3. Clear node's own entries (The "Root Cause" Fix)
+        this.adjacency.delete(nodeId);
+        this.reverseAdjacency.delete(nodeId);
+    }
+
     public clear() {
         this.adjacency.clear();
         this.reverseAdjacency.clear();
