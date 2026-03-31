@@ -7,7 +7,7 @@ import { PayloadUtils } from '../../utils/PayloadUtils';
 const math = create(all, { number: 'number' });
 
 /**
- * 🧮 NerdamerService: Symbolic Math Engine Facade
+ * NerdamerService: Symbolic Math Engine Facade
  */
 
 // LRU Cache implementation for compiled math functions
@@ -55,14 +55,14 @@ export class NerdamerService {
     private compiledFnCache: LRUCache<string, Function>;
 
     private constructor() {
-        // 💡 Fix: Use globalThis for safe universal scope access (Worker/Window/Node)
+        // Fix: Use globalThis for safe universal scope access (Worker/Window/Node)
         const globalNerd = (globalThis as any).nerdamer;
-        
+
         if (globalNerd) {
             this.nerdamer = globalNerd;
         } else {
             // Server-side / Node / Standard Bundled Client
-            // 💡 Fix: Handle ESM default export vs CommonJS
+            // Fix: Handle ESM default export vs CommonJS
             this.nerdamer = (nerdamer as any).default || nerdamer;
         }
 
@@ -77,7 +77,7 @@ export class NerdamerService {
     }
 
     /**
-     * 💡 Reset for Testing
+     * Reset for Testing
      * Used to clear singleton state in test suites to prevent pollution.
      */
     public static reset() {
@@ -145,7 +145,7 @@ export class NerdamerService {
             const nExpr = this.nerdamer(normExpr);
             const textExpr = nExpr.text();
 
-            // 💡 Use MathJS for robust evaluation (handles ^ and math functions natively)
+            // Use MathJS for robust evaluation (handles ^ and math functions natively)
             // Using 'number' mode for performance and compatibility with plotting.
             const compiled = math.compile(textExpr);
             const fn = (scope: any) => {

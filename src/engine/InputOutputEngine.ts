@@ -10,12 +10,12 @@ export class InputOutputEngine implements InputOutputEngineInterface {
     private constructor() {
         console.log('[InputOutputEngine] Constructor starting... [V2-FIXED]');
         try {
-            // 💡 In a module worker, we strongly prefer the bundled 'mathjs' import
+            // In a module worker, we strongly prefer the bundled 'mathjs' import
             // to ensure consistency and availability of BigNumber/Units.
-            
+
             console.log('[InputOutputEngine] Creating local math instance with bundled all/create...');
             this.math = create(all, MATH_CONFIG);
-            
+
             if (typeof this.math.bignumber !== 'function') {
                 console.error('[InputOutputEngine] Created math instance is missing bignumber! Trying fallback...');
                 // Emergency attempt if 'all' didn't include it for some reason
@@ -24,7 +24,7 @@ export class InputOutputEngine implements InputOutputEngineInterface {
 
             console.log('[InputOutputEngine] Math instance ready. bignumber check:', typeof this.math.bignumber);
 
-            // 🧠 Register First-Class Math Aliases
+            // Register First-Class Math Aliases
             // These are not "patches" but standard international/mathematical alternatives.
             const aliases: any = {};
             for (const [alias, primary] of Object.entries(MATH_ALIASES)) {
@@ -32,7 +32,7 @@ export class InputOutputEngine implements InputOutputEngineInterface {
                     aliases[alias] = this.math[primary];
                 }
             }
-            
+
             this.math.import(aliases, { override: true });
             console.log(`[InputOutputEngine] Registered ${Object.keys(aliases).length} math aliases.`);
         } catch (error) {
@@ -50,7 +50,7 @@ export class InputOutputEngine implements InputOutputEngineInterface {
     }
 
     /**
-     * 💡 Reset for Testing
+     * Reset for Testing
      * Used to clear singleton state in test suites to prevent pollution.
      */
     public static reset() {
@@ -81,7 +81,7 @@ export class InputOutputEngine implements InputOutputEngineInterface {
     public processInput(val: unknown, unit?: string): unknown {
         if (unit) {
             try {
-                // 💡 NEW: Lazy Unit Registration
+                // NEW: Lazy Unit Registration
                 // If mathjs doesn't know this unit, try to create it as a base unit
                 // to allow it to participate in basic arithmetic and formatting.
                 try {
@@ -93,7 +93,7 @@ export class InputOutputEngine implements InputOutputEngineInterface {
                         this.math.createUnit(unit);
                     }
                 }
-                
+
                 return this.math.unit(val as any, unit);
             } catch (e) {
                 // console.warn(`[InputOutputEngine] Failed to create/register unit ${val} ${unit}`, e);
@@ -110,7 +110,7 @@ export class InputOutputEngine implements InputOutputEngineInterface {
             const msg = e.message || '';
             // If mathjs knows both units but they are incompatible (e.g. m to kg)
             if (msg.includes('Units do not match') || msg.includes('Unexpected type')) {
-                throw e; 
+                throw e;
             }
             // Otherwise it's likely an unknown unit (like 'apple'), so just relay
             return val;

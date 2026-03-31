@@ -10,7 +10,7 @@ import { Transaction } from '../../engine/types';
 import remarkGfm from 'remark-gfm';
 
 /**
- * 📝 TextAnnotationNode (UI-01)
+ * TextAnnotationNode (UI-01)
  * A "Sticky Note" style node with Markdown support and dynamic resizing.
  * Refactored to use BaseNode/ResizeHandle/useNodeDimensions for stability.
  */
@@ -59,7 +59,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
     const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
         const currentValue = e.target.value; // Stale State Defense: Direct DOM Access
         const initialValue = originalValue.current;
-        
+
         if (initialValue !== null && initialValue !== currentValue && !isRestoring) {
             push({
                 id: `edit_${id}_${Date.now()}`,
@@ -93,7 +93,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
             style={{ width, height }}
             onDoubleClick={toggleEdit}
         >
-            <div 
+            <div
                 className="flex-1 w-full h-full min-h-0 min-w-0 select-none cursor-text overflow-hidden prose prose-invert prose-sm max-w-none prose-headings:mb-1 prose-p:mb-1 flex flex-col pt-1 nodrag"
                 onPointerDown={(e) => e.stopPropagation()}
             >

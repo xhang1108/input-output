@@ -1,5 +1,5 @@
 /**
- * 🌉 BrainWorkerProxy
+ * BrainWorkerProxy
  * 
  * Main-thread adapter that manages communication with the brain.worker.ts.
  * Handles epoch-based stale result prevention, request coalescing,
@@ -78,7 +78,7 @@ export class BrainWorkerProxy {
 
     private spawnWorker() {
         if (this.isBlocked) return;
-        
+
         try {
             this.worker = new Worker(
                 new URL('./brain.worker.ts', import.meta.url),
@@ -94,7 +94,7 @@ export class BrainWorkerProxy {
                 const message = (error as any).message || 'Unknown error';
                 const filename = (error as any).filename || '';
                 const lineno = (error as any).lineno || 0;
-                
+
                 console.error(`[BrainWorkerProxy] Worker crashed: ${message} at ${filename}:${lineno}`);
                 debugManager.trackWorkerError({ message, filename, lineno });
 
@@ -121,7 +121,7 @@ export class BrainWorkerProxy {
         this.pendingRequest = false;
         this.queuedPatch = null;
         if (this.evalDebounceTimer) clearTimeout(this.evalDebounceTimer);
-        
+
         this.callbacks.onError(this.epoch, 'Worker crashed unexpectedly');
 
         if (this.worker) {
@@ -216,7 +216,7 @@ export class BrainWorkerProxy {
         if (this.evalDebounceTimer) clearTimeout(this.evalDebounceTimer);
         this.evalDebounceTimer = setTimeout(() => {
             if (this.pendingRequest) return;
-            
+
             this.pendingRequest = true;
             this.requestStartTime = Date.now();
             const currentPatch = this.queuedPatch || patch;
@@ -228,7 +228,7 @@ export class BrainWorkerProxy {
                 epoch: this.epoch,
                 patches: currentPatch,
             });
-        }, 32); 
+        }, 32);
     }
 
     /** Atomic full-sync + eval: replace graph then compute dirty nodes */
@@ -237,7 +237,7 @@ export class BrainWorkerProxy {
         this.epoch++;
         this.pendingRequest = true;
         this.requestStartTime = Date.now();
-        this.queuedPatch = null; 
+        this.queuedPatch = null;
         this.send({
             type: 'SYNC_AND_EVAL',
             msgId: this.nextMsgId(),

@@ -10,7 +10,7 @@ import { useNodeDebounce } from './hooks/useNodeDebounce';
 import { Brain } from '../../engine/Brain';
 
 /**
- * 🧱 MatrixInputNode (IO-08)
+ * MatrixInputNode (IO-08)
  * Standard matrix entry node with dynamic resizing.
  * Snaps to grid steps (44px horizontal, 36px vertical).
  */
@@ -206,8 +206,8 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                                 <div
                                     key={c}
                                     className={`w-10 h-8 bg-zinc-900/50 border rounded flex items-center justify-center transition-colors ${isNaN(parseFloat(String(val))) && String(val) !== ''
-                                            ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]'
-                                            : 'border-zinc-800'
+                                        ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]'
+                                        : 'border-zinc-800'
                                         }`}
                                 >
                                     <input

@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
                     <Link href="/wiki/user/system" className="group/version bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded text-[8px] font-bold hover:bg-primary/20 hover:text-primary transition-all duration-200 cursor-pointer">
                         V{pkg.version}
                     </Link>
-                    <span>©2026 Input-Output All Rights Reserved</span>
+                    <span>2026 Input-Output All Rights Reserved</span>
                 </div>
 
                 {/* RIGHT: Email */}

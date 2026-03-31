@@ -1,5 +1,5 @@
 /**
- * 🛡️ RuntimeGuard: Eval-Time Safety Valve
+ * ️ RuntimeGuard: Eval-Time Safety Valve
  *
  * Instead of pre-scanning for domain errors (which risks infinite loops),
  * we catch errors at evaluation time. This intercepts:

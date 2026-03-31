@@ -1,10 +1,10 @@
 import type { MathNode } from 'mathjs';
 
 /**
- * 💡 MathCompileCache: Centralized String-to-Code Optimization
+ * MathCompileCache: Centralized String-to-Code Optimization
  * 
  * Compiling raw formula strings is computationally expensive in Mathjs.
- * Node evaluators are called frequently (up to 120fps during slide sweeps).
+ * Node evaluators are called frequently during interactions.
  * This global cache intercepts identical math expressions and returns pre-compiled
  * native executable Javascript objects. 
  */

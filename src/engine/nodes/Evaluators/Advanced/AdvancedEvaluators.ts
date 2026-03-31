@@ -318,7 +318,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const variable = data.variable || 'x', order = Number(data.order) || 1;
         const exprStr = PayloadUtils.extractExprStr(inputs['in_a']);
         if (!exprStr || ['null', 'undefined'].includes(exprStr)) return PayloadUtils.createError('No Expression Input');
-        
+
         try {
             const svc = NerdamerService.getInstance();
             const text = svc.differentiate(exprStr, variable, order).text();
@@ -393,7 +393,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             }
             else {
                 const trimmed = valStr.trim();
-                // 💡 Fix: Skip raw numeric scalars without an assignment. 
+                // Fix: Skip raw numeric scalars without an assignment. 
                 // Pushing '6' as an equation makes Nerdamer think '6 = 0', which is a contradiction.
                 if (!trimmed.includes('=') && !isNaN(Number(trimmed))) {
                     return; // Ignore raw numeric constants that aren't assigned to a variable
@@ -473,7 +473,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             // If targetVar is already in the scope, we're done immediately
             if (targetVar && scope[targetVar] !== undefined) {
                 const val = Number(scope[targetVar]);
-                // 💡 Fix: Even early returns must be wrapped in an array for Solver consistency
+                // Fix: Even early returns must be wrapped in an array for Solver consistency
                 const finalVal = !isNaN(val) ? val : String(scope[targetVar]);
                 return PayloadUtils.createArray([finalVal]);
             }
@@ -546,7 +546,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                     // nerdamer evaluate().text('decimals') can return non-numeric strings for complex values
                     const evaluated = nerd(trimmed).evaluate().text('decimals');
                     const num = Number(evaluated);
-                    
+
                     if (isNaN(num) || !isFinite(num)) {
                         // If it's a fraction string like "1/2", try to convert to decimal if it's simple
                         if (trimmed.includes('/')) {
@@ -587,7 +587,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 })
                 .slice(0, 6); // MAX_SOLUTIONS = 6
 
-            // 💡 Fix: Equation Solver should ALWAYS return an array of solutions, 
+            // Fix: Equation Solver should ALWAYS return an array of solutions, 
             // even if there is only one root (e.g. [2]). 
             // This ensures consistency for downstream Plot and Result nodes.
             return PayloadUtils.createArray(finalTokens);
@@ -790,11 +790,11 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
         const engine = InputOutputEngine.getInstance();
         const math = engine.getMathInstance();
 
-        // 🔠 Normalize function names for case-insensitivity (e.g. SIN -> sin)
+        // Normalize function names for case-insensitivity (e.g. SIN -> sin)
         code = PayloadUtils.normalizeMathExpression(code, math);
 
         try {
-            // 💡 Smart Evaluation & Assignment Detection
+            // Smart Evaluation & Assignment Detection
             const parsed = math.parse(code);
             let metadata: any = {};
 
@@ -802,7 +802,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
                 const asmt = parsed as any;
                 metadata.label = asmt.object?.name || asmt.name;
 
-                // 💡 Fix: Assignments (e.g., "orange=4") should remain Symbolic in the Expression node.
+                // Fix: Assignments (e.g., "orange=4") should remain Symbolic in the Expression node.
                 // This allows downstream Solvers to receive the full symbolic string.
                 const payload = PayloadUtils.createSymbolic(code);
                 payload.meta = { ...payload.meta, ...metadata };

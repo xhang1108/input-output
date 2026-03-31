@@ -26,7 +26,7 @@ interface ResizeHandleProps {
 }
 
 /**
- * 📐 Unified Resize Handle Component
+ * Unified Resize Handle Component
  * Encapsulates the arrow design, cursor logic, and resizing hook.
  */
 export const ResizeHandle = memo(({

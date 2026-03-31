@@ -104,7 +104,7 @@ export interface InjectableGraph {
 }
 
 /**
- * 🛡️ [V1.0] Master Project Data format for serialization.
+ * ️ [V1.0] Master Project Data format for serialization.
  */
 export interface ProjectData extends InjectableGraph {
     version?: string;

@@ -14,7 +14,7 @@ interface UseContentMetricsOptions {
 }
 
 /**
- * 📐 useContentMetrics
+ * useContentMetrics
  *
  * ResizeObserver bridge — automatically captures height/width changes caused by
  * text reflow or content expansion, without requiring the user to drag a resize handle.
@@ -31,7 +31,7 @@ export function useContentMetrics(
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastBoxRef = useRef<{ width: number; height: number } | null>(null);
     const brain = useBrain();
- 
+
     useEffect(() => {
         const el = ref.current;
         if (!el) return;

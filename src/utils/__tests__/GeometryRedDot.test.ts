@@ -3,7 +3,7 @@ import { GeometryUtils } from '../GeometryUtils';
 import { DEFAULT_UI_ORIGIN, DEFAULT_PHYSICAL_ANCHOR } from '../../types/NodeDefinition';
 
 /**
- * 🚩 GeometryRedDot.test.ts
+ * GeometryRedDot.test.ts
  * "The Red-Dot Constitution"
  * 
  * This test suite ensures that the node coordinate system remains anchored to the 
@@ -60,9 +60,9 @@ describe('Red-Dot Geometry Sovereignty', () => {
 
         // Even without dimensions, top-left anchoring remains valid
         const physical = GeometryUtils.computePhysicalCenter(
-            x, 
-            y, 
-            undefined, 
+            x,
+            y,
+            undefined,
             undefined
         );
 
@@ -75,7 +75,7 @@ describe('Red-Dot Geometry Sovereignty', () => {
         // (e.g., for specialized nodes that explicitly request centering)
         const x = 100; // Center coordinate
         const w = 50;
-        
+
         const physical = GeometryUtils.computePhysicalCenter(
             x,
             0,

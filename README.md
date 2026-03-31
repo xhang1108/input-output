@@ -49,4 +49,4 @@ npm run test:run   # Single pass
 ```
 
 Built by the **input-output** Team.
-© 2026. All rights Reserved.
+2026. All rights Reserved.

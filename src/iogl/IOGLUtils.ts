@@ -4,7 +4,7 @@ import { ColorUtils } from '../utils/ColorUtils';
 import { IOGLSchema } from './manifest';
 
 /**
- * 🛠️ IOGL 1.0 Central Utilities
+ * ️ IOGL 1.0 Central Utilities
  * Centralizes shared logic for Lexer-level literal parsing, 
  * Parser-level Fidelity Guards, and Encoder-level value unwrapping.
  */
@@ -16,7 +16,7 @@ export class IOGLUtils {
         if (val === 'true') return true;
         if (val === 'false') return false;
         if (val === 'null') return null;
-        
+
         const n = parseFloat(val);
         // Flexible numeric check: Valid number and matches standard numeric pattern
         if (!isNaN(n) && isFinite(n) && /^[ \t]*[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?[ \t]*$/.test(val)) {
@@ -32,7 +32,7 @@ export class IOGLUtils {
     public static resolveHandle(handle: string | undefined, isSource: boolean): string {
         let h = (handle || '').toLowerCase();
         if (h.startsWith('.')) h = h.substring(1);
-        
+
         // Match a, b, c, d or shorthands
         const match = h.match(/^([a-z]|out|in|val|res)$/);
         if (match) {
@@ -55,7 +55,7 @@ export class IOGLUtils {
         // Match in_a, out_b, in, out etc. 
         // We capture the char (a, b, c...)
         const match = h.match(/^(in|out)(_?([a-z]))?$/);
-        
+
         if (match) {
             const char = match[3] || 'a';
             return `.${char}`;
@@ -86,7 +86,7 @@ export class IOGLUtils {
                 if (typeof val === 'string') {
                     try { parsedVal = JSON.parse(val); } catch (e) { parsedVal = val; }
                 }
-                
+
                 if (!this.checkNumeric(parsedVal)) {
                     // This warning logic might be better placed in a higher-level validator, 
                     // but we preserve the behavior of the current Parser.

@@ -1,5 +1,5 @@
 /**
- * 🛡️ [V1.0] LaTeX Authority Registry
+ * ️ [V1.0] LaTeX Authority Registry
  * 
  * The Single Source of Truth for mapping between:
  * LaTeX Commands <-> MathEngine Operations <-> Node Types (MA-*)
@@ -88,7 +88,7 @@ export const LATEX_REGISTRY: LatexNodeConfig[] = [
 ];
 
 /**
- * 🛡️ Utility: Finds a node configuration by a LaTeX token.
+ * ️ Utility: Finds a node configuration by a LaTeX token.
  */
 export function findConfigByLatex(token: string): LatexNodeConfig | undefined {
     const t = token.toLowerCase();
@@ -99,7 +99,7 @@ export function findConfigByLatex(token: string): LatexNodeConfig | undefined {
 }
 
 /**
- * 🛡️ Utility: Finds a configuration by Engine Operation name.
+ * ️ Utility: Finds a configuration by Engine Operation name.
  */
 export function findConfigByOp(op: string): LatexNodeConfig | undefined {
     return LATEX_REGISTRY.find(c => c.op.toUpperCase() === op.toUpperCase());

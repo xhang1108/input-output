@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * 🚨 Webpack Worker Syntax AST Enforcer 🚨
+ * Webpack Worker Syntax AST Enforcer 
  * 
  * In Next.js (Webpack 5), Web Workers MUST be instantiated using the strict AST pattern:
  *     new Worker(new URL('./path/to/worker.ts', import.meta.url), { type: 'module' });
@@ -16,7 +16,7 @@ import * as path from 'path';
  */
 
 describe('Webpack Web Worker Syntax Enforcer', () => {
-    
+
     // Scans recursively through directories to find .ts files
     const getAllFiles = (dirPath: string, arrayOfFiles: string[] = []) => {
         const files = fs.readdirSync(dirPath);
@@ -46,24 +46,24 @@ describe('Webpack Web Worker Syntax Enforcer', () => {
 
         allFiles.forEach(file => {
             const content = fs.readFileSync(file, 'utf-8');
-            
+
             // Ignore this test file itself
             if (file.includes('WebpackWorkerSyntax.test.ts')) return;
-            
+
             const lines = content.split('\n');
             lines.forEach((line, index) => {
                 // Ignore comments and custom wrappers
                 if (line.includes('new Worker(') && !line.trim().startsWith('//') && !line.includes('new WorkerOrchestrator')) {
                     workerInstancesFound++;
-                    
+
                     // To handle multi-line indentation, combine this line with the next 2 lines and strip whitespace
                     const chunk = lines.slice(index, index + 3).join('').replace(/\s+/g, '');
-                    
+
                     const isValidPattern = chunk.includes('newWorker(newURL(');
-                    
+
                     if (!isValidPattern) {
                         throw new Error(
-                            `\n❌ INVALID WEB WORKER SYNTAX DETECTED in ${file}:${index + 1}\n\n` +
+                            `\nINVALID WEB WORKER SYNTAX DETECTED in ${file}:${index + 1}\n\n` +
                             `Found: ${line.trim()}\n\n` +
                             `Next.js Webpack 5 requires the 'new URL' to be strictly inlined within the 'new Worker' constructor.\n` +
                             `Extracting it to a variable will cause the Worker to be served as a raw media asset, crashing production.\n\n` +

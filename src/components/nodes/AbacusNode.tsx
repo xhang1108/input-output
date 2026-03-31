@@ -9,7 +9,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { useNodeDimensions } from './hooks/useNodeDimensions';
 
 /**
- * 🧮 AbacusNode (IN-08)
+ * AbacusNode (IN-08)
  * Standard abacus input node with dynamic digit-rod resizing.
  * Anchored to Top-Left (Red-Dot).
  */

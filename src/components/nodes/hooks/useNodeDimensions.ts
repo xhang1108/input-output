@@ -18,8 +18,8 @@ interface UseNodeDimensionsProps {
 }
 
 /**
- * 📐 Unified hook for managing node dimensions during and after resize.
- * Handles local visual state for 120fps updates and syncs with Brain atomically at resize end.
+ * Unified hook for managing node dimensions during and after resize.
+ * Handles local visual state for smooth updates and syncs with Brain atomically at resize end.
  *
  * Undo semantics: ONE Ctrl+Z restores both the outer frame AND any data changes
  * (e.g. matrix rows/cols) that occurred during the drag.

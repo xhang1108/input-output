@@ -1,12 +1,12 @@
 import { ASTNode } from '../types/payload';
 
 /**
- * 🎨 FormulaRenderer: Phase 3 Formula Generator
+ * FormulaRenderer: Phase 3 Formula Generator
  * 
  * Converts a symbolic ASTNode into a LaTeX string.
  */
 export class FormulaRenderer {
-    // 🪜 Operator Precedence (Higher = Binds tighter)
+    // Operator Precedence (Higher = Binds tighter)
     private static PRECEDENCE: Record<string, number> = {
         'OR': 10,
         'AND': 20,
@@ -60,8 +60,8 @@ export class FormulaRenderer {
                 : (child.type === 'FunctionCall' ? this.PRECEDENCE['CALL'] : 100);
 
             let rendered = this.render(child, options);
-            
-            // 💡 Rule: If child precedence is strictly lower than parent, wrap in parens
+
+            // Rule: If child precedence is strictly lower than parent, wrap in parens
             // Exception: DIV (Fractions) and POW (Superscript) have natural visual grouping
             if (childPrec < parentPrec && op !== 'DIV' && op !== 'POW') {
                 return `\\left(${rendered}\\right)`;
@@ -116,7 +116,7 @@ export class FormulaRenderer {
         }
         if (lowerName === 'det' || lowerName === 'determinant') {
             if (args[0] && (args[0] as any).isMatrix) {
-                 return this.renderArrayAsMatrix(args[0], 'vmatrix', options);
+                return this.renderArrayAsMatrix(args[0], 'vmatrix', options);
             }
             return `\\det\\left(${renderedArgs[0]}\\right)`;
         }
@@ -127,7 +127,7 @@ export class FormulaRenderer {
         if (lowerName === 'cos') return `\\cos{${renderedArgs[0]}}`;
         if (lowerName === 'tan') return `\\tan{${renderedArgs[0]}}`;
         if (lowerName === 'abs') return `\\left|${renderedArgs[0]}\\right|`;
-        
+
         // 4. Advanced Math (Log/Ln/Round)
         if (lowerName === 'log') {
             const baseNode = node.meta?.base;

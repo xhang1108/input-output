@@ -5,7 +5,7 @@ import { LATEX_REGISTRY, findConfigByLatex } from './latexRegistry';
 const generateNodeId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 6)}`;
 
 /**
- * 🛡️ [V4.2.1] MathJS Friendly Pre-processor
+ * ️ [V4.2.1] MathJS Friendly Pre-processor
  * Strips LaTeX syntax and reformats for standard MathJS expression parsing.
  * Uses space padding to help lexer distinguish operators.
  */
@@ -155,7 +155,7 @@ export function parseLatexToGraph(latex: string, startPos: { x: number, y: numbe
 
     const rootNodeId = processNode(rootAst, 0, 0);
 
-    // 🛡️ [V1.0] Auto-Attach Result Node
+    // ️ [V1.0] Auto-Attach Result Node
     if (rootNodeId) {
         const resultId = generateNodeId('RESULT');
         nodeTransactions.push({

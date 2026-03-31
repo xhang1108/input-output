@@ -5,7 +5,7 @@ import { useAppStore } from '../store/useStore';
 import { toast } from 'sonner';
 
 /**
- * 🏗️ WorkerOrchestrator
+ * ️ WorkerOrchestrator
  * 
  * Manages Web Worker lifecycle, synchronization, and result application.
  * Decouples the low-level worker threading logic from the main Brain logic.
@@ -48,7 +48,7 @@ export class WorkerOrchestrator {
                     onError: (epoch: number, error: string) => {
                         console.error('[WorkerOrchestrator] error:', error);
                         if (error === 'ENGINE_BLOCKED') {
-                            toast.error('⚠️ Engine Loading Blocked', {
+                            toast.error('️ Engine Loading Blocked', {
                                 description: 'Please check your Ad-blocker or network connection and refresh the page.',
                                 duration: 10000,
                             });
