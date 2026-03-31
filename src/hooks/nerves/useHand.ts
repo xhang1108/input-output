@@ -20,7 +20,7 @@ export function useHand() {
     const { getNodes, setNodes, getViewport, setViewport } = useReactFlow();
     const brain = useBrain();
     const { project } = useCanvasProjection();
-    const { interactionMode, setInteractionMode, push: pushHistory } = useHistoryStore();
+    const { interactionMode, setInteractionMode, push: pushHistory, setIsRestoring } = useHistoryStore();
     
     // Internal UI local mode for rapid state (rAF loops)
     const [mode, _setMode] = useState<HistoryMode>('IDLE');
@@ -42,6 +42,7 @@ export function useHand() {
 
     // --- Transform State ---
     const initialPositions = useRef<Map<string, XYPosition>>(new Map());
+    const initialParentIds = useRef<Map<string, string | null>>(new Map());
     const initialAbsolutePositions = useRef<Map<string, XYPosition>>(new Map());
     const initialDimensions = useRef<Map<string, { w: number, h: number }>>(new Map());
     const initialRotations = useRef<Map<string, number>>(new Map());
@@ -326,12 +327,13 @@ export function useHand() {
         }
 
         initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
+        initialParentIds.current = new Map(selected.map((n) => [n.id, n.parentId || null]));
         initialAbsolutePositions.current.clear();
         startMousePos.current = mousePos;
         startFlowPos.current = project(mousePos);
         setAxisLock(null);
         setMode('GRABBING');
-    }, [getNodes, detachSelected, project]);
+    }, [getNodes, detachSelected, project, setMode]);
 
     const startScale = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
@@ -465,15 +467,20 @@ export function useHand() {
             brain.applyTransaction({ type: 'BATCH', payload: txs });
 
             const invTxs: Transaction[] = [];
-            initialAbsolutePositions.current.forEach((_, id) => {
-                const initNode = nodes.find(n => n.id === id);
-                if (initNode) {
-                    const initPos = initialPositions.current.get(id);
-                    if (initPos) {
-                        invTxs.push({ type: 'MOVE_NODE', payload: { id, position: { ...initPos }, parentId: initNode.parentId || null } });
-                    }
-                }
+            // FIX: Use initialPositions as the source of truth for all transformations (Grab/Scale/Rotate)
+            // initialAbsolutePositions is only populated for Scale/Rotate and is used for calculation, not history.
+            initialPositions.current.forEach((initPos, id) => {
+                const initialParentId = initialParentIds.current.get(id) ?? null;
+                invTxs.push({ 
+                    type: 'MOVE_NODE', 
+                    payload: { 
+                        id, 
+                        position: { ...initPos }, 
+                        parentId: initialParentId 
+                    } 
+                });
             });
+
             initialDimensions.current.forEach((initDim, id) => {
                 invTxs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: initDim.w, height: initDim.h } } });
             });
@@ -517,6 +524,8 @@ export function useHand() {
             return;
         }
 
+        // Sync protection: Prevent cancelGrab from generating polluting history in useBrainSync
+        setIsRestoring(true);
         setNodes(nodes => nodes.map(n => {
             // Restore Frames
             if (framesToRestore.has(n.id)) {
@@ -525,13 +534,23 @@ export function useHand() {
             // Restore Nodes (Position Only)
             const initPos = positionsToRestore.get(n.id);
             if (initPos) {
-                return { 
+                const initialParentId = initialParentIds.current.get(n.id);
+                const res = { 
                     ...n, 
-                    position: initPos
+                    position: { ...initPos }
                 };
+                if (initialParentId !== undefined) res.parentId = initialParentId === null ? undefined : initialParentId;
+                return res;
             }
             return n;
         }));
+        
+        // Double rAF to ensure sync completes before releasing guard
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setIsRestoring(false);
+            });
+        });
 
         isResolvingRef.current = true;
         setTimeout(() => { isResolvingRef.current = false; }, 100);

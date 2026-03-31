@@ -574,7 +574,17 @@ export function Body({
             'system:save': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project'); }),
 
             // History
-            'system:undo': (e) => { e.preventDefault(); undo(); logAction('Undo'); },
+            'system:undo': (e) => {
+                e.preventDefault();
+                if (mode !== 'IDLE') {
+                    cancelGrab(true);
+                    logAction('Cancel + Undo');
+                } else {
+                    logAction('Undo');
+                }
+                // Small delay to ensure state propagates if we just cancelled
+                setTimeout(() => undo(), 10);
+            },
             'system:redo': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
             'system:redo-alt': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
 

@@ -210,7 +210,8 @@ export function useHistoryExecutor() {
     }, [brain, setNodes, setEdges, setIsRestoring, pushPastSilent, pushFutureSilent, getNodes, getEdges]);
 
     const undo = useCallback(() => {
-        if (interactionMode !== 'IDLE' || isDraggingConnection) {
+        const { interactionMode: currentMode } = useHistoryStore.getState();
+        if (currentMode !== 'IDLE' || isDraggingConnection) {
             return;
         }
         if (isExecutionBlocked()) {
@@ -222,10 +223,11 @@ export function useHistoryExecutor() {
             return;
         }
         executeRestoration(entry, true);
-    }, [popPast, executeRestoration, interactionMode, isDraggingConnection]);
+    }, [popPast, executeRestoration, isDraggingConnection]);
 
     const redo = useCallback(() => {
-        if (interactionMode !== 'IDLE' || isDraggingConnection) {
+        const { interactionMode: currentMode } = useHistoryStore.getState();
+        if (currentMode !== 'IDLE' || isDraggingConnection) {
              return;
         }
         if (isExecutionBlocked()) {
@@ -237,7 +239,7 @@ export function useHistoryExecutor() {
             return;
         }
         executeRestoration(entry, false);
-    }, [popFuture, executeRestoration, interactionMode, isDraggingConnection]);
+    }, [popFuture, executeRestoration, isDraggingConnection]);
 
     return { 
         undo,
