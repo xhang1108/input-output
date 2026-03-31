@@ -25,7 +25,7 @@ if (command === 'validate') {
     const { diagnostics } = GraphCodec.parse(content);
     if (diagnostics.length > 0) {
         console.error('Validation Errors:');
-        diagnostics.forEach(d => console.error(`  - ${d}`));
+        diagnostics.forEach(d => console.error(`  - ${JSON.stringify(d, null, 2)}`));
         process.exit(1);
     } else {
         console.log('IOGL is valid.');

@@ -201,12 +201,8 @@ export function useHistoryExecutor() {
             pushPastSilent(entry);
         }
 
-        // Step D: Unmute via Double rAF (Final Repaint Guarantee)
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                setIsRestoring(false);
-            });
-        });
+        // Step D: Unmute Synchronously
+        setIsRestoring(false);
     }, [brain, setNodes, setEdges, setIsRestoring, pushPastSilent, pushFutureSilent, getNodes, getEdges]);
 
     const undo = useCallback(() => {

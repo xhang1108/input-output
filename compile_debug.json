@@ -1,0 +1,627 @@
+{
+  "nodes": [
+    {
+      "id": "IN-02_96mqm8bc",
+      "type": "IN-02",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "data": {
+        "type": "slider",
+        "value": {
+          "type": "scalar",
+          "value": 4.5,
+          "symbol": null,
+          "meta": {
+            "rank": 0,
+            "dimensions": []
+          }
+        },
+        "min": 0,
+        "max": 10,
+        "step": 0.01,
+        "label": "Local Station ($/L)"
+      }
+    },
+    {
+      "id": "IN-02_8833fcya",
+      "type": "IN-02",
+      "position": {
+        "x": 0,
+        "y": 150
+      },
+      "data": {
+        "type": "slider",
+        "value": {
+          "type": "scalar",
+          "value": 4.2,
+          "symbol": null,
+          "meta": {
+            "rank": 0,
+            "dimensions": []
+          }
+        },
+        "min": 0,
+        "max": 10,
+        "step": 0.01,
+        "label": "Further Station ($/L)"
+      }
+    },
+    {
+      "id": "IN-02_rtwuxkw5",
+      "type": "IN-02",
+      "position": {
+        "x": 0,
+        "y": 300
+      },
+      "data": {
+        "type": "slider",
+        "value": {
+          "type": "scalar",
+          "value": 50,
+          "symbol": null,
+          "meta": {
+            "rank": 0,
+            "dimensions": []
+          }
+        },
+        "min": 10,
+        "max": 100,
+        "step": 1,
+        "label": "Refill Amount (L)"
+      }
+    },
+    {
+      "id": "IN-02_j4qpuu5r",
+      "type": "IN-02",
+      "position": {
+        "x": 0,
+        "y": 450
+      },
+      "data": {
+        "type": "slider",
+        "value": {
+          "type": "scalar",
+          "value": 10,
+          "symbol": null,
+          "meta": {
+            "rank": 0,
+            "dimensions": []
+          }
+        },
+        "min": 1,
+        "max": 100,
+        "step": 1,
+        "label": "Dist (1-way km)"
+      }
+    },
+    {
+      "id": "IN-02_6xr4qutm",
+      "type": "IN-02",
+      "position": {
+        "x": 0,
+        "y": 600
+      },
+      "data": {
+        "type": "slider",
+        "value": {
+          "type": "scalar",
+          "value": 8,
+          "symbol": null,
+          "meta": {
+            "rank": 0,
+            "dimensions": []
+          }
+        },
+        "min": 2,
+        "max": 25,
+        "step": 0.5,
+        "label": "Cons (L/100km)"
+      }
+    },
+    {
+      "id": "MA-01_ws3r4k4h",
+      "type": "MA-01",
+      "position": {
+        "x": 400,
+        "y": 75
+      },
+      "data": {
+        "mode": "SUB",
+        "label": "Price Diff"
+      }
+    },
+    {
+      "id": "MA-01_gcxnv2x6",
+      "type": "MA-01",
+      "position": {
+        "x": 850,
+        "y": 225
+      },
+      "data": {
+        "mode": "MUL",
+        "label": "Gross Savings"
+      }
+    },
+    {
+      "id": "MA-01_up9zxqbh",
+      "type": "MA-01",
+      "position": {
+        "x": 400,
+        "y": 450
+      },
+      "data": {
+        "mode": "MUL",
+        "label": "Total Dist (km)"
+      }
+    },
+    {
+      "id": "IN-01_wq3bpzqn",
+      "type": "IN-01",
+      "position": {
+        "x": 400,
+        "y": 550
+      },
+      "data": {
+        "type": "scalar",
+        "value": {
+          "type": "scalar",
+          "value": 2,
+          "symbol": null,
+          "meta": {
+            "rank": 0,
+            "dimensions": []
+          }
+        },
+        "label": "Const: 2"
+      }
+    },
+    {
+      "id": "IN-01_f25e9h68",
+      "type": "IN-01",
+      "position": {
+        "x": 850,
+        "y": 550
+      },
+      "data": {
+        "type": "scalar",
+        "value": {
+          "type": "scalar",
+          "value": 100,
+          "symbol": null,
+          "meta": {
+            "rank": 0,
+            "dimensions": []
+          }
+        },
+        "label": "Const: 100"
+      }
+    },
+    {
+      "id": "MA-01_bb5cwkdr",
+      "type": "MA-01",
+      "position": {
+        "x": 850,
+        "y": 450
+      },
+      "data": {
+        "mode": "DIV",
+        "label": "L per km"
+      }
+    },
+    {
+      "id": "MA-01_fpg33qz6",
+      "type": "MA-01",
+      "position": {
+        "x": 1300,
+        "y": 525
+      },
+      "data": {
+        "mode": "MUL",
+        "label": "Fuel for Trip"
+      }
+    },
+    {
+      "id": "MA-01_b4sw88f8",
+      "type": "MA-01",
+      "position": {
+        "x": 1750,
+        "y": 450
+      },
+      "data": {
+        "mode": "MUL",
+        "label": "Trip Gas Cost"
+      }
+    },
+    {
+      "id": "MA-01_mkve7xau",
+      "type": "MA-01",
+      "position": {
+        "x": 1750,
+        "y": 300
+      },
+      "data": {
+        "mode": "SUB",
+        "label": "Net Benefit"
+      }
+    },
+    {
+      "id": "IN-01_keuqnpsv",
+      "type": "IN-01",
+      "position": {
+        "x": 2200,
+        "y": 450
+      },
+      "data": {
+        "type": "scalar",
+        "value": {
+          "type": "scalar",
+          "value": 0,
+          "symbol": null,
+          "meta": {
+            "rank": 0,
+            "dimensions": []
+          }
+        },
+        "label": "Zero"
+      }
+    },
+    {
+      "id": "LG-01_ppw93r76",
+      "type": "LG-01",
+      "position": {
+        "x": 2200,
+        "y": 300
+      },
+      "data": {
+        "mode": "GT",
+        "label": "Is Profitable?"
+      }
+    },
+    {
+      "id": "IN-04_4zypmphr",
+      "type": "IN-04",
+      "position": {
+        "x": 2650,
+        "y": 400
+      },
+      "data": {
+        "type": "string",
+        "value": {
+          "type": "string",
+          "value": "YES! Go now.",
+          "symbol": null,
+          "meta": {}
+        },
+        "label": "Msg: YES"
+      }
+    },
+    {
+      "id": "IN-04_j68hsgn9",
+      "type": "IN-04",
+      "position": {
+        "x": 2650,
+        "y": 500
+      },
+      "data": {
+        "type": "string",
+        "value": {
+          "type": "string",
+          "value": "NO! Too costly.",
+          "symbol": null,
+          "meta": {}
+        },
+        "label": "Msg: NO"
+      }
+    },
+    {
+      "id": "LG-02_w48wxfzp",
+      "type": "LG-02",
+      "position": {
+        "x": 2650,
+        "y": 300
+      },
+      "data": {
+        "type": "switch",
+        "label": "Switch"
+      }
+    },
+    {
+      "id": "OT-01_z3sckzmn",
+      "type": "OT-01",
+      "position": {
+        "x": 3100,
+        "y": 100
+      },
+      "data": {
+        "type": "result",
+        "viewMode": "auto",
+        "label": "Net Savings ($)",
+        "precision": 2
+      }
+    },
+    {
+      "id": "OT-01_aqzavqx6",
+      "type": "OT-01",
+      "position": {
+        "x": 3100,
+        "y": 300
+      },
+      "data": {
+        "type": "result",
+        "viewMode": "auto",
+        "label": "Final Verdict"
+      }
+    },
+    {
+      "id": "UT-01_asky8x23",
+      "type": "UT-01",
+      "position": {
+        "x": 400,
+        "y": -100
+      },
+      "data": {
+        "markdown": "# Gas Logic\\nNet = (Liters * PriceDiff) - (Usage * Dist * TargetPrice)\\n\\nIf positive, it pays for itself.",
+        "width": 200,
+        "height": 150,
+        "label": "Sticky Note"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_yca82892",
+      "source": "IN-02_96mqm8bc",
+      "sourceHandle": "out_a",
+      "target": "MA-01_ws3r4k4h",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_u25rvdmc",
+      "source": "IN-02_8833fcya",
+      "sourceHandle": "out_a",
+      "target": "MA-01_ws3r4k4h",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_b2tkv64z",
+      "source": "MA-01_ws3r4k4h",
+      "sourceHandle": "out_a",
+      "target": "MA-01_gcxnv2x6",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_haktgwm4",
+      "source": "IN-02_rtwuxkw5",
+      "sourceHandle": "out_a",
+      "target": "MA-01_gcxnv2x6",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_ftwjy7ge",
+      "source": "IN-02_j4qpuu5r",
+      "sourceHandle": "out_a",
+      "target": "MA-01_up9zxqbh",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_498kwukn",
+      "source": "IN-01_wq3bpzqn",
+      "sourceHandle": "out_a",
+      "target": "MA-01_up9zxqbh",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_8dfsxfty",
+      "source": "MA-01_up9zxqbh",
+      "sourceHandle": "out_a",
+      "target": "MA-01_bb5cwkdr",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_w7a2aq3z",
+      "source": "IN-01_f25e9h68",
+      "sourceHandle": "out_a",
+      "target": "MA-01_bb5cwkdr",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_psfquu9b",
+      "source": "MA-01_bb5cwkdr",
+      "sourceHandle": "out_a",
+      "target": "MA-01_fpg33qz6",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_hvr8h6r4",
+      "source": "IN-02_6xr4qutm",
+      "sourceHandle": "out_a",
+      "target": "MA-01_fpg33qz6",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_y3u6q7n4",
+      "source": "MA-01_fpg33qz6",
+      "sourceHandle": "out_a",
+      "target": "MA-01_b4sw88f8",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_7uf7rqud",
+      "source": "IN-02_8833fcya",
+      "sourceHandle": "out_a",
+      "target": "MA-01_b4sw88f8",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_j7hva4s9",
+      "source": "MA-01_gcxnv2x6",
+      "sourceHandle": "out_a",
+      "target": "MA-01_mkve7xau",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_5aqg9b27",
+      "source": "MA-01_b4sw88f8",
+      "sourceHandle": "out_a",
+      "target": "MA-01_mkve7xau",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_kvmtgtr5",
+      "source": "MA-01_mkve7xau",
+      "sourceHandle": "out_a",
+      "target": "LG-01_ppw93r76",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_cqpaspyg",
+      "source": "IN-01_keuqnpsv",
+      "sourceHandle": "out_a",
+      "target": "LG-01_ppw93r76",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_ux7hrnnr",
+      "source": "LG-01_ppw93r76",
+      "sourceHandle": "out_a",
+      "target": "LG-02_w48wxfzp",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_fp8yjuxe",
+      "source": "IN-04_4zypmphr",
+      "sourceHandle": "out_a",
+      "target": "LG-02_w48wxfzp",
+      "targetHandle": "in_b",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_m5pbh3up",
+      "source": "IN-04_j68hsgn9",
+      "sourceHandle": "out_a",
+      "target": "LG-02_w48wxfzp",
+      "targetHandle": "in_c",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_bxyebwrf",
+      "source": "MA-01_mkve7xau",
+      "sourceHandle": "out_a",
+      "target": "OT-01_z3sckzmn",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    },
+    {
+      "id": "e_qpqf4as7",
+      "source": "LG-02_w48wxfzp",
+      "sourceHandle": "out_a",
+      "target": "OT-01_aqzavqx6",
+      "targetHandle": "in_a",
+      "type": "magnetic",
+      "data": {
+        "pathType": "bezier",
+        "animate": false
+      }
+    }
+  ],
+  "hasExplicitPositions": true
+}

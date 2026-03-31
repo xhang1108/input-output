@@ -148,7 +148,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ c
                     try {
                         const payload = JSON.parse(String(children).replace(/\n$/, ''));
                         return (
-                            <div className="not-prose w-full mb-4 bg-transparent! border-none! shadow-none!" style={{ minHeight: payload.height || 80 }}>
+                            <div className="not-prose w-full mb-4 bg-transparent! border-none! shadow-none!" style={{ minHeight: (payload.height || 160) + 40 }}>
                                 <IOPlayground
                                     nodeType={payload.nodeType}
                                     initialData={payload.initialData || payload.data}

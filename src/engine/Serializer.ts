@@ -15,16 +15,56 @@ export class Serializer {
      */
     public static serialize(data: ProjectData): string {
         try {
-            const payload = {
-                ...data,
-                version: this.VERSION,
-                timestamp: Date.now()
-            };
-            return LZString.compressToEncodedURIComponent(JSON.stringify(payload));
+            // [V4.0] Lean Payload: Prune redundant metadata before storage
+            const pruned = this.prune(data);
+            return LZString.compressToEncodedURIComponent(JSON.stringify(pruned));
         } catch (e) {
             console.error('[Serializer] Failed to serialize data:', e);
             throw new Error('Serialization failed.');
         }
+    }
+
+    /**
+     * ️ [v4.0] Strips redundant UI metadata, settings, and viewport info to keep saves lean.
+     */
+    public static prune(data: ProjectData | any): ProjectData {
+        if (!data) return data;
+        
+        return {
+            nodes: (data.nodes || []).map((n: any) => {
+                // Prune internal React Flow state and local animation ticks
+                const { 
+                    handles, 
+                    measured, 
+                    selected, 
+                    dragging, 
+                    visualTick,
+                    width,
+                    height,
+                    zIndex,
+                    ...leanData 
+                } = (n.data || {}) as any;
+
+                return {
+                    id: n.id,
+                    type: n.type || 'io:val',
+                    position: n.position,
+                    data: leanData,
+                    parentId: n.parentId
+                };
+            }),
+            edges: (data.edges || []).map((e: any) => ({
+                id: e.id,
+                source: e.source,
+                sourceHandle: e.sourceHandle || '',
+                target: e.target,
+                targetHandle: e.targetHandle || '',
+                type: e.type
+            })),
+            version: data.version || this.VERSION,
+            mathPrecision: data.mathPrecision || 64
+            // Note: 'settings' and 'viewport' are intentionally omitted per V4.0 Lean Spec
+        } as ProjectData;
     }
 
     /**

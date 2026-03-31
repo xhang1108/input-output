@@ -105,6 +105,52 @@ export class SaveManager {
     }
 
     /**
+     * Save node data directly from an encoded string. [V3.0 Optimization]
+     * Bypasses full engine re-serialization.
+     */
+    public static saveFromRaw(
+        name: string,
+        encoded: string,
+        settings: Record<string, unknown>,
+        slotId?: string
+    ): string {
+        const index = this.list();
+        if (!slotId && index.length >= MAX_SLOTS) {
+            throw new Error(`Save limit reached (max ${MAX_SLOTS}). Delete an old save first.`);
+        }
+
+        const id = slotId ?? crypto.randomUUID();
+        const now = Date.now();
+        
+        // Decompress briefly to capture node/edge counts for indexing
+        const data = Serializer.deserialize(encoded);
+        const nodeCount = data?.nodes?.length ?? 0;
+        const edgeCount = data?.edges?.length ?? 0;
+
+        const meta: SaveSlotMeta = {
+            id,
+            name,
+            createdAt: slotId
+                ? (index.find(s => s.id === slotId)?.createdAt ?? now)
+                : now,
+            updatedAt: now,
+            nodeCount,
+            edgeCount,
+            version: Serializer.VERSION,
+            syncStatus: slotId 
+                ? (index.find(s => s.id === slotId)?.syncStatus)
+                : undefined
+        };
+
+        localStorage.setItem(SLOT_PREFIX + id, encoded);
+        const newIndex = index.filter(s => s.id !== id);
+        newIndex.push(meta);
+        localStorage.setItem(INDEX_KEY, JSON.stringify(newIndex));
+
+        return id;
+    }
+
+    /**
      * Efficiently save a template directly from a parsed graph, bypassing Engine overhead.
      * Used for initial payload ingestion.
      */
@@ -295,4 +341,3 @@ export class SaveManager {
         console.log(`[SaveManager] Purged ${purgeableIds.length} cloud projects from cache. Preserved pending ones.`);
     }
 }
-

@@ -64,10 +64,10 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
         } else if (nodeType) {
             // Single Node Mode
             const def = NODE_DEFINITIONS.find(d => d.id === nodeType);
-            const rawData = { 
-                ...(def?.defaultData || {}), 
-                ...(initialData || {}), 
-                label: label || initialData?.label || def?.label 
+            const rawData = {
+                ...(def?.defaultData || {}),
+                ...(initialData || {}),
+                label: label || initialData?.label || def?.label
             };
             rawData.value = PayloadUtils.normalizeForDisplay(nodeType, rawData.value);
 
@@ -143,7 +143,7 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
                         const brainW = logicNode.width ?? (logicNode.data?.width as number);
                         const brainH = logicNode.height ?? (logicNode.data?.height as number);
                         const rawPayload = updates?.has(n.id) ? updates.get(n.id) : logicNode.value;
-                        
+
                         const finalValue = PayloadUtils.normalizeForDisplay(n.type || '', rawPayload);
                         const updatedData = { ...n.data, ...logicNode.data, value: finalValue };
 
@@ -153,11 +153,11 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
                             JSON.stringify(n.data) !== JSON.stringify(updatedData)
                         ) {
                             changed = true;
-                            return { 
-                                ...n, 
-                                width: brainW ?? n.width, 
-                                height: brainH ?? n.height, 
-                                data: updatedData 
+                            return {
+                                ...n,
+                                width: brainW ?? n.width,
+                                height: brainH ?? n.height,
+                                data: updatedData
                             };
                         }
                     }
@@ -192,13 +192,13 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
             currentNodes.forEach(node => {
                 brain.applyTransaction({
                     type: 'UPDATE_NODE_DATA',
-                    payload: { 
-                        id: node.id, 
-                        data: { 
+                    payload: {
+                        id: node.id,
+                        data: {
                             ...node.data,
                             width: node.width || node.measured?.width || node.data.width,
                             height: node.height || node.measured?.height || node.data.height
-                        } 
+                        }
                     }
                 }, true);
             });
@@ -218,17 +218,17 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
             if (currentLookup.size === 0) return;
             let minY = Infinity;
             let maxY = -Infinity;
-            
+
             const nodes = Array.from(currentLookup.values());
             nodes.forEach((node: any) => {
                 if (!node.id.startsWith(namespace)) return;
                 const logicNode = brain.getNode(node.id);
-                const nHeight = node.measured?.height 
-                    || logicNode?.height 
-                    || (node.height as number) 
-                    || (node.data?.height as number) 
+                const nHeight = node.measured?.height
+                    || logicNode?.height
+                    || (node.height as number)
+                    || (node.data?.height as number)
                     || 150;
-                
+
                 const top = node.position.y || 0;
                 const bottom = top + nHeight;
                 if (top < minY) minY = top;
@@ -236,7 +236,7 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
             });
 
             if (maxY > minY) {
-                const newHeight = Math.ceil((maxY - minY) + (VERTICAL_PADDING * 2) + 40);
+                const newHeight = Math.ceil((maxY - minY) + (VERTICAL_PADDING * 2) + 100);
                 setCanvasHeight(newHeight);
             }
         };
@@ -247,7 +247,7 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
 
     return (
         <WikiDemoCanvas height={canvasHeight}>
-            <div 
+            <div
                 className="w-full h-full"
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
