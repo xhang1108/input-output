@@ -18,6 +18,8 @@ export type NodeLogic = Node & {
     parentId?: string; // Phase 4.1: Tree-based Coordinate System
     /** UI-reported bounding box (absolute canvas coords). Written by useContentMetrics. */
     boundingBox?: { width: number; height: number; x: number; y: number };
+    /** Diagnostic: track why a node was marked dirty. */
+    lastUpdatedProperty?: string;
 };
 
 export interface GraphState {
@@ -99,4 +101,15 @@ export interface InjectableGraph {
         type?: string;
         data?: Record<string, unknown>;
     }[];
+}
+
+/**
+ * ️ [V1.0] Master Project Data format for serialization.
+ */
+export interface ProjectData extends InjectableGraph {
+    version?: string;
+    timestamp?: number;
+    mathPrecision?: number;
+    settings?: Record<string, any>;
+    viewport?: { x: number; y: number; zoom: number };
 }

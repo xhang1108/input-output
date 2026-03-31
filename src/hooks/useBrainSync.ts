@@ -73,13 +73,14 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                 if (!brain.isResizing) {
                     // Check for Selection Changes
                     if (node.selected !== prevNode.selected) {
-                        syncTxs.push({
+                        // Use silent mode for selection updates to avoid triggering BATCH re-evaluations
+                        brain.applyTransaction({
                             type: 'UPDATE_NODE_DATA',
                             payload: {
                                 id: node.id,
-                                data: { ...node.data, selected: node.selected }
+                                data: { selected: node.selected }
                             }
-                        });
+                        }, true);
                     }
 
                     // Check for Data Updates (Excluding internally managed 'value')
@@ -173,7 +174,9 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
 
             // Apply remaining structural changes as a BATCH
             if (otherTxs.length > 0) {
-                brain.applyTransaction({ type: 'BATCH', payload: otherTxs });
+                // Determine if this batch contains purely non-structural data updates
+                const isPassiveBatch = otherTxs.every(t => t.type === 'UPDATE_NODE_DATA');
+                brain.applyTransaction({ type: 'BATCH', payload: otherTxs }, isPassiveBatch);
             }
         }
 

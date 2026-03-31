@@ -1,5 +1,5 @@
 /**
- * 🌀 Physics & Interaction Configuration
+ * Physics & Interaction Configuration
  * 
  * Centralized source of truth for physical thresholds, grid sizes, and layout paddings.
  * This decouples interaction logic from DOM-specific hardcoded values.

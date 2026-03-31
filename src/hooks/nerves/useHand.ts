@@ -20,7 +20,7 @@ export function useHand() {
     const { getNodes, setNodes, getViewport, setViewport } = useReactFlow();
     const brain = useBrain();
     const { project } = useCanvasProjection();
-    const { interactionMode, setInteractionMode, push: pushHistory } = useHistoryStore();
+    const { interactionMode, setInteractionMode, push: pushHistory, setIsRestoring } = useHistoryStore();
     
     // Internal UI local mode for rapid state (rAF loops)
     const [mode, _setMode] = useState<HistoryMode>('IDLE');
@@ -35,14 +35,17 @@ export function useHand() {
     const {
         deleteSelected, resetSelected,
         detachSelected, swapConnections,
+        alignSelectedNodes,
         clearSelection, selectNode,
     } = useSelection();
     const { cutPath, startCut, updateCut, endCut } = useKnife();
 
     // --- Transform State ---
     const initialPositions = useRef<Map<string, XYPosition>>(new Map());
+    const initialParentIds = useRef<Map<string, string | null>>(new Map());
     const initialAbsolutePositions = useRef<Map<string, XYPosition>>(new Map());
     const initialDimensions = useRef<Map<string, { w: number, h: number }>>(new Map());
+    const initialRotations = useRef<Map<string, number>>(new Map());
 
     const startMousePos = useRef<XYPosition | null>(null);
     const startFlowPos = useRef<XYPosition | null>(null);
@@ -93,18 +96,22 @@ export function useHand() {
         });
     }, [setNodes]);
 
-    const getCentroid = (nodes: Node[], nodeMap: Map<string, Node>): XYPosition => {
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    const getPivot = (nodes: Node[], nodeMap: Map<string, Node>): XYPosition => {
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
         nodes.forEach(n => {
             const absPos = getAbsolutePosition(n.id, nodeMap);
-            const w = n.measured?.width ?? 150;
-            const h = n.measured?.height ?? 50;
-            minX = Math.min(minX, absPos.x - w / 2);
-            maxX = Math.max(maxX, absPos.x + w / 2);
-            minY = Math.min(minY, absPos.y - h / 2);
-            maxY = Math.max(maxY, absPos.y + h / 2);
+            minX = Math.min(minX, absPos.x);
+            minY = Math.min(minY, absPos.y);
+            maxX = Math.max(maxX, absPos.x);
+            maxY = Math.max(maxY, absPos.y);
         });
-        return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+        
+        // Pivot is now the absolute BBox Center of Top-Left (Red-Dot) points
+        return { 
+            x: (minX + maxX) / 2, 
+            y: (minY + maxY) / 2 
+        };
     };
 
     const applyScale = useCallback((scaleFactor: number) => {
@@ -118,81 +125,34 @@ export function useHand() {
 
         setNodes((nodes) => {
             const nodeMap = new Map(nodes.map(n => [n.id, n]));
-            const newAbsolutePositions = new Map<string, XYPosition>();
-            const newDimensions = new Map<string, { w: number, h: number }>();
+            const nextAbsolutePositions = new Map<string, XYPosition>();
 
-            // Determine intention: single node resize vs multi-node spread
-            const selectedIds = Array.from(initialAbsolutePositions.current.keys());
-            const isSingleScale = selectedIds.length === 1;
-
-            // 1. Calculate new ABSOLUTE positions (and dimensions if single node)
+            // 1. Calculate Orbital Positions (Collapse-Safe)
             initialAbsolutePositions.current.forEach((initAbsPos, id) => {
                 const node = nodeMap.get(id);
                 if (!node) return;
 
-                const dims = initialDimensions.current.get(id);
-                const w = dims?.w ?? node.measured?.width ?? node.width ?? 150;
-                const h = dims?.h ?? node.measured?.height ?? node.height ?? 50;
+                // Relative Vector from selection pivot
+                const rx = initAbsPos.x - center.x;
+                const ry = initAbsPos.y - center.y;
 
-                const initialCenterX = initAbsPos.x;
-                const initialCenterY = initAbsPos.y;
-
-                if (isSingleScale) {
-                    // Visual Anchoring (Top-Left fixed, expand right/bottom)
-                    const newW = w * sx;
-                    const newH = h * sy;
-
-                    // Shift center by half the size difference to keep top-left pinned
-                    const newCenterX = initialCenterX + (newW - w) / 2;
-                    const newCenterY = initialCenterY + (newH - h) / 2;
-
-                    newDimensions.set(id, { w: newW, h: newH });
-                    newAbsolutePositions.set(id, { x: newCenterX, y: newCenterY });
-                } else {
-                    // Multi-node spread scaling around centroid
-                    const dx = initialCenterX - center.x;
-                    const dy = initialCenterY - center.y;
-
-                    const newCenterX = center.x + dx * sx;
-                    const newCenterY = center.y + dy * sy;
-
-                    newAbsolutePositions.set(id, {
-                        x: newCenterX,
-                        y: newCenterY
-                    });
-                }
+                // Pivot + (Vector * s)
+                nextAbsolutePositions.set(id, {
+                    x: center.x + rx * sx,
+                    y: center.y + ry * sy
+                });
             });
 
             // 2. Apply updates
-            const updatedNodes = nodes.map(node => {
-                const newAbsPos = newAbsolutePositions.get(node.id);
-                if (!newAbsPos) return node;
+            return nodes.map(node => {
+                const nextPos = nextAbsolutePositions.get(node.id);
+                if (!nextPos) return node;
 
-                const newDims = newDimensions.get(node.id);
-                const newNode = {
+                return {
                     ...node,
-                    position: newAbsPos,
-                    ...(newDims ? {
-                        width: Math.round(newDims.w),
-                        height: Math.round(newDims.h),
-                        style: {
-                            ...node.style,
-                            width: Math.round(newDims.w),
-                            height: Math.round(newDims.h)
-                        },
-                        data: {
-                            ...node.data,
-                            width: Math.round(newDims.w),
-                            height: Math.round(newDims.h)
-                        }
-                    } : {})
+                    position: nextPos
                 };
-
-                nodeMap.set(node.id, newNode);
-                return newNode;
             });
-
-            return updatedNodes;
         });
     }, [setNodes, axisLock, getAbsolutePosition]);
 
@@ -204,49 +164,31 @@ export function useHand() {
         const sin = Math.sin(angleRad);
 
         setNodes((nodes) => {
-            const nodeMap = new Map(nodes.map(n => [n.id, n]));
-            const newAbsolutePositions = new Map<string, XYPosition>();
+            const nextAbsolutePositions = new Map<string, XYPosition>();
 
-            // 1. Calculate new ABSOLUTE positions
+            // 1. Calculate Orbital Position ONLY (Nodes stay upright)
             initialAbsolutePositions.current.forEach((initAbsPos, id) => {
-                const node = nodeMap.get(id);
-                if (!node) return;
+                const dx = initAbsPos.x - center.x;
+                const dy = initAbsPos.y - center.y;
 
-                const dims = initialDimensions.current.get(id);
-                const w = dims?.w ?? node.measured?.width ?? node.width ?? 150;
-                const h = dims?.h ?? node.measured?.height ?? node.height ?? 50;
+                const nextX = center.x + (dx * cos - dy * sin);
+                const nextY = center.y + (dx * sin + dy * cos);
 
-                const initialCenterX = initAbsPos.x;
-                const initialCenterY = initAbsPos.y;
-
-                const dx = initialCenterX - center.x;
-                const dy = initialCenterY - center.y;
-
-                const newCenterX = center.x + (dx * cos - dy * sin);
-                const newCenterY = center.y + (dx * sin + dy * cos);
-
-                newAbsolutePositions.set(id, {
-                    x: newCenterX,
-                    y: newCenterY
-                });
+                nextAbsolutePositions.set(id, { x: nextX, y: nextY });
             });
 
             // 2. Apply updates
-            const updatedNodes = nodes.map(node => {
-                const newAbsPos = newAbsolutePositions.get(node.id);
-                if (!newAbsPos) return node;
+            return nodes.map(node => {
+                const nextPos = nextAbsolutePositions.get(node.id);
+                if (nextPos === undefined) return node;
 
-                const newNode = {
+                return {
                     ...node,
-                    position: newAbsPos
+                    position: nextPos
                 };
-                nodeMap.set(node.id, newNode);
-                return newNode;
             });
-
-            return updatedNodes;
         });
-    }, [setNodes, getAbsolutePosition]);
+    }, [setNodes]);
 
 
     // --- Interaction Core ---
@@ -281,10 +223,11 @@ export function useHand() {
 
             const currentFlowPos = project(mousePos);
             const flowStartMouse = startFlowPos.current;
-            const center = centerRef.current;
+            const pivot = centerRef.current;
 
-            const startDist = Math.hypot(flowStartMouse.x - center.x, flowStartMouse.y - center.y);
-            const currentDist = Math.hypot(currentFlowPos.x - center.x, currentFlowPos.y - center.y);
+            // Use distance from the Red-Dot (Pivot) as the scaling lever
+            const startDist = Math.hypot(flowStartMouse.x - pivot.x, flowStartMouse.y - pivot.y);
+            const currentDist = Math.hypot(currentFlowPos.x - pivot.x, currentFlowPos.y - pivot.y);
 
             const scale = startDist > 0 ? currentDist / startDist : 1;
             setTransformValue(scale.toFixed(2));
@@ -294,8 +237,10 @@ export function useHand() {
             if (transformBuffer !== '') return;
 
             const currentFlowPos = project(mousePos);
-            const center = centerRef.current;
-            const currentAngle = Math.atan2(currentFlowPos.y - center.y, currentFlowPos.x - center.x);
+            const pivot = centerRef.current;
+            
+            // Mouse angle relative to the Red-Dot (Pivot)
+            const currentAngle = Math.atan2(currentFlowPos.y - pivot.y, currentFlowPos.x - pivot.x);
 
             let delta = currentAngle - lastAngleRef.current;
             if (delta > Math.PI) delta -= 2 * Math.PI;
@@ -382,12 +327,13 @@ export function useHand() {
         }
 
         initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
+        initialParentIds.current = new Map(selected.map((n) => [n.id, n.parentId || null]));
         initialAbsolutePositions.current.clear();
         startMousePos.current = mousePos;
         startFlowPos.current = project(mousePos);
         setAxisLock(null);
         setMode('GRABBING');
-    }, [getNodes, detachSelected, project]);
+    }, [getNodes, detachSelected, project, setMode]);
 
     const startScale = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
@@ -405,6 +351,11 @@ export function useHand() {
             getAbsolutePosition(n.id, nodeMap)
         ]));
 
+        initialRotations.current = new Map(selected.map((n) => [
+            n.id,
+            (n.data?.rotation as number) || 0
+        ]));
+
         // Store Dimensions for stability
         initialDimensions.current = new Map(selected.map((n) => [
             n.id,
@@ -414,7 +365,7 @@ export function useHand() {
             }
         ]));
 
-        centerRef.current = getCentroid(selected, nodeMap);
+        centerRef.current = getPivot(selected, nodeMap);
         startMousePos.current = mousePos;
         startFlowPos.current = project(mousePos);
         setMode('SCALING');
@@ -436,6 +387,11 @@ export function useHand() {
             getAbsolutePosition(n.id, nodeMap)
         ]));
 
+        initialRotations.current = new Map(selected.map((n) => [
+            n.id,
+            (n.data?.rotation as number) || 0
+        ]));
+
         // Store Dimensions for stability
         initialDimensions.current = new Map(selected.map((n) => [
             n.id,
@@ -445,7 +401,7 @@ export function useHand() {
             }
         ]));
 
-        centerRef.current = getCentroid(selected, nodeMap);
+        centerRef.current = getPivot(selected, nodeMap);
 
         const flowStartMouse = project({ x: mousePos.x, y: mousePos.y });
         accumulatedRotation.current = 0;
@@ -499,7 +455,7 @@ export function useHand() {
             return;
         }
 
-        // 2. Build transactions simple
+        // 2. Build transactions (Position Only)
         movedNodeIds.forEach(id => {
             const node = nodeMap.get(id);
             if (!node) return;
@@ -511,12 +467,20 @@ export function useHand() {
             brain.applyTransaction({ type: 'BATCH', payload: txs });
 
             const invTxs: Transaction[] = [];
+            // FIX: Use initialPositions as the source of truth for all transformations (Grab/Scale/Rotate)
+            // initialAbsolutePositions is only populated for Scale/Rotate and is used for calculation, not history.
             initialPositions.current.forEach((initPos, id) => {
-                const initNode = nodes.find(n => n.id === id);
-                if (initNode) {
-                    invTxs.push({ type: 'MOVE_NODE', payload: { id, position: { ...initPos }, parentId: initNode.parentId || null } });
-                }
+                const initialParentId = initialParentIds.current.get(id) ?? null;
+                invTxs.push({ 
+                    type: 'MOVE_NODE', 
+                    payload: { 
+                        id, 
+                        position: { ...initPos }, 
+                        parentId: initialParentId 
+                    } 
+                });
             });
+
             initialDimensions.current.forEach((initDim, id) => {
                 invTxs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: initDim.w, height: initDim.h } } });
             });
@@ -536,6 +500,8 @@ export function useHand() {
         setMode('IDLE');
         initialPositions.current.clear();
         initialDimensions.current.clear();
+        initialRotations.current.clear();
+        initialAbsolutePositions.current.clear();
 
         startMousePos.current = null;
         startFlowPos.current = null;
@@ -558,18 +524,33 @@ export function useHand() {
             return;
         }
 
+        // Sync protection: Prevent cancelGrab from generating polluting history in useBrainSync
+        setIsRestoring(true);
         setNodes(nodes => nodes.map(n => {
             // Restore Frames
             if (framesToRestore.has(n.id)) {
                 return { ...framesToRestore.get(n.id)! };
             }
-            // Restore Nodes
-            const init = positionsToRestore.get(n.id);
-            if (init) {
-                return { ...n, position: init };
+            // Restore Nodes (Position Only)
+            const initPos = positionsToRestore.get(n.id);
+            if (initPos) {
+                const initialParentId = initialParentIds.current.get(n.id);
+                const res = { 
+                    ...n, 
+                    position: { ...initPos }
+                };
+                if (initialParentId !== undefined) res.parentId = initialParentId === null ? undefined : initialParentId;
+                return res;
             }
             return n;
         }));
+        
+        // Double rAF to ensure sync completes before releasing guard
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setIsRestoring(false);
+            });
+        });
 
         isResolvingRef.current = true;
         setTimeout(() => { isResolvingRef.current = false; }, 100);
@@ -577,6 +558,8 @@ export function useHand() {
         setMode('IDLE');
         initialPositions.current.clear();
         initialDimensions.current.clear();
+        initialRotations.current.clear();
+        initialAbsolutePositions.current.clear();
 
         startMousePos.current = null;
         startFlowPos.current = null;
@@ -605,6 +588,14 @@ export function useHand() {
             setMode('CUTTING');
             startCut({ x: e.clientX, y: e.clientY });
             return;
+        }
+
+        // Panning Guard: If middle-click (1) or space+left-click (0 with specific class)
+        // We also check for the flow pane specifically to avoid node-click triggering this.
+        const isMiddleClick = e.button === 1;
+        const isFlowPane = target.classList.contains('react-flow__pane');
+        if (isMiddleClick || (e.button === 0 && isFlowPane)) {
+            brain.setInteracting(true);
         }
 
         if (e.button === 0) {
@@ -681,9 +672,11 @@ export function useHand() {
             endCut();
             setMode('IDLE');
         } else {
+            // End of any interaction (including panning/dragging)
+            brain.setInteracting(false);
             handleModalMouseUp(e);
         }
-    }, [mode, endCut, handleModalMouseUp, selectNode]);
+    }, [mode, endCut, handleModalMouseUp, selectNode, brain]);
 
     // Prevent context menu during transform modes to allow right-click cancel
     useEffect(() => {
@@ -695,6 +688,17 @@ export function useHand() {
         window.addEventListener('contextmenu', handleContextMenu);
         return () => window.removeEventListener('contextmenu', handleContextMenu);
     }, [mode]);
+
+    // Failsafe: Cleanup interaction guard on global blur or mouse leave
+    useEffect(() => {
+        const resetGuard = () => brain.setInteracting(false);
+        window.addEventListener('blur', resetGuard);
+        window.addEventListener('mouseleave', resetGuard);
+        return () => {
+            window.removeEventListener('blur', resetGuard);
+            window.removeEventListener('mouseleave', resetGuard);
+        };
+    }, [brain]);
 
     const handleTypeNum = useCallback((char: string) => {
         if (!['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) return;
@@ -742,6 +746,7 @@ export function useHand() {
         resetSelected,
         swapConnections,
         detachSelected,
+        alignSelectedNodes,
         clearSelection,
         selectNode,
         setAxisLock,

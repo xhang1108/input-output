@@ -1,12 +1,12 @@
 import { ASTNode } from '../types/payload';
 
 /**
- * 🎨 FormulaRenderer: Phase 3 Formula Generator
+ * FormulaRenderer: Phase 3 Formula Generator
  * 
  * Converts a symbolic ASTNode into a LaTeX string.
  */
 export class FormulaRenderer {
-    // 🪜 Operator Precedence (Higher = Binds tighter)
+    // Operator Precedence (Higher = Binds tighter)
     private static PRECEDENCE: Record<string, number> = {
         'OR': 10,
         'AND': 20,
@@ -35,7 +35,7 @@ export class FormulaRenderer {
             case 'UnaryExpression':
                 return this.renderUnary(node.operator!, node.argument!, options);
             case 'FunctionCall':
-                return this.renderFunction(node.name!, node.args || [], options);
+                return this.renderFunction(node, options);
             case 'TemplateLiteral':
                 return this.renderTemplate(node.parts || [], options);
             default:
@@ -60,8 +60,8 @@ export class FormulaRenderer {
                 : (child.type === 'FunctionCall' ? this.PRECEDENCE['CALL'] : 100);
 
             let rendered = this.render(child, options);
-            
-            // 💡 Rule: If child precedence is strictly lower than parent, wrap in parens
+
+            // Rule: If child precedence is strictly lower than parent, wrap in parens
             // Exception: DIV (Fractions) and POW (Superscript) have natural visual grouping
             if (childPrec < parentPrec && op !== 'DIV' && op !== 'POW') {
                 return `\\left(${rendered}\\right)`;
@@ -92,7 +92,9 @@ export class FormulaRenderer {
         }
     }
 
-    private static renderFunction(name: string, args: ASTNode[], options: { expandSymbols?: boolean }): string {
+    private static renderFunction(node: ASTNode, options: { expandSymbols?: boolean }): string {
+        const name = node.name!;
+        const args = node.args || [];
         const renderedArgs = args.map(arg => this.render(arg, options));
         const lowerName = name.toLowerCase();
 
@@ -113,9 +115,8 @@ export class FormulaRenderer {
             return this.renderArrayAsMatrix(args[0], 'pmatrix', options);
         }
         if (lowerName === 'det' || lowerName === 'determinant') {
-            // If the argument is already a matrix literal, use vmatrix
             if (args[0] && (args[0] as any).isMatrix) {
-                 return this.renderArrayAsMatrix(args[0], 'vmatrix', options);
+                return this.renderArrayAsMatrix(args[0], 'vmatrix', options);
             }
             return `\\det\\left(${renderedArgs[0]}\\right)`;
         }
@@ -125,13 +126,21 @@ export class FormulaRenderer {
         if (lowerName === 'sin') return `\\sin{${renderedArgs[0]}}`;
         if (lowerName === 'cos') return `\\cos{${renderedArgs[0]}}`;
         if (lowerName === 'tan') return `\\tan{${renderedArgs[0]}}`;
-        if (lowerName === 'asin') return `\\arcsin{${renderedArgs[0]}}`;
-        if (lowerName === 'acos') return `\\arccos{${renderedArgs[0]}}`;
-        if (lowerName === 'atan') return `\\arctan{${renderedArgs[0]}}`;
-        if (lowerName === 'log') return `\\log{${renderedArgs[0]}}`;
-        if (lowerName === 'ln') return `\\ln{${renderedArgs[0]}}`;
+        if (lowerName === 'abs') return `\\left|${renderedArgs[0]}\\right|`;
 
-        // 4. Custom LaTeX Commands
+        // 4. Advanced Math (Log/Ln/Round)
+        if (lowerName === 'log') {
+            const baseNode = node.meta?.base;
+            if (baseNode) {
+                const b = this.render(baseNode, options);
+                return `\\log_{${b}}{${renderedArgs[0]}}`;
+            }
+            return `\\log{${renderedArgs[0]}}`;
+        }
+        if (lowerName === 'ln') return `\\ln{${renderedArgs[0]}}`;
+        if (lowerName === 'round') return `\\text{round}(${renderedArgs.join(', ')})`;
+
+        // 5. Custom LaTeX Commands
         if (name.startsWith('\\')) {
             return `${name}\\left(${renderedArgs.join(', ')}\\right)`;
         }
@@ -140,8 +149,6 @@ export class FormulaRenderer {
     }
 
     private static renderArrayAsMatrix(node: ASTNode, env: 'pmatrix' | 'vmatrix', options: { expandSymbols?: boolean }): string {
-        // This expects the node value to be a 2D array after hydration/parsing
-        // Since we are in the renderer, we try to interpret the structure
         const val = node.value as any;
         if (!val || typeof val !== 'object') return this.render(node, options);
 

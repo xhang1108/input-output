@@ -5,7 +5,7 @@ import { registerAdvancedNodes } from './advancedNodes';
 import { registerUtilityNodes } from './utilityNodes';
 
 /**
- * 💡 initializeNodes
+ * initializeNodes
  * 
  * Hub to register all specialized node categories into the central NodeRegistry.
  * This decouples the NodeRegistry from individual node implementations.
@@ -20,7 +20,7 @@ export function initializeNodes() {
     registerAdvancedNodes();
     registerUtilityNodes();
 
-    // 💡 Bridge Nodes: Pass-through for Macro boundaries
+    // Bridge Nodes: Pass-through for Macro boundaries
     NodeRegistry.register('BRIDGE_IN', (node, inputs) => {
         // Bridge In nodes act as source internally, but externally they represent an input.
         // During evaluation (inside macro), they just return the value they were given from parents.

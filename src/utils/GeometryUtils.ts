@@ -15,7 +15,45 @@ export interface BBox {
     height: number;
 }
 
+export const FALLBACK_SIZE = { width: 150, height: 100 };
+
 export class GeometryUtils {
+    /**
+     * migratePosition
+     * 
+     * Core migration formula to translate coordinates between different UI origins.
+     * Used for backward compatibility (e.g. migrating Center-based saves to TopLeft-based).
+     * 
+     * Formula:
+     * TopLeft_X = Center_X - (Width / 2)
+     * TopLeft_Y = Center_Y - (Height / 2)
+     * 
+     * @param pos The current position
+     * @param measured Optional measured size of the node
+     * @param fromOrigin Original origin [x, y] (default [0.5, 0.5])
+     * @param toOrigin Target origin [x, y] (default [0, 0])
+     */
+    static migratePosition(
+        pos: { x: number; y: number },
+        measured?: { width?: number; height?: number },
+        fromOrigin: [number, number] = [0.5, 0.5],
+        toOrigin: [number, number] = [0, 0]
+    ) {
+        // 1. Get dimensions, fallback to constants if measured is missing
+        const w = measured?.width ?? FALLBACK_SIZE.width;
+        const h = measured?.height ?? FALLBACK_SIZE.height;
+
+        // 2. Calculate origin delta
+        // If from [0.5, 0.5] to [0, 0], delta is (0 - 0.5) * size = -0.5 * size
+        const dx = (toOrigin[0] - fromOrigin[0]) * w;
+        const dy = (toOrigin[1] - fromOrigin[1]) * h;
+
+        return {
+            x: pos.x + dx,
+            y: pos.y + dy
+        };
+    }
+
     /**
      * computePhysicalCenter
      * 
@@ -36,22 +74,20 @@ export class GeometryUtils {
     static computePhysicalCenter(
         renderX: number,
         renderY: number,
-        width: number | undefined,
-        height: number | undefined,
+        _width: number | undefined,
+        _height: number | undefined,
         uiOrigin: [number, number] = DEFAULT_UI_ORIGIN,
         physicalAnchor: [number, number] = DEFAULT_PHYSICAL_ANCHOR
     ): { x: number; y: number } {
-        // Fallback dimensions for unmeasured nodes to avoid NaN
-        const w = width ?? 100;
-        const h = height ?? 50;
+        // Since both uiOrigin and physicalAnchor default to [0, 0], 
+        // the Physical Center IS the Render Position.
+        // We only apply offsets if they are explicitly different from top-left.
+        const w = _width ?? 0;
+        const h = _height ?? 0;
 
-        // 1. First, find the absolute Top-Left coordinate (0,0) of the BBox
-        // If uiOrigin is [0.5, 0.5], renderX is the center. So TopLeftX = renderX - width * 0.5.
         const absoluteTopLeftX = renderX - w * uiOrigin[0];
         const absoluteTopLeftY = renderY - h * uiOrigin[1];
 
-        // 2. Add the physical anchor offset to calculate the mathematical coordinate
-        // If physicalAnchor is [0.5, 0.5], we go from TopLeft to the Center.
         const physicalX = absoluteTopLeftX + w * physicalAnchor[0];
         const physicalY = absoluteTopLeftY + h * physicalAnchor[1];
 

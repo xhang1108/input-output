@@ -4,15 +4,15 @@ import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { IOGLUtils } from './IOGLUtils';
 
 /**
- * 🛠️ IOGL 1.0 Encoder
+ * ️ IOGL 1.0 Encoder
  * Converts internal Engine graph state into IOGL 1.0 script format.
  * Utilizes IOGLUtils for standardized handle and value formatting.
  */
 export class Encoder {
   private static formatLabel(label: string): string {
     if (!label) return '';
-    const needsBrackets = /[^a-zA-Z0-9_]/.test(label);
-    return needsBrackets ? `[${label}]` : label;
+    // IOGL 1.0 Law: Labels MUST be bracketed at all times for consistency.
+    return `[${label}]`;
   }
 
   public static encode(graph: InjectableGraph): string {
@@ -53,13 +53,13 @@ export class Encoder {
           }
 
           const values = keys.map(key => {
-              return IOGLUtils.unwrapValue(data[key]);
+            return IOGLUtils.unwrapValue(data[key]);
           }).filter(v => v !== undefined);
 
           if (values.length > 0) {
             // Position-based encoding (Extreme Merging)
             values.forEach(v => {
-                positionalData.push(JSON.stringify(v));
+              positionalData.push(JSON.stringify(v));
             });
           }
         }
@@ -78,10 +78,9 @@ export class Encoder {
       const propStr = props.length > 0 ? ` { ${props.join(', ')} }` : '';
       const x = Math.round(node.position.x);
       const y = Math.round(node.position.y);
-      
-      // Node Label logic: Only prefix if label differs or needs brackets
-      const hasSpecialChars = /[^a-zA-Z0-9_]/.test(label);
-      const labelStr = (label !== node.type || hasSpecialChars) ? `${this.formatLabel(label)} ` : '';
+
+      // IOGL 1.1 Law: All nodes MUST have bracketed labels in output
+      const labelStr = `${this.formatLabel(label)} `;
 
       result += `${labelStr}${node.type}${positionalStr}${propStr} @${x},${y}\n`;
     }

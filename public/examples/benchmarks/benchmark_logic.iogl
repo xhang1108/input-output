@@ -5,26 +5,26 @@
 [C] IN-01 0 @0,200
 
 [Gate_AND] LG-01 AND @300,100
-A.a -> Gate_AND.a
-C.a -> Gate_AND.b
+[A].a -> [Gate_AND].a
+[C].a -> [Gate_AND].b
 
 [Switch] LG-02 @600,300
-Gate_AND.a -> Switch.a
-A.a -> Switch.b
-B.a -> Switch.c
+[Gate_AND].a -> [Switch].a
+[A].a -> [Switch].b
+[B].a -> [Switch].c
 
 [V_True] IN-05 Sticky, true @450,450
 [V_Data] IN-01 500 @450,550
 [Split] LG-03 @550,500
-V_True.a -> Split.a
-V_Data.a -> Split.b
+[V_True].a -> [Split].a
+[V_Data].a -> [Split].b
 
 # Results
 [Res_Gate] OT-01 @900,100
-Gate_AND.a -> Res_Gate.a
+[Gate_AND].a -> [Res_Gate].a
 
 [Res_Switch] OT-01 @900,300
-Switch.a -> Res_Switch.a
+[Switch].a -> [Res_Switch].a
 
 [Res_TrueArr] OT-01 @900,500
-Split.a -> Res_TrueArr.a
+[Split].a -> [Res_TrueArr].a

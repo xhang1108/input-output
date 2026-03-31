@@ -29,6 +29,12 @@ export class Brain {
     private pendingPatch: IncrementalPatch = { dirtyChainNodeIds: [] };
     private dirtyNodes: Set<string> = new Set();
 
+    private isInteracting = false;
+    private interactionWatchdog: NodeJS.Timeout | null = null;
+    private readonly INTERACTION_TIMEOUT = 5000;
+
+    private lastSolveMs = 0;
+
     private constructor(id: string) {
         this.id = id;
         this.state = {
@@ -201,15 +207,21 @@ export class Brain {
 
             // O(1) dirty check
             const hasDirty = this.dirtyNodes.size > 0 || this.worker.getFreshlyUpdated().size > 0;
-            if (hasDirty) {
+
+            if (hasDirty && !this.isInteracting && !this.isRecalculating) {
                 this.isRecalculating = true;
 
                 if (this.worker.isEnabled()) {
                     await this.worker.init();
+                    const startTime = performance.now();
                     await this.worker.syncAndEval(this.state.nodes, this.state.edges, this.topology);
+                    this.lastSolveMs = performance.now() - startTime;
+                    this.isRecalculating = false; // Worker handles its own completion
                 } else {
                     try {
+                        const startTime = performance.now();
                         const patches = await this.recalculateDirtyChain();
+                        this.lastSolveMs = performance.now() - startTime;
                         if (patches.size > 0) {
                             this.emit('graphChanged', patches);
                         }
@@ -217,6 +229,9 @@ export class Brain {
                         this.isRecalculating = false;
                     }
                 }
+            } else if (!hasDirty && !this.isRecalculating) {
+                // If idle, reset solveMs to 0
+                this.lastSolveMs = 0;
             }
         }, this.HEARTBEAT_MS);
     }
@@ -238,6 +253,35 @@ export class Brain {
 
     public getPhysicsConfig() {
         return PHYSICS_CONFIG;
+    }
+
+    public getStatus() {
+        return {
+            isRecalculating: this.isRecalculating,
+            isInteracting: this.isInteracting,
+            solveMs: this.lastSolveMs
+        };
+    }
+
+    /** 
+     * Viewport Interaction Guard: Suspend computation during pan/zoom.
+     * Includes a watchdog to prevent engine stalls if events are missed.
+     */
+    public setInteracting(value: boolean) {
+        this.isInteracting = value;
+
+        if (this.interactionWatchdog) {
+            clearTimeout(this.interactionWatchdog);
+            this.interactionWatchdog = null;
+        }
+
+        if (value) {
+            this.interactionWatchdog = setTimeout(() => {
+                console.warn('️ [Brain] Interaction Watchdog Fired: Forcing resume.');
+                this.isInteracting = false;
+                this.interactionWatchdog = null;
+            }, this.INTERACTION_TIMEOUT);
+        }
     }
 
     public static getComputeSession(id: string = 'main'): Brain {
@@ -430,9 +474,9 @@ export class Brain {
 
             // Stepwise Propagation: Only propagate if the value ACTUALLY changed.
             // This prevents "Performance Avalanches" (Fatal Flaw 4 Fix)
-            // 💡 Pulse Protection: We ignore the 'symbol' field because it can change (e.g. literals in AST) 
+            // Pulse Protection: We ignore the 'symbol' field because it can change (e.g. literals in AST) 
             // even if the result value is identical.
-            const isEqual = oldPayload && 
+            const isEqual = oldPayload &&
                 deepEqual(oldPayload.value, resultPayload.value) &&
                 oldPayload.type === resultPayload.type &&
                 deepEqual(oldPayload.meta, resultPayload.meta);
@@ -500,7 +544,7 @@ export class Brain {
             .filter(n => n.isInDirtyChain)
             .map(n => n.id);
 
-        // 💡 Pulse Protection: Clear the visual tracking set to avoid infinite heartbeats
+        // Pulse Protection: Clear the visual tracking set to avoid infinite heartbeats
         this.dirtyNodes.clear();
 
         for (const id of dirtyChainNodeIds) {
@@ -940,7 +984,7 @@ export class Brain {
      * Called by `useContentMetrics` (ResizeObserver bridge) when a node's DOM
      * dimensions change due to content reflow (e.g. Sticky Note text growth).
      *
-     * ⚠️ Pure metadata write — no Transaction, no Undo history, no dirty-chain.
+     * ️ Pure metadata write — no Transaction, no Undo history, no dirty-chain.
      * This is intentional: bounding box is a geometric read-only cache for A* routing.
      */
     public updateNodeBoundingBox(id: string, box: { width: number; height: number }) {
@@ -1034,7 +1078,7 @@ export class Brain {
 
             if (definition) {
                 // Node Data Reconciliation: Sync with current code base definition
-                
+
                 // 1.1 Handles Sync: Prioritize definition's handles to ensure new IO ports appear
                 if (definition.handles) {
                     nodeData = { ...nodeData, handles: definition.handles };
@@ -1241,8 +1285,8 @@ export class Brain {
     }
 
     /** No-op stubs to prevent crashes from existing UI calls */
-    public undo(): void {}
-    public redo(): void {}
+    public undo(): void { }
+    public redo(): void { }
 }
 
 

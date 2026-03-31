@@ -24,18 +24,16 @@ interface UseFlexibleResizeProps {
     onResizeStart?: () => void;
     /** Optional callback on resize end */
     onResizeEnd?: (dims: ResizeDimensions) => void;
+    /** Current canvas zoom level for delta scaling */
+    zoom?: number;
 }
 
-/**
- * A unified hook for "Visual Measurement" resizing.
- * It strictly measures raw screen-space pixels to ensure 1:1 mouse tracking.
- * Responsibility for Zoom compensation and Constraints belongs to the caller.
- */
 export const useFlexibleResize = ({
     targetRef,
     onResize,
     onResizeStart,
-    onResizeEnd
+    onResizeEnd,
+    zoom = 1
 }: UseFlexibleResizeProps) => {
     const [state, setState] = useState<ResizeState>({
         active: false,
@@ -66,24 +64,24 @@ export const useFlexibleResize = ({
         if (!state.active) return;
 
         const handleMove = (e: PointerEvent) => {
-            const deltaX = e.clientX - state.originX;
-            const deltaY = e.clientY - state.originY;
+            const deltaX = (e.clientX - state.originX) / zoom;
+            const deltaY = (e.clientY - state.originY) / zoom;
 
             onResize({
-                screenW: state.originW + deltaX,
-                screenH: state.originH + deltaY,
+                screenW: state.originW / zoom + deltaX,
+                screenH: state.originH / zoom + deltaY,
                 deltaX,
                 deltaY
             });
         };
 
         const handleUp = (e: PointerEvent) => {
-            const deltaX = e.clientX - state.originX;
-            const deltaY = e.clientY - state.originY;
+            const deltaX = (e.clientX - state.originX) / zoom;
+            const deltaY = (e.clientY - state.originY) / zoom;
 
             onResizeEnd?.({
-                screenW: state.originW + deltaX,
-                screenH: state.originH + deltaY,
+                screenW: state.originW / zoom + deltaX,
+                screenH: state.originH / zoom + deltaY,
                 deltaX,
                 deltaY
             });

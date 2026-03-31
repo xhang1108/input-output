@@ -1,5 +1,5 @@
 /**
- * 🎨 DisplayUtils
+ * DisplayUtils
  * 
  * Centralized utility for formatting MathJS objects and engine payloads
  * into human-readable strings for the UI nodes.
@@ -35,7 +35,7 @@ export const DisplayUtils = {
         if (typeof val === 'number') {
             if (isNaN(val)) return 'NaN';
             if (!isFinite(val)) return val > 0 ? '∞' : '-∞';
-            
+
             if (precision >= 0) {
                 const p = Math.max(0, Math.min(20, precision));
                 return val.toLocaleString(undefined, {
@@ -43,7 +43,7 @@ export const DisplayUtils = {
                     maximumFractionDigits: p
                 });
             }
-            
+
             // Clean rounding for floating point noise
             const str = String(Math.round(val * 1e10) / 1e10);
             return str;
@@ -65,8 +65,8 @@ export const DisplayUtils = {
 
         // 4. Objects (Payloads, MathJS, Dehydrated)
         if (typeof val === 'object') {
-            
-            // --- 🛡️ NodePayload Detection ---
+
+            // --- ️ NodePayload Detection ---
             // If it's a wrapper, we unwrap and recurse with specific logic for each type
             if ('type' in val && ('value' in val || 'meta' in val)) {
                 const type = String(val.type).toLowerCase();
@@ -103,13 +103,13 @@ export const DisplayUtils = {
                 return this.formatValue(value, precision);
             }
 
-            // --- 🧪 MathJS Dehydrated Types ---
+            // --- MathJS Dehydrated Types ---
             // Check this BEFORE generic object keys to catch serialized BigNumbers etc.
             if (val.mathjs) {
                 switch (val.mathjs) {
                     case 'BigNumber': return this.formatValue(val.value, precision);
                     case 'Fraction': return `${val.n}/${val.d}`;
-                    case 'Complex': 
+                    case 'Complex':
                         const re = this.formatValue(val.re, precision);
                         const im = this.formatValue(val.im, precision);
                         return `${re}${val.im >= 0 ? '+' : ''}${im}i`;
@@ -118,7 +118,7 @@ export const DisplayUtils = {
                 }
             }
 
-            // --- 🧬 Live MathJS Objects ---
+            // --- Live MathJS Objects ---
             if (val.isBigNumber === true) return this.formatValue(val.toString(), precision);
             if (val.isComplex === true) {
                 return `${this.formatValue(val.re, precision)}${val.im >= 0 ? '+' : ''}${this.formatValue(val.im, precision)}i`;
@@ -127,12 +127,12 @@ export const DisplayUtils = {
             if (val.isUnit === true) return val.toString();
             if (val.isMatrix === true) return this.formatValue(val.toArray ? val.toArray() : val._data, precision);
 
-            // --- 📊 Standard Arrays ---
+            // --- Standard Arrays ---
             if (Array.isArray(val)) {
                 return `[${val.map(item => this.formatValue(item, precision)).join(', ')}]`;
             }
 
-            // --- 🏛️ Plain Objects ---
+            // --- ️ Plain Objects ---
             const keys = Object.keys(val).filter(k => k !== 'constructor' && !k.startsWith('_'));
             if (keys.length > 0) {
                 const entries = keys.map(k => `${k}: ${this.formatValue(val[k], precision)}`);

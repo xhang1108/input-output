@@ -22,7 +22,7 @@ export const NodeExpression = memo((props: NodeProps) => {
         }
     }, [data.code]);
 
-    // ⚡ Debounced Engine Sync
+    // Debounced Engine Sync
     useEffect(() => {
         const timer = setTimeout(() => {
             if (code !== data.code) {

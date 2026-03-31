@@ -1,5 +1,5 @@
 /**
- * 📦 Serializable Graph Types
+ * Serializable Graph Types
  * 
  * Type definitions for data transported between Main Thread and Web Worker.
  * All types here MUST be JSON-serializable (no functions, no class instances).

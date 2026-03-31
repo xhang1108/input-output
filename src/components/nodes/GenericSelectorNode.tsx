@@ -12,13 +12,13 @@ import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
  * Everything is driven by NODE_DEFINITIONS.
  */
 export const GenericSelectorNode = memo((props: NodeProps) => {
-    // 🧠 Dynamic Param Detection: 
+    // Dynamic Param Detection: 
     // Find the first 'select' parameter from the definition.
     // This allows support for nodes using 'op' (Math) AND 'mode' (List Utility).
     const paramId = useMemo(() => {
         const def = NODE_DEFINITIONS.find(d => d.id === props.type);
         if (!def || !def.params) return 'op'; // Fallback
-        
+
         const selectParam = def.params.find(p => p.type === 'select');
         return selectParam?.id || 'op';
     }, [props.type]);

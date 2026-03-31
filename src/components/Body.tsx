@@ -117,10 +117,10 @@ export function Body({
 
     const effectiveSnap = isSnapping || manualSnap;
 
-    const { 
-        interactionMode, 
-        isRestoring, 
-        push 
+    const {
+        interactionMode,
+        isRestoring,
+        push
     } = useHistoryStore();
     const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
 
@@ -189,6 +189,7 @@ export function Body({
         cutPath,
         swapConnections,
         detachSelected,
+        alignSelectedNodes,
         clearSelection,
         selectNode,
         handleTypeNum,
@@ -573,7 +574,17 @@ export function Body({
             'system:save': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project'); }),
 
             // History
-            'system:undo': (e) => { e.preventDefault(); undo(); logAction('Undo'); },
+            'system:undo': (e) => {
+                e.preventDefault();
+                if (mode !== 'IDLE') {
+                    cancelGrab(true);
+                    logAction('Cancel + Undo');
+                } else {
+                    logAction('Undo');
+                }
+                // Small delay to ensure state propagates if we just cancelled
+                setTimeout(() => undo(), 10);
+            },
             'system:redo': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
             'system:redo-alt': (e) => { e.preventDefault(); redo(); logAction('Redo'); },
 
@@ -688,8 +699,6 @@ export function Body({
                     // Explicitly disable native edge updates to prioritize our Relink system
                     edgesReconnectable={false}
 
-                    nodeOrigin={[0.5, 0.5]}
-                    snapToGrid={effectiveSnap}
                     selectionKeyCode={null}
                     multiSelectionKeyCode={['Shift']}
 
@@ -762,6 +771,7 @@ export function Body({
 
                     // Snapping Logic
 
+                    nodeOrigin={[0, 0]}
                     snapGrid={effectiveSnap ? [20, 20] : undefined} // Only provide grid when enabled
                     minZoom={0.1}
                     maxZoom={4}
@@ -811,6 +821,7 @@ export function Body({
                                     detachSelected,
                                     deleteSelected,
                                     viewSpecs: () => { }, // Canvas has no specs
+                                    alignSelectedNodes,
                                     logAction,
                                 }, contextMenu.x, contextMenu.y)
                                 : (() => {
@@ -839,6 +850,7 @@ export function Body({
                                         copyToClipboard,
                                         detachSelected,
                                         deleteSelected,
+                                        alignSelectedNodes,
                                         logAction,
                                     }, hasSpecs);
                                 })()

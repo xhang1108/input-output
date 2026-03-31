@@ -14,11 +14,11 @@
 
 # --- 2. Math ---
 [add] MA-01 ADD @300,0
-num.a -> add.a
-pi.a -> add.b
+[num].a -> [add].a
+[pi].a -> [add].b
 
 [pow] MA-02 POW @300,100
-add.a -> pow.a
+[add].a -> [pow].a
 
 [log] MA-03 LN @300,200
 [trig] MA-04 SIN @300,300
@@ -29,7 +29,7 @@ add.a -> pow.a
 
 # --- 3. Calculus ---
 [diff] CL-01 x, 1 @600,0
-expr.a -> diff.a
+[expr].a -> [diff].a
 
 [int] CL-02 indefinite, x @600,100
 [lim] CL-03 both, x, 0 @600,200
@@ -38,8 +38,8 @@ expr.a -> diff.a
 
 # --- 4. Data ---
 [build] DT-01 Rows @900,0
-num.a -> build.a
-pi.a -> build.a
+[num].a -> [build].a
+[pi].a -> [build].a
 
 [ext] DT-02 1D, 0 @900,100
 [list] DT-03 "Sort (Asc)" @900,200

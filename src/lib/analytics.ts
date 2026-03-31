@@ -1,5 +1,5 @@
 /**
- * 💡 Analytics Utility
+ * Analytics Utility
  * Unified interface for tracking custom events in Google Analytics.
  * Uses the 'gtag' function provided by @next/third-parties.
  */
@@ -10,7 +10,7 @@ declare global {
   }
 }
 
-export type AnalyticsEvent = 
+export type AnalyticsEvent =
   | { name: 'add_node'; params: { type: string } }
   | { name: 'share_graph'; params: { platform: string } }
   | { name: 'run_calculation'; params: { node_count: number } }

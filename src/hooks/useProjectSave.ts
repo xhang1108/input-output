@@ -190,7 +190,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 const storageId = `cloud:${actualId}`;
                 SaveManager.updateMeta(storageId, { syncStatus: 'synced' });
 
-                if (!silent) toast.success('Cloud Synced ☁️');
+                if (!silent) toast.success('Cloud Synced ️');
 
                 // Auto-transition to SAVED status for UI polish
                 setTimeout(() => {
@@ -423,7 +423,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
                             // Conflict Resolution: Local vs Cloud
                             if (localMeta && (localMeta.updatedAt - cloudUpdatedAt) > 5000) {
-                                toast('⚠️ Version Conflict Detected', {
+                                toast('️ Version Conflict Detected', {
                                     description: 'Local backup is newer. Load local or force cloud?',
                                     duration: Infinity,
                                     action: {

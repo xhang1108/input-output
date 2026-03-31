@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from "next-auth/react";
-import { v7 as uuidv7 } from 'uuid';
+
 import {
     Plus, Trash2, Pencil, Check, X,
     Box, GitBranch, Clock, Cloud, HardDrive,
@@ -114,15 +114,15 @@ function SaveSlotCard({
 
                 {loading ? (
                     <div className="flex flex-col items-center gap-3">
-                        <motion.img 
-                            src="/logo.webp" 
-                            alt="Loading" 
+                        <motion.img
+                            src="/logo.webp"
+                            alt="Loading"
                             className="w-10 h-10 object-contain"
-                            animate={{ 
+                            animate={{
                                 scale: [1, 1.15, 1],
                                 opacity: [0.7, 1, 0.7]
                             }}
-                            transition={{ 
+                            transition={{
                                 duration: 2,
                                 repeat: Infinity,
                                 ease: "easeInOut"
@@ -231,7 +231,7 @@ function SaveSlotCard({
                     )}
 
                     <button
-                        onClick={() => { 
+                        onClick={() => {
                             setActiveSlotId?.(meta.id);
                             if (isRenaming) submitRename();
                             else { setNameInput(meta.name); setIsRenaming(true); }
@@ -308,15 +308,15 @@ function NewProjectCard({ onClick, isCloud = false, disabled = false, descriptio
                         ? 'bg-cloud/20 text-text-cloud group-hover:bg-cloud/20'
                         : 'bg-surface-light text-text-muted group-hover:bg-unit/20 group-hover:text-unit'}`}>
                     {loading ? (
-                        <motion.img 
-                            src="/logo.webp" 
-                            alt="Loading" 
+                        <motion.img
+                            src="/logo.webp"
+                            alt="Loading"
                             className="w-8 h-8 object-contain"
-                            animate={{ 
+                            animate={{
                                 scale: [1, 1.1, 1],
                                 opacity: [0.5, 1, 0.5]
                             }}
-                            transition={{ 
+                            transition={{
                                 duration: 1.5,
                                 repeat: Infinity,
                                 ease: "easeInOut"
@@ -633,7 +633,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
     const canCreateCloud = !!session && cloudSlots.length < 20;
 
     const handleNewProjectLogic = () => {
-        const id = uuidv7();
+        const id = crypto.randomUUID();
         setLoadingId('new-project');
         if (canCreateCloud) {
             onNewProject(`cloud:${id}?new=1`);
@@ -649,9 +649,9 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
         <div className="flex-1 flex flex-col overflow-auto bg-transparent relative">
             {isLoadingCloud && (
                 <div className="absolute top-6 right-8 flex items-center gap-2 px-3 py-1.5 bg-cloud/10 border border-cloud/20 rounded-full z-20">
-                    <motion.img 
-                        src="/logo.webp" 
-                        alt="Syncing" 
+                    <motion.img
+                        src="/logo.webp"
+                        alt="Syncing"
                         className="w-3 h-3 object-contain"
                         animate={{ opacity: [0.5, 1, 0.5] }}
                         transition={{ duration: 1, repeat: Infinity }}
@@ -781,7 +781,7 @@ function AutoSyncManager({ allProjects, session, refreshLocal }: { allProjects: 
                     if (res.ok) {
                         SaveManager.updateMeta(p.id, { syncStatus: 'synced' });
                         refreshLocal();
-                        toast.success(`Synced "${p.name}" to Cloud ☁️`);
+                        toast.success(`Synced "${p.name}" to Cloud ️`);
                     } else {
                         const err = await res.json().catch(() => ({ error: 'Sync failed' }));
 

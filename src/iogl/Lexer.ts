@@ -2,6 +2,7 @@
 export type TokenType =
   | 'LBRACKET' | 'RBRACKET'  // []
   | 'LBRACE' | 'RBRACE'      // {}
+  | 'LPAREN' | 'RPAREN'      // ()
   | 'ID'                     // Labels, Node IDs, Handle IDs
   | 'BRACKETED_ID'           // [Label with spaces] or [[Matrix]]
   | 'COLON'                  // :
@@ -45,8 +46,7 @@ export class Lexer {
         continue;
       }
 
-      // 1. Comments (Starts with # followed by space OR at start of line followed by space)
-      // Special case: If # is followed by a hex digit [0-9A-Fa-f], it's an ID (color hex), not a comment.
+      // 1. Comments
       if (char === '#' && (this.pos === 0 || /[ \t\n\r]/.test(this.input[this.pos - 1]))) {
         const next = this.input[this.pos + 1];
         const isHex = next && /[0-9A-Fa-f]/.test(next);
@@ -66,7 +66,7 @@ export class Lexer {
         continue;
       }
 
-      // 2. Bracketed Identifier (Priority over singles)
+      // 2. Bracketed Identifier
       if (char === '[') {
         this.tokens.push(this.readBracketedID());
         continue;
@@ -76,6 +76,7 @@ export class Lexer {
       const singles: Record<string, TokenType> = {
         ']': 'RBRACKET',
         '{': 'LBRACE', '}': 'RBRACE',
+        '(': 'LPAREN', ')': 'RPAREN',
         ':': 'COLON', '@': 'AT',
         ',': 'COMMA', '=': 'EQUALS'
       };
@@ -92,19 +93,24 @@ export class Lexer {
         continue;
       }
 
-      // Numbers (Scientific notation support)
+      // Numbers
       if (/[0-9]/.test(char) || (char === '-' && /[0-9]/.test(this.input[this.pos + 1] || ''))) {
         this.tokens.push(this.readNumber());
         continue;
       }
 
-      // Identifiers
+      // 3. Dot-prefixed identifiers (shorthands like .a, .out)
+      if (char === '.') {
+        this.tokens.push(this.readIdentifier());
+        continue;
+      }
+
+      // 4. Identifiers
       if (/[a-zA-Z_\-\.#]/.test(char)) {
         this.tokens.push(this.readIdentifier());
         continue;
       }
 
-      // Skip unknown
       this.advanceChars(1);
     }
     this.tokens.push({ type: 'EOF', value: '', line: this.line, col: this.col });
@@ -128,16 +134,10 @@ export class Lexer {
     }
   }
 
-  private skipComment() {
-    while (this.pos < this.input.length && this.input[this.pos] !== '\n') {
-      this.advanceChars(1);
-    }
-  }
-
   private readQuotedString(): Token {
     const startLine = this.line;
     const startCol = this.col;
-    this.advanceChars(1); // skip "
+    this.advanceChars(1);
     let val = '';
     while (this.pos < this.input.length && this.input[this.pos] !== '"') {
       if (this.input[this.pos] === '\\' && this.input[this.pos + 1] === '"') {
@@ -157,29 +157,14 @@ export class Lexer {
     const startCol = this.col;
     let val = '';
     let depth = 0;
-    
-    // Consume characters until balanced brackets are reached
     while (this.pos < this.input.length) {
       const char = this.input[this.pos];
       val += char;
-      
-      if (char === '[') {
-        depth++;
-      } else if (char === ']') {
-        depth--;
-      }
-      
+      if (char === '[') depth++;
+      else if (char === ']') depth--;
       this.advanceChars(1);
       if (depth === 0) break;
     }
-
-    if (depth > 0) {
-      // Basic error reporting - following user recommendation
-      console.error(`Lexer Error: Unclosed bracket starting at L${startLine}:C${startCol}`);
-      // Return as ID to avoid total crash, though it will likely fail parser
-      return { type: 'ID', value: val, line: startLine, col: startCol };
-    }
-
     return { type: 'BRACKETED_ID', value: val, line: startLine, col: startCol };
   }
 
@@ -187,7 +172,11 @@ export class Lexer {
     const startLine = this.line;
     const startCol = this.col;
     let val = '';
-    // Identifiers can contain numbers, but not START with them (handled by tokenizeAll)
+    // If it starts with a dot, consume it first
+    if (this.input[this.pos] === '.') {
+      val += '.';
+      this.advanceChars(1);
+    }
     while (this.pos < this.input.length && /[a-zA-Z0-9_\-\.\$#]/.test(this.input[this.pos])) {
       val += this.input[this.pos];
       this.advanceChars(1);
@@ -199,31 +188,27 @@ export class Lexer {
     const startLine = this.line;
     const startCol = this.col;
     let val = '';
-    
     if (this.input[this.pos] === '-') {
       val += '-';
       this.advanceChars(1);
     }
-
     while (this.pos < this.input.length) {
       const char = this.input[this.pos];
       const next = this.input[this.pos + 1] || '';
-      
       if (/[0-9\.]/.test(char)) {
         val += char;
         this.advanceChars(1);
       } else if (/[eE]/.test(char) && /[0-9\-\+]/.test(next)) {
-        val += char; // Consume 'e'
+        val += char;
         this.advanceChars(1);
         if (/[-\+]/.test(this.input[this.pos])) {
-          val += this.input[this.pos]; // Consume +/-
+          val += this.input[this.pos];
           this.advanceChars(1);
         }
       } else {
         break;
       }
     }
-    
     return { type: 'NUMBER', value: val, line: startLine, col: startCol };
   }
 

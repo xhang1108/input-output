@@ -35,6 +35,21 @@ export function DebugOverlay({ mode }: { mode: string }) {
                 <span>Zoom:</span>
                 <span className="text-zinc-300">{transform[2].toFixed(2)}x</span>
 
+                <span>Status:</span>
+                <span className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full`} style={{
+                        backgroundColor: (window as any).brain?.getStatus().isRecalculating ? '#ef4444' : '#22c55e',
+                        boxShadow: (window as any).brain?.getStatus().isRecalculating ? '0 0 8px #ef4444' : 'none',
+                        animation: (window as any).brain?.getStatus().isRecalculating ? 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
+                    }} />
+                    <span style={{ color: (window as any).brain?.getStatus().isRecalculating ? '#ef4444' : '#22c55e', fontWeight: 'bold' }}>
+                        {(window as any).brain?.getStatus().isRecalculating ? 'COMPUTING' : 'IDLE'}
+                    </span>
+                </span>
+
+                <span>Solve Time:</span>
+                <span className="text-zinc-300">{(window as any).brain?.getStatus().solveMs.toFixed(2)} ms</span>
+
                 <span>Pan:</span>
                 <span className="text-zinc-300">{Math.round(transform[0])}, {Math.round(transform[1])}</span>
             </div>

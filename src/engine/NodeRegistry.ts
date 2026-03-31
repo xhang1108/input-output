@@ -6,7 +6,7 @@ import { NerdamerService } from './calculus/NerdamerService';
 import { RuntimeGuard } from './calculus/RuntimeGuard';
 
 /**
- * 💡 NodeRegistry: The Brain's Cortex
+ * NodeRegistry: The Brain's Cortex
  * 
  * Manages the registration and execution of node evaluators and symbolizers.
  * Supports auto-propagation of symbolic ASTs for formula generation.
@@ -24,7 +24,7 @@ export class NodeRegistry {
     }
 
     /**
-     * 💡 initializeNodes
+     * initializeNodes
      * Static access to the global initialization hub.
      */
     static initializeNodes() {

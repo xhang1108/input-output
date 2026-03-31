@@ -102,23 +102,16 @@ export function useClipboard() {
             let offset = { x: 20, y: 20 };
 
             if (targetPos && clipboardNodes.length > 0) {
-                // Calculate bounding box of clipboard nodes to find center
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                // Calculate group's top-left Red Dot anchor (minX, minY)
+                let minX = Infinity, minY = Infinity;
                 clipboardNodes.forEach(n => {
-                    const x = n.position.x;
-                    const y = n.position.y;
-                    minX = Math.min(minX, x);
-                    maxX = Math.max(maxX, x);
-                    minY = Math.min(minY, y);
-                    maxY = Math.max(maxY, y);
+                    minX = Math.min(minX, n.position.x);
+                    minY = Math.min(minY, n.position.y);
                 });
 
-                const centerX = (minX + maxX) / 2;
-                const centerY = (minY + maxY) / 2;
-
                 offset = {
-                    x: targetPos.x - centerX,
-                    y: targetPos.y - centerY
+                    x: targetPos.x - minX,
+                    y: targetPos.y - minY
                 };
             }
 

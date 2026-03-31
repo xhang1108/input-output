@@ -10,20 +10,20 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as Record<string, unknown>;
         const math = InputOutputEngine.getInstance().getMathInstance();
         const original = node.value || PayloadUtils.createScalar(0);
-        // 💡 Fix: Support both 'value' and 'val' keys from different UI components
+        // Fix: Support both 'value' and 'val' keys from different UI components
         const rawVal = data.value ?? data.val;
         let val = rawVal !== undefined ? (PayloadUtils.unwrap(rawVal) as number) : PayloadUtils.unwrap(original);
-        
+
         // Support precision rounding for Constant node (IN-01 variant)
         const rawPrecision = data.precision ?? data.accuracy;
         const precision = rawPrecision !== undefined ? Number(rawPrecision) : -1;
-        
+
         if (precision >= 0) {
-            try { val = math.round(val, precision); } catch (e) {}
+            try { val = math.round(val, precision); } catch (e) { }
         }
-        
+
         const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
-        
+
         const payload = PayloadUtils.createScalar(val, extractedUnit);
         return {
             ...payload,
@@ -34,20 +34,20 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as Record<string, unknown>;
         const math = InputOutputEngine.getInstance().getMathInstance();
         const original = node.value || PayloadUtils.createScalar(0);
-        // 💡 Fix: Support both 'value' and 'val'
+        // Fix: Support both 'value' and 'val'
         const rawVal = data.value ?? data.val;
         let val = rawVal !== undefined ? (PayloadUtils.unwrap(rawVal) as number) : PayloadUtils.unwrap(original);
-        
+
         // Support precision rounding for Slider node
         const rawPrecision = data.precision ?? data.accuracy;
         const precision = rawPrecision !== undefined ? Number(rawPrecision) : -1;
 
         if (precision >= 0) {
-            try { val = math.round(val, precision); } catch (e) {}
+            try { val = math.round(val, precision); } catch (e) { }
         }
-        
+
         const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
-        
+
         const payload = PayloadUtils.createScalar(val, extractedUnit);
         return {
             ...payload,
@@ -76,11 +76,11 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             const val = PayloadUtils.unwrap(payload);
             try {
                 const hydrated = PayloadUtils.hydrate(val, math);
-                // 💡 Fix: Handle plain Arrays as well as mathjs objects
+                // Fix: Handle plain Arrays as well as mathjs objects
                 const rounded = (typeof hydrated === 'number' || Array.isArray(hydrated) || (hydrated && typeof hydrated === 'object' && ((hydrated as any).isBigNumber || (hydrated as any).isFraction || (hydrated as any).isComplex || (hydrated as any).isMatrix)))
                     ? math.round(hydrated, precision)
                     : hydrated;
-                
+
                 const wrapped = PayloadUtils.wrap(rounded);
                 return {
                     ...wrapped,
@@ -96,34 +96,34 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     },
     'IN-07': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        
+
         // 1. Check direct 'value' (from Parser or Stepwise propagation)
         const dataVal = data.value;
         if (dataVal !== undefined) {
             return PayloadUtils.createArray(dataVal);
         }
-        
+
         // 2. Check 'array' property (Legacy or Positional Data)
         const raw = data.array;
         if (raw !== undefined) {
-             return PayloadUtils.createArray(raw);
+            return PayloadUtils.createArray(raw);
         }
-        
+
         // 3. Fallback to node.value (Stale cache)
         if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
             return node.value as any;
         }
-        
+
         // 4. Ultimate Fallback: Default 3x3 Zero Matrix
         return PayloadUtils.createArray([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
     },
     'IN-03': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
         const rawValue = data.value ?? data.val;
-        
-        // 💡 Priority: Static UI Value (data.value) -> Stale Cache (node.value) -> Default Blue
+
+        // Priority: Static UI Value (data.value) -> Stale Cache (node.value) -> Default Blue
         const source = rawValue ?? node.value ?? '#3b82f6';
-        
+
         const depth = (data.depth as string) || '8bit';
         return ColorUtils.standardize(source, depth);
     },
@@ -181,7 +181,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             let pts: any[] = [];
 
             try {
-                // 💡 Enhancement: Unified formula extraction from symbol tree or value
+                // Enhancement: Unified formula extraction from symbol tree or value
                 const activeFormula = PayloadUtils.extractExprStr(p);
 
                 if (activeFormula && (p.type === DataType.Symbolic || p.type === DataType.Scalar)) {
@@ -217,7 +217,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             type: DataType.Object,
             value: {
                 points: allPoints,
-                formula: payloadList[0]?.symbol?.value || payloadList[0]?.value || '', 
+                formula: payloadList[0]?.symbol?.value || payloadList[0]?.value || '',
                 label: payloadList[0]?.meta?.label || 'Series 1'
             },
             symbol: null,

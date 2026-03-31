@@ -1,5 +1,5 @@
 /**
- * 🔧 Shared MathJS Configuration
+ * Shared MathJS Configuration
  * 
  * Single source of truth for MathJS initialization parameters.
  * Used by both InputOutputEngine (main thread) and brain.worker.ts (Worker thread)

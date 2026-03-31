@@ -22,16 +22,16 @@ export class PlottingUtils {
 
         const cleanFormula = formula.trim();
 
-        // 🧠 Upgrade: Detect Parametric [x(t), y(t)] or (x(t), y(t))
+        // Upgrade: Detect Parametric [x(t), y(t)] or (x(t), y(t))
         if (cleanFormula.startsWith('[') && cleanFormula.endsWith(']')) {
-             const inner = cleanFormula.substring(1, cleanFormula.length - 1);
-             const parts = inner.split(',');
-             if (parts.length === 2) {
-                 expressionToCompile = parts[0].trim();
-                 expressionY = parts[1].trim();
-                 isParametric = true;
-                 targetVar = 't';
-             }
+            const inner = cleanFormula.substring(1, cleanFormula.length - 1);
+            const parts = inner.split(',');
+            if (parts.length === 2) {
+                expressionToCompile = parts[0].trim();
+                expressionY = parts[1].trim();
+                isParametric = true;
+                targetVar = 't';
+            }
         }
 
         if (!isParametric && formula.includes('=')) {
@@ -58,8 +58,8 @@ export class PlottingUtils {
             }
         }
 
-        const vars = isParametric 
-            ? [...svc.getVariables(expressionToCompile), ...svc.getVariables(expressionY)] 
+        const vars = isParametric
+            ? [...svc.getVariables(expressionToCompile), ...svc.getVariables(expressionY)]
             : svc.getVariables(expressionToCompile);
 
         // Prioritize target variable mapping
@@ -82,7 +82,7 @@ export class PlottingUtils {
             // Build scope object
             const scope: Record<string, number> = { [targetVar]: tVal };
             for (const v of orderedVars) {
-                if (v !== targetVar) scope[v] = 0; 
+                if (v !== targetVar) scope[v] = 0;
             }
 
             let x: any;
@@ -109,7 +109,7 @@ export class PlottingUtils {
 
             const cleanX = typeof x === 'number' && Number.isFinite(x) ? x : null;
             const cleanY = typeof y === 'number' && Number.isFinite(y) ? y : null;
-            
+
             result.push({ x: cleanX as any, y: cleanY as any });
         }
 

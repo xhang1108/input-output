@@ -1,11 +1,11 @@
-import { useCallback, RefObject, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { useBrain } from '../../context/BrainContext';
-import { Brain } from '../../engine/Brain';
 import { GraphCodec } from '../../engine/GraphCodec';
 import { parseLatexToGraph } from '../../utils/latex/latexToGraph';
 
 /**
  * useMouth (The Mouth/Speech Organ)
+ * [V1.0] Atomic Injection Engine
  * Handles all I/O flows: Import (Eating) and Export (Speaking).
  */
 export function useMouth() {
@@ -65,6 +65,7 @@ export function useMouth() {
     }, []);
 
     /**
+     * [V1.0] Production MathJS Ingester
      * Consumes Graph data (IOGL or LaTeX) and injects it into the Brain.
      * Returns diagnostics from the parsing and injection steps.
      */
@@ -79,48 +80,44 @@ export function useMouth() {
                 throw new Error(`Please enter ${mode} data.`);
             }
 
-            let injectDiagnostics: string[] = [];
-            let parseDiagnostics: string[] = [];
-
             if (mode === 'IOGL') {
                 const result = GraphCodec.parse(input);
                 const graphData = result.graph;
-                parseDiagnostics = result.diagnostics;
-
-                // Inject the graph data
-                injectDiagnostics = await brain.injectNodes(graphData, shouldClear, false, onProgress);
+                const injectDiagnostics = await brain.injectNodes(graphData, shouldClear, false, onProgress);
 
                 return {
                     success: true,
-                    diagnostics: [...parseDiagnostics, ...injectDiagnostics]
+                    diagnostics: [...result.diagnostics, ...injectDiagnostics]
                 };
             } else {
-                // LaTeX Mode
+                // LaTeX Mode - [V1.0] Atomic Batch Ingestion
                 const transactions = parseLatexToGraph(input, { x: 0, y: 0 });
                 if (transactions.length === 0) {
-                    throw new Error("Failed to parse LaTeX. Please check syntax.");
+                    throw new Error("Parsed LaTeX resulted in zero nodes.");
                 }
 
                 if (shouldClear) {
                     brain.clearAll();
                 }
 
-                let processed = 0;
-                const CHUNK_SIZE = 50;
+                const nodeTxs = transactions.filter(t => t.type === 'ADD_NODE');
+                const edgeTxs = transactions.filter(t => t.type === 'CONNECT');
 
-                for (let i = 0; i < transactions.length; i += CHUNK_SIZE) {
-                    const chunk = transactions.slice(i, i + CHUNK_SIZE);
-                    chunk.forEach(tx => brain.applyTransaction(tx, true, true));
-                    processed += chunk.length;
+                // 1. Bulk Inject (Strictly SILENT)
+                nodeTxs.forEach(tx => brain.applyTransaction(tx, true));
+                edgeTxs.forEach(tx => brain.applyTransaction(tx, true));
 
-                    if (onProgress) onProgress(processed, transactions.length);
-                    // Yield to browser UI for a paint
-                    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
-                }
+                // Single Global Sync Signal
+                (brain as any).emit('graphChanged', true);
+
+                // Deferred Auto-Layout
+                setTimeout(() => {
+                    (brain as any).emit('RE-LAYOUT');
+                }, 200);
 
                 return {
                     success: true,
-                    diagnostics: ['LaTeX imported successfully!']
+                    diagnostics: [`Successfully injected formula graph (${nodeTxs.length} nodes).`]
                 };
             }
         } catch (err: unknown) {
@@ -142,4 +139,3 @@ export function useMouth() {
         consumeGraph
     };
 }
-

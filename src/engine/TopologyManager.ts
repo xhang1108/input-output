@@ -2,7 +2,7 @@ import { Edge } from '@xyflow/react';
 import { GraphState, NodeLogic } from './types';
 
 /**
- * 🕸️ TopologyManager
+ * ️ TopologyManager
  * 
  * Handles graph structure, adjacency indices, and dirty propagation logic.
  * Decouples structural logic from high-level orchestration.

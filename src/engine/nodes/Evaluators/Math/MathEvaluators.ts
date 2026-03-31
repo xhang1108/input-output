@@ -10,7 +10,7 @@ import { NodeEvaluator } from '../../../NodeRegistry';
  * Provides deterministic results for a given seed.
  */
 function seededRandom(seed: number) {
-    return function() {
+    return function () {
         let t = seed += 0x6D2B79F5;
         t = Math.imul(t ^ t >>> 15, t | 1);
         t ^= t + Math.imul(t ^ t >>> 7, t | 61);
@@ -94,8 +94,8 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 case 'MUL': result = m.multiply(procA, procB); break;
                 case 'DIV': result = m.divide(procA, procB); break;
                 case 'POW': result = m.pow(procA, procB); break;
-                case 'SQRT': 
-                    result = (payloadB && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA); 
+                case 'SQRT':
+                    result = (payloadB && !m.equal(procB, 0)) ? m.nthRoot(procA, procB) : m.sqrt(procA);
                     break;
                 case 'ABS': result = m.abs(procA); break;
                 case 'NEG': result = m.unaryMinus(procA); break;
@@ -142,7 +142,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const valR = inputs['in_b'];
 
         if (!valN) return PayloadUtils.createError('Missing Input (n)');
-        
+
         // Factorial only needs 'n'
         if (op !== 'FACTORIAL' && !valR) return PayloadUtils.createError('Missing Input (r)');
 
@@ -189,7 +189,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const isMixed = data.mixed === true;
         try {
             if (raw === null || raw === undefined) return PayloadUtils.createScalar(0);
-            // 💡 Important: mathjs.fraction(BigNumber) creates huge numerators/denominators for decimals.
+            // Important: mathjs.fraction(BigNumber) creates huge numerators/denominators for decimals.
             // Using Number(raw) allows fraction.js to use rational approximation for results like 1/3 (0.333...).
             const f = math.fraction(typeof raw === 'object' && (raw as any).isBigNumber ? (raw as any).toNumber() : raw);
             let n = Number(f.n), d = Number(f.d), integerPart = 0;
@@ -230,17 +230,17 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
         const collectNumbers = (p: NodePayload | NodePayload[] | undefined): any[] => {
             if (!p) return [];
-            
+
             // Handle Capsule Input (Array of Payloads)
             if (Array.isArray(p)) {
                 return p.flatMap(item => collectNumbers(item));
             }
-            
+
             const unwrapped = PayloadUtils.unwrap(p);
             const hydrated = PayloadUtils.hydrate(unwrapped, math);
-            
+
             if (hydrated === null || hydrated === undefined) return [];
-            
+
             // Flatten if it's a matrix or array
             if (typeof hydrated === 'object' && (hydrated as any).isMatrix) {
                 return (hydrated as any).toArray().flat(Infinity);
@@ -273,7 +273,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 if (Number(valB) === 0) {
                     return PayloadUtils.createError('Modulo by zero');
                 }
-                
+
                 result = math.mod(valA, valB);
             } else if (op === 'ISPRIME') {
                 const valsA = collectNumbers(inputs['in_a']);
@@ -364,13 +364,13 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     // IN-10: Unified Random Node (Professional Stochastic Generator)
     'IN-10': (node, inputs) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        
+
         // Decoupled Property Support (v3.0) with Backward Compatibility
         let distribution = (data.mode as string || 'Uniform');
         let isFloat = data.isFloat !== false; // Default to true for historical reasons
 
         const distKey = distribution.toLowerCase();
-        
+
         // Sampling parameters helper
         const getNum = (key: string, def: number) => {
             const val = inputs[key] ? PayloadUtils.unwrap(inputs[key]) : data[key];
@@ -482,11 +482,11 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const targetUnit = isCustom ? data.customUnit : (data.unit || 'm');
         const valPayload = inputs['in_a'];
         if (!valPayload) return PayloadUtils.createScalar(0);
-        
+
         try {
             const raw = PayloadUtils.unwrap(valPayload);
             const sourceUnit = valPayload.meta?.unit;
-            
+
             // Standard Conversion logic
             if (sourceUnit && sourceUnit !== targetUnit && !isCustom) {
                 try {
@@ -497,11 +497,11 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                     return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
                 }
             }
-            
+
             // Otherwise just assign the label (Custom or Standard label)
             return PayloadUtils.createScalar(raw, targetUnit);
-        } catch (e: any) { 
-            return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`); 
+        } catch (e: any) {
+            return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`);
         }
     },
     // TR-02: Base Converter
@@ -511,14 +511,14 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         if (!inputPayload) return PayloadUtils.createScalar(0);
 
         const metaUnit = inputPayload.meta?.unit?.toLowerCase();
-        
+
         const baseMap: Record<string, number> = { 'bin': 2, 'quat': 4, 'oct': 8, 'dec': 10, 'duo': 12, 'hex': 16 };
 
         // Final Whitelist: Allow ONLY if Scalar OR explicit Base Unit
         const isScalar = inputPayload.type === DataType.Scalar;
         const hasBaseUnit = !!baseMap[metaUnit || ''];
         const isArray = inputPayload.type === DataType.Array || inputPayload.type === DataType.Matrix;
-        
+
         if (isArray || (!isScalar && !hasBaseUnit)) {
             return PayloadUtils.createError("Base Conversion only supports scalar or base-prefixed strings.");
         }
@@ -528,13 +528,13 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const fromBase = Number(data.fromBase || baseMap[metaUnit!] || 10);
         const toBase = Number(data.toBase || 16);
         const val = String(PayloadUtils.unwrap(inputPayload));
-        
+
         try {
             const num = parseInt(val, fromBase);
             if (isNaN(num)) throw new Error('NaN');
             const resultStr = num.toString(toBase).toUpperCase();
             const outputUnit = unitMap[toBase] || 'scalar';
-            
+
             return {
                 ...PayloadUtils.createScalar(resultStr),
                 meta: { unit: outputUnit }
@@ -588,7 +588,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
 
             // CASE 2: Array/Matrix smoothing (Unified 2D Blur)
             const matrix = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && (raw as any).isMatrix ? (raw as any).toArray() : [raw]);
-            
+
             if (!Array.isArray(matrix)) return dataPayload;
 
             const is2D = Array.isArray(matrix[0]);

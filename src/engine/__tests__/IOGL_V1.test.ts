@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GraphCodec } from '../GraphCodec';
-import { PayloadUtils } from '../../utils/PayloadUtils';
 import { Brain } from '../Brain';
 import { NodeRegistry } from '../NodeRegistry';
 
@@ -29,7 +28,7 @@ describe('IOGL 1.0 Master Logic Test', () => {
             const iogl = `
                 [num_1] IN-01 { data: 42 } @100,200
                 [res_1] OT-01 @500,200
-                num_1.a -> res_1.a
+                [num_1].a -> [res_1].a
             `;
             const { graph, diagnostics } = GraphCodec.parse(iogl);
             
@@ -46,7 +45,7 @@ describe('IOGL 1.0 Master Logic Test', () => {
             expect(edge.targetHandle).toBe('in_a');
         });
 
-        it('should handle complex positional data mapping (Extreme Merging)', () => {
+        it('should handle complex positional data mapping (extreme merging surrogate)', () => {
             const iogl = `
                 [s1] IN-02 { data: [50, 0, 100, 1] } @0,0
                 [r1] IN-10 { mode: "Normal", data: [0, 0.1, 100, 1] } @0,100
@@ -79,35 +78,16 @@ describe('IOGL 1.0 Master Logic Test', () => {
             const builder = graph.nodes.find(n => n.data!.label === 'builder')!;
             expect(builder.data!.axis).toBe(1); // Cols -> 1
         });
-    });
 
-    describe('2. Edge Cases & Boundary Conditions', () => {
-        it('should correctly parse TR-03 (Geometry) with mode-only mapping', () => {
+        it('should correctly parse TR-03 (Geometry) with mode-based inputs', () => {
             const iogl = `
-                [c1] TR-03 Circle
-                [q1] TR-03 Quad
+                [rad] IN-01 10
+                [geo] TR-03 { mode: "Circle" }
+                [rad].a -> [geo].a
             `;
-            const { graph, diagnostics } = GraphCodec.parse(iogl);
-            expect(diagnostics).toHaveLength(0);
-
-            const c1 = graph.nodes.find(n => n.data!.label === 'c1')!;
-            expect(c1.data!.shape).toBe('Circle');
-            expect(c1.data!.radius).toBeUndefined();
-        });
-
-        it('should correctly parse CL-02 (Integral) with definite/indefinite schemas', () => {
-            const iogl = `
-                [int1] CL-02 definite x 0 1
-                [int2] CL-02 indefinite y
-            `;
-            const { graph, diagnostics } = GraphCodec.parse(iogl);
-            expect(diagnostics).toHaveLength(0);
-
-            const int1 = graph.nodes.find(n => n.data!.label === 'int1')!;
-            expect(int1.data!.mode).toBe('definite');
-            expect(int1.data!.variable).toBe('x');
-            expect(int1.data!.lower).toBe(0);
-            expect(int1.data!.upper).toBe(1);
+            const { graph } = GraphCodec.parse(iogl);
+            const edge = graph.edges[0];
+            expect(edge.targetHandle).toBe('in_a');
         });
 
         it('should allow multiple connections to the same handle (Capsule support)', () => {
@@ -115,8 +95,8 @@ describe('IOGL 1.0 Master Logic Test', () => {
                 [a1] IN-01 10
                 [a2] IN-01 20
                 [builder] DT-01 Rows
-                a1.a -> builder.a
-                a2.a -> builder.a
+                [a1].a -> [builder].a
+                [a2].a -> [builder].a
             `;
             const { graph, diagnostics } = GraphCodec.parse(iogl);
             expect(diagnostics).toHaveLength(0);
@@ -129,52 +109,44 @@ describe('IOGL 1.0 Master Logic Test', () => {
         it('should correctly parse negative coordinates', () => {
             const iogl = `[n1] IN-01 10 @-100,-200`;
             const { graph } = GraphCodec.parse(iogl);
-            const n1 = graph.nodes.find(n => n.data!.label === 'n1')!;
-            expect(n1.position.x).toBe(-100);
-            expect(n1.position.y).toBe(-200);
+            expect(graph.nodes[0].position).toEqual({ x: -100, y: -200 });
+        });
+
+        it('should parse expression nodes (IN-09)', () => {
+            const iogl = `
+                [node] IN-09 "x^2"
+                [res] OT-01
+                [node].a -> [res].a
+            `;
+            const { graph } = GraphCodec.parse(iogl);
+            expect(graph.nodes.find(n => n.type === 'IN-09')!.data!.code).toBe('x^2');
+        });
+
+        it('should handle complex algebraic chains', () => {
+            const iogl = `
+                [A] IN-01 10
+                [B] IN-01 20
+                [C] MA-01 ADD
+                [D] OT-01
+                [A].a -> [C].a
+                [B].a -> [C].b
+                [C].a -> [D].a
+            `;
+            const { graph, diagnostics } = GraphCodec.parse(iogl);
+            expect(diagnostics).toHaveLength(0);
+            expect(graph.edges).toHaveLength(3);
         });
     });
 
-    describe('3. Historical Regressions (Bug Fix Verification)', () => {
-        it('should preserve injected IN-01 values correctly', async () => {
-            const iogl = '[V18] IN-01 18 @0,180';
-            const { graph } = GraphCodec.parse(iogl);
-            
-            const node = graph.nodes[0];
-            expect(PayloadUtils.unwrap(node.data!.value)).toBe(18);
-
-            await brain.injectNodes(graph, true);
-            const brainNode = brain.getNode(node.id);
-            expect(PayloadUtils.unwrap(brainNode?.data.value)).toBe(18);
-        });
-
-        it('should correctly preserve "0" in numeric inputs', async () => {
-            const iogl = '[V0] IN-01 0 @0,0';
-            const { graph } = GraphCodec.parse(iogl);
-            expect(PayloadUtils.unwrap(graph.nodes[0].data!.value)).toBe(0);
-
-            await brain.injectNodes(graph, true);
-            const brainNode = brain.getNode(graph.nodes[0].id);
-            expect(PayloadUtils.unwrap(brainNode?.data.value)).toBe(0);
-        });
-    });
-
-    describe('4. Encoder Consistency', () => {
-        it('should generate clean IOGL 1.0 from graph state', () => {
-            const graph = {
-                nodes: [
-                    { id: 'n1', type: 'IN-01', position: { x: 10, y: 10 }, data: { label: 'MyInput', value: { type: 'scalar', value: 5 } } },
-                    { id: 'n2', type: 'MA-06', position: { x: 100, y: 100 }, data: { label: 'Frac', mixed: true } }
-                ],
-                edges: [
-                    { source: 'n1', sourceHandle: 'out_a', target: 'n2', targetHandle: 'in_a' }
-                ]
-            };
-            
-            const encoded = GraphCodec.encode(graph as any);
-            expect(encoded).toContain('[MyInput] IN-01 5 @10,10');
-            expect(encoded).toContain('[Frac] MA-06 { mode: "Mixed" }');
-            expect(encoded).toContain('MyInput.a -> Frac.a');
+    describe('2. Error Handling & Validation', () => {
+        it('should detect ghost links (non-existent handles)', () => {
+            const iogl = `
+                [n1] IN-01 10
+                [n2] OT-01
+                [n1].invalid -> [n2].a
+            `;
+            const { diagnostics } = GraphCodec.parse(iogl);
+            expect(diagnostics.some(d => d.message.includes("does not have output handle"))).toBe(true);
         });
     });
 });

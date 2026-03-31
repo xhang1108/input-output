@@ -3,34 +3,34 @@
 [M1] IN-07 "[[1,2],[3,4]]" @0,0
 
 [InvDet] DT-06 DET @300,100
-M1.a -> InvDet.a
+[M1].a -> [InvDet].a
 
 [Inv] DT-06 INV @300,0
-M1.a -> Inv.a
+[M1].a -> [Inv].a
 
 [N1] IN-01 1 @0,400
 [N5] IN-01 5 @0,500
 [N9] IN-01 9 @0,600
 
 [Builder] DT-01 Rows @300,450
-N1.a -> Builder.a
-N5.a -> Builder.a
-N9.a -> Builder.a
+[N1].a -> [Builder].a
+[N5].a -> [Builder].a
+[N9].a -> [Builder].a
 
 [Ext] DT-02 { data: 1 } @600,450
-Builder.a -> Ext.a
+[Builder].a -> [Ext].a
 [Idx2] IN-01 2 @450,550
-Idx2.a -> Ext.b
+[Idx2].a -> [Ext].b
 
 [L1] IN-07 "[3, 1, 2]" @0,700
 [Sort] DT-03 sort @300,700
-L1.a -> Sort.a
+[L1].a -> [Sort].a
 
 [Set1] IN-07 "[1, 2]" @0,850
 [Set2] IN-07 "[2, 3]" @0,950
 [Union] DT-04 union @300,900
-Set1.a -> Union.a
-Set2.a -> Union.b
+[Set1].a -> [Union].a
+[Set2].a -> [Union].b
 
 # Results
 [Res_Det] OT-01 @600,100
@@ -39,8 +39,8 @@ Set2.a -> Union.b
 [Res_Sort] OT-01 @600,700
 [Res_Union] OT-01 @600,900
 
-InvDet.a -> Res_Det.a
-Inv.a -> Res_Inv.a
-Ext.a -> Res_Ext.a
-Sort.a -> Res_Sort.a
-Union.a -> Res_Union.a
+[InvDet].a -> [Res_Det].a
+[Inv].a -> [Res_Inv].a
+[Ext].a -> [Res_Ext].a
+[Sort].a -> [Res_Sort].a
+[Union].a -> [Res_Union].a

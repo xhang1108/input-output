@@ -2,7 +2,7 @@ import { DataType, NodePayload } from '../types/payload';
 import { PayloadUtils } from './PayloadUtils';
 
 /**
- * 🎨 Color Utility for the Input-Output Engine.
+ * Color Utility for the Input-Output Engine.
  * Handles conversions between HEX, RGB, and Vec3 across different bit depths.
  */
 export const ColorUtils = {
@@ -14,7 +14,7 @@ export const ColorUtils = {
      */
     standardize(input: any, depth: string = '8bit', unit?: string): NodePayload {
         const val = PayloadUtils.unwrap(input);
-        
+
         // 1. Validating existing structure?
         // We do NOT early return here anymore to ensure all aliases (hex, vec3) and '#' are injected.
         if (val && typeof val === 'object' && !Array.isArray(val) && (val as any).out_a) {
@@ -26,17 +26,17 @@ export const ColorUtils = {
 
         // 2. Handle HEX String (direct or from object)
         const sourceHex = typeof val === 'string' ? val : (val && typeof val === 'object' && !Array.isArray(val) ? (val as any).out_a || (val as any).hex : null);
-        
+
         if (typeof sourceHex === 'string' && (sourceHex.startsWith('#') || /^[0-9A-Fa-f]{6}$/.test(sourceHex))) {
             hex = sourceHex.startsWith('#') ? sourceHex : '#' + sourceHex;
             rNorm = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
             gNorm = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
             bNorm = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
-        } 
+        }
         // 3. Handle Array (RGB or Vec3)
         else if (Array.isArray(val) && val.length >= 3) {
             const scaler = depth === '10bit' ? 1023 : depth === '12bit' ? 4095 : 255;
-            
+
             // Determine if it's already normalized (0-1) or needs scaling
             if (unit === 'vec3' || (val[0] <= 1 && val[1] <= 1 && val[2] <= 1 && !unit)) {
                 rNorm = Math.max(0, Math.min(1, Number(val[0])));

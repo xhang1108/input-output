@@ -3,7 +3,7 @@ import { MATH_ALIASES } from "../engine/mathAliases";
 import { DisplayUtils } from "./DisplayUtils";
 
 /**
- * 🛠️ Utility functions for creating and manipulating NodePayloads.
+ * ️ Utility functions for creating and manipulating NodePayloads.
  * Acts as the Adapter Layer between legacy number logic and the new object system.
  */
 export const PayloadUtils = {
@@ -29,7 +29,7 @@ export const PayloadUtils = {
         }
         else if (typeof value === 'object' && value !== null) {
             const val = value as any;
-            // 💡 BigNumbers, Fractions, and Complex numbers are Scalars in our system
+            // BigNumbers, Fractions, and Complex numbers are Scalars in our system
             if (val.isBigNumber || val.isFraction || val.isComplex) {
                 type = DataType.Scalar;
             } else {
@@ -40,7 +40,7 @@ export const PayloadUtils = {
             }
         }
 
-        // 💡 Pulse Consistency: All Scalars MUST have rank 0 and empty dimensions
+        // Pulse Consistency: All Scalars MUST have rank 0 and empty dimensions
         // to pass deepEqual checks during stepwise propagation.
         if (type === DataType.Scalar) {
             meta.rank = 0;
@@ -61,7 +61,7 @@ export const PayloadUtils = {
     calculateDimensions(value: unknown): number[] {
         if (!value) return [];
         const h = value as any;
-        
+
         // Match MathJS matrix structure
         if (h.isMatrix || (h._data && h._size)) {
             if (typeof h.size === 'function') return h.size();
@@ -69,7 +69,7 @@ export const PayloadUtils = {
         }
 
         if (!Array.isArray(value)) return [];
-        
+
         const dims: number[] = [value.length];
         let curr = value[0];
         while (Array.isArray(curr)) {
@@ -87,7 +87,7 @@ export const PayloadUtils = {
             const p = payload as any;
             // 1. Standard Payload unwrap
             if ('value' in p && p.type) return p.value;
-            
+
             // 2. MathJS Internal unwrap (if raw object leaked)
             if (p._data && p._size) return p._data;
         }
@@ -245,7 +245,7 @@ export const PayloadUtils = {
     },
 
     /**
-     * 🧊 Dehydrate: MathJS Object -> JSON
+     * Dehydrate: MathJS Object -> JSON
      * Prepares value for storage or transport (Web Worker).
      */
     dehydrate(value: unknown): PayloadValue {
@@ -313,12 +313,12 @@ export const PayloadUtils = {
             };
         }
 
-        // 📝 MathJS Node (OperatorNode, SymbolNode, etc) -> String
+        // MathJS Node (OperatorNode, SymbolNode, etc) -> String
         if (typeof value === 'object' && value !== null && 'isNode' in (value as any)) {
             return (value as any).toString();
         }
 
-        // 📦 Plain Object -> Recursive Dehydrate
+        // Plain Object -> Recursive Dehydrate
         // This ensures nested results in objects (like { a: det(...) }) are properly handled.
         // We only recursion if it's a "POJO" (Plain Old JavaScript Object)
         const isPOJO = typeof value === 'object' && value !== null &&
@@ -334,7 +334,7 @@ export const PayloadUtils = {
             return result as unknown as PayloadValue;
         }
 
-        // 🛡️ Final Fallback: If it's a complex object we don't recognize but has a toString, 
+        // ️ Final Fallback: If it's a complex object we don't recognize but has a toString, 
         // and it's not a POJO/Array, it might be an internal Decimal/Complex/Unit.
         if (typeof value === 'object' && value !== null && h.toString) {
             return h.toString();
@@ -344,7 +344,7 @@ export const PayloadUtils = {
     },
 
     /**
-     * 💧 Hydrate: JSON -> MathJS Object
+     * Hydrate: JSON -> MathJS Object
      * Restores objects for calculation.
      * Note: Requires math instance to create objects.
      */
@@ -383,7 +383,7 @@ export const PayloadUtils = {
     },
 
     /**
-     * 🧠 Truthiness Logic
+     * Truthiness Logic
      * Determines if a payload or raw value is "true" in the Input-Output world.
      * Handles: Booleans, Numbers (0=false), Strings (""=false), and MathJS Types (BigNumber, Unit).
      */
@@ -418,7 +418,7 @@ export const PayloadUtils = {
     },
 
     /**
-     * 🛡️ Strict Typing: Validate & Coerce
+     * ️ Strict Typing: Validate & Coerce
      * Ensures payload matches expected type, or throws.
      */
     validateType(payload: NodePayload, expected: DataType): NodePayload {
@@ -458,7 +458,7 @@ export const PayloadUtils = {
     },
 
     /**
-     * 🔠 Stringify Symbol: AST -> Formula String
+     * Stringify Symbol: AST -> Formula String
      * Recursively converts an AST node into a human-readable formula.
      */
     stringifySymbol(node: ASTNode | null, options: { expandSymbols?: boolean } = {}): string {
@@ -468,7 +468,7 @@ export const PayloadUtils = {
             case 'Literal':
                 return String(node.value);
             case 'Identifier':
-                // 💡 Smart Expansion: Expand if requested OR if it's an input node (IN-XX)
+                // Smart Expansion: Expand if requested OR if it's an input node (IN-XX)
                 const isInputNode = node.sourceId?.startsWith('IN-');
                 if ((options.expandSymbols || isInputNode) && node.value !== undefined && node.value !== null) {
                     // Use DisplayUtils to handle dehydrated MathJS objects recursively
@@ -482,7 +482,7 @@ export const PayloadUtils = {
                 const op = opMap[node.operator!] || (node.operator || '');
                 const isFunc = ['abs', 'sqrt', 'sign', 'cbrt'].includes(op);
                 const arg = this.stringifySymbol(node.argument!, options);
-                
+
                 if (op === '!') return `factorial(${arg})`; // Use function call for Factorial
                 return isFunc ? `${op}(${arg})` : `${op}${arg}`;
             }
@@ -497,7 +497,7 @@ export const PayloadUtils = {
                     EQ: '==', GT: '>', LT: '<', GTE: '>=', LTE: '<=', NEQ: '!='
                 };
                 let op = opMap[node.operator!] || node.operator;
-                
+
                 // Fallback for mis-categorized unary ops in binary tree (e.g. NEG with right=0)
                 if (node.operator === 'NEG') return `(-${left})`;
                 if (node.operator === 'ABS') return `abs(${left})`;
@@ -520,7 +520,7 @@ export const PayloadUtils = {
     },
 
     /**
-     * 👯 Clone Payload
+     * Clone Payload
      * Creates a shallow copy of the payload to prevent mutation side-effects.
      */
     clone(payload: NodePayload): NodePayload {
@@ -533,12 +533,12 @@ export const PayloadUtils = {
     },
 
     /**
-     * 🧠 Centralized Expression Extraction
+     * Centralized Expression Extraction
      * Converts a payload to a string suitable for Nerdamer/MathJS.
      */
     extractExprStr(payload: NodePayload | undefined): string | null {
         if (!payload) return null;
-        
+
         // 1. For Symbolic types, the 'value' IS the expression string.
         if (payload.type === DataType.Symbolic) {
             const val = this.unwrap(payload);
@@ -581,20 +581,20 @@ export const PayloadUtils = {
     },
 
     /**
-     * 👁️ Extracts a view-friendly value for UI presentation.
+     * ️ Extracts a view-friendly value for UI presentation.
      * Handles specialized node types like Color and raw Input.
      * Centralizing this prevents duplication in Wiki and Canvas components.
      */
     normalizeForDisplay(nodeType: string, payload: any): any {
         const unwrapped = this.unwrap(payload);
-        
+
         // Color Normalization (HEX extraction)
         if (nodeType === 'IN-03' || nodeType === 'IN-COLOR') {
             const colorObj = (typeof unwrapped === 'object' && unwrapped !== null && !Array.isArray(unwrapped)) ? unwrapped as any : null;
             let displayColor = (colorObj && typeof colorObj.out_a === 'string')
                 ? colorObj.out_a
                 : (typeof unwrapped === 'string' ? unwrapped : '');
-            
+
             // If it's an array, we should ideally convert to hex, but for normalization let's just use first element or fallback
             if (Array.isArray(unwrapped)) {
                 return '#3b82f6'; // Safe fallback for normalization
@@ -617,14 +617,14 @@ export const PayloadUtils = {
     },
 
     /**
-     * 🔠 Normalizes mathematical expressions by lowercasing known function names.
+     * Normalizes mathematical expressions by lowercasing known function names.
      * Prevents case-sensitivity issues while preserving user variables.
      */
     _normRegexMap: new Map<any, RegExp>(),
     normalizeMathExpression(expr: string, math: any): string {
         if (!expr || typeof expr !== 'string' || !math) return expr;
 
-        // 🧠 Canonicalization: Map aliases to primary names (e.g. sgn -> sign)
+        // Canonicalization: Map aliases to primary names (e.g. sgn -> sign)
         // This ensures downstream engines like nerdamer see standard names.
         let processed = expr;
         for (const [alias, primary] of Object.entries(MATH_ALIASES)) {
@@ -646,8 +646,8 @@ export const PayloadUtils = {
             this._normRegexMap.set(math, regex);
         }
 
-        // 🧠 Super Normalizer Logic
-        
+        // Super Normalizer Logic
+
         // 1. Case Normalization (Standard Functions)
         const normalized = processed.replace(regex, (match) => {
             const lower = match.toLowerCase();
@@ -657,20 +657,20 @@ export const PayloadUtils = {
             return match;
         });
 
-        // 🔍 Get function names for subsequent patterns
+        // Get function names for subsequent patterns
         const knownFunctions = Object.keys(math);
         const fnList = knownFunctions.filter(name => /^[a-z][a-zA-Z0-9]*$/.test(name)).join('|') + '|atan|sign';
 
         // 3. Parentheses Injection: "sin x" -> "sin(x)"
         // Only if followed by simple identifier or number (avoid double wrapping)
         let finalExpr = normalized.replace(new RegExp(`\\b(${fnList})\\s+([a-zA-Z0-9x.]+)(\\b|$)`, 'gi'), '$1($2)');
-        
+
         // 4. Implicit Multiplication (Surgery)
         // ) ( -> ) * ( , ) fn -> ) * fn
         finalExpr = finalExpr.replace(/(\))(\s*)(\()/g, '$1 * $3');
         finalExpr = finalExpr.replace(new RegExp(`(\\))(\s*)(${fnList}|[a-zA-Z0-9])\\b`, 'gi'), '$1 * $3');
 
-        // 5. 🧠 Smart Expression: Auto-append (x) to univariate naked functions (e.g. sin -> sin(x))
+        // 5. Smart Expression: Auto-append (x) to univariate naked functions (e.g. sin -> sin(x))
         const clean = finalExpr.trim();
         if (/^[a-z][a-zA-Z0-9]*$/.test(clean) && typeof (math as any)[clean] === 'function') {
             try {

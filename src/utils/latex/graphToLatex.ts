@@ -1,6 +1,7 @@
 import { Node, Edge } from '@xyflow/react';
 import { FormulaRenderer } from '../FormulaRenderer';
 import { ASTNode } from '../../types/payload';
+import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 
 /**
  * Builds an AST (Symbol) from the React Flow graph (nodes and edges).
@@ -59,103 +60,81 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
 
         // --- Math Family ---
         case 'MA-01': // Standard Math
-            const op = data.op || 'ADD';
-            const unaryOps = ['SIN', 'COS', 'TAN', 'SQRT', 'ABS'];
+        case 'MA-02': { // Advanced Math
+            const def = NODE_DEFINITIONS.find(d => d.id === node.type);
+            const getOrderInput = (handleId: string): ASTNode => {
+                const edge = edges.find(e => e.target === nodeId && e.targetHandle === handleId);
+                if (!edge) return { type: 'Literal' as const, value: '\\square' };
+                return buildASTFromGraph(edge.source, nodes, edges, new Set(visited));
+            };
+
+            const op = data.mode || data.op || 'ADD';
+            const unaryOps = ['SIN', 'COS', 'TAN', 'SQRT', 'ABS', 'LOG10', 'LN'];
 
             if (unaryOps.includes(op)) {
                 return {
-                    type: 'FunctionCall',
+                    type: 'FunctionCall' as const,
                     name: op.toLowerCase(),
-                    args: [getInputAST('in_a', 0)]
+                    args: [getOrderInput('in_a')]
                 };
             }
             return {
-                type: 'BinaryExpression',
+                type: 'BinaryExpression' as const,
                 operator: op,
-                left: getInputAST('in_a', 0),
-                right: getInputAST('in_b', 0)
+                left: getOrderInput('in_a'),
+                right: getOrderInput('in_b')
             };
+        }
 
-        case 'MA-05': // Round
-            return { type: 'FunctionCall', name: 'round', args: [getInputAST('in_a', 0), { type: 'Literal', value: data.precision || 0 }] };
-
-        case 'MA-06': // Fraction
-            return { type: 'FunctionCall', name: 'fraction', args: [getInputAST('in', 0)] };
-
-        case 'MA-16': // Logarithm
-            return {
-                type: 'FunctionCall',
-                name: (data.op || 'LN').toLowerCase(),
-                args: [getInputAST('in', 0), getInputAST('base', Math.E)]
+        case 'MA-05': { // Round
+            const getOrderInput = (handleId: string): ASTNode => {
+                const edge = edges.find(e => e.target === nodeId && e.targetHandle === handleId);
+                if (!edge) return { type: 'Literal' as const, value: '\\square' };
+                return buildASTFromGraph(edge.source, nodes, edges, new Set(visited));
             };
-
-        // --- Calculus / Linear Algebra ---
-        case 'CL-01': // Derivative
-            return {
-                type: 'FunctionCall',
-                name: 'diff',
-                args: [
-                    getInputAST('expr', 0),
-                    { type: 'Identifier', name: data.variable || 'x' },
-                    { type: 'Literal', value: data.order || 1 }
-                ]
+            return { 
+                type: 'FunctionCall' as const, 
+                name: 'round', 
+                args: [getOrderInput('in_a'), { type: 'Literal' as const, value: data.precision || 0 }] 
             };
+        }
 
-        case 'CL-02': // Integral
-            return {
-                type: 'FunctionCall',
-                name: data.mode === 'definite' ? 'defint' : 'integrate',
-                args: data.mode === 'definite'
-                    ? [
-                        getInputAST('expr', 0),
-                        { type: 'Literal', value: data.lower || 0 },
-                        { type: 'Literal', value: data.upper || 1 },
-                        { type: 'Identifier', name: data.variable || 'x' }
-                    ]
-                    : [
-                        getInputAST('expr', 0),
-                        { type: 'Identifier', name: data.variable || 'x' }
-                    ]
+        case 'MA-16': { // Logarithm
+            const getOrderInput = (handleId: string): ASTNode => {
+                const edge = edges.find(e => e.target === nodeId && e.targetHandle === handleId);
+                if (!edge) return { type: 'Literal' as const, value: '\\square' };
+                return buildASTFromGraph(edge.source, nodes, edges, new Set(visited));
             };
+            
+            const valAST = getOrderInput('in_a');
+            const mode = data.mode || 'LOGN';
 
-        case 'CL-03': // Limit
-            return {
-                type: 'FunctionCall',
-                name: 'limit',
-                args: [
-                    getInputAST('expr', 0),
-                    { type: 'Identifier', name: data.variable || 'x' },
-                    { type: 'Literal', value: data.approach || '0' }
-                ]
-            };
+            if (mode === 'LN') return { type: 'FunctionCall' as const, name: 'ln', args: [valAST] };
+            if (mode === 'LOG10') return { type: 'FunctionCall' as const, name: 'log', args: [valAST], meta: { base: { type: 'Literal' as const, value: '10' } } };
 
-        // --- Linear Algebra Utils ---
-        case 'DT-06': // Matrix Tools
-        case 'TR-06': // Stats
-            const nodeOp = (data.op || '').toLowerCase();
-            return {
-                type: 'FunctionCall',
-                name: nodeOp,
-                args: [getInputAST('in_a', 0), getInputAST('in_b', 0)]
-            };
+            const baseEdge = edges.find(e => e.target === nodeId && e.targetHandle === 'in_b');
+            const baseAST = baseEdge 
+                ? buildASTFromGraph(baseEdge.source, nodes, edges, new Set(visited)) 
+                : { type: 'Literal' as const, value: data.base || 10 };
+
+            return { type: 'FunctionCall' as const, name: 'log', args: [valAST], meta: { base: baseAST } };
+        }
 
         // --- Output/Pass-through Family ---
         case 'OT-01': // Result
         case 'TR-07': // Color Result
         case 'TR-01': // Unit Assigner
-            // For unit assigner, maybe we could prepend a unit? But it expects purely scalar math string for latex mostly.
-            return getInputAST('in', 0);
-
         case 'UT-02': // Reroute
-        case 'UI-03': 
-            return getInputAST('in', 0);
+        case 'UI-03': {
+            const primaryIn = edges.find(e => e.target === nodeId && (e.targetHandle === 'in' || e.targetHandle === 'in_a'));
+            if (primaryIn) return buildASTFromGraph(primaryIn.source, nodes, edges, new Set(visited));
+            return { type: 'Literal' as const, value: '\\square' };
+        }
 
         // --- Fallback ---
         default:
-            const primaryIn = edges.find(e => e.target === nodeId && (e.targetHandle === 'in' || e.targetHandle === 'in_a'));
-            if (primaryIn) {
-                return buildASTFromGraph(primaryIn.source, nodes, edges, new Set(visited));
-            }
+            const firstIn = edges.find(e => e.target === nodeId && (e.targetHandle === 'in' || e.targetHandle === 'in_a'));
+            if (firstIn) return buildASTFromGraph(firstIn.source, nodes, edges, new Set(visited));
             return { type: 'Identifier', name: data.label || `Node(${type})` };
     }
 }

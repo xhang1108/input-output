@@ -285,7 +285,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
         }
     }, [sections]);
 
-    // 🛠️ FIX: Synchronous & Instant Section Switch
+    // ️ FIX: Synchronous & Instant Section Switch
     // Use useLayoutEffect to reset scroll BEFORE browser paint
     React.useLayoutEffect(() => {
         if (!activeSection.id) return;
@@ -306,7 +306,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
         // as handleNavigate's timeouts need to finish their scroll first.
     }, [activeSection.id]);
 
-    // 🚀 Progressive Loader: Incrementally load more items to fill the section without hanging the UI thread
+    // Progressive Loader: Incrementally load more items to fill the section without hanging the UI thread
     useEffect(() => {
         if (visibleItemsCount < activeSection.items.length) {
             const timer = setTimeout(() => {
@@ -316,7 +316,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
         }
     }, [visibleItemsCount, activeSection.items.length]);
 
-    // 💡 Robust Scroll Tracking: IntersectionObserver for Sidebar Highlighting
+    // Robust Scroll Tracking: IntersectionObserver for Sidebar Highlighting
     useEffect(() => {
         const scroller = scrollerRef.current;
         if (!scroller) return;
@@ -384,7 +384,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
 
         return () => {
             observer.disconnect();
-    mutationObserver.disconnect();
+            mutationObserver.disconnect();
         };
     }, [sections, activeSection.id, activeItemId, activeSectionId]);
 

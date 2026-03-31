@@ -1,5 +1,5 @@
 /**
- * 🧠 Brain Web Worker
+ * Brain Web Worker
  * 
  * Runs the computation pipeline (NodeRegistry.evaluate + InputOutputEngine) in a
  * background thread. Maintains a persistent shadow graph that mirrors the

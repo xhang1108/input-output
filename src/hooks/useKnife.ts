@@ -3,6 +3,7 @@ import { useReactFlow, XYPosition, Edge } from '@xyflow/react';
 import { useCanvasProjection } from './useCanvasProjection';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types';
+import { FALLBACK_SIZE } from '../utils/GeometryUtils';
 
 /**
  * useKnife
@@ -44,14 +45,25 @@ export function useKnife() {
                 const targetNode = allNodes.find(n => n.id === edge.target);
                 if (!sourceNode || !targetNode) return;
 
-                const sx = sourceNode.position.x + (sourceNode.measured?.width || 150);
-                const sy = sourceNode.position.y + (sourceNode.measured?.height || 50) / 2;
+                const sw = sourceNode.measured?.width ?? sourceNode.width ?? FALLBACK_SIZE.width;
+                const sh = sourceNode.measured?.height ?? sourceNode.height ?? FALLBACK_SIZE.height;
+                const tw = targetNode.measured?.width ?? targetNode.width ?? FALLBACK_SIZE.width;
+                const th = targetNode.measured?.height ?? targetNode.height ?? FALLBACK_SIZE.width;
+
+                const sx = sourceNode.position.x + sw;
                 const tx = targetNode.position.x;
-                const ty = targetNode.position.y + (targetNode.measured?.height || 50) / 2;
+                const HEADER_H = 52;
+                const PADDING = 12;
+                const SOCKET_SIZE = 12;
+                
+                // Visual wire start/end Y coordinates (aligned with first handles)
+                const sy = sourceNode.position.y + HEADER_H + PADDING + (SOCKET_SIZE / 2);
+                const ty = targetNode.position.y + HEADER_H + PADDING + (SOCKET_SIZE / 2);
 
                 for (let i = 0; i < projectedPath.length - 1; i++) {
                     const p1 = projectedPath[i];
                     const p2 = projectedPath[i + 1];
+                    
                     if (linesIntersect(sx, sy, tx, ty, p1.x, p1.y, p2.x, p2.y)) {
                         edgesToRemoveObjects.push(edge);
                         restoredEdgeIndices[edge.id] = index;

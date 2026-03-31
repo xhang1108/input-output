@@ -1,6 +1,6 @@
 
 /**
- * 🧮 MATH_ALIASES
+ * MATH_ALIASES
  * 
  * Central mapping of alternative mathematical notations to their primary 
  * Canonical representation in the engine.
@@ -13,17 +13,17 @@ export const MATH_ALIASES: Record<string, string> = {
     'tg': 'tan',
     'ctg': 'cot',
     'arcctg': 'acot',
-    
+
     // Hyperbolic (Russian/German/International)
     'sh': 'sinh',
     'ch': 'cosh',
     'th': 'tanh',
     'cth': 'coth',
-    
+
     // Logarithms
     'ln': 'log',
     'lg': 'log10',
-    
+
     // Others
     'arcsin': 'asin',
     'arccos': 'acos'

@@ -6,48 +6,38 @@ import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
 import { AbacusRod } from './AbacusRod';
 import { ResizeHandle } from './ResizeHandle';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { useNodeDimensions } from './hooks/useNodeDimensions';
 
+/**
+ * AbacusNode (IN-08)
+ * Standard abacus input node with dynamic digit-rod resizing.
+ * Anchored to Top-Left (Red-Dot).
+ */
 export const AbacusNode = memo((props: NodeProps) => {
-    const { id, data, selected } = props;
+    const { id, data } = props;
     const brain = useBrain();
     const { updateNodeData, getNode } = useReactFlow();
     const nodeRef = useRef<HTMLDivElement>(null);
 
-    // Custom handles: output value
-    const handles = useMemo(() => [
-        {
-            id: 'out_a',
-            type: 'source' as const,
-            position: Position.Right,
-            variant: 'single' as const
-        }
-    ], []);
-
     const initialDigits: number[] = (data.array as number[]) || Array(7).fill(0);
     const [digits, setDigits] = useState<number[]>(initialDigits);
 
-    // Dynamic Width Calculation
-    const definition = NODE_DEFINITIONS.find(d => d.id === 'IN-08');
-    const [localWidth, setLocalWidth] = useState<number | null>(null);
+    // Dimension management via unified hook
+    const { width: totalWidth, onResize, onResizeStart, onResizeEnd } = useNodeDimensions({
+        id,
+        type: 'IN-08',
+        data,
+        onProject: useCallback((screenW: number) => ({
+            w: screenW,
+            h: (getNode(id)?.measured?.height) || (data.height as number) || 100
+        }), [id, data.height, getNode]),
+        onResize: useCallback(({ width: _w }: { width: number }) => {
+            // Internal state sync if needed
+        }, [])
+    });
 
-    // Use total node width as primary, subtract padding for internal content
-    const totalWidth = localWidth || (data.width as number) || definition?.minWidth || (7 * 28 + 24 + 24);
     const contentWidth = totalWidth - 24; // BaseNode padding
     const rodCount = Math.max(7, Math.floor((contentWidth - 24) / 28));
-
-    // Standard Resize Logic
-    const handleResizeRight = useCallback(({ screenW }: { screenW: number }) => {
-        setLocalWidth(screenW);
-        updateNodeData(id, { width: screenW });
-    }, [id, updateNodeData]);
-
-    const handleResizeEnd = useCallback(({ screenW }: { screenW: number }) => {
-        setLocalWidth(null);
-        // Only update width, keep current height
-        const currentHeight = (getNode(id)?.measured?.height) || (data.height as number) || 100;
-        brain.resizeNode(id, screenW, currentHeight);
-    }, [id, data.height, getNode, brain]);
 
     // Adjust digits array when rodCount changes
     useEffect(() => {
@@ -60,7 +50,7 @@ export const AbacusNode = memo((props: NodeProps) => {
                 }
             });
         }
-    }, [rodCount]);
+    }, [rodCount, digits.length]);
 
     useEffect(() => {
         if (data.array && Array.isArray(data.array)) {
@@ -93,18 +83,18 @@ export const AbacusNode = memo((props: NodeProps) => {
 
         setDigits(newDigits);
         updateNodeData(id, { array: newDigits });
-        
+
         brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { array: newDigits } }
         });
     };
 
-    const nodeData = {
+    const nodeData = useMemo(() => ({
         ...data,
-        handles,
-        label: data.label || 'Abacus'
-    };
+        label: data.label || 'Abacus',
+        width: totalWidth
+    }), [data, totalWidth]);
 
     return (
         <BaseNode {...props} ref={nodeRef} data={nodeData} style={{ width: `${totalWidth}px` }}>
@@ -138,8 +128,9 @@ export const AbacusNode = memo((props: NodeProps) => {
                 id={id}
                 targetRef={nodeRef}
                 position="bottom-right"
-                onResize={handleResizeRight}
-                onResizeEnd={handleResizeEnd}
+                onResize={onResize}
+                onResizeStart={onResizeStart}
+                onResizeEnd={onResizeEnd}
                 className="text-zinc-600 hover:text-orange-400"
             />
         </BaseNode>

@@ -51,12 +51,15 @@ export function useAutoLayout(
             nodesToLayout.map(n => [n.id, { ...n.position }])
         );
 
-        // Calculate center for partial layout to preserve location
-        let originalCenter = { x: 0, y: 0 };
+        // Calculate Top-Left anchor for partial layout to preserve location (Bounding Box of Red Dots)
+        let originalTopLeft = { x: 0, y: 0 };
         if (isPartial) {
-            const xSum = nodesToLayout.reduce((acc, n) => acc + n.position.x, 0);
-            const ySum = nodesToLayout.reduce((acc, n) => acc + n.position.y, 0);
-            originalCenter = { x: xSum / nodesToLayout.length, y: ySum / nodesToLayout.length };
+            let minX = Infinity, minY = Infinity;
+            nodesToLayout.forEach(n => {
+                minX = Math.min(minX, n.position.x);
+                minY = Math.min(minY, n.position.y);
+            });
+            originalTopLeft = { x: minX, y: minY };
         }
 
         const layouted = await getLayoutedElements(nodesToLayout, edgesToLayout, {
@@ -64,15 +67,18 @@ export function useAutoLayout(
             direction: 'RIGHT'
         });
 
-        // Restore center for partial layout
+        // Restore Top-Left for partial layout
         let finalNodes = layouted.nodes;
         if (isPartial) {
-            const xSum = layouted.nodes.reduce((acc, n) => acc + n.position.x, 0);
-            const ySum = layouted.nodes.reduce((acc, n) => acc + n.position.y, 0);
-            const currentCenter = { x: xSum / layouted.nodes.length, y: ySum / layouted.nodes.length };
+            let minX = Infinity, minY = Infinity;
+            layouted.nodes.forEach(n => {
+                minX = Math.min(minX, n.position.x);
+                minY = Math.min(minY, n.position.y);
+            });
+            const currentTopLeft = { x: minX, y: minY };
 
-            const offsetX = originalCenter.x - currentCenter.x;
-            const offsetY = originalCenter.y - currentCenter.y;
+            const offsetX = originalTopLeft.x - currentTopLeft.x;
+            const offsetY = originalTopLeft.y - currentTopLeft.y;
 
             finalNodes = layouted.nodes.map(n => ({
                 ...n,

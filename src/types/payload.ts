@@ -1,5 +1,5 @@
 /**
- * 📦 Input-Output Data Payload System
+ * Input-Output Data Payload System
  * 
  * Defines the structure of data passed between nodes in the graph.
  * Transitions from simple `number` to a rich object capable of carrying
@@ -23,6 +23,7 @@ export type ASTNode = {
     name?: string;
     value?: number | string | boolean;
     unit?: string; // Symbolic unit
+    meta?: Record<string, any>; // [1.2.0] Extra metadata for rendering (e.g. log base)
 };
 export type Matrix = unknown;  // Will be mathjs.Matrix in Phase 2.3
 
