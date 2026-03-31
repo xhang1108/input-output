@@ -77,6 +77,9 @@ export function useHand() {
         return node.position;
     }, []);
 
+    // Sanity check for finite coordinates
+    const isFiniteCoord = (pos: XYPosition) => Number.isFinite(pos.x) && Number.isFinite(pos.y);
+
 
 
     const applyMove = useCallback((dx: number, dy: number) => {
@@ -88,6 +91,10 @@ export function useHand() {
                 const node = nodeMap.get(id);
                 if (node) {
                     const newPos = { x: initPos.x + dx, y: initPos.y + dy };
+                    if (!isFiniteCoord(newPos)) {
+                        console.warn(`[useHand] Aborted MOVE for node ${id} due to invalid coordinates:`, newPos);
+                        return;
+                    }
                     nodeMap.set(id, { ...node, position: newPos, measured: node.measured });
                 }
             });
@@ -146,7 +153,7 @@ export function useHand() {
             // 2. Apply updates
             return nodes.map(node => {
                 const nextPos = nextAbsolutePositions.get(node.id);
-                if (!nextPos) return node;
+                if (!nextPos || !isFiniteCoord(nextPos)) return node;
 
                 return {
                     ...node,
@@ -180,7 +187,7 @@ export function useHand() {
             // 2. Apply updates
             return nodes.map(node => {
                 const nextPos = nextAbsolutePositions.get(node.id);
-                if (nextPos === undefined) return node;
+                if (nextPos === undefined || !isFiniteCoord(nextPos)) return node;
 
                 return {
                     ...node,
@@ -426,8 +433,8 @@ export function useHand() {
 
         // Helper: get node dimensions safely
         const getSize = (n: Node) => ({
-            w: n.measured?.width ?? n.width ?? (n.data?.width as number) ?? 150,
-            h: n.measured?.height ?? n.height ?? (n.data?.height as number) ?? 50,
+            w: n.measured?.width ?? n.width ?? (n.data?.width as number) ?? (n.data?._dataWidth as number) ?? 150,
+            h: n.measured?.height ?? n.height ?? (n.data?.height as number) ?? (n.data?._dataHeight as number) ?? 50,
         });
 
         // 1. Identify moved or resized nodes
@@ -458,9 +465,20 @@ export function useHand() {
         // 2. Build transactions (Position Only)
         movedNodeIds.forEach(id => {
             const node = nodeMap.get(id);
-            if (!node) return;
+            if (!node || !isFiniteCoord(node.position)) {
+                console.warn(`[useHand] Aborted final transaction for node ${id} due to invalid coordinates.`);
+                return;
+            }
+
+            // NESTING GUARD: If a node has a parent and that parent is also being moved,
+            // we skip the child's MOVE_NODE transaction because its relative position 
+            // hasn't changed in the Brain's coordinate space.
+            if (node.parentId && movedNodeIds.has(node.parentId)) {
+                console.log(`[useHand] Skipping MOVE_NODE for nested child ${id} because parent ${node.parentId} is also moving.`);
+                return;
+            }
             
-            txs.push({ type: 'MOVE_NODE', payload: { id, position: node.position } });
+            txs.push({ type: 'MOVE_NODE', payload: { id, position: { ...node.position } } });
         });
 
         if (txs.length > 0) {
@@ -470,6 +488,8 @@ export function useHand() {
             // FIX: Use initialPositions as the source of truth for all transformations (Grab/Scale/Rotate)
             // initialAbsolutePositions is only populated for Scale/Rotate and is used for calculation, not history.
             initialPositions.current.forEach((initPos, id) => {
+                if (!isFiniteCoord(initPos)) return; // History Guard
+
                 const initialParentId = initialParentIds.current.get(id) ?? null;
                 invTxs.push({ 
                     type: 'MOVE_NODE', 
@@ -482,7 +502,9 @@ export function useHand() {
             });
 
             initialDimensions.current.forEach((initDim, id) => {
-                invTxs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: initDim.w, height: initDim.h } } });
+                const w = Number.isFinite(initDim.w) ? initDim.w : 150;
+                const h = Number.isFinite(initDim.h) ? initDim.h : 50;
+                invTxs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: w, height: h } } });
             });
 
             console.log(`[Hand] Pushing history: Transform ${movedNodeIds.size} items`, { forward: txs, inverse: invTxs });

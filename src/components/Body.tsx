@@ -26,9 +26,8 @@ import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
 import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
 import { useEar } from '../hooks/nerves/useEar';
 import { useHand } from '../hooks/nerves/useHand';
-import { useKnife } from '../hooks/useKnife';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
-import { COMMAND_REGISTRY, getEarShortcuts, Platform } from '../config/shortcuts';
+import { getEarShortcuts, Platform } from '../config/shortcuts';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 import { useEye } from '../hooks/nerves/useEye';
@@ -53,12 +52,9 @@ import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useExampleListener } from '../hooks/useExampleListener';
 import { useAppStore } from '../store/useStore';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { getDocInfo, hasDocForToken } from '../config/docRegistry';
+import { getDocInfo } from '../config/docRegistry';
 import { FloatingProjectControls } from './ui/FloatingProjectControls';
-
-// nodeTypes and edgeTypes imported from config/nodeTypeMap.ts
 
 interface BodyProps {
     projectId: string;
@@ -82,10 +78,8 @@ export function Body({
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-    // Enable cross-page example loading (The Living Lab)
     useExampleListener();
 
-    // UI Helpers
     const { fitView, getViewport, setViewport } = useReactFlow();
     const router = useRouter();
     const mousePosRef = useRef({ x: 0, y: 0 });
@@ -97,15 +91,13 @@ export function Body({
         palettePosition, setPalettePosition,
         showNPanel, setShowNPanel,
         manualSnap, setManualSnap,
-        showGrid, setShowGrid,
         showDebugStats, setShowDebugStats,
         edgeType, setEdgeType,
         layoutAlgorithm, setLayoutAlgorithm,
         panOnScroll, setPanOnScroll,
-        actionLog, logAction
+        logAction
     } = useAppStore();
 
-    // Context Menu State
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         x: number;
@@ -114,53 +106,42 @@ export function Body({
         nodeId?: string;
     } | null>(null);
 
-    // pendingConnection and spawnNode managed by useNodeSpawner
-    // highlightedEdgeId and autoInsert managed by useAutoInsert
-
     const effectiveSnap = isSnapping || manualSnap;
 
     const {
-        interactionMode,
-        isRestoring,
-        push
+        isRestoring
     } = useHistoryStore();
-    const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
+    const { undo, redo } = useHistoryExecutor();
 
     const {
         saveProject,
+        updateVisibility,
         autoSave,
+        triggerDirty,
+        resetCloudTimer,
         isLoaded,
         projectMeta,
         permissionError,
         forkProject,
         isOwner,
         isReadOnly,
-        updateVisibility
+        isCloudDirty,
+        navigateWithSave
     } = useProjectSave(projectId, setNodes, visibility);
 
-    // Propagate metadata to parent
     useEffect(() => {
         if (projectMeta && onProjectLoaded) {
             onProjectLoaded(projectMeta);
         }
     }, [projectMeta, onProjectLoaded]);
 
-    // Handle Permission Error
     useEffect(() => {
         if (permissionError && onForbidden) {
             onForbidden();
         }
     }, [permissionError, onForbidden]);
 
-
-    // Sync Edge Type for existing edges
-    // (Removed duplicate useEffect that caused ReferenceError)
-
-
-    // Get flow helpers
-    const { focusOn, resetView, getZoom } = useEye();
-
-    // Action Log is handled by useAppStore
+    const { focusOn, resetView } = useEye();
 
     const { handleAutoLayout } = useAutoLayout(
         nodes,
@@ -171,7 +152,6 @@ export function Body({
         logAction
     );
 
-    // Nerve Integration: useHand handles physical gestures and tools
     const {
         startGrab,
         startScale,
@@ -192,7 +172,6 @@ export function Body({
         swapConnections,
         detachSelected,
         alignSelectedNodes,
-        clearSelection,
         selectNode,
         handleTypeNum,
         isResolvingTransform,
@@ -201,9 +180,7 @@ export function Body({
         transformValue
     } = useHand();
 
-    // Intercept React Flow node changes to prevent native deselection during operation
     const onNodesChangeSafe = useCallback((changes: NodeChange[]) => {
-        // Block destructive/structural changes for non-owners, but allow 'add' for ephemeral experiments
         const isDestructive = changes.some(c => c.type === 'remove' || c.type === 'position' || c.type === 'dimensions');
         if (isReadOnly && isDestructive) return;
 
@@ -213,7 +190,6 @@ export function Body({
             return;
         }
 
-        // Additive Selection Strategy: 
         if (isModifierActive) {
             const currentlySelected = new Set(nodes.filter(n => n.selected).map(n => n.id));
 
@@ -225,43 +201,19 @@ export function Body({
             });
 
             onNodesChange(enforcedChanges as any[]);
-            
-            // Selection changes should NOT trigger auto-save (noise reduction)
             return;
         }
 
         onNodesChange(changes as any[]);
-
-        // --- Bulletproof Auto-Save Whitelisting ---
-        // 1. dimensions: Ignored (Echoes of rendering/layout, already handled by RESIZE_NODE tx)
-        // 2. select: Ignored (Purely UI state)
-        // 3. position: Only save when dragging ends (dragging === false)
-        // 4. add/remove: Always save structural changes
-        const hasStructuralChange = (changes as any[]).some(c => 
-            c.type === 'add' || 
-            c.type === 'remove' || 
-            (c.type === 'position' && c.dragging === false)
-        );
-
-        if (hasStructuralChange && !isReadOnly && !isRestoring) {
-            autoSave();
-        }
-    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, nodes, autoSave, isReadOnly, isRestoring]);
+    }, [mode, isResolvingTransform, onNodesChange, isModifierActive, triggerDirty, isReadOnly, isRestoring]);
 
     const onEdgesChangeSafe = useCallback((changes: EdgeChange[]) => {
         const isDestructive = (changes as any[]).some(c => c.type === 'remove');
         if (isReadOnly && isDestructive) return;
         
         onEdgesChange(changes as any[]);
+    }, [onEdgesChange, triggerDirty, isReadOnly, isRestoring]);
 
-        // Strict Edge Whitelisting: Only add/remove trigger auto-save
-        const hasStructuralChange = (changes as any[]).some(c => c.type === 'add' || c.type === 'remove');
-        if (hasStructuralChange && !isReadOnly && !isRestoring) {
-            autoSave();
-        }
-    }, [onEdgesChange, autoSave, isReadOnly, isRestoring]);
-
-    // --- Canvas Reset ---
     const clearMemory = useCallback(() => {
         if (isReadOnly) return;
         if (confirm('Are you sure you want to wipe all memory? This cannot be undone.')) {
@@ -284,16 +236,13 @@ export function Body({
             if (currentId) {
                 SaveManager.rename(currentId, newName);
                 logAction(`Project renamed to: ${newName}`);
-                // Trigger an immediate save to sync the new name to cloud if applicable
                 saveProject(true);
             } else {
-                // If it's a 'new' project, we just save it for the first time with the name
                 saveProject(false);
             }
         }
     }, [projectId, saveProject, logAction, isReadOnly]);
 
-    // Node Spawner (Command Palette + Auto-Link)
     const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
         palettePosition,
         edgeType,
@@ -302,7 +251,6 @@ export function Body({
         logAction,
     });
 
-    // Auto Insert (Drag over edge to split)
     const { highlightedEdgeId, detectAutoInsert, performAutoInsert } = useAutoInsert({
         mode,
         edgeType,
@@ -310,7 +258,6 @@ export function Body({
         logAction,
     });
 
-    // Sync Edge Type and Highlight State
     useEffect(() => {
         setEdges(eds => eds.map(e => ({
             ...e,
@@ -322,12 +269,9 @@ export function Body({
         })));
     }, [edgeType, highlightedEdgeId, setEdges]);
 
-    // Brain Sync (Shadow Mirror)
     useBrainSync(nodes, edges);
-    // Brain Updates (Reverse Sync: Brain -> UI)
     useBrainUpdates(setNodes, setEdges);
 
-    // Connect Brain Log to UI Log
     useEffect(() => {
         window.Brain = Brain;
         window.brain = brain;
@@ -346,18 +290,13 @@ export function Body({
         return () => { cleanupLog(); };
     }, [logAction, brain]);
 
-
-    // Debug: Log Mode Changes
     useEffect(() => {
         logAction(`Mode: ${mode}`);
     }, [mode, logAction]);
 
-    // Track Modifiers for Snapping and Additive Selection
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Control') setIsSnapping(true);
-            // ONLY Shift triggers additive selection. 
-            // Control is for Snapping, Meta/Cmd is for system shortcuts.
             if (e.shiftKey) setIsModifierActive(true);
         };
         const handleKeyUp = (e: KeyboardEvent) => {
@@ -381,9 +320,7 @@ export function Body({
         }
     }, []);
 
-    // spawnNode managed by useNodeSpawner hook
 
-    // --- Custom Handle Interactions State ---
     const { project } = useCanvasProjection();
     const {
         relinkState,
@@ -391,7 +328,6 @@ export function Body({
         onRelinkEnd,
         onRelinkConnect,
         isValidRelinkConnection,
-        isRelinkActive,
         startEdgeDragDisconnect
     } = useRelink({
         setEdges,
@@ -400,9 +336,8 @@ export function Body({
         onSmartLinkSearch: (params) => {
             setPalettePosition(params.position);
             setShowPalette(true);
-            paletteGuardRef.current = true; // Block immediate close from background click
+            paletteGuardRef.current = true;
 
-            // Store for auto-link
             setPendingConnection({
                 nodeId: params.nodeId,
                 handleId: params.handleId,
@@ -424,11 +359,10 @@ export function Body({
 
     const relinkValue = {
         ...relinkState,
-        edgeType, // Inject current edgeType into RelinkContext
+        edgeType,
         startEdgeDragDisconnect
     };
 
-    // Guard: Prevent onConnectStart from interfering with native Reconnect
     const paletteGuardRef = useRef(false);
 
     const closePalette = useCallback(() => {
@@ -437,14 +371,12 @@ export function Body({
     }, [setShowPalette, setPendingConnection]);
 
     const handleCancel = useCallback(() => {
-        // Layer 1: Cancel active transformation
         if (mode !== 'IDLE') {
-            cancelGrab(false); // Keyboard Esc doesn't need to suppress next right-click as it's not a right-click
+            cancelGrab(false);
             logAction('Cancel Transform (Esc)');
             return;
         }
 
-        // Layer 2: Deselect all nodes
         const selectedCount = nodes.filter(n => n.selected).length;
         if (selectedCount > 0) {
             setNodes(nds => nds.map(n => ({ ...n, selected: false })));
@@ -452,7 +384,6 @@ export function Body({
             return;
         }
 
-        // Layer 3: Close UI Panels
         if (showPalette || showNPanel) {
             closePalette();
             setShowNPanel(false);
@@ -461,7 +392,6 @@ export function Body({
         }
     }, [mode, cancelGrab, nodes, setNodes, showPalette, showNPanel, closePalette, setShowNPanel, logAction]);
 
-    // --- FEEL NERVES (Input Handling) ---
     const autoConfirm = useCallback((fn: (e: any) => void) => (e: any) => {
         if (mode !== 'IDLE') confirmGrab();
         fn(e);
@@ -471,7 +401,6 @@ export function Body({
 
     useEar({
         shortcuts: getEarShortcuts(platform, {
-            // Creation & Layout
             'palette:open': autoConfirm((e: any) => {
                 e.preventDefault();
                 setPendingConnection(null);
@@ -502,8 +431,6 @@ export function Body({
                     logAction(`${actionName} (.)`);
                 }
             },
-
-            // Transform Commands
             'transform:grab': autoConfirm((e) => {
                 if (isReadOnly) return;
                 startGrab(mousePosRef.current, e.altKey, undefined, true);
@@ -528,9 +455,6 @@ export function Body({
                     logAction('Duplicate Selected (Shift+D)');
                 }
             }),
-
-
-            // Node Operations
             'nodes:delete': () => {
                 if (isReadOnly) return;
                 const active = document.activeElement?.tagName;
@@ -553,20 +477,17 @@ export function Body({
                     logAction('Delete Selected');
                 }
             },
-
             'selection:all': autoConfirm((e) => {
                 if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
                     setNodes(nds => nds.map(n => ({ ...n, selected: true })));
                     logAction('Select All (A)');
                 }
             }),
-
             'system:toggle-n-panel': (e: any) => {
                 e.preventDefault();
                 setShowNPanel((prev: boolean) => !prev);
                 logAction('Toggle N Panel (N)');
             },
-
             'm': autoConfirm(() => {
                 const active = document.activeElement?.tagName;
                 if (active === 'INPUT' || active === 'TEXTAREA') return;
@@ -581,25 +502,22 @@ export function Body({
                 });
                 if (selected.length > 0) logAction(`Toggle Mute [${selected.length}] (M)`);
             }),
-
-            // Axis Lock (While Grabbing/Scaling)
             'y': () => { if (mode === 'GRABBING' || mode === 'SCALING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
-
-            // Clipboard
             'clipboard:copy': autoConfirm(() => { copyToClipboard(); logAction('Copy'); }),
             'clipboard:paste': autoConfirm(() => {
                 if (isReadOnly) return;
                 pasteFromClipboard(project(mousePosRef.current));
                 logAction('Paste');
             }),
-
-            // Save
-            'system:save': autoConfirm((e) => { e.preventDefault(); saveProject(); logAction('Save Project'); }),
-
-            // History
+            'system:save': autoConfirm(async (e) => { 
+                e.preventDefault(); 
+                await saveProject(); 
+                resetCloudTimer();
+                logAction('Save Project'); 
+            }),
             'system:undo': (e) => {
                 e.preventDefault();
-                autoSave.cancel(); // Defuse pending saves before restoration
+                autoSave.cancel();
                 if (mode !== 'IDLE') {
                     cancelGrab(true);
                     logAction('Cancel + Undo');
@@ -620,12 +538,8 @@ export function Body({
                 redo(); 
                 logAction('Redo'); 
             },
-
-            // Confirmation & Navigation
             'system:confirm': () => { confirmGrab(); logAction('Confirm (Enter)'); },
             'system:cancel': () => { handleCancel(); },
-
-            // Numeric Inputs for Transform (keep as literal keys for now as they are many)
             '0': () => handleTypeNum('0'),
             '1': () => handleTypeNum('1'),
             '2': () => handleTypeNum('2'),
@@ -636,7 +550,6 @@ export function Body({
             '7': () => handleTypeNum('7'),
             '8': () => handleTypeNum('8'),
             '9': () => handleTypeNum('9'),
-
             '-': () => handleTypeNum('-'),
             'backspace': () => {
                 const active = document.activeElement?.tagName;
@@ -652,9 +565,8 @@ export function Body({
                 }
             },
         }),
-        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly]
+        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, deleteSelected, resetSelected, focusOn, nodes, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer]
     });
-
 
     const updateModifier = useCallback((e: React.MouseEvent) => {
         const active = e.shiftKey;
@@ -689,7 +601,6 @@ export function Body({
         if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) confirmGrab();
     }, [mode, confirmGrab, showPalette, contextMenu, setShowPalette, setContextMenu]);
 
-
     return (
         <RelinkContext.Provider value={relinkValue}>
             <div
@@ -705,7 +616,6 @@ export function Body({
                 }}
                 onContextMenu={(e) => e.preventDefault()}
             >
-                {/* Loading Overlay — blocks flash while project data loads */}
                 {!isLoaded && (
                     <div className="absolute inset-0 z-9999 bg-zinc-800 flex items-center justify-center">
                         <div className="flex flex-col items-center gap-3">
@@ -727,9 +637,8 @@ export function Body({
 
                     nodeTypes={nodeTypes}
                     colorMode="dark"
-                    connectionMode={ConnectionMode.Loose} // Allow Target-to-Target connection start
+                    connectionMode={ConnectionMode.Loose}
                     proOptions={{ hideAttribution: true }}
-                    // Explicitly disable native edge updates to prioritize our Relink system
                     edgesReconnectable={false}
 
                     selectionKeyCode={null}
@@ -761,7 +670,6 @@ export function Body({
                             return;
                         }
                         if (isReadOnly) return;
-                        // Auto-select if not selected
                         if (!node.selected) {
                             selectNode(node.id, true);
                         }
@@ -775,8 +683,7 @@ export function Body({
                     }}
                     onEdgeContextMenu={(e) => e.preventDefault()}
 
-
-                    nodesDraggable={false} // Disable native drag to use our custom system
+                    nodesDraggable={false}
                     nodesConnectable={!isReadOnly}
                     elementsSelectable={true}
                     panOnDrag={[1]}
@@ -802,17 +709,13 @@ export function Body({
                         data: { pathType: edgeType }
                     }}
 
-                    // Snapping Logic
-
                     nodeOrigin={[0, 0]}
-                    snapGrid={effectiveSnap ? [20, 20] : undefined} // Only provide grid when enabled
+                    snapGrid={[20, 20]}
                     minZoom={0.1}
                     maxZoom={4}
                 >
                     <Background color="#555" gap={20} size={1} />
                     {showDebugStats && <DebugOverlay mode={mode} />}
-
-
 
                     <SettingsPanel
                         isSnapping={manualSnap}
@@ -829,14 +732,11 @@ export function Body({
                         onBackToProjects={onBackToProjects || (() => { })}
                     />
 
-
-                    {/* N Panel (N) */}
                     <NPanel
                         isOpen={showNPanel}
                         onClose={() => setShowNPanel(false)}
                     />
 
-                    {/* Context Menu */}
                     {contextMenu && (
                         <ContextMenu
                             x={contextMenu.x}
@@ -853,7 +753,7 @@ export function Body({
                                     copyToClipboard,
                                     detachSelected,
                                     deleteSelected,
-                                    viewSpecs: () => { }, // Canvas has no specs
+                                    viewSpecs: () => { },
                                     alignSelectedNodes,
                                     logAction,
                                 }, contextMenu.x, contextMenu.y)
@@ -893,11 +793,10 @@ export function Body({
                     <StatusBar
                         mode={mode}
                         transformValue={transformValue}
+                        isDirty={isCloudDirty}
                     />
                 </ReactFlow>
 
-
-                {/* Knife Cut Path Overlay */}
                 {mode === 'CUTTING' && cutPath.length > 0 && (
                     <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-100 overflow-visible">
                         <polyline
@@ -911,7 +810,6 @@ export function Body({
                     </svg>
                 )}
 
-                {/* Node Picker (Shift + A) - Moved outside ReactFlow to avoid transform scaling issues */}
                 {showPalette && (
                     <div className="absolute top-0 left-0 w-full h-full z-100 flex items-center justify-center pointer-events-none">
                         <NodePicker
@@ -929,11 +827,10 @@ export function Body({
                     </div>
                 )}
 
-                {/* Floating Project Controls */}
                 <FloatingProjectControls
                     isOwner={isOwner}
                     projectId={projectId}
-                    onBack={onBackToProjects || (() => { })}
+                    onBack={() => navigateWithSave('/dashboard')}
                     onFork={forkProject}
                     visibility={visibility}
                     onVisibilityChange={updateVisibility}

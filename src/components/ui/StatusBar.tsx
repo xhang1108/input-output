@@ -9,6 +9,7 @@ type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 interface StatusBarProps {
     mode: InteractionMode;
     transformValue?: string;
+    isDirty?: boolean;
 }
 
 interface StatusBarContentProps extends StatusBarProps {
@@ -53,23 +54,28 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
             {/* Right: Stats */}
             <div className="flex gap-4 items-center">
                 {/* Save Status Indicator */}
-                <span className={`transition-all duration-300 flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm ${
-                    saveStatus === 'SAVING' ? 'text-primary bg-primary/10' :
-                    saveStatus === 'PENDING_SYNC' ? 'text-warning bg-warning/10' :
-                    saveStatus === 'CLOUD_SYNCED' ? 'text-success bg-success/10 border border-success/20' :
-                    saveStatus === 'SAVED' ? 'text-success bg-success/10' :
-                    'text-zinc-600'
+                <span className={`transition-all duration-300 flex items-center gap-2 px-2.5 py-1 rounded-sm border ${
+                    saveStatus === 'SAVING' ? 'text-zinc-50 bg-primary/20 border-primary/40' :
+                    saveStatus === 'DIRTY' ? 'text-orange-50 bg-orange-950/30 border-orange-500/30 shadow-[0_0_10px_rgba(249,115,22,0.1)]' :
+                    saveStatus === 'LOCAL_SAVED' ? 'text-success bg-success/10 border-success/20' :
+                    saveStatus === 'CLOUD_SYNCED' ? 'text-blue-400 bg-blue-900/20 border-blue-800/30' :
+                    saveStatus === 'PENDING_SYNC' ? 'text-warning bg-warning/10 border-warning/20' :
+                    'text-zinc-400 bg-zinc-800/30 border-zinc-700/20'
                 }`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${
-                        saveStatus === 'SAVING' ? 'bg-primary animate-pulse' :
-                        saveStatus === 'PENDING_SYNC' ? 'bg-warning shadow-[0_0_5px_hsla(38,92%,55%,0.5)]' :
-                        saveStatus === 'CLOUD_SYNCED' || saveStatus === 'SAVED' ? 'bg-success' :
-                        'bg-border-dim'
+                        saveStatus === 'SAVING' ? 'bg-zinc-50 animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.8)]' :
+                        saveStatus === 'DIRTY' ? 'bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.6)] animate-[pulse_1.5s_infinite]' :
+                        saveStatus === 'LOCAL_SAVED' ? 'bg-success shadow-[0_0_8px_var(--color-success)]' :
+                        saveStatus === 'CLOUD_SYNCED' ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' :
+                        saveStatus === 'PENDING_SYNC' ? 'bg-warning shadow-[0_0_8px_var(--color-warning)]' :
+                        'bg-zinc-600'
                     }`} />
-                    <span className="text-[9px] font-medium tracking-tight">
+                    <span className="text-[10px] font-black tracking-widest uppercase">
                         {saveStatus === 'SAVING' ? 'SYNCING...' : 
-                         saveStatus === 'PENDING_SYNC' ? 'SYNC PENDING' : 
+                         saveStatus === 'DIRTY' ? 'UNSAVED' :
+                         saveStatus === 'LOCAL_SAVED' ? 'LOCAL SAVED' :
                          saveStatus === 'CLOUD_SYNCED' ? 'CLOUD SYNCED' : 
+                         saveStatus === 'PENDING_SYNC' ? 'SYNC PENDING' :
                          'SAVED'}
                     </span>
                 </span>

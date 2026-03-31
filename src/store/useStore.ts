@@ -16,7 +16,7 @@ interface AppState {
     edgeType: string;
     layoutAlgorithm: LayoutAlgorithm;
     panOnScroll: boolean;
-    saveStatus: 'IDLE' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR';
+    saveStatus: 'IDLE' | 'DIRTY' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR';
     mathPrecision: MathPrecision;
     lastEvalMs: number | null;
     lastImportMs: number | null;
@@ -40,7 +40,7 @@ interface AppState {
     setEdgeType: (type: string | ((prev: string) => string)) => void;
     setLayoutAlgorithm: (algo: LayoutAlgorithm | ((prev: LayoutAlgorithm) => LayoutAlgorithm)) => void;
     setPanOnScroll: (enabled: boolean | ((prev: boolean) => boolean)) => void;
-    setSaveStatus: (status: 'IDLE' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR') => void;
+    setSaveStatus: (status: 'IDLE' | 'DIRTY' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR') => void;
     setMathPrecision: (precision: MathPrecision) => void;
     setLastEvalMs: (ms: number | null) => void;
     setLastImportMs: (ms: number | null) => void;

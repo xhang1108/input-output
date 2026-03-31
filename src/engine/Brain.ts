@@ -742,6 +742,9 @@ export class Brain {
         });
 
         if (res.success && !silent) {
+            // Emit successful, non-silent transactions for global status tracking (e.g. Dirtying)
+            this.emit('transactionApplied', tx);
+
             // Position-only transactions don't need full UI topology sync.
             // MOVE_NODE has no effect on computation or structure.
             const isPositionOnly = tx.type === 'MOVE_NODE' ||

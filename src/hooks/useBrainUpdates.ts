@@ -71,6 +71,11 @@ export function useBrainUpdates(
                     // 1. Remove nodes not in Brain
                     for (let i = nextNodes.length - 1; i >= 0; i--) {
                         if (!brainNodes.has(nextNodes[i].id)) {
+                            console.warn(`[useBrainUpdates] Removing node ${nextNodes[i].id} because it is missing from Brain state.`, {
+                                nodeType: nextNodes[i].type,
+                                hasParent: !!nextNodes[i].parentId,
+                                currentNodesCount: nextNodes.length
+                            });
                             nextNodes.splice(i, 1);
                             changed = true;
                         }

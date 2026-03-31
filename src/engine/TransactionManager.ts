@@ -122,6 +122,12 @@ export class TransactionManager {
                 const p = tx.payload as MoveNodePayload;
                 const node = state.nodes.get(p.id);
                 if (node) {
+                    // COORDINATE SANITY GUARD: Block NaN/Infinity from entering state
+                    if (!Number.isFinite(p.position.x) || !Number.isFinite(p.position.y)) {
+                        console.warn(`[TransactionManager] Blocked MOVE_NODE for ${p.id} due to non-finite coordinates.`, p.position);
+                        return { success: false, reason: 'Invalid coordinates' };
+                    }
+
                     // DEADZONE GUARD: Ignore microscopic movements (< 0.5px) to prevent 
                     // floating point oscillations from triggering unnecessary re-evaluations.
                     const dx = Math.abs(node.position.x - p.position.x);
@@ -129,7 +135,7 @@ export class TransactionManager {
                     const hasMovedSignificantly = dx > 0.5 || dy > 0.5;
 
                     if (hasMovedSignificantly || node.parentId !== p.parentId) {
-                        node.position = p.position;
+                        node.position = { ...p.position };
                         if (p.parentId !== undefined) {
                             node.parentId = p.parentId;
                         }
@@ -145,13 +151,15 @@ export class TransactionManager {
                 const p = tx.payload as ResizeNodePayload;
                 const node = state.nodes.get(p.id);
                 if (node) {
-                    node.width = p.width;
-                    node.height = p.height;
-                    // Sync to data object as well, as many functional components 
-                    // (like MatrixInputNode) use data.width/height as the primary reference
-                    node.data = { ...node.data, width: p.width, height: p.height };
+                    const w = Number.isFinite(p.width) && p.width > 10 ? p.width : (node.width || 150);
+                    const h = Number.isFinite(p.height) && p.height > 10 ? p.height : (node.height || 50);
+
+                    node.width = w;
+                    node.height = h;
+                    // Sync to data object as well
+                    node.data = { ...node.data, width: w, height: h };
                     node.lastUpdatedProperty = 'dimensions';
-                    hooks.onNodeDataUpdated?.(p.id); // Trigger visual update
+                    hooks.onNodeDataUpdated?.(p.id);
                     return { success: true };
                 }
                 return { success: false, reason: 'Node not found' };
@@ -161,9 +169,19 @@ export class TransactionManager {
                 const p = tx.payload as { id: string, data: Record<string, unknown> };
                 const tNode = state.nodes.get(p.id);
                 if (tNode) {
-                    const { selected, ...remainingData } = p.data;
+                    const { selected, width, height, ...remainingData } = p.data;
                     if (selected !== undefined) {
                         tNode.selected = !!selected;
+                    }
+
+                    // Width/Height Guard: Prevent UI collapsing
+                    if (width !== undefined && typeof width === 'number' && Number.isFinite(width)) {
+                        tNode.width = Math.max(10, width);
+                        (remainingData as any).width = tNode.width;
+                    }
+                    if (height !== undefined && typeof height === 'number' && Number.isFinite(height)) {
+                        tNode.height = Math.max(10, height);
+                        (remainingData as any).height = tNode.height;
                     }
 
                     // Deep Equal Guard: Only mark dirty if data content actually changed
