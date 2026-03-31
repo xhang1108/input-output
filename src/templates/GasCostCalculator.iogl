@@ -1,0 +1,62 @@
+[Local Station ($/L)] IN-02 4.50, 0, 10, 0.01 @0,0
+[Further Station ($/L)] IN-02 4.20, 0, 10, 0.01 @0,150
+[Refill Amount (L)] IN-02 50, 10, 100, 1 @0,300
+[Dist (1-way km)] IN-02 10, 1, 100, 1 @0,450
+[Cons (L/100km)] IN-02 8, 2, 25, 0.5 @0,600
+
+[Price Diff] MA-01 { mode: "SUB" } @400,75
+[Gross Savings] MA-01 { mode: "MUL" } @850,225
+
+[Total Dist (km)] MA-01 { mode: "MUL" } @400,450
+[Const: 2] IN-01 2 @400,550
+
+[Const: 100] IN-01 100 @850,550
+[L per km] MA-01 { mode: "DIV" } @850,450
+[Fuel for Trip] MA-01 { mode: "MUL" } @1300,525
+
+[Trip Gas Cost] MA-01 { mode: "MUL" } @1750,450
+[Net Benefit] MA-01 { mode: "SUB" } @1750,300
+
+[Zero] IN-01 0 @2200,450
+[Is Profitable?] LG-01 { mode: "GT" } @2200,300
+
+[Msg: YES] IN-04 "YES! Go now." @2650,400
+[Msg: NO] IN-04 "NO! Too costly." @2650,500
+[Switch] LG-02 @2650,300
+
+[Net Savings ($)] OT-01 { viewMode: "auto", precision: 2 } @3100,100
+[Final Verdict] OT-01 { viewMode: "text" } @3100,300
+
+[Sticky Note] UT-01 "# Gas Logic\nNet = (Liters * PriceDiff) - (Usage * Dist * TargetPrice)\n\nIf positive, it pays for itself." @400,-100
+
+# Edges
+[Local Station ($/L)].out_a -> [Price Diff].in_a
+[Further Station ($/L)].out_a -> [Price Diff].in_b
+
+[Price Diff].out_a -> [Gross Savings].in_a
+[Refill Amount (L)].out_a -> [Gross Savings].in_b
+
+[Dist (1-way km)].out_a -> [Total Dist (km)].in_a
+[Const: 2].out_a -> [Total Dist (km)].in_b
+
+[Total Dist (km)].out_a -> [L per km].in_a
+[Const: 100].out_a -> [L per km].in_b
+
+[L per km].out_a -> [Fuel for Trip].in_a
+[Cons (L/100km)].out_a -> [Fuel for Trip].in_b
+
+[Fuel for Trip].out_a -> [Trip Gas Cost].in_a
+[Further Station ($/L)].out_a -> [Trip Gas Cost].in_b
+
+[Gross Savings].out_a -> [Net Benefit].in_a
+[Trip Gas Cost].out_a -> [Net Benefit].in_b
+
+[Net Benefit].out_a -> [Is Profitable?].in_a
+[Zero].out_a -> [Is Profitable?].in_b
+
+[Is Profitable?].out_a -> [Switch].in_a
+[Msg: YES].out_a -> [Switch].in_b
+[Msg: NO].out_a -> [Switch].in_c
+
+[Net Benefit].out_a -> [Net Savings ($)].in_a
+[Switch].out_a -> [Final Verdict].in_a

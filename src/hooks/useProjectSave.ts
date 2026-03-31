@@ -88,7 +88,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         const { setSaveStatus } = settings;
 
         setSaveStatus('SAVING');
-        const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);
+        setSaveStatus('SAVING');
 
         const slotName = currentSlotIdRef.current
             ? (SaveManager.getMeta(currentSlotIdRef.current)?.name ?? 'Untitled')
@@ -96,6 +96,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
         const isFirstCloudSync = isCloud && !hasSyncedRef.current;
 
+        let encoded = '';
         try {
             const id = SaveManager.save(
                 slotName,
@@ -103,6 +104,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 settings as unknown as Record<string, unknown>,
                 currentSlotIdRef.current || (isCloud ? `cloud:${actualId}` : undefined)
             );
+            encoded = SaveManager.getRawData(id)!;
 
             // Clarify log: this is a local save to a cloud-prefixed slot
             console.log(`[useProjectSave] Local backup updated ${isCloud ? '(Cloud Slot)' : ''}. Slot: ${id}. Size: ${Math.round(encoded.length / 1024)}KB`);
@@ -239,7 +241,6 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
     const forkProject = useCallback(async (targetType: 'cloud' | 'local' = 'cloud') => {
         const settings = useAppStore.getState();
-        const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);
         const title = `Copy of ${projectMeta?.title || 'Untitled'}`;
 
         if (targetType === 'cloud') {
@@ -248,6 +249,9 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 return;
             }
             try {
+                const newId = SaveManager.save(title, brain, settings as unknown as Record<string, unknown>);
+                const encoded = SaveManager.getRawData(newId)!;
+
                 const response = await fetch('/api/graphs', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -267,11 +271,13 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 toast.error('Failed to fork project');
             }
         } else {
-            const newId = SaveManager.save(title, brain, settings as unknown as Record<string, unknown>);
+            // Re-use current newId if we already saved above?
+            // Actually newId might not be available here, let's keep it simple.
+            const newLocalId = SaveManager.save(title, brain, settings as unknown as Record<string, unknown>);
             toast.success('Project forked to your Local storage!');
             // Small delay to ensure localStorage write/indexing is finished before navigation
             setTimeout(() => {
-                router.push(`/d/${newId}`);
+                router.push(`/d/${newLocalId}`);
             }, 100);
         }
     }, [brain, projectMeta, session, router]);
@@ -305,8 +311,9 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
         if (data.settings) restoreSettings(data.settings);
 
-        if (data.graph) {
-            brain.injectNodes(data.graph, true).then(() => {
+        const graphToInject = (data as any).graph || { nodes: data.nodes, edges: data.edges };
+        if (graphToInject.nodes) {
+            brain.injectNodes(graphToInject, true).then(() => {
                 toast.success('Project loaded successfully');
                 fitViewToScene({ duration: 400 });
             });
@@ -346,9 +353,10 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 const loadGraphData = (sourceData: any) => {
                     if (sourceData) {
                         if (sourceData.settings) restoreSettings(sourceData.settings);
-                        if (sourceData.graph) {
-                            console.log(`[useProjectSave] Injecting graph with ${sourceData.graph.nodes.length} nodes...`);
-                            brain.injectNodes(sourceData.graph, true, true).then((diagnostics) => {
+                        const graphToInject = (sourceData as any).graph || { nodes: sourceData.nodes, edges: sourceData.edges };
+                        if (graphToInject.nodes) {
+                            console.log(`[useProjectSave] Injecting graph with ${graphToInject.nodes.length} nodes...`);
+                            brain.injectNodes(graphToInject, true, true).then((diagnostics) => {
                                 if (diagnostics && diagnostics.length > 0) {
                                     console.warn("[useProjectSave] Injection diagnostics:", diagnostics);
                                 }
@@ -356,7 +364,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                                 revealAfterPaint();
                             });
                         } else {
-                            console.warn("[useProjectSave] Load data found but no graph present.");
+                            console.warn("[useProjectSave] Load data found but no nodes present.");
                             setIsLoaded(true);
                         }
                     } else {
@@ -483,8 +491,9 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 if (data) {
                     if (data.settings) restoreSettings(data.settings);
 
-                    if (data.graph) {
-                        brain.injectNodes(data.graph, true, true).then(() => {
+                    const graphToInject = (data as any).graph || { nodes: data.nodes, edges: data.edges };
+                    if (graphToInject.nodes) {
+                        brain.injectNodes(graphToInject, true, true).then(() => {
                             fitViewToScene({ duration: 0 });
                             revealAfterPaint();
                         });
@@ -512,19 +521,23 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
         if (isReadOnly) return;
 
         setProjectMeta(prev => prev ? { ...prev, visibility: newVisibility } : null);
-
-        // Immediate save to sync visibility
         const settings = useAppStore.getState();
-        const encoded = Serializer.serialize(brain, settings as unknown as Record<string, unknown>);
-        const title = projectMeta?.title || 'Untitled';
+
+        const savedId = SaveManager.save(
+            projectMeta?.title || 'Untitled',
+            brain,
+            settings as unknown as Record<string, unknown>,
+            currentSlotIdRef.current || `cloud:${actualId}`
+        );
+        const encodedData = SaveManager.getRawData(savedId)!;
 
         try {
             const response = await fetch(`/api/graphs/${actualId}`, {
                 method: "PUT",
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    payload: encoded,
-                    title,
+                    payload: encodedData,
+                    title: projectMeta?.title || 'Untitled',
                     id: actualId,
                     visibility: newVisibility
                 })
