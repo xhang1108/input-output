@@ -158,7 +158,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'out_a', type: 'source', variant: 'single', dataType: 'array' }
         ],
         defaultData: {
-            array: '[[0,0,0],[0,0,0],[0,0,0]]',
+            array: [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
             width: 152,
             height: 160
         },

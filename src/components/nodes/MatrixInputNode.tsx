@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useRef, useEffect } from 'react';
+import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { useHistoryStore } from '../../store/useHistoryStore';
 import { Transaction } from '../../engine/types';
@@ -21,26 +21,40 @@ export const MatrixInputNode = memo((props: NodeProps) => {
     const initialGridRef = useRef<any[][] | null>(null);
 
     // --- Grid State Management ---
-    const initialGrid = (() => {
+    const initialGrid = useMemo(() => {
         try {
             const extract2DArray = (val: any): any[][] | null => {
+                if (!val) return null;
+
+                // 1. If val is a string, try parsing it
                 if (typeof val === 'string') {
                     try {
                         const parsed = JSON.parse(val);
-                        if (Array.isArray(parsed) && Array.isArray(parsed[0])) return parsed;
+                        return extract2DArray(parsed); // Recursive unwrap
                     } catch (e) { return null; }
                 }
-                if (Array.isArray(val) && Array.isArray(val[0])) return val;
-                if (val && typeof val === 'object') {
-                    // 1. Direct Payload match (Standard for IOGL 1.0 / NodePayload)
-                    if (val.type === 'array' && Array.isArray(val.value)) return val.value;
-                    
-                    // 2. Property match (Mapped from manifest.ts)
-                    const arrayProp = val.array || val.value;
-                    if (arrayProp) {
-                        const unwrapped = typeof arrayProp === 'string' ? JSON.parse(arrayProp) : arrayProp;
-                        if (unwrapped?.type === 'array' && Array.isArray(unwrapped.value)) return unwrapped.value;
-                        if (Array.isArray(unwrapped)) return unwrapped;
+
+                // 2. If it's a 2D array of numbers/strings, return as is
+                if (Array.isArray(val) && val.length > 0 && Array.isArray(val[0])) {
+                    // Check for nested double-stringification: [["[[1,2],...]]"]]
+                    if (val.length === 1 && val[0].length === 1 && typeof val[0][0] === 'string' && val[0][0].startsWith('[[')) {
+                        try {
+                            return extract2DArray(val[0][0]);
+                        } catch (e) { }
+                    }
+                    return val;
+                }
+
+                // 3. Handle Object/Payload formats
+                if (typeof val === 'object') {
+                    // Property match (Mapped from manifest.ts or direct data)
+                    const arrayProp = val.array ?? val.value;
+                    if (arrayProp !== undefined) {
+                        // If it's a payload: { type: 'array', value: [...] }
+                        if (arrayProp && typeof arrayProp === 'object' && 'type' in arrayProp && 'value' in arrayProp) {
+                            return extract2DArray((arrayProp as any).value);
+                        }
+                        return extract2DArray(arrayProp);
                     }
                 }
                 return null;
@@ -49,9 +63,12 @@ export const MatrixInputNode = memo((props: NodeProps) => {
             const extractedFromData = extract2DArray(data);
             if (extractedFromData) return extractedFromData;
 
-        } catch (e) { }
+        } catch (e) {
+            console.error("[MatrixInputNode] Extraction Critical Failure", e);
+        }
+        // Strict fallback to 3x3 to match nodeDefinitions default
         return [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-    })() as any[][];
+    }, [data]); // Only re-calculate when data property changes (structural sync)
 
     const nodeRef = useRef<HTMLDivElement>(null);
 
@@ -188,11 +205,10 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                             {row.map((val, c) => (
                                 <div
                                     key={c}
-                                    className={`w-10 h-8 bg-zinc-900/50 border rounded flex items-center justify-center transition-colors ${
-                                        isNaN(parseFloat(String(val))) && String(val) !== '' 
-                                            ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]' 
+                                    className={`w-10 h-8 bg-zinc-900/50 border rounded flex items-center justify-center transition-colors ${isNaN(parseFloat(String(val))) && String(val) !== ''
+                                            ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]'
                                             : 'border-zinc-800'
-                                    }`}
+                                        }`}
                                 >
                                     <input
                                         type="text"

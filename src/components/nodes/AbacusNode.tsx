@@ -83,7 +83,7 @@ export const AbacusNode = memo((props: NodeProps) => {
 
         setDigits(newDigits);
         updateNodeData(id, { array: newDigits });
-        
+
         brain.applyTransaction({
             type: 'UPDATE_NODE_DATA',
             payload: { id, data: { array: newDigits } }

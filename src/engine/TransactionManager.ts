@@ -5,7 +5,7 @@ import { getUniqueLabel } from '../utils/labelUtils';
 import deepEqual from 'fast-deep-equal';
 
 export class TransactionManager {
-    constructor() {}
+    constructor() { }
 
     /**
      * Applies a transaction to the GraphState.
@@ -34,7 +34,7 @@ export class TransactionManager {
             case 'ADD_NODE': {
                 const p = tx.payload as AddNodePayload;
                 const initialPayload = PayloadUtils.wrap(p.initialValue);
-                
+
                 // Label Uniqueness Check
                 let label = p.data?.label;
                 if (typeof label === 'string') {

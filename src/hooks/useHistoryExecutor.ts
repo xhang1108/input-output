@@ -17,8 +17,8 @@ const isExecutionBlocked = () => {
 };
 
 const computeNextState = (
-    transactions: Transaction[], 
-    currentNodes: Node[], 
+    transactions: Transaction[],
+    currentNodes: Node[],
     currentEdges: Edge[],
     uiMetadata?: {
         restoredNodeIndices?: Record<string, number>;
@@ -59,7 +59,7 @@ const computeNextState = (
                 const p = tx.payload as any;
                 nextNodes = nextNodes.map(node => {
                     if (node.id !== p.id) return node;
-                    
+
                     const data = tx.type === 'UPDATE_NODE_DATA' ? p.data : p;
                     // 必須進行深層合併 (Deep Merge)，確保 React 偵測到 data 的記憶體位置改變
                     const res = { ...node, data: { ...node.data, ...data } };
@@ -76,7 +76,7 @@ const computeNextState = (
                         res.style = { ...res.style, height: data.height };
                     }
                     if (data.parentId !== undefined) res.parentId = data.parentId;
-                    
+
                     return res;
                 });
                 break;
@@ -157,8 +157,8 @@ const computeNextState = (
 };
 
 export function useHistoryExecutor() {
-    const { 
-        past, future, 
+    const {
+        past, future,
         setIsRestoring, popPast, popFuture, pushPastSilent, pushFutureSilent,
         interactionMode
     } = useHistoryStore();
@@ -172,7 +172,7 @@ export function useHistoryExecutor() {
 
     const executeRestoration = useCallback((entry: HistoryEntry, isUndo: boolean) => {
         console.log(`[History] Executing ${isUndo ? 'Undo' : 'Redo'}:`, entry.description);
-        
+
         // Step A: Mute (Lock the sync)
         setIsRestoring(true);
 
@@ -182,9 +182,9 @@ export function useHistoryExecutor() {
         const nodesBefore = getNodes();
         const edgesBefore = getEdges();
         const { nextNodes, nextEdges } = computeNextState(
-            txs, 
-            nodesBefore, 
-            edgesBefore, 
+            txs,
+            nodesBefore,
+            edgesBefore,
             entry.uiMetadata
         );
 
@@ -194,7 +194,7 @@ export function useHistoryExecutor() {
         setNodes(nextNodes);
         setEdges(nextEdges);
         brain.applyTransaction({ type: 'BATCH', payload: txs }, true);
-        
+
         if (isUndo) {
             pushFutureSilent(entry);
         } else {
@@ -217,7 +217,7 @@ export function useHistoryExecutor() {
         if (isExecutionBlocked()) {
             return;
         }
-        
+
         const entry = popPast();
         if (!entry) {
             return;
@@ -228,7 +228,7 @@ export function useHistoryExecutor() {
     const redo = useCallback(() => {
         const { interactionMode: currentMode } = useHistoryStore.getState();
         if (currentMode !== 'IDLE' || isDraggingConnection) {
-             return;
+            return;
         }
         if (isExecutionBlocked()) {
             return;
@@ -241,10 +241,10 @@ export function useHistoryExecutor() {
         executeRestoration(entry, false);
     }, [popFuture, executeRestoration, isDraggingConnection]);
 
-    return { 
+    return {
         undo,
         redo,
-        canUndo: past.length > 0, 
-        canRedo: future.length > 0 
+        canUndo: past.length > 0,
+        canRedo: future.length > 0
     };
 }
