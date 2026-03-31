@@ -714,7 +714,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Transform',
         handles: [
             { id: 'in_a', type: 'target', variant: 'single', dataType: 'scalar' },
-            { id: 'out_a', type: 'source', variant: 'single', dataType: 'unit' }
+            { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { type: 'unit', unit: 'm', customUnit: '' },
         params: [
