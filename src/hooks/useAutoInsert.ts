@@ -11,7 +11,6 @@ import { useAppStore } from '../store/useStore';
 
 interface UseAutoInsertProps {
     mode: string;
-    edgeType: string;
     brain: Brain;
     logAction: (msg: string) => void;
 }
@@ -24,7 +23,6 @@ interface UseAutoInsertProps {
  */
 export function useAutoInsert({
     mode,
-    edgeType,
     brain,
     logAction,
 }: UseAutoInsertProps) {
@@ -191,7 +189,7 @@ export function useAutoInsert({
                     target: node.id,
                     targetHandle: inputHandle,
                     type: 'magnetic',
-                    data: { pathType: edgeType }
+                    data: { pathType: 'bezier' }
                 };
 
                 const e2: Edge = {
@@ -201,7 +199,7 @@ export function useAutoInsert({
                     target: targetId,
                     targetHandle: edge.targetHandle,
                     type: 'magnetic',
-                    data: { pathType: edgeType }
+                    data: { pathType: 'bezier' }
                 };
 
                 const forwardTxs: Transaction[] = [
@@ -237,7 +235,7 @@ export function useAutoInsert({
             }
             setHighlightedEdgeId(null);
         }
-    }, [highlightedEdgeId, edgeType, brain, logAction, getNodes, getEdges, setHighlightedEdgeId, pushHistory]);
+    }, [highlightedEdgeId, brain, logAction, getNodes, getEdges, setHighlightedEdgeId, pushHistory]);
 
     return {
         detectAutoInsert,

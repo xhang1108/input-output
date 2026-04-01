@@ -101,8 +101,6 @@ export function FlowCanvas({
     const setManualSnap = useAppStore(s => s.setManualSnap);
     const showDebugStats = useAppStore(s => s.showDebugStats);
     const setShowDebugStats = useAppStore(s => s.setShowDebugStats);
-    const edgeType = useAppStore(s => s.edgeType);
-    const setEdgeType = useAppStore(s => s.setEdgeType);
     const layoutAlgorithm = useAppStore(s => s.layoutAlgorithm);
     const setLayoutAlgorithm = useAppStore(s => s.setLayoutAlgorithm);
     const panOnScroll = useAppStore(s => s.panOnScroll);
@@ -251,7 +249,6 @@ export function FlowCanvas({
 
     const { detectAutoInsert, performAutoInsert } = useAutoInsert({
         mode,
-        edgeType,
         brain,
         logAction,
     });
@@ -320,7 +317,6 @@ export function FlowCanvas({
     } = useRelink({
         setEdges,
         logAction,
-        edgeType,
         onSmartLinkSearch: (params) => {
             setPalettePosition(params.position);
             setShowPalette(true);
@@ -347,7 +343,6 @@ export function FlowCanvas({
 
     const relinkValue = {
         ...relinkState,
-        edgeType,
         startEdgeDragDisconnect
     };
 
@@ -677,18 +672,13 @@ export function FlowCanvas({
                     preventScrolling={true}
                     panOnScrollSpeed={1}
                     selectionMode={SelectionMode.Partial}
-                    connectionLineType={{
-                        bezier: ConnectionLineType.Bezier,
-                        straight: ConnectionLineType.Straight,
-                        step: ConnectionLineType.Step,
-                        smoothstep: ConnectionLineType.SmoothStep,
-                    }[edgeType as 'bezier' | 'straight' | 'step' | 'smoothstep'] || ConnectionLineType.Bezier}
+                    connectionLineType={ConnectionLineType.Bezier}
                     connectionLineStyle={{ stroke: 'var(--color-zinc-500)', strokeWidth: 2 }}
                     edgeTypes={edgeTypes}
                     defaultEdgeOptions={{
                         type: 'magnetic',
                         animated: false,
-                        data: { pathType: edgeType }
+                        data: { pathType: 'bezier' }
                     }}
 
                     nodeOrigin={[0, 0]}

@@ -20,14 +20,12 @@ import { Transaction } from '../engine/types';
 type UseRelinkProps = {
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
     logAction: (action: string) => void;
-    edgeType: string;
     onSmartLinkSearch?: (params: { nodeId: string; handleId: string; handleType: 'source' | 'target'; handleColor: string; position: { x: number; y: number } }) => void;
 };
 
 export function useRelink({
     setEdges,
     logAction,
-    edgeType,
     onSmartLinkSearch
 }: UseRelinkProps) {
     const brain = useBrain();
@@ -215,7 +213,7 @@ export function useRelink({
                         target: anchor.nodeId,
                         targetHandle: anchor.handleId,
                         type: 'magnetic' as const,
-                        data: { pathType: edgeType }
+                        data: { pathType: 'bezier' }
                     };
                 })
                 .filter(Boolean) as Edge[];
@@ -239,7 +237,7 @@ export function useRelink({
                     target: dropSide.n!,
                     targetHandle: dropSide.h,
                     type: 'magnetic' as const,
-                    data: { pathType: edgeType }
+                    data: { pathType: 'bezier' }
                 };
                 newEdgesToCreate.push(newEdge);
 
@@ -269,7 +267,7 @@ export function useRelink({
             return false;
         }
 
-    }, [edgeType, logAction, edges, submitRelinkBatch, brain]);
+    }, [logAction, edges, submitRelinkBatch, brain]);
 
     const resetRelink = useCallback(() => {
         const emptyState: RelinkState = {
@@ -466,7 +464,7 @@ export function useRelink({
                 target: params.target,
                 targetHandle: params.targetHandle,
                 type: 'magnetic' as const,
-                data: { pathType: edgeType }
+                data: { pathType: 'bezier' }
             };
 
             if (isReplacementTarget && existingEdge) {
@@ -483,7 +481,7 @@ export function useRelink({
             const detail = `${params.source}:${params.sourceHandle} -> ${params.target}:${params.targetHandle}`;
             logAction(`Connected: ${detail}`);
         },
-        [edges, edgeType, logAction, submitRelinkBatch, brain]
+        [edges, logAction, submitRelinkBatch, brain]
     );
 
     const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {

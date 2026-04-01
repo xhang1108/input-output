@@ -1,4 +1,4 @@
-import { BaseEdge, EdgeProps, getBezierPath, getStraightPath, getSmoothStepPath, useStore } from '@xyflow/react';
+import { BaseEdge, EdgeProps, getBezierPath, useStore } from '@xyflow/react';
 import React, { useContext, useRef } from 'react';
 import { useCapsulePreview } from './capsulePreviewState';
 import { HANDLE_SLOT_SPACING, calculateSlotOffsetY } from '../../utils/handleUtils';
@@ -22,7 +22,7 @@ export function MagneticEdge({
     selected,
     data,
 }: EdgeProps) {
-    const pathType = data?.pathType || 'bezier';
+    // pathType is now consistently 'bezier'
     const { startEdgeDragDisconnect } = useContext(RelinkContext);
     const dragStartPos = useRef<{ x: number, y: number } | null>(null);
 
@@ -62,21 +62,7 @@ export function MagneticEdge({
         targetPosition,
     };
 
-    let edgePath = '';
-    switch (pathType) {
-        case 'straight':
-            [edgePath] = getStraightPath(params);
-            break;
-        case 'step':
-            [edgePath] = getSmoothStepPath({ ...params, borderRadius: 0 });
-            break;
-        case 'smoothstep':
-            [edgePath] = getSmoothStepPath(params);
-            break;
-        default:
-            [edgePath] = getBezierPath(params);
-            break;
-    }
+    const [edgePath] = getBezierPath(params);
 
     return (
         <>

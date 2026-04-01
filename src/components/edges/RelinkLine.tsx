@@ -1,4 +1,4 @@
-import { ConnectionLineComponentProps, useStore, Position, getBezierPath, getStraightPath, getSmoothStepPath, getSimpleBezierPath } from '@xyflow/react';
+import { ConnectionLineComponentProps, useStore, Position, getBezierPath } from '@xyflow/react';
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useHandleMagnet } from '../../hooks/useHandleMagnet';
 import { getNearestHandle } from '../../utils/geometry';
@@ -17,7 +17,6 @@ export interface RelinkState {
     targetHandleId: string | null; // The "Anchor" Handle ID
     type: 'source' | 'target';     // The Anchor Type: 'source' (Output) or 'target' (Input)
     anchors?: RelinkAnchor[];      // Multiple anchors for multi-wire output unplug
-    edgeType?: string;             // Dynamic path type
     startEdgeDragDisconnect?: (event: React.PointerEvent, edgeId: string) => void;
 }
 
@@ -27,7 +26,6 @@ export const RelinkContext = createContext<RelinkState>({
     targetHandleId: null,
     type: 'target',
     anchors: [],
-    edgeType: 'bezier',
 });
 
 export const RelinkLine = ({
@@ -39,7 +37,7 @@ export const RelinkLine = ({
     toPosition,
     connectionLineStyle,
 }: ConnectionLineComponentProps) => {
-    const { active, targetNodeId, targetHandleId, type, anchors, edgeType: relinkEdgeType } = useContext(RelinkContext);
+    const { active, targetNodeId, targetHandleId, type, anchors } = useContext(RelinkContext);
     const nodeLookup = useStore((s) => s.nodeLookup);
     const allEdges = useStore((s) => s.edges);
     const transform = useStore((s) => s.transform); // [tx, ty, zoom]
@@ -169,24 +167,7 @@ export const RelinkLine = ({
             targetPosition: targetPos,
         };
 
-        let d = '';
-        switch (relinkEdgeType) {
-            case 'straight':
-                [d] = getStraightPath(pathParams);
-                break;
-            case 'step':
-                // React Flow sometimes uses different names or Step isn't a direct export in all versions
-                // Fallback to smoothstep with 0 radius if specific step is missing or use straight
-                [d] = getSmoothStepPath({ ...pathParams, borderRadius: 0 });
-                break;
-            case 'smoothstep':
-                [d] = getSmoothStepPath(pathParams);
-                break;
-            case 'bezier':
-            default:
-                [d] = getBezierPath(pathParams);
-                break;
-        }
+        const [d] = getBezierPath(pathParams);
 
         return d;
     };
@@ -230,16 +211,7 @@ export const RelinkLine = ({
             targetPosition: effectiveToPos,
         };
 
-        let d = '';
-        // Use the context edgeType if provided, fallback to bezier (active check is inside if)
-        const currentType = relinkEdgeType || 'bezier';
-
-        switch (currentType) {
-            case 'straight': [d] = getStraightPath(pathParams); break;
-            case 'step': [d] = getSmoothStepPath({ ...pathParams, borderRadius: 0 }); break;
-            case 'smoothstep': [d] = getSmoothStepPath(pathParams); break;
-            default: [d] = getBezierPath(pathParams); break;
-        }
+        const [d] = getBezierPath(pathParams);
 
         return (
             <g>

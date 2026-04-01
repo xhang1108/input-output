@@ -47,8 +47,6 @@ export function Body({
     const setManualSnap = useAppStore(s => s.setManualSnap);
     const showDebugStats = useAppStore(s => s.showDebugStats);
     const setShowDebugStats = useAppStore(s => s.setShowDebugStats);
-    const edgeType = useAppStore(s => s.edgeType);
-    const setEdgeType = useAppStore(s => s.setEdgeType);
     const layoutAlgorithm = useAppStore(s => s.layoutAlgorithm);
     const setLayoutAlgorithm = useAppStore(s => s.setLayoutAlgorithm);
     const panOnScroll = useAppStore(s => s.panOnScroll);
@@ -86,7 +84,6 @@ export function Body({
     // Lifted generic UI logics
     const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
         palettePosition,
-        edgeType,
         setNodes,
         setEdges,
         logAction,
@@ -141,8 +138,6 @@ export function Body({
                 setSnapping={setManualSnap}
                 showDebugStats={showDebugStats}
                 setShowDebugStats={setShowDebugStats}
-                edgeType={edgeType}
-                setEdgeType={setEdgeType}
                 layoutAlgorithm={layoutAlgorithm}
                 setLayoutAlgorithm={setLayoutAlgorithm}
                 panOnScroll={panOnScroll}

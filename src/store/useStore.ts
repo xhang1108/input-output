@@ -13,7 +13,6 @@ interface AppState {
     manualSnap: boolean;
     showGrid: boolean;
     showDebugStats: boolean;
-    edgeType: string;
     layoutAlgorithm: LayoutAlgorithm;
     panOnScroll: boolean;
     saveStatus: 'IDLE' | 'DIRTY' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR';
@@ -40,7 +39,6 @@ interface AppState {
     setManualSnap: (snap: boolean | ((prev: boolean) => boolean)) => void;
     setShowGrid: (show: boolean | ((prev: boolean) => boolean)) => void;
     setShowDebugStats: (show: boolean | ((prev: boolean) => boolean)) => void;
-    setEdgeType: (type: string | ((prev: string) => string)) => void;
     setLayoutAlgorithm: (algo: LayoutAlgorithm | ((prev: LayoutAlgorithm) => LayoutAlgorithm)) => void;
     setPanOnScroll: (enabled: boolean | ((prev: boolean) => boolean)) => void;
     setSaveStatus: (status: 'IDLE' | 'DIRTY' | 'SAVING' | 'LOCAL_SAVED' | 'CLOUD_SYNCED' | 'SAVED' | 'PENDING_SYNC' | 'ERROR') => void;
@@ -68,7 +66,6 @@ export const useAppStore = create<AppState>()(
                 manualSnap: false,
                 showGrid: true,
                 showDebugStats: false,
-                edgeType: 'bezier',
                 layoutAlgorithm: 'layered',
                 panOnScroll: typeof navigator !== 'undefined' ? /Mac|iPad|iPhone/.test(navigator.platform) : false,
                 saveStatus: 'IDLE',
@@ -93,7 +90,6 @@ export const useAppStore = create<AppState>()(
                 setManualSnap: (snap) => set((s) => ({ manualSnap: typeof snap === 'function' ? snap(s.manualSnap) : snap })),
                 setShowGrid: (show) => set((s) => ({ showGrid: typeof show === 'function' ? show(s.showGrid) : show })),
                 setShowDebugStats: (show) => set((s) => ({ showDebugStats: typeof show === 'function' ? show(s.showDebugStats) : show })),
-                setEdgeType: (type) => set((s) => ({ edgeType: typeof type === 'function' ? type(s.edgeType) : type })),
                 setLayoutAlgorithm: (algo) => set((s) => ({ layoutAlgorithm: typeof algo === 'function' ? algo(s.layoutAlgorithm) : algo })),
                 setPanOnScroll: (enabled) => set((s) => ({ panOnScroll: typeof enabled === 'function' ? enabled(s.panOnScroll) : enabled })),
                 setSaveStatus: (status) => set({ saveStatus: status }),
@@ -114,7 +110,6 @@ export const useAppStore = create<AppState>()(
                     manualSnap: state.manualSnap,
                     showGrid: state.showGrid,
                     showDebugStats: state.showDebugStats,
-                    edgeType: state.edgeType,
                     layoutAlgorithm: state.layoutAlgorithm,
                     panOnScroll: state.panOnScroll,
                     showNPanel: state.showNPanel,
