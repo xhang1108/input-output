@@ -64,7 +64,7 @@ export function CategorizedMenu({
 
     const { getViewport } = useReactFlow();
     const { zoom } = getViewport();
-    const { menuLayout } = useAppStore();
+    const menuLayout = useAppStore(s => s.menuLayout);
 
     // Ensure we are on the client
     useEffect(() => {

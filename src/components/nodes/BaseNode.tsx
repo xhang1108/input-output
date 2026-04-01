@@ -30,9 +30,8 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     const [isError, setIsError] = useState(false);
     const labelSetRef = useRef<Set<string>>(new Set());
     const inputRef = useRef<HTMLInputElement>(null);
-    const { updateNodeData, setNodes } = useReactFlow();
+    const { updateNodeData, setNodes, getEdges } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
-    const node = useStore((s: ReactFlowState) => s.nodeLookup.get(id));
     const targetConnections = useNodeConnections({ handleType: 'target' });
     const sourceConnections = useNodeConnections({ handleType: 'source' });
     const connections = [...targetConnections, ...sourceConnections];
@@ -59,24 +58,10 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
         if (data.label) setTitle(data.label as string);
     }, [id, data.handles, data.width, data.height, data.label, updateNodeInternals]);
 
-    // Visual State Subscription (Strict DOM Isolation)
-    const [visualTick, setVisualTick] = useState(0);
+    // Visual State (Strict DOM Isolation)
     const brain = useBrain();
     const nodeLogic = brain.getNode(id);
     const visualState = nodeLogic?.visualState;
-
-    useEffect(() => {
-        // Selective Subscription: Only listen to heartbeat if node is selected or has active logic
-        // This prevents the entire graph from re-rendering on every pulse.
-        const shouldAnimate = selected || data.isInDirtyChain || definition?.category === 'Data';
-        
-        if (!shouldAnimate) return;
-
-        const unsubscribe = brain.on('visualUpdate', () => {
-            setVisualTick(t => t + 1);
-        });
-        return unsubscribe;
-    }, [id, brain, selected, data.isInDirtyChain, definition?.category]);
 
     // ─── Capsule Expansion Compensation (REMOVED) ───
     useEffect(() => {
@@ -194,7 +179,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
         Math.max(calculateSideHeight(leftHandles), calculateSideHeight(rightHandles)) + NODE_LAYOUT.headerH
     );
 
-    const allEdges = useEdges();
+
 
     // ─── Phase 4.3: Edge Cleanup (Ghost Link Prevention) ────────────────
     // When a handle becomes hidden (e.g. POW -> SQRT), we MUST explicitly 
@@ -202,6 +187,8 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     useEffect(() => {
         const activeTargetHandleIds = new Set(leftHandles.map(h => h.id));
         const activeSourceHandleIds = new Set(rightHandles.map(h => h.id));
+
+        const allEdges = getEdges();
 
         targetConnections.forEach(conn => {
             if (conn.targetHandle && !activeTargetHandleIds.has(conn.targetHandle)) {
@@ -233,7 +220,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                 }
             }
         });
-    }, [allHandles, id, brain, targetConnections, sourceConnections, leftHandles, rightHandles, allEdges]);
+    }, [allHandles, id, brain, targetConnections, sourceConnections, leftHandles, rightHandles, getEdges]);
 
     /**
      * Calculate Y position for a specific handle or fallback to first.

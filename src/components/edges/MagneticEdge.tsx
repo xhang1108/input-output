@@ -25,29 +25,25 @@ export function MagneticEdge({
     const { startEdgeDragDisconnect } = useContext(RelinkContext);
     const dragStartPos = useRef<{ x: number, y: number } | null>(null);
 
-    // ─── Dynamic Target Y Offset Calculation ───
-    const allEdges = useStore((s) => s.edges);
-    const siblingEdges = allEdges.filter((e) => e.target === target && e.targetHandle === targetHandleId);
-    const nodeLookup = useStore((s) => s.nodeLookup);
+    const siblingEdgesCount = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).length);
+    const myIndex = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).findIndex((e) => e.id === id));
+    
     const preview = useCapsulePreview();
 
     let finalTargetY = targetY;
-    if (siblingEdges.length > 0) {
-        const myIndex = siblingEdges.findIndex((e) => e.id === id);
-        if (myIndex !== -1) {
-            const isPreviewActive = preview.active && preview.nodeId === target && preview.handleId === targetHandleId;
-            // CHECK: Is the previewed wire already committed to the edge list?
-            const isAlreadyCommitted = isPreviewActive && siblingEdges.length === preview.totalSlots;
+    if (siblingEdgesCount > 0 && myIndex !== -1) {
+        const isPreviewActive = preview.active && preview.nodeId === target && preview.handleId === targetHandleId;
+        // CHECK: Is the previewed wire already committed to the edge list?
+        const isAlreadyCommitted = isPreviewActive && siblingEdgesCount === preview.totalSlots;
 
-            if (isPreviewActive && !isAlreadyCommitted) {
-                // A new wire is pending at preview.slotIndex — shift existing wires to make room
-                const total = preview.totalSlots;
-                const adjustedIndex = myIndex >= preview.slotIndex ? myIndex + 1 : myIndex;
-                finalTargetY += calculateSlotOffsetY(adjustedIndex, total);
-            } else {
-                // Normal layout or post-drop transition
-                finalTargetY += calculateSlotOffsetY(myIndex, siblingEdges.length);
-            }
+        if (isPreviewActive && !isAlreadyCommitted) {
+            // A new wire is pending at preview.slotIndex — shift existing wires to make room
+            const total = preview.totalSlots;
+            const adjustedIndex = myIndex >= preview.slotIndex ? myIndex + 1 : myIndex;
+            finalTargetY += calculateSlotOffsetY(adjustedIndex, total);
+        } else {
+            // Normal layout or post-drop transition
+            finalTargetY += calculateSlotOffsetY(myIndex, siblingEdgesCount);
         }
     }
 

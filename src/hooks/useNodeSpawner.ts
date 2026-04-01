@@ -42,7 +42,7 @@ export function useNodeSpawner({
     const { project, getCurrentZoom } = useCanvasProjection();
     const { getNodes } = useReactFlow();
     const brain = useBrain();
-    const history = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
 
     // Reset spawn count when the palette is opened in a new location
     // Since palettePosition is re-set every time Shift+A or context menu is clicked
@@ -139,7 +139,7 @@ export function useNodeSpawner({
 
         // Finalize History & Engine Sync
         brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
-        history.push({
+        pushHistory({
             id: `spawn_${newNode.id}`,
             description: `Spawn ${label}`,
             forward,
@@ -150,7 +150,7 @@ export function useNodeSpawner({
         });
 
         return newNode;
-    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction, getCurrentZoom]);
+    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction, getCurrentZoom, pushHistory]);
 
     return {
         pendingConnection,

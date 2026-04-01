@@ -21,7 +21,7 @@ function restoreSettings(settings: Record<string, unknown>) {
     if (typeof settings.layoutAlgorithm === 'string') store.setLayoutAlgorithm(settings.layoutAlgorithm as any);
 }
 
-export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev: any[]) => any[])) => void, existingVisibility?: 'private' | 'public') {
+export function useProjectSave(projectId: string, existingVisibility?: 'private' | 'public') {
     const { getViewport, setViewport, fitView } = useReactFlow();
     const router = useRouter();
     const brain = useBrain();

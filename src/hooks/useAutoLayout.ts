@@ -8,16 +8,16 @@ import { Transaction } from '../engine/types';
 import { useHistoryExecutor } from './useHistoryExecutor';
 
 export function useAutoLayout(
-    nodes: Node[],
-    edges: Edge[],
     setNodes: (nodes: Node[] | ((original: Node[]) => Node[])) => void,
     setEdges: (edges: Edge[] | ((original: Edge[]) => Edge[])) => void,
     layoutAlgorithm: LayoutAlgorithm,
     logAction: (msg: string) => void
 ) {
-    const { fitView } = useReactFlow();
+    const { fitView, getNodes, getEdges } = useReactFlow();
     const brain = useBrain();
-    const { push, interactionMode, isRestoring } = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
+    const interactionMode = useHistoryStore(s => s.interactionMode);
+    const isRestoring = useHistoryStore(s => s.isRestoring);
     const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
 
     // 1. Manual Layout Trigger
@@ -29,6 +29,8 @@ export function useAutoLayout(
             return;
         }
 
+        const nodes = getNodes();
+        const edges = getEdges();
         const selectedNodes = nodes.filter(n => n.selected);
         const isPartial = selectedNodes.length > 0;
 
@@ -111,7 +113,7 @@ export function useAutoLayout(
 
         // Trigger UI updates & Push history if changes actually happened
         if (forward.length > 0) {
-            push({
+            pushHistory({
                 id: `layout_${Date.now()}`,
                 description: isPartial ? 'AutoLayout Selection' : 'AutoLayout Global',
                 forward,
@@ -131,7 +133,7 @@ export function useAutoLayout(
                 logAction('Layout Global (L)');
             }
         }
-    }, [nodes, edges, setNodes, setEdges, layoutAlgorithm, logAction, fitView, interactionMode, isRestoring, push]);
+    }, [setNodes, setEdges, layoutAlgorithm, logAction, fitView, interactionMode, isRestoring, pushHistory, getNodes, getEdges]);
 
 
     // --- Interaction & Queuing Logic (v4 Final) ---

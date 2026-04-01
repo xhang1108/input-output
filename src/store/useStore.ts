@@ -24,6 +24,8 @@ interface AppState {
     isFastMode: boolean;
     lastAddedNodeType: string;
     menuLayout: 'expanded' | 'horizontal';
+    mode: 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
+    transformValue: string;
 
     // State
     actionLog: string[];
@@ -48,6 +50,8 @@ interface AppState {
     setFastMode: (enabled: boolean | ((prev: boolean) => boolean)) => void;
     setLastAddedNodeType: (type: string) => void;
     setMenuLayout: (layout: 'expanded' | 'horizontal') => void;
+    setMode: (mode: 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING') => void;
+    setTransformValue: (val: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -73,6 +77,8 @@ export const useAppStore = create<AppState>()(
                 isFastMode: false,
                 lastAddedNodeType: 'add',
                 menuLayout: 'expanded',
+                mode: 'IDLE',
+                transformValue: '',
                 actionLog: [],
 
                 // Setters
@@ -95,6 +101,8 @@ export const useAppStore = create<AppState>()(
                 setFastMode: (enabled) => set((s) => ({ isFastMode: typeof enabled === 'function' ? enabled(s.isFastMode) : enabled })),
                 setLastAddedNodeType: (type) => set({ lastAddedNodeType: type }),
                 setMenuLayout: (menuLayout) => set({ menuLayout }),
+                setMode: (mode) => set({ mode }),
+                setTransformValue: (transformValue) => set({ transformValue }),
             }),
             {
                 name: 'Input-Output-settings-v3',

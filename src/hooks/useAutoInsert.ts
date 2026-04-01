@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { Node, Edge, useReactFlow, useStore } from '@xyflow/react';
+import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 
@@ -24,10 +24,8 @@ export function useAutoInsert({
     setEdges,
     logAction,
 }: UseAutoInsertProps) {
-    const nodes = useStore((s) => s.nodes);
-    const edges = useStore((s) => s.edges);
     const [highlightedEdgeId, setHighlightedEdgeId] = useState<string | null>(null);
-    const { screenToFlowPosition } = useReactFlow();
+    const { screenToFlowPosition, getNodes, getEdges } = useReactFlow();
     
     // rAF Orchestration Refs
     const rafId = useRef<number | null>(null);
@@ -55,6 +53,8 @@ export function useAutoInsert({
         rafId.current = requestAnimationFrame(() => {
             rafId.current = null;
             
+            const nodes = getNodes();
+            const edges = getEdges();
             const selectedNodes = nodes.filter(n => n.selected);
             if (selectedNodes.length !== 1) {
                 if (highlightedEdgeId) setHighlightedEdgeId(null);
@@ -154,10 +154,12 @@ export function useAutoInsert({
                 setHighlightedEdgeId(bestEdge);
             }
         });
-    }, [mode, nodes, edges, highlightedEdgeId]);
+    }, [mode, highlightedEdgeId, getNodes, getEdges]);
 
     const performAutoInsert = useCallback(() => {
         if (highlightedEdgeId) {
+            const nodes = getNodes();
+            const edges = getEdges();
             const edge = edges.find(e => e.id === highlightedEdgeId);
             const selectedNodes = nodes.filter(n => n.selected);
             const node = selectedNodes[0];
@@ -203,7 +205,7 @@ export function useAutoInsert({
             }
             setHighlightedEdgeId(null);
         }
-    }, [highlightedEdgeId, nodes, edges, edgeType, setEdges, logAction]);
+    }, [highlightedEdgeId, edgeType, setEdges, logAction, getNodes, getEdges]);
 
     return {
         highlightedEdgeId,

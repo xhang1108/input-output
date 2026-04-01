@@ -8,6 +8,7 @@ import { useHistoryStore, InteractionMode as HistoryMode } from '../../store/use
 import { useClipboard } from '../useClipboard';
 import { useSelection } from '../useSelection';
 import { useKnife } from '../useKnife';
+import { useAppStore } from '../../store/useStore';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -20,15 +21,19 @@ export function useHand() {
     const { getNodes, setNodes, getViewport, setViewport } = useReactFlow();
     const brain = useBrain();
     const { project } = useCanvasProjection();
-    const { interactionMode, setInteractionMode, push: pushHistory, setIsRestoring } = useHistoryStore();
-    
-    // Internal UI local mode for rapid state (rAF loops)
-    const [mode, _setMode] = useState<HistoryMode>('IDLE');
+    const interactionMode = useHistoryStore(s => s.interactionMode);
+    const setInteractionMode = useHistoryStore(s => s.setInteractionMode);
+    const pushHistory = useHistoryStore(s => s.push);
+    const setIsRestoring = useHistoryStore(s => s.setIsRestoring);
+
+    const mode = useAppStore(s => s.mode);
+    const _setMode = useAppStore(s => s.setMode);
+    const setTransformValue = useAppStore(s => s.setTransformValue);
 
     const setMode = useCallback((newMode: HistoryMode) => {
         _setMode(newMode);
         setInteractionMode(newMode);
-    }, [setInteractionMode]);
+    }, [_setMode, setInteractionMode]);
 
     // --- Composed Hooks ---
     const { duplicateSelected, copyToClipboard, pasteFromClipboard } = useClipboard();
@@ -55,7 +60,6 @@ export function useHand() {
 
     // Numeric Transform Buffer
     const [transformBuffer, setTransformBuffer] = useState<string>('');
-    const [transformValue, setTransformValue] = useState<string>('');
 
     // Rotation Winding
     const accumulatedRotation = useRef(0);
@@ -84,22 +88,23 @@ export function useHand() {
 
     const applyMove = useCallback((dx: number, dy: number) => {
         setNodes((currentNodes) => {
-            const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
-
-            // 1. Update Moved Nodes
-            initialPositions.current.forEach((initPos, id) => {
-                const node = nodeMap.get(id);
-                if (node) {
+            let hasChanges = false;
+            const nextNodes = currentNodes.map(n => {
+                const initPos = initialPositions.current.get(n.id);
+                if (initPos) {
                     const newPos = { x: initPos.x + dx, y: initPos.y + dy };
                     if (!isFiniteCoord(newPos)) {
-                        console.warn(`[useHand] Aborted MOVE for node ${id} due to invalid coordinates:`, newPos);
-                        return;
+                        console.warn(`[useHand] Aborted MOVE for node ${n.id} due to invalid coordinates:`, newPos);
+                        return n;
                     }
-                    nodeMap.set(id, { ...node, position: newPos, measured: node.measured });
+                    if (Math.abs(n.position.x - newPos.x) > 0.001 || Math.abs(n.position.y - newPos.y) > 0.001) {
+                        hasChanges = true;
+                        return { ...n, position: newPos };
+                    }
                 }
+                return n;
             });
-
-            return Array.from(nodeMap.values());
+            return hasChanges ? nextNodes : currentNodes;
         });
     }, [setNodes]);
 
@@ -113,11 +118,11 @@ export function useHand() {
             maxX = Math.max(maxX, absPos.x);
             maxY = Math.max(maxY, absPos.y);
         });
-        
+
         // Pivot is now the absolute BBox Center of Top-Left (Red-Dot) points
-        return { 
-            x: (minX + maxX) / 2, 
-            y: (minY + maxY) / 2 
+        return {
+            x: (minX + maxX) / 2,
+            y: (minY + maxY) / 2
         };
     };
 
@@ -130,38 +135,29 @@ export function useHand() {
         if (axisLock === 'X') sy = 1;
         if (axisLock === 'Y') sx = 1;
 
-        setNodes((nodes) => {
-            const nodeMap = new Map(nodes.map(n => [n.id, n]));
-            const nextAbsolutePositions = new Map<string, XYPosition>();
+        setNodes((currentNodes) => {
+            let hasChanges = false;
+            const nextNodes = currentNodes.map(n => {
+                const initAbsPos = initialAbsolutePositions.current.get(n.id);
+                if (initAbsPos) {
+                    const rx = initAbsPos.x - center.x;
+                    const ry = initAbsPos.y - center.y;
+                    const nextPos = {
+                        x: center.x + rx * sx,
+                        y: center.y + ry * sy
+                    };
+                    if (!isFiniteCoord(nextPos)) return n;
 
-            // 1. Calculate Orbital Positions (Collapse-Safe)
-            initialAbsolutePositions.current.forEach((initAbsPos, id) => {
-                const node = nodeMap.get(id);
-                if (!node) return;
-
-                // Relative Vector from selection pivot
-                const rx = initAbsPos.x - center.x;
-                const ry = initAbsPos.y - center.y;
-
-                // Pivot + (Vector * s)
-                nextAbsolutePositions.set(id, {
-                    x: center.x + rx * sx,
-                    y: center.y + ry * sy
-                });
+                    if (Math.abs(n.position.x - nextPos.x) > 0.001 || Math.abs(n.position.y - nextPos.y) > 0.001) {
+                        hasChanges = true;
+                        return { ...n, position: nextPos };
+                    }
+                }
+                return n;
             });
-
-            // 2. Apply updates
-            return nodes.map(node => {
-                const nextPos = nextAbsolutePositions.get(node.id);
-                if (!nextPos || !isFiniteCoord(nextPos)) return node;
-
-                return {
-                    ...node,
-                    position: nextPos
-                };
-            });
+            return hasChanges ? nextNodes : currentNodes;
         });
-    }, [setNodes, axisLock, getAbsolutePosition]);
+    }, [setNodes, axisLock]);
 
     const applyRotate = useCallback((angleRad: number) => {
         const center = centerRef.current;
@@ -170,30 +166,29 @@ export function useHand() {
         const cos = Math.cos(angleRad);
         const sin = Math.sin(angleRad);
 
-        setNodes((nodes) => {
-            const nextAbsolutePositions = new Map<string, XYPosition>();
+        setNodes((currentNodes) => {
+            let hasChanges = false;
+            const nextNodes = currentNodes.map(n => {
+                const initAbsPos = initialAbsolutePositions.current.get(n.id);
+                if (initAbsPos) {
+                    const dx = initAbsPos.x - center.x;
+                    const dy = initAbsPos.y - center.y;
 
-            // 1. Calculate Orbital Position ONLY (Nodes stay upright)
-            initialAbsolutePositions.current.forEach((initAbsPos, id) => {
-                const dx = initAbsPos.x - center.x;
-                const dy = initAbsPos.y - center.y;
+                    const nextPos = {
+                        x: center.x + (dx * cos - dy * sin),
+                        y: center.y + (dx * sin + dy * cos)
+                    };
 
-                const nextX = center.x + (dx * cos - dy * sin);
-                const nextY = center.y + (dx * sin + dy * cos);
+                    if (!isFiniteCoord(nextPos)) return n;
 
-                nextAbsolutePositions.set(id, { x: nextX, y: nextY });
+                    if (Math.abs(n.position.x - nextPos.x) > 0.001 || Math.abs(n.position.y - nextPos.y) > 0.001) {
+                        hasChanges = true;
+                        return { ...n, position: nextPos };
+                    }
+                }
+                return n;
             });
-
-            // 2. Apply updates
-            return nodes.map(node => {
-                const nextPos = nextAbsolutePositions.get(node.id);
-                if (nextPos === undefined || !isFiniteCoord(nextPos)) return node;
-
-                return {
-                    ...node,
-                    position: nextPos
-                };
-            });
+            return hasChanges ? nextNodes : currentNodes;
         });
     }, [setNodes]);
 
@@ -245,7 +240,7 @@ export function useHand() {
 
             const currentFlowPos = project(mousePos);
             const pivot = centerRef.current;
-            
+
             // Mouse angle relative to the Red-Dot (Pivot)
             const currentAngle = Math.atan2(currentFlowPos.y - pivot.y, currentFlowPos.x - pivot.x);
 
@@ -269,9 +264,9 @@ export function useHand() {
             return;
         }
 
-         const { x, y } = mousePosRef.current;
+        const { x, y } = mousePosRef.current;
         const config = brain.getPhysicsConfig();
-         const pad = config.interaction.autoPanPadding;
+        const pad = config.interaction.autoPanPadding;
         const w = window.innerWidth;
         const h = window.innerHeight;
 
@@ -480,7 +475,7 @@ export function useHand() {
                 console.log(`[useHand] Skipping MOVE_NODE for nested child ${id} because parent ${node.parentId} is also moving.`);
                 return;
             }
-            
+
             txs.push({ type: 'MOVE_NODE', payload: { id, position: { ...node.position } } });
         });
 
@@ -494,13 +489,13 @@ export function useHand() {
                 if (!isFiniteCoord(initPos)) return; // History Guard
 
                 const initialParentId = initialParentIds.current.get(id) ?? null;
-                invTxs.push({ 
-                    type: 'MOVE_NODE', 
-                    payload: { 
-                        id, 
-                        position: { ...initPos }, 
-                        parentId: initialParentId 
-                    } 
+                invTxs.push({
+                    type: 'MOVE_NODE',
+                    payload: {
+                        id,
+                        position: { ...initPos },
+                        parentId: initialParentId
+                    }
                 });
             });
 
@@ -514,7 +509,7 @@ export function useHand() {
             pushHistory({
                 id: `transform_${Date.now()}`,
                 description: `Transform ${movedNodeIds.size} items`,
-                forward: txs, 
+                forward: txs,
                 inverse: invTxs
             });
         }
@@ -551,25 +546,35 @@ export function useHand() {
 
         // Sync protection: Prevent cancelGrab from generating polluting history in useBrainSync
         setIsRestoring(true);
-        setNodes(nodes => nodes.map(n => {
-            // Restore Frames
-            if (framesToRestore.has(n.id)) {
-                return { ...framesToRestore.get(n.id)! };
-            }
-            // Restore Nodes (Position Only)
-            const initPos = positionsToRestore.get(n.id);
-            if (initPos) {
-                const initialParentId = initialParentIds.current.get(n.id);
-                const res = { 
-                    ...n, 
-                    position: { ...initPos }
-                };
-                if (initialParentId !== undefined) res.parentId = initialParentId === null ? undefined : initialParentId;
-                return res;
-            }
-            return n;
-        }));
-        
+        setNodes(currentNodes => {
+            let hasChanges = false;
+            const nextNodes = currentNodes.map(n => {
+                // Restore Frames
+                if (framesToRestore.has(n.id)) {
+                    hasChanges = true;
+                    return { ...framesToRestore.get(n.id)! };
+                }
+                // Restore Nodes (Position Only)
+                const initPos = positionsToRestore.get(n.id);
+                if (initPos) {
+                    // Fast path ref-equality
+                    if (Math.abs(n.position.x - initPos.x) < 0.001 && Math.abs(n.position.y - initPos.y) < 0.001) {
+                        return n;
+                    }
+                    hasChanges = true;
+                    const initialParentId = initialParentIds.current.get(n.id);
+                    const res = {
+                        ...n,
+                        position: { ...initPos }
+                    };
+                    if (initialParentId !== undefined) res.parentId = initialParentId === null ? undefined : initialParentId;
+                    return res;
+                }
+                return n;
+            });
+            return hasChanges ? nextNodes : currentNodes;
+        });
+
         // Double rAF to ensure sync completes before releasing guard
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -642,6 +647,13 @@ export function useHand() {
             }
         }
     }, [startCut, getNodes, selectNode]);
+    // rAF throttle to prevent high-frequency gaming mouse from destroying React Flow performance
+    const dragRafRef = useRef<number | null>(null);
+    useEffect(() => {
+        return () => {
+            if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+        };
+    }, []);
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         const currentMousePos = { x: e.clientX, y: e.clientY };
@@ -660,12 +672,17 @@ export function useHand() {
             }
         }
 
-        if (mode === 'CUTTING') {
-            updateCut(currentMousePos);
-        } else {
-            updateInteraction(currentMousePos, e.ctrlKey);
-        }
-    }, [mode, updateCut, updateInteraction, startGrab]);
+        if (dragRafRef.current !== null) return;
+
+        dragRafRef.current = requestAnimationFrame(() => {
+            dragRafRef.current = null;
+            if (mode === 'CUTTING') {
+                updateCut(currentMousePos);
+            } else {
+                updateInteraction(currentMousePos, e.ctrlKey);
+            }
+        });
+    }, [mode, updateCut, updateInteraction, startGrab, brain]);
 
     // --- Modal Action Logic ---
     const handleModalMouseUp = useCallback((e: MouseEvent) => {
@@ -757,7 +774,6 @@ export function useHand() {
         mode,
         cutPath,
         transformBuffer,
-        transformValue,
         startGrab,
         startScale,
         startRotate,

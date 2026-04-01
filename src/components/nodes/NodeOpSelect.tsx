@@ -50,7 +50,7 @@ export const NodeOpSelect = memo(({
     overrideOptions,
 }: NodeOpSelectProps) => {
     const brain = useBrain();
-    const { push } = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
     const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const { options: staticOptions, currentValue, currentLabel: staticLabel } = useNodeParam(nodeId, defId, paramId, data);
 
@@ -66,7 +66,7 @@ export const NodeOpSelect = memo(({
         const previousValue = currentValue;
 
         if (newValue !== previousValue) {
-            push({
+            pushHistory({
                 id: `select_${nodeId}_${paramId}_${Date.now()}`,
                 description: `Change ${paramId}: ${item.label}`,
                 forward: [{ type: 'UPDATE_NODE_DATA', payload: { id: nodeId, data: { [paramId]: newValue } } }],

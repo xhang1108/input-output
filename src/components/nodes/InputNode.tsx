@@ -9,7 +9,8 @@ import { PayloadUtils } from '../../utils/PayloadUtils';
 export const InputNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
     const { updateNodeData } = useReactFlow();
-    const { push, isRestoring } = useHistoryStore();
+    const push = useHistoryStore(s => s.push);
+    const isRestoring = useHistoryStore(s => s.isRestoring);
     const originalValue = useRef<any>(null);
     const brain = useBrain();
     const unwrappedValue = PayloadUtils.unwrap(data.value);

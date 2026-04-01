@@ -151,7 +151,9 @@ export function useBrainUpdates(
                             let needsUpdate = false;
 
                             // Check data changes
+                            let dataChanged = false;
                             if (!deepEqual(uiNode.data, targetData)) {
+                                dataChanged = true;
                                 needsUpdate = true;
                             }
 
@@ -168,6 +170,15 @@ export function useBrainUpdates(
                             if (uiNode.parentId !== logicNode.parentId) {
                                 needsUpdate = true;
                             }
+                            
+                            const newStyle = { ...uiNode.style, ...style };
+                            let styleChanged = false;
+                            // Simple shallow equality for style
+                            if (Object.keys(newStyle).length !== Object.keys(uiNode.style || {}).length || 
+                                Object.entries(newStyle).some(([k,v]) => (uiNode.style as any)?.[k] !== v)) {
+                                styleChanged = true;
+                                needsUpdate = true;
+                            }
 
                             if (needsUpdate || uiNode.selected !== logicNode.selected) {
                                 // Selection logic (UI wins for false-positives)
@@ -175,13 +186,13 @@ export function useBrainUpdates(
 
                                 nextNodes[existingIndex] = {
                                     ...uiNode,
-                                    data: targetData,
+                                    data: dataChanged ? targetData : uiNode.data,
                                     position: newPos,
                                     parentId: logicNode.parentId,
                                     width: width as number,
                                     height: height as number,
                                     origin: uiOrigin,
-                                    style: { ...uiNode.style, ...style },
+                                    style: styleChanged ? newStyle : uiNode.style,
                                     selected: finalSelected
                                 };
                                 changed = true;
