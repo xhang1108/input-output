@@ -1,11 +1,35 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 import { useStore as useRFStore } from '@xyflow/react';
 import { useAppStore } from '../../store/useStore';
 
 export function DebugOverlay({ mode }: { mode: string }) {
     const actionLog = useAppStore(s => s.actionLog);
     const logAction = useAppStore(s => s.logAction);
+
+    // Dynamic FPS Counter
+    const [fps, setFps] = useState(0);
+    useEffect(() => {
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let animationFrameId: number;
+
+        const tick = () => {
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                setFps(Math.round((frameCount * 1000) / (now - lastTime)));
+                frameCount = 0;
+                lastTime = now;
+            }
+            animationFrameId = requestAnimationFrame(tick);
+        };
+
+        animationFrameId = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animationFrameId);
+    }, []);
 
     // Access React Flow internal store for stats
     const nodeCount = useRFStore(s => s.nodeLookup.size);
@@ -21,6 +45,11 @@ export function DebugOverlay({ mode }: { mode: string }) {
                 <span>Mode:</span>
                 <span className={mode !== 'IDLE' ? 'text-(--color-scalar) font-bold' : 'text-zinc-300'}>
                     {mode}
+                </span>
+
+                <span>FPS:</span>
+                <span className={`font-bold ${fps >= 55 ? 'text-green-400' : fps >= 30 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {fps}
                 </span>
 
                 <span>Nodes:</span>

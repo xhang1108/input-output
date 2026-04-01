@@ -17,7 +17,8 @@ import { Brain } from '../../engine/Brain';
 export const MatrixInputNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const { updateNodeData } = useReactFlow();
-    const { push, isRestoring } = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
+    const isRestoring = useHistoryStore(s => s.isRestoring);
     const initialGridRef = useRef<any[][] | null>(null);
 
     // --- Grid State Management ---
@@ -136,7 +137,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
             // Check if grid actually changed (Zero-Delta Filter)
             const changed = JSON.stringify(initial) !== JSON.stringify(grid);
             if (changed) {
-                push({
+                pushHistory({
                     id: `edit_matrix_${id}_${Date.now()}`,
                     description: `Edit Matrix ${rows}×${cols}`,
                     forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { array: grid } } }],
@@ -145,7 +146,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
             }
         }
         initialGridRef.current = null;
-    }, [id, grid, rows, cols, push, isRestoring]);
+    }, [id, grid, rows, cols, pushHistory, isRestoring]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Escape') {

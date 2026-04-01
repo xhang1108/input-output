@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { Node, Edge, addEdge, useReactFlow } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
@@ -42,19 +42,18 @@ export function useNodeSpawner({
     const { project, getCurrentZoom } = useCanvasProjection();
     const { getNodes } = useReactFlow();
     const brain = useBrain();
-    const history = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
 
     // Reset spawn count when the palette is opened in a new location
-    // Since palettePosition is re-set every time Shift+A or context menu is clicked
-    // we can use it to reset the contiguous spawn counter.
-    React.useEffect(() => {
+    // Using optional chaining to prevent crash if palettePosition is null
+    useEffect(() => {
         spawnCountRef.current = 0;
-    }, [palettePosition.x, palettePosition.y]);
+    }, [palettePosition?.x, palettePosition?.y]);
 
     const spawnNode = useCallback((type: string, label: string, extraData?: unknown, isContinuous?: boolean, screenPos?: { x: number, y: number }): Node | null => {
         logAction(`Spawn Node: ${type}`);
 
-        const basePos = screenPos || palettePosition;
+        const basePos = screenPos || palettePosition || { x: 0, y: 0 };
 
         const flowPos = project({
             x: basePos.x,
@@ -139,7 +138,7 @@ export function useNodeSpawner({
 
         // Finalize History & Engine Sync
         brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
-        history.push({
+        pushHistory({
             id: `spawn_${newNode.id}`,
             description: `Spawn ${label}`,
             forward,
@@ -150,7 +149,7 @@ export function useNodeSpawner({
         });
 
         return newNode;
-    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction, getCurrentZoom]);
+    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction, getCurrentZoom, pushHistory]);
 
     return {
         pendingConnection,

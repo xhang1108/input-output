@@ -28,7 +28,7 @@ export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResiz
     const brain = useBrain();
     const { updateNodeData, getNode } = useReactFlow();
     const [localSize, setLocalSize] = useState<{ w: number; h: number } | null>(null);
-    const { push: pushHistory } = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
     // Captures the size + full data at the START of a drag for correct Undo payload
     const startSizeRef = useRef<{ w: number; h: number } | null>(null);
     const startDataRef = useRef<any>(null);

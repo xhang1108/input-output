@@ -157,11 +157,14 @@ const computeNextState = (
 };
 
 export function useHistoryExecutor() {
-    const {
-        past, future,
-        setIsRestoring, popPast, popFuture, pushPastSilent, pushFutureSilent,
-        interactionMode
-    } = useHistoryStore();
+    const past = useHistoryStore(s => s.past);
+    const future = useHistoryStore(s => s.future);
+    const setIsRestoring = useHistoryStore(s => s.setIsRestoring);
+    const popPast = useHistoryStore(s => s.popPast);
+    const popFuture = useHistoryStore(s => s.popFuture);
+    const pushPastSilent = useHistoryStore(s => s.pushPastSilent);
+    const pushFutureSilent = useHistoryStore(s => s.pushFutureSilent);
+    const interactionMode = useHistoryStore(s => s.interactionMode);
     const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
     const brain = useBrain();
 

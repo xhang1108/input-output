@@ -18,6 +18,7 @@ export class Brain {
     private static instances: Map<string, Brain> = new Map();
     private state: GraphState;
     private id: string;
+    private isDisposed: boolean = false;
 
     private topology: TopologyManager;
     private worker: WorkerOrchestrator;
@@ -204,8 +205,15 @@ export class Brain {
                 node.visualState.visualTick = this.visualTick;
             }
 
-            if (!this.isRecalculating) {
-                this.emit('visualUpdate', this.visualTick);
+            // 2. Pulse Guard: Decide if we need to broadcast UI updates
+            const isVisualDirty = this.dirtyNodes.size > 0 || this.isRecalculating || this.isInteracting;
+            
+            if (isVisualDirty) {
+                // UI Throttle: Broadcast at ~30fps for visual metadata to save CPU, 
+                // while engine still runs at 60fps for logic precision.
+                if (Math.floor(now / 33.33) % 2 === 0) {
+                    this.emit('visualUpdate', this.visualTick);
+                }
             }
 
             if (this.isRecalculating) return;
@@ -285,6 +293,7 @@ export class Brain {
      * Includes a watchdog to prevent engine stalls if events are missed.
      */
     public setInteracting(value: boolean) {
+        if (this.isDisposed) return;
         this.isInteracting = value;
 
         if (this.interactionWatchdog) {
@@ -313,32 +322,49 @@ export class Brain {
         return this.getComputeSession('main');
     }
 
+    /**
+     * static disposeAll
+     * 
+     * Globally clears all active Brain instances. 
+     * Useful for testing environments (Vitest) to prevent heartbeat leaks.
+     */
+    public static disposeAll(): void {
+        const ids = Array.from(this.instances.keys());
+        ids.forEach(id => {
+            const instance = this.instances.get(id);
+            if (instance) instance.dispose();
+        });
+        this.instances.clear();
+    }
+
     /** 
      * Completely destroys this brain instance, cleaning up all intervals, 
      * workers, and listeners. 
      */
-    public dispose() {
-        // 1. Stop Heartbeat
+    public dispose(): void {
+        if (this.isDisposed) return;
+        this.isDisposed = true;
+
         if (this.heartbeatInterval) {
             clearInterval(this.heartbeatInterval);
             this.heartbeatInterval = null;
         }
 
-        // 2. Shut down Worker
+        if (this.interactionWatchdog) {
+            clearTimeout(this.interactionWatchdog);
+            this.interactionWatchdog = null;
+        }
+
         this.worker.dispose();
-
-        // 3. Clear Listeners
         this.listeners.clear();
-
-        // 4. Reset State
+        
+        // Reset State
         this.state = { nodes: new Map(), edges: [] };
         this.topology.clear();
         this.dirtyNodes.clear();
 
-        // 5. Remove from instances map
+        // Remove from global instances
         Brain.instances.delete(this.id);
-
-        console.log(`[Brain] Session "${this.id}" disposed.`);
     }
 
     public on(eventType: string, callback: (payload: unknown) => void): () => void {

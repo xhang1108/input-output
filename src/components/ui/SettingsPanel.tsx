@@ -34,7 +34,10 @@ export function SettingsPanel({
     onReset,
     onBackToProjects
 }: SettingsPanelProps) {
-    const { mathPrecision, setMathPrecision, menuLayout, setMenuLayout } = useAppStore();
+    const mathPrecision = useAppStore(s => s.mathPrecision);
+    const setMathPrecision = useAppStore(s => s.setMathPrecision);
+    const menuLayout = useAppStore(s => s.menuLayout);
+    const setMenuLayout = useAppStore(s => s.setMenuLayout);
     const [isOpen, setIsOpen] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);

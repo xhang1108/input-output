@@ -14,7 +14,7 @@ import deepEqual from 'fast-deep-equal';
  */
 export function useBrainSync(nodes: Node[], edges: Edge[]) {
     const brain = useBrain();
-    const { isRestoring } = useHistoryStore();
+    const isRestoring = useHistoryStore(s => s.isRestoring);
     const prevNodesRef = useRef<Map<string, Node>>(new Map());
     const prevEdgesRef = useRef<Set<string>>(new Set());
 

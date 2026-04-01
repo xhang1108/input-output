@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useStore, Panel } from '@xyflow/react';
 import { useAppStore } from '../../store/useStore';
 
@@ -18,8 +19,42 @@ interface StatusBarContentProps extends StatusBarProps {
     isStandalone?: boolean;
 }
 
+/**
+ * RenderTiming: Isolated sub-component for high-frequency performance stats.
+ * This prevents the entire StatusBarContent from re-rendering when solve/render times jump.
+ */
+function RenderTiming() {
+    const lastEvalMs = useAppStore(s => s.lastEvalMs);
+    const uiRenderMs = useAppStore(s => s.uiRenderMs);
+
+    if (lastEvalMs === null && uiRenderMs === null) return null;
+
+    return (
+        <div className="flex gap-2.5 items-center">
+            {lastEvalMs !== null && (
+                <span className="text-zinc-500 font-mono flex items-center gap-1">
+                    <span className="text-[9px] text-zinc-600 uppercase tracking-tighter">solve:</span>
+                    <span className={lastEvalMs > 50 ? 'text-warning' : 'text-zinc-300'}>
+                        {lastEvalMs}ms
+                    </span>
+                </span>
+            )}
+            {uiRenderMs !== null && (
+                <span className="text-zinc-500 font-mono flex items-center gap-1">
+                    <span className="text-[9px] text-zinc-600 uppercase tracking-tighter">draw:</span>
+                    <span className={uiRenderMs > 16 ? 'text-warning' : 'text-zinc-300'}>
+                        {uiRenderMs}ms
+                    </span>
+                </span>
+            )}
+        </div>
+    );
+}
+
 export function StatusBarContent({ mode, transformValue, nodeCount, selectionCount, isStandalone }: StatusBarContentProps) {
-    const { saveStatus, mathPrecision, lastEvalMs, uiRenderMs, isFastMode } = useAppStore();
+    const saveStatus = useAppStore(s => s.saveStatus);
+    const mathPrecision = useAppStore(s => s.mathPrecision);
+    const isFastMode = useAppStore(s => s.isFastMode);
 
     const hints: Record<InteractionMode, string[]> = {
         IDLE: ['LMB: Select', 'MMB: Pan', 'Shift+A: Add', 'G: Grab', 'F: Group', 'Shift+D: Duplicate'],
@@ -82,27 +117,14 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
 
                 <div className="w-px h-3 bg-surface-light mx-1" />
 
-                <div className="flex gap-2.5 items-center mr-2">
+                <div className="flex gap-4 items-center mr-2">
                     <span className="text-zinc-500 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-border-dim" />
                         Prec: <span className="text-zinc-300 font-mono">{mathPrecision}B</span>
                     </span>
-                    {lastEvalMs !== null && (
-                        <span className="text-zinc-500 font-mono flex items-center gap-1">
-                            <span className="text-[9px] text-zinc-600">solve:</span>
-                            <span className={lastEvalMs > 50 ? 'text-warning' : 'text-zinc-300'}>
-                                {lastEvalMs}ms
-                            </span>
-                        </span>
-                    )}
-                    {uiRenderMs !== null && (
-                        <span className="text-zinc-500 font-mono flex items-center gap-1">
-                            <span className="text-[9px] text-zinc-600 ml-1">render:</span>
-                            <span className={uiRenderMs > 40 ? 'text-danger' : uiRenderMs > 20 ? 'text-warning' : 'text-success'}>
-                                {uiRenderMs}ms
-                            </span>
-                        </span>
-                    )}
+                    
+                    <RenderTiming />
+
                     {isFastMode && (
                         <span className="text-warning font-bold px-1.5 py-0.5 bg-warning/10 rounded-sm border border-warning/20 ml-1">
                             FAST MODE
@@ -128,9 +150,11 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
     );
 }
 
-export function StatusBar({ mode, transformValue }: StatusBarProps) {
+export const StatusBar = React.memo(function StatusBar() {
     const nodeCount = useStore((s) => s.nodes.length);
     const selectionCount = useStore((s) => s.nodes.filter(n => n.selected).length);
+    const mode = useAppStore(s => s.mode);
+    const transformValue = useAppStore(s => s.transformValue);
 
     return (
         <StatusBarContent
@@ -140,4 +164,4 @@ export function StatusBar({ mode, transformValue }: StatusBarProps) {
             selectionCount={selectionCount}
         />
     );
-}
+});

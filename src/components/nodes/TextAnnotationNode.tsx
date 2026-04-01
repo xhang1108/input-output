@@ -17,7 +17,8 @@ import remarkGfm from 'remark-gfm';
 export const TextAnnotationNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
     const { updateNodeData, getNode } = useReactFlow();
-    const { push, isRestoring } = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
+    const isRestoring = useHistoryStore(s => s.isRestoring);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const originalValue = useRef<string | null>(null);
     const nodeRef = useRef<HTMLDivElement>(null);
@@ -61,7 +62,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         const initialValue = originalValue.current;
 
         if (initialValue !== null && initialValue !== currentValue && !isRestoring) {
-            push({
+            pushHistory({
                 id: `edit_${id}_${Date.now()}`,
                 description: 'Edit Text',
                 forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: currentValue } } }],
@@ -70,7 +71,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         }
         originalValue.current = null;
         updateNodeData(id, { isEditing: false });
-    }, [id, push, isRestoring, updateNodeData]);
+    }, [id, pushHistory, isRestoring, updateNodeData]);
 
     const toggleEdit = useCallback(() => {
         if (!isEditing) {

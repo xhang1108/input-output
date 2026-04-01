@@ -30,7 +30,7 @@ export function useRelink({
     onSmartLinkSearch
 }: UseRelinkProps) {
     const brain = useBrain();
-    const history = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
     const edges = useStore((s) => s.edges);
     const [relinkState, setRelinkState] = useState<RelinkState>({
         active: false,
@@ -121,7 +121,7 @@ export function useRelink({
 
         brain.applyTransaction({ type: 'BATCH', payload: forward });
         
-        history.push({
+        pushHistory({
             id: `relink_${newEdges[0]?.id || Date.now()}`,
             description: newEdges.length > 1 ? `Relinked ${newEdges.length} connections` : 'Modified connection',
             forward,
@@ -129,7 +129,7 @@ export function useRelink({
         });
 
         setEdges(updated);
-    }, [edges, setEdges, brain, history]);
+    }, [edges, setEdges, brain, pushHistory]);
 
     const performRelink = useCallback((targetN: string, targetH: string | null) => {
         const state = relinkStateRef.current;

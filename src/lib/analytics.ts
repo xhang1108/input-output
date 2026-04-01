@@ -20,7 +20,7 @@ export type AnalyticsEvent =
  * Send a custom event to Google Analytics
  */
 export function trackEvent(event: AnalyticsEvent) {
-  if (typeof window !== 'undefined' \u0026\u0026 window.gtag) {
+  if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', event.name, event.params);
   }
 }
@@ -29,7 +29,7 @@ export function trackEvent(event: AnalyticsEvent) {
  * Shorthand for common events
  */
 export const analytics = {
-  addNode: (type: string) =\u003e trackEvent({ name: 'add_node', params: { type } }),
-  shareGraph: (platform: string) =\u003e trackEvent({ name: 'share_graph', params: { platform } }),
-  runCalculation: (node_count: number) =\u003e trackEvent({ name: 'run_calculation', params: { node_count } }),
+  addNode: (type: string) => trackEvent({ name: 'add_node', params: { type } }),
+  shareGraph: (platform: string) => trackEvent({ name: 'share_graph', params: { platform } }),
+  runCalculation: (node_count: number) => trackEvent({ name: 'run_calculation', params: { node_count } }),
 };

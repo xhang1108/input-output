@@ -146,7 +146,7 @@ describe('IOGL 1.0 Master Logic Test', () => {
                 [n1].invalid -> [n2].a
             `;
             const { diagnostics } = GraphCodec.parse(iogl);
-            expect(diagnostics.some(d => d.message.includes("does not have output handle"))).toBe(true);
+            expect(diagnostics.some(d => d.includes("does not have output handle"))).toBe(true);
         });
     });
 });

@@ -10,6 +10,7 @@ describe('Switch Node Logic', () => {
     beforeEach(() => {
         registerIONodes();
         registerMathNodes();
+        Brain.disposeAll(); // Prevent heartbeat leaks from previous test runs
         brain = Brain.getInstance();
         brain.clearAll();
     });

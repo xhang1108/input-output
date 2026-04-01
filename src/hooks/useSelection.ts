@@ -15,7 +15,7 @@ import { HandleConfig } from '../types/NodeDefinition';
 export function useSelection() {
     const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
     const brain = useBrain();
-    const history = useHistoryStore();
+    const pushHistory = useHistoryStore(s => s.push);
     const config = brain.getPhysicsConfig();
 
     // --- Command: Delete Selected ---
@@ -66,7 +66,7 @@ export function useSelection() {
         setEdges(eds => eds.filter(e => !selectedIds.has(e.source) && !selectedIds.has(e.target)));
 
         // 4. Push to History
-        history.push({
+        pushHistory({
             id: `delete_${Date.now()}`,
             description: `Delete ${selectedIds.size} items`,
             forward,
@@ -75,7 +75,7 @@ export function useSelection() {
                 restoredNodeIndices: nodeIndices
             }
         });
-    }, [getNodes, getEdges, setNodes, setEdges, brain, history]);
+    }, [getNodes, getEdges, setNodes, setEdges, brain, pushHistory]);
 
     // --- Command: Reset Selected Data (Backspace) ---
     const resetSelected = useCallback(() => {
@@ -101,14 +101,14 @@ export function useSelection() {
                 return { ...n, data: { ...n.data, label: 'Node' } };
             }));
 
-            history.push({
+            pushHistory({
                 id: `reset_${Date.now()}`,
                 description: `Reset ${selectedNodes.length} nodes`,
                 forward,
                 inverse
             });
         }
-    }, [getNodes, setNodes, brain, history]);
+    }, [getNodes, setNodes, brain, pushHistory]);
 
 
 
@@ -239,14 +239,14 @@ export function useSelection() {
                 return tx ? { ...n, position: (tx.payload as { position: { x: number, y: number } }).position } : n;
             }));
 
-            history.push({
+            pushHistory({
                 id: `align_${Date.now()}`,
                 description: `Align ${axis === 'X' ? 'Left' : 'Top'} (${selected.length} nodes)`,
                 forward,
                 inverse
             });
         }
-    }, [getNodes, setNodes, brain, history, brain.applyTransaction]);
+    }, [getNodes, setNodes, brain, pushHistory]);
 
     // --- Selection Helpers ---
     const clearSelection = useCallback(() => {
