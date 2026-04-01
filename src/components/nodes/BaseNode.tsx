@@ -66,11 +66,17 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     const visualState = nodeLogic?.visualState;
 
     useEffect(() => {
+        // Selective Subscription: Only listen to heartbeat if node is selected or has active logic
+        // This prevents the entire graph from re-rendering on every pulse.
+        const shouldAnimate = selected || data.isInDirtyChain || definition?.category === 'Data';
+        
+        if (!shouldAnimate) return;
+
         const unsubscribe = brain.on('visualUpdate', () => {
             setVisualTick(t => t + 1);
         });
         return unsubscribe;
-    }, [id, brain]);
+    }, [id, brain, selected, data.isInDirtyChain, definition?.category]);
 
     // ─── Capsule Expansion Compensation (REMOVED) ───
     useEffect(() => {

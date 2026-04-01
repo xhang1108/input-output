@@ -339,8 +339,9 @@ export function useHand() {
         startMousePos.current = mousePos;
         startFlowPos.current = project(mousePos);
         setAxisLock(null);
+        brain.setInteracting(true); // Wake up Pulse
         setMode('GRABBING');
-    }, [getNodes, detachSelected, project, setMode]);
+    }, [getNodes, detachSelected, project, setMode, brain]);
 
     const startScale = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
@@ -375,8 +376,9 @@ export function useHand() {
         centerRef.current = getPivot(selected, nodeMap);
         startMousePos.current = mousePos;
         startFlowPos.current = project(mousePos);
+        brain.setInteracting(true); // Wake up Pulse
         setMode('SCALING');
-    }, [getNodes, project, getAbsolutePosition]);
+    }, [getNodes, project, getAbsolutePosition, brain]);
 
     const startRotate = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
@@ -423,8 +425,9 @@ export function useHand() {
         );
 
         startMousePos.current = mousePos;
+        brain.setInteracting(true); // Wake up Pulse
         setMode('ROTATING');
-    }, [getNodes, project, getAbsolutePosition]);
+    }, [getNodes, project, getAbsolutePosition, brain]);
 
     const confirmGrab = useCallback(() => {
         const nodes = getNodes();

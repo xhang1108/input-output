@@ -204,8 +204,15 @@ export class Brain {
                 node.visualState.visualTick = this.visualTick;
             }
 
-            if (!this.isRecalculating) {
-                this.emit('visualUpdate', this.visualTick);
+            // 2. Pulse Guard: Decide if we need to broadcast UI updates
+            const isVisualDirty = this.dirtyNodes.size > 0 || this.isRecalculating || this.isInteracting;
+            
+            if (isVisualDirty) {
+                // UI Throttle: Broadcast at ~30fps for visual metadata to save CPU, 
+                // while engine still runs at 60fps for logic precision.
+                if (Math.floor(now / 33.33) % 2 === 0) {
+                    this.emit('visualUpdate', this.visualTick);
+                }
             }
 
             if (this.isRecalculating) return;
