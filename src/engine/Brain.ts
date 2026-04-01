@@ -808,7 +808,7 @@ export class Brain {
         normalized?: { source: string, sourceHandle: string, target: string, targetHandle: string }
     } {
 
-        const edgesToCheck = edges || this.state.edges;
+        const edgesToCheck = edges !== undefined ? edges : this.state.edges;
         const nodesToCheck = nodesMap || this.state.nodes;
 
         if (!source || !target || !sourceHandle || !targetHandle) {

@@ -47,7 +47,7 @@ export function useBrainUpdates(
                             // SIGNAL FALLBACK: Use computed value if available, else use stored state (important for fresh imports)
                             const sourceValue = rawPayload ?? node.data.value;
                             const newValue = isInput ? PayloadUtils.unwrap(sourceValue) : sourceValue;
-                            
+
                             if (node.data.value !== newValue) {
                                 changed = true;
                                 return {
@@ -95,7 +95,7 @@ export function useBrainUpdates(
                         }
 
                         const isInput = logicNode.id.startsWith('IN-') || logicNode.type?.startsWith('IN-');
-                        
+
                         // SIGNAL FALLBACK: Prioritize result signal, fallback to persistent data state
                         const sourceVal = unwrappedValue ?? logicNode.data.value;
                         const finalValue = isInput ? PayloadUtils.unwrap(sourceVal) : sourceVal;
@@ -170,12 +170,12 @@ export function useBrainUpdates(
                             if (uiNode.parentId !== logicNode.parentId) {
                                 needsUpdate = true;
                             }
-                            
+
                             const newStyle = { ...uiNode.style, ...style };
                             let styleChanged = false;
                             // Simple shallow equality for style
-                            if (Object.keys(newStyle).length !== Object.keys(uiNode.style || {}).length || 
-                                Object.entries(newStyle).some(([k,v]) => (uiNode.style as any)?.[k] !== v)) {
+                            if (Object.keys(newStyle).length !== Object.keys(uiNode.style || {}).length ||
+                                Object.entries(newStyle).some(([k, v]) => (uiNode.style as any)?.[k] !== v)) {
                                 styleChanged = true;
                                 needsUpdate = true;
                             }

@@ -27,55 +27,35 @@ export function useSelection() {
 
         if (selectedIds.size === 0) return;
 
-        // Capture History
-        const forward: Transaction[] = [];
-        const inverse: Transaction[] = [];
-        const nodeIndices: Record<string, number> = {};
+        const nodesToRemove = selectedNodes.map(node => ({
+            id: node.id,
+            type: node.type,
+            position: { ...node.position },
+            data: { ...node.data },
+            selected: node.selected
+        }));
 
-        // 1. Process Nodes
-        selectedNodes.forEach(node => {
-            const index = nodes.indexOf(node);
-            nodeIndices[node.id] = index;
-
-            forward.push({ type: 'REMOVE_NODE', payload: node.id });
-            inverse.push({
-                type: 'ADD_NODE',
-                payload: {
-                    id: node.id,
-                    type: node.type,
-                    position: { ...node.position },
-                    data: { ...node.data },
-                    selected: node.selected
-                }
-            });
-        });
-
-        // 2. Process Edges
         const edgesToRemove = edges.filter(e => selectedIds.has(e.source) || selectedIds.has(e.target));
-        edgesToRemove.forEach(edge => {
-            forward.push({ type: 'DISCONNECT', payload: edge.id });
-            inverse.push({
-                type: 'CONNECT',
-                payload: { ...edge }
-            });
-        });
 
-        // 3. Dispatch to Brain and UI
+        const forward: Transaction[] = [
+            ...Array.from(selectedIds).map(id => ({ type: 'REMOVE_NODE' as const, payload: id })),
+            ...edgesToRemove.map(e => ({ type: 'DISCONNECT' as const, payload: e.id }))
+        ];
+
+        const inverse: Transaction[] = [
+            ...nodesToRemove.map(n => ({ type: 'ADD_NODE' as const, payload: { ...n } })),
+            ...edgesToRemove.map(e => ({ type: 'CONNECT' as const, payload: { ...e } }))
+        ];
+
         brain.applyTransaction({ type: 'BATCH', payload: forward });
-        setNodes(nds => nds.filter(n => !selectedIds.has(n.id)));
-        setEdges(eds => eds.filter(e => !selectedIds.has(e.source) && !selectedIds.has(e.target)));
-
-        // 4. Push to History
+        
         pushHistory({
             id: `delete_${Date.now()}`,
-            description: `Delete ${selectedIds.size} items`,
+            description: `Delete ${selectedIds.size} item(s)`,
             forward,
-            inverse,
-            uiMetadata: {
-                restoredNodeIndices: nodeIndices
-            }
+            inverse
         });
-    }, [getNodes, getEdges, setNodes, setEdges, brain, pushHistory]);
+    }, [getNodes, getEdges, brain, pushHistory]);
 
     // --- Command: Reset Selected Data (Backspace) ---
     const resetSelected = useCallback(() => {
@@ -96,19 +76,16 @@ export function useSelection() {
 
         if (forward.length > 0) {
             brain.applyTransaction({ type: 'BATCH', payload: forward });
-            setNodes(nds => nds.map(n => {
-                if (!n.selected) return n;
-                return { ...n, data: { ...n.data, label: 'Node' } };
-            }));
+            // Let useBrainUpdates handle UI sync
 
             pushHistory({
                 id: `reset_${Date.now()}`,
-                description: `Reset ${selectedNodes.length} nodes`,
+                description: `Reset ${selectedNodes.length} node(s)`,
                 forward,
                 inverse
             });
         }
-    }, [getNodes, setNodes, brain, pushHistory]);
+    }, [getNodes, brain, pushHistory]);
 
 
 
@@ -133,13 +110,26 @@ export function useSelection() {
         const edgesToRemove = edges.filter(e => selectedIds.has(e.source) || selectedIds.has(e.target));
 
         if (edgesToRemove.length > 0) {
-            const txs: Transaction[] = edgesToRemove.map(e => ({
+            const forward: Transaction[] = edgesToRemove.map(e => ({
                 type: 'DISCONNECT',
                 payload: e.id
             }));
-            brain.applyTransaction({ type: 'BATCH', payload: txs });
+            const inverse: Transaction[] = edgesToRemove.map(e => ({
+                type: 'CONNECT',
+                payload: { ...e }
+            }));
+
+            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            // Let useBrainUpdates handle UI sync to avoid duplicate key errors
+
+            pushHistory({
+                id: `detach_${Date.now()}`,
+                description: `Detach ${edgesToRemove.length} edge(s)`,
+                forward,
+                inverse
+            });
         }
-    }, [getNodes, getEdges]);
+    }, [getNodes, getEdges, brain, pushHistory]);
 
     // --- Command: Swap Inputs (Alt + S) ---
     const swapConnections = useCallback(() => {
@@ -151,7 +141,7 @@ export function useSelection() {
         const node = selectedNodes[0];
         const targetId = node.id;
 
-        // 1. Resolve handles (from data or definition)
+        // 1. Resolve handles
         const definition = NODE_DEFINITIONS.find(d => d.id === node.type);
         const allHandles = (node.data.handles as HandleConfig[]) || definition?.handles || [];
         const inputHandles = allHandles.filter(h => h.type === 'target');
@@ -163,7 +153,7 @@ export function useSelection() {
 
         if (targetEdges.length === 0) return;
 
-        // 2. Build rotation mapping: Map current handle ID to next handle ID
+        // 2. Build rotation mapping
         const rotationMap: Record<string, string> = {};
         handleIds.forEach((id, idx) => {
             const nextIdx = (idx + 1) % handleIds.length;
@@ -171,15 +161,14 @@ export function useSelection() {
         });
 
         // 3. Generate transactions
-        const txs: Transaction[] = [];
-
-        // TO PREVENT COLLISIONS: We MUST DISCONNECT ALL first, THEN CONNECT ALL.
-        // In Brain.ts, applyTransaction('CONNECT') validates against occupied handles.
-        // If we connect to handle B before disconnecting the edge currently at B, the operation fails.
+        const forward: Transaction[] = [];
+        const inverse: Transaction[] = [];
+        const newEdges: Edge[] = [];
 
         // Phase A: Disconnect everything
         targetEdges.forEach((edge) => {
-            txs.push({ type: 'DISCONNECT', payload: edge.id });
+            forward.push({ type: 'DISCONNECT', payload: edge.id });
+            inverse.push({ type: 'CONNECT', payload: { ...edge } });
         });
 
         // Phase B: Connect everything to new targets
@@ -189,20 +178,29 @@ export function useSelection() {
 
             if (!nextHandleId) return;
 
-            txs.push({
-                type: 'CONNECT',
-                payload: {
-                    ...edge,
-                    id: generateEdgeId(),
-                    targetHandle: nextHandleId
-                }
-            });
+            const newEdge: Edge = {
+                ...edge,
+                id: generateEdgeId(),
+                targetHandle: nextHandleId
+            };
+            newEdges.push(newEdge);
+
+            forward.push({ type: 'CONNECT', payload: newEdge });
+            inverse.push({ type: 'DISCONNECT', payload: newEdge.id });
         });
 
-        if (txs.length > 0) {
-            brain.applyTransaction({ type: 'BATCH', payload: txs });
+        if (forward.length > 0) {
+            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            // Let useBrainUpdates handle UI sync to avoid duplicate key errors
+
+            pushHistory({
+                id: `swap_${Date.now()}`,
+                description: `Swap inputs on ${node.id}`,
+                forward,
+                inverse
+            });
         }
-    }, [getNodes, getEdges]);
+    }, [getNodes, getEdges, brain, pushHistory]);
 
     const alignSelectedNodes = useCallback((axis: 'X' | 'Y') => {
         const nodes = getNodes();
@@ -232,12 +230,7 @@ export function useSelection() {
 
         if (forward.length > 0) {
             brain.applyTransaction({ type: 'BATCH', payload: forward });
-            
-            // Sync UI
-            setNodes(nds => nds.map(n => {
-                const tx = forward.find(f => (f.payload as { id: string }).id === n.id);
-                return tx ? { ...n, position: (tx.payload as { position: { x: number, y: number } }).position } : n;
-            }));
+            // Let useBrainUpdates handle UI sync to avoid duplicate key errors
 
             pushHistory({
                 id: `align_${Date.now()}`,
@@ -246,7 +239,7 @@ export function useSelection() {
                 inverse
             });
         }
-    }, [getNodes, setNodes, brain, pushHistory]);
+    }, [getNodes, brain, pushHistory]);
 
     // --- Selection Helpers ---
     const clearSelection = useCallback(() => {

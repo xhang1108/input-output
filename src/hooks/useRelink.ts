@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { Edge, Connection, OnConnectStartParams, useStore } from '@xyflow/react';
 import { nanoid } from 'nanoid';
+import { toast } from 'sonner';
 import { RelinkState } from '../components/edges/RelinkLine';
 import { capsulePreviewState } from '../components/edges/capsulePreviewState';
 import { Brain } from '../engine/Brain';
@@ -62,10 +63,20 @@ export function useRelink({
 
     const submitRelinkBatch = useCallback((newEdges: Edge[]) => {
         const removedIds = removedEdgeIds.current;
-        const beforeEdgeIds = edges.map(e => e.id);
-        const removedEdgesFull = removedEdgesBackup.current; // Use the backup!
+        const currentEdges = edges;
         
-        let updated = edges.filter(e => !removedIds.includes(e.id));
+        // RESOLVE: Ensure backup contains ALL actual edge objects being removed
+        // (both already detached ones and newly replaced ones)
+        const removedEdgesInStore = currentEdges.filter(e => removedIds.includes(e.id));
+        const removedEdgesFull = [...removedEdgesBackup.current];
+        for (const re of removedEdgesInStore) {
+            if (!removedEdgesFull.some(be => be.id === re.id)) {
+                removedEdgesFull.push(re);
+            }
+        }
+
+        const beforeEdgeIds = currentEdges.map(e => e.id);
+        let updated = currentEdges.filter(e => !removedIds.includes(e.id));
 
         for (const newEdge of newEdges) {
             const targetHandleId = newEdge.targetHandle;
@@ -124,19 +135,49 @@ export function useRelink({
         
         pushHistory({
             id: `relink_${newEdges[0]?.id || Date.now()}`,
-            description: newEdges.length > 1 ? `Relinked ${newEdges.length} connections` : 'Modified connection',
+            description: newEdges.length > 1 ? `Relinked ${newEdges.length} connection(s)` : 'Modified connection',
             forward,
             inverse
         });
 
-        setEdges(updated);
-    }, [edges, setEdges, brain, pushHistory]);
+        // 3.0 PURGE: Centrally clear removal buffers after any submission
+    removedEdgesBackup.current = [];
+    }, [edges, brain, pushHistory]);
 
-    const performRelink = useCallback((targetN: string, targetH: string | null) => {
+    /** Helper to transform internal IDs like 'MA-01_hash:in_a' to '[Basic Math - 01] A' */
+    const formatIdentifier = useCallback((id: string) => {
+        // Regex to find 'NodeID:HandleID' or just 'NodeID'
+        return id.replace(/([A-Z0-9-]+)_([a-z0-9]+)(:[a-z0-9_]+)?/g, (match, typeId, hash, handlePart) => {
+            const nodeId = `${typeId}_${hash}`;
+            const nodeLogic = brain.getNode(nodeId);
+            const def = NODE_DEFINITIONS.find(d => d.id === typeId);
+            
+            // Priority: 1. Custom Label from Brain | 2. Static Label | 3. Base ID
+            const nodeLabel = nodeLogic?.data?.label as string || def?.label || typeId;
+            const shortIdx = typeId.includes('-') ? typeId.split('-')[1] : typeId;
+            
+            const handleId = handlePart ? handlePart.substring(1) : null; // Remove the ':'
+            let handleLabel = '';
+            
+            if (handleId) {
+                const handleDef = def?.handles.find(h => h.id === handleId);
+                handleLabel = ' ' + (handleDef?.label || handleId.replace(/^in_/, '').replace(/^out_/, '').toUpperCase());
+            }
+            
+            return `[${nodeLabel}]${handleLabel}`;
+        });
+    }, []);
+
+    const performRelink = useCallback((targetN: string, targetH: string | null): boolean => {
+        const startParams = connectionStartRef.current;
+        if (!startParams) {
+            logAction('No relink starting point found');
+            return false;
+        }
         const state = relinkStateRef.current;
         const anchorNodeId = state.targetNodeId || (state.anchors && state.anchors[0]?.nodeId);
 
-        if (!state.active || !anchorNodeId) return;
+        if (!state.active || !anchorNodeId) return false;
 
         const dropSide = { n: targetN, h: targetH };
         let newEdgesToCreate: Edge[] = [];
@@ -156,11 +197,15 @@ export function useRelink({
 
                     if (!check.isValid) {
                         logAction(`Relink Blocked: ${check.reason}`);
+                        toast.error(formatIdentifier(check.reason || 'Invalid connection'));
                         return null;
                     }
 
                     if (check.edgeToReplace) {
                         edgesToRemove.push(check.edgeToReplace.id);
+                        if (!removedEdgesBackup.current.some(e => e.id === check.edgeToReplace!.id)) {
+                            removedEdgesBackup.current.push(check.edgeToReplace);
+                        }
                     }
 
                     return {
@@ -200,9 +245,14 @@ export function useRelink({
 
                 if (check.edgeToReplace) {
                     edgesToRemove.push(check.edgeToReplace.id);
+                    if (!removedEdgesBackup.current.some(e => e.id === check.edgeToReplace!.id)) {
+                        removedEdgesBackup.current.push(check.edgeToReplace);
+                    }
                 }
             } else {
                 logAction(`Relink Blocked: ${check.reason}`);
+                toast.error(formatIdentifier(check.reason || 'Invalid connection'));
+                return false;
             }
         }
 
@@ -214,22 +264,14 @@ export function useRelink({
                 ? `${newEdgesToCreate.length} wires`
                 : `${newEdgesToCreate[0].source}:${newEdgesToCreate[0].sourceHandle} -> ${newEdgesToCreate[0].target}:${newEdgesToCreate[0].targetHandle}`;
             logAction(`Relinked: ${detail}`);
+            return true;
         } else {
-            // RESTORATION: Put original wires back into the UI state
-            if (removedEdgesBackup.current.length > 0) {
-                setEdges(eds => [...eds, ...removedEdgesBackup.current]);
-                logAction(`Relink Blocked: Connection restored to original source`);
-                // Clear backup to prevent double-restoration
-                removedEdgesBackup.current = [];
-            }
+            return false;
         }
 
     }, [edgeType, logAction, edges, submitRelinkBatch, brain]);
 
     const resetRelink = useCallback(() => {
-        brain.isReconnecting = false;
-        removedEdgeIds.current = [];
-        removedEdgesBackup.current = [];
         const emptyState: RelinkState = {
             active: false,
             targetNodeId: null,
@@ -237,8 +279,14 @@ export function useRelink({
             type: 'target',
             anchors: []
         };
-        setRelinkState(emptyState);
+        brain.isReconnecting = false;
+        removedEdgeIds.current = [];
+        removedEdgesBackup.current = [];
+        capsulePreviewState.clear();
+        
+        // Atomic synchronous update to ref (crucial for valid-relink detection in next frame)
         relinkStateRef.current = emptyState;
+        setRelinkState(emptyState);
     }, [brain]);
 
     const onRelinkStart = useCallback((event: MouseEvent | TouchEvent, params: OnConnectStartParams) => {
@@ -367,6 +415,14 @@ export function useRelink({
     const onRelinkConnect = useCallback(
         (params: Connection) => {
             const state = relinkStateRef.current;
+            
+            // 3.0 HARD PURGE: If this is NOT an active relink (e.g. Standard mouse-down-drag-up),
+            // we must ensure previous failed relink's IDs are not in the buffer!
+            if (!state.active) {
+                removedEdgeIds.current = [];
+                removedEdgesBackup.current = [];
+            }
+
             // Block if Relink is active OR was just processed in the same JS tick
             if (state.active || processingRelinkRef.current) return;
 
@@ -394,6 +450,12 @@ export function useRelink({
 
             if (!validation.isValid) {
                 logAction(`Blocked: ${validation.reason}`);
+                toast.error(formatIdentifier(validation.reason || 'Invalid connection'));
+                // 5.0 EMERGENCY UI RESTORE: If replacement is blocked, restore the original edge to the UI immediately.
+                // This prevents 'Clean UI vs Dirty Brain' desynchronization.
+                if (existingEdge && isReplacementTarget) {
+                    setEdges(eds => [...eds, existingEdge]);
+                }
                 return;
             }
 
@@ -409,8 +471,11 @@ export function useRelink({
 
             if (isReplacementTarget && existingEdge) {
                 removedEdgeIds.current = [existingEdge.id];
+                removedEdgesBackup.current = [existingEdge];
             } else {
                 removedEdgeIds.current = [];
+                // CRITICAL: Always clear backup if no relink is active to prevent ghost snap-backs
+                if (!state.active) removedEdgesBackup.current = [];
             }
 
             submitRelinkBatch([newEdge]);
@@ -421,22 +486,19 @@ export function useRelink({
         [edges, edgeType, logAction, submitRelinkBatch, brain]
     );
 
-    const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: { toNode: { id: string } | null; toHandle: { id?: string | null } | null; isValid: boolean | null } | null) => {
-        const state = relinkStateRef.current;
-        const wasRelinking = state.active;
-
+    const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
+        const capturedStartParams = connectionStartRef.current;
+        const wasRelinking = relinkStateRef.current.active;
+        
         if (wasRelinking) {
             processingRelinkRef.current = true;
-            // Clear the lock after 100ms to allow future standard connections
             setTimeout(() => { processingRelinkRef.current = false; }, 100);
         }
 
         let { toNode, toHandle, isValid } = connectionState || {};
         
-        // Log for debugging (visible in UI action log)
-        logAction(`onRelinkEnd: isValid=${isValid}, wasRelink=${wasRelinking}, startNode=${connectionStartRef.current?.nodeId}`);
-
         if (wasRelinking) {
+            // Support magnetic snapping even if React Flow doesn't report it
             if (!toNode || !toHandle) {
                 if (MagneticSnapState.nodeId && MagneticSnapState.handleId) {
                     toNode = { id: MagneticSnapState.nodeId };
@@ -445,68 +507,91 @@ export function useRelink({
             }
 
             if (toNode && toHandle) {
-                performRelink(toNode.id, toHandle.id || null);
-            } else {
-                // RESTORATION: Snap back instead of creating a history entry for deletion
-                if (removedEdgesBackup.current.length > 0) {
-                    setEdges(eds => [...eds, ...removedEdgesBackup.current]);
-                    logAction(`Relink canceled — wire snapped back`);
-                } else {
-                    // Fallback for cases where no backup exists (shouldn't happen)
-                    removedEdgeIds.current.forEach(eid => {
-                        brain.applyTransaction({ type: 'DISCONNECT', payload: eid });
-                    });
-                    logAction(`Relink canceled — wire deleted`);
+                const success = performRelink(toNode.id, toHandle.id || null);
+                if (success) {
+                    resetRelink();
+                    connectionStartRef.current = null;
+                    return;
                 }
             }
+
+            // FAILURE / AIR DROP / ILLEGAL BRANCH:
+            // 7.0 TOTAL DISCONNECT: If we reach here, it means we either dropped in air 
+            // OR performRelink returned false (illegal). We commit a physical disconnect.
+            const removedIds = removedEdgeIds.current;
+            const backups = removedEdgesBackup.current;
+
+            if (removedIds.length > 0 && backups.length > 0) {
+                const forward: Transaction[] = removedIds.map(id => ({ type: 'DISCONNECT' as const, payload: id }));
+                const inverse: Transaction[] = backups.map(e => ({ type: 'CONNECT' as const, payload: e }));
+
+                brain.applyTransaction({ type: 'BATCH', payload: forward });
+                
+                // 8.1 FIX: Only show info toast if it was a drop-in-air (not a validation failure already toasted)
+                if (!toNode) {
+                    toast.info('Connection removed (dropped in air)');
+                }
+
+                pushHistory({
+                    id: `relink_fail_${Date.now()}`,
+                    description: `Relink aborted or invalid — connection deleted`,
+                    forward,
+                    inverse
+                });
+                logAction(`Relink failed or dropped — connection deleted physically`);
+            } else {
+                // Check for Smart Link Trigger
+                if (capturedStartParams?.nodeId && onSmartLinkSearch) {
+                    logAction(`Smart Link Triggered from ${capturedStartParams.nodeId}`);
+                    let screenX, screenY;
+                    if ('clientX' in event) {
+                        screenX = (event as MouseEvent).clientX;
+                        screenY = (event as MouseEvent).clientY;
+                    } else {
+                        const touch = (event as TouchEvent).changedTouches[0] || (event as TouchEvent).touches[0];
+                        screenX = touch?.clientX || 0;
+                        screenY = touch?.clientY || 0;
+                    }
+
+                    const startNode = brain.getNode(capturedStartParams.nodeId);
+                    const startNodeDef = NODE_DEFINITIONS.find(d => d.id === startNode?.type);
+                    const startHandleDef = (startNode?.data?.handles as any[])?.find(h => h.id === capturedStartParams?.handleId)
+                        || startNodeDef?.handles.find((h: any) => h.id === capturedStartParams?.handleId);
+
+                    const handleColor = startHandleDef 
+                        ? (startHandleDef.dynamicColor && startNode?.data 
+                            ? getHandleColorByConfig({ ...startHandleDef, dataType: startHandleDef.dynamicColor(startNode.data) })
+                            : getHandleColorByConfig(startHandleDef)) 
+                        : 'var(--color-any)';
+
+                    onSmartLinkSearch({
+                        nodeId: capturedStartParams.nodeId,
+                        handleId: capturedStartParams.handleId!,
+                        handleType: capturedStartParams.handleType as 'source' | 'target',
+                        handleColor,
+                        position: { x: screenX, y: screenY }
+                    });
+                }
+            }
+            
             resetRelink();
         } else {
+            // Standard Connection End: Handle synthetic snapping (Auto-magnet)
             const nativeConnectWillFire = isValid === true;
             const needsSyntheticConnection = !nativeConnectWillFire && MagneticSnapState.nodeId && MagneticSnapState.handleId;
 
-            if (needsSyntheticConnection && connectionStartRef.current?.nodeId) {
-                const synthesizedConnection: Connection = {
-                    source: connectionStartRef.current.nodeId,
-                    sourceHandle: connectionStartRef.current.handleId || null,
+            if (needsSyntheticConnection && capturedStartParams?.nodeId) {
+                onRelinkConnect({
+                    source: capturedStartParams.nodeId,
+                    sourceHandle: capturedStartParams.handleId || null,
                     target: MagneticSnapState.nodeId!,
                     targetHandle: MagneticSnapState.handleId! || null,
-                };
-                onRelinkConnect(synthesizedConnection);
-
-            } else if (!nativeConnectWillFire && !needsSyntheticConnection && connectionStartRef.current?.nodeId && onSmartLinkSearch) {
-                logAction(`Smart Link Triggered from ${connectionStartRef.current.nodeId}`);
-                let screenX, screenY;
-                if ('clientX' in event) {
-                    screenX = (event as MouseEvent).clientX;
-                    screenY = (event as MouseEvent).clientY;
-                } else {
-                    const touch = (event as TouchEvent).changedTouches[0];
-                    screenX = touch.clientX;
-                    screenY = touch.clientY;
-                }
-
-                const startNode = brain.getNode(connectionStartRef.current.nodeId);
-                const startNodeDef = NODE_DEFINITIONS.find(d => d.id === startNode?.type);
-                const startHandleDef = (startNode?.data?.handles as any[])?.find(h => h.id === connectionStartRef.current?.handleId)
-                    || startNodeDef?.handles.find((h: any) => h.id === connectionStartRef.current?.handleId);
-
-                const handleColor = startHandleDef 
-                    ? (startHandleDef.dynamicColor && startNode?.data 
-                        ? getHandleColorByConfig({ ...startHandleDef, dataType: startHandleDef.dynamicColor(startNode.data) })
-                        : getHandleColorByConfig(startHandleDef)) 
-                    : 'var(--color-any)';
-
-                onSmartLinkSearch({
-                    nodeId: connectionStartRef.current.nodeId,
-                    handleId: connectionStartRef.current.handleId!,
-                    handleType: connectionStartRef.current.handleType as 'source' | 'target',
-                    handleColor, // Pass the solved color
-                    position: { x: screenX, y: screenY }
                 });
             }
         }
+        
         connectionStartRef.current = null;
-    }, [resetRelink, performRelink, logAction, onSmartLinkSearch, onRelinkConnect, brain]);
+    }, [performRelink, resetRelink, brain, pushHistory, logAction, onSmartLinkSearch, onRelinkConnect]);
 
     const startEdgeDragDisconnect = useCallback((event: React.PointerEvent, edgeId: string) => {
         if (relinkStateRef.current.active) return;

@@ -87,7 +87,7 @@ export function Body({
     const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
         palettePosition,
         edgeType,
-        setNodes, 
+        setNodes,
         setEdges,
         logAction,
     });
@@ -118,8 +118,8 @@ export function Body({
                     </div>
                 </div>
             )}
-            
-            <FlowCanvas 
+
+            <FlowCanvas
                 isReadOnly={isReadOnly}
                 isLoaded={isLoaded}
                 saveProject={saveProject}

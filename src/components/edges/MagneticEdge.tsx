@@ -3,6 +3,7 @@ import React, { useContext, useRef } from 'react';
 import { useCapsulePreview } from './capsulePreviewState';
 import { HANDLE_SLOT_SPACING, calculateSlotOffsetY } from '../../utils/handleUtils';
 import { RelinkContext } from './RelinkLine';
+import { useAppStore } from '../../store/useStore';
 
 export function MagneticEdge({
     id,
@@ -28,6 +29,8 @@ export function MagneticEdge({
     const siblingEdgesCount = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).length);
     const myIndex = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).findIndex((e) => e.id === id));
     
+    const highlightedEdgeId = useAppStore(s => s.highlightedEdgeId);
+    const isHighlighted = highlightedEdgeId === id;
     const preview = useCapsulePreview();
 
     let finalTargetY = targetY;
@@ -90,11 +93,11 @@ export function MagneticEdge({
                 path={edgePath}
                 markerEnd={markerEnd}
                 style={{
-                    strokeWidth: data?.isHighlighted ? 4 : (selected ? 3 : 2),
-                    stroke: data?.isHighlighted ? 'var(--color-primary)' : (selected ? '#fff' : 'var(--color-zinc-500)'),
+                    strokeWidth: isHighlighted ? 4 : (selected ? 3 : 2),
+                    stroke: isHighlighted ? 'var(--color-primary)' : (selected ? '#fff' : 'var(--color-zinc-500)'),
                     ...style,
                 }}
-                className={`react-flow__edge-path opacity-80 ${data?.isHighlighted ? 'drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]' : ''}`}
+                className={`react-flow__edge-path opacity-80 ${isHighlighted ? 'drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]' : ''}`}
             />
 
             {/* Drag-to-Disconnect Hit Area (Invisible/Secret) */}

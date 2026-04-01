@@ -26,6 +26,7 @@ interface AppState {
     menuLayout: 'expanded' | 'horizontal';
     mode: 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
     transformValue: string;
+    highlightedEdgeId: string | null;
 
     // State
     actionLog: string[];
@@ -52,6 +53,7 @@ interface AppState {
     setMenuLayout: (layout: 'expanded' | 'horizontal') => void;
     setMode: (mode: 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING') => void;
     setTransformValue: (val: string) => void;
+    setHighlightedEdgeId: (id: string | null) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -79,6 +81,7 @@ export const useAppStore = create<AppState>()(
                 menuLayout: 'expanded',
                 mode: 'IDLE',
                 transformValue: '',
+                highlightedEdgeId: null,
                 actionLog: [],
 
                 // Setters
@@ -103,6 +106,7 @@ export const useAppStore = create<AppState>()(
                 setMenuLayout: (menuLayout) => set({ menuLayout }),
                 setMode: (mode) => set({ mode }),
                 setTransformValue: (transformValue) => set({ transformValue }),
+                setHighlightedEdgeId: (highlightedEdgeId) => set({ highlightedEdgeId }),
             }),
             {
                 name: 'Input-Output-settings-v3',
@@ -119,8 +123,6 @@ export const useAppStore = create<AppState>()(
                     menuLayout: state.menuLayout,
                 }),
             }
-
         )
     )
 );
-
