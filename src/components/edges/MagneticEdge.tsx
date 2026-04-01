@@ -1,8 +1,9 @@
-import { BaseEdge, EdgeProps, getBezierPath, getStraightPath, getSmoothStepPath, useStore } from '@xyflow/react';
+import { BaseEdge, EdgeProps, getBezierPath, useStore } from '@xyflow/react';
 import React, { useContext, useRef } from 'react';
 import { useCapsulePreview } from './capsulePreviewState';
 import { HANDLE_SLOT_SPACING, calculateSlotOffsetY } from '../../utils/handleUtils';
 import { RelinkContext } from './RelinkLine';
+import { useAppStore } from '../../store/useStore';
 
 export function MagneticEdge({
     id,
@@ -21,13 +22,15 @@ export function MagneticEdge({
     selected,
     data,
 }: EdgeProps) {
-    const pathType = data?.pathType || 'bezier';
+    // pathType is now consistently 'bezier'
     const { startEdgeDragDisconnect } = useContext(RelinkContext);
     const dragStartPos = useRef<{ x: number, y: number } | null>(null);
 
     const siblingEdgesCount = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).length);
     const myIndex = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).findIndex((e) => e.id === id));
     
+    const highlightedEdgeId = useAppStore(s => s.highlightedEdgeId);
+    const isHighlighted = highlightedEdgeId === id;
     const preview = useCapsulePreview();
 
     let finalTargetY = targetY;
@@ -59,21 +62,7 @@ export function MagneticEdge({
         targetPosition,
     };
 
-    let edgePath = '';
-    switch (pathType) {
-        case 'straight':
-            [edgePath] = getStraightPath(params);
-            break;
-        case 'step':
-            [edgePath] = getSmoothStepPath({ ...params, borderRadius: 0 });
-            break;
-        case 'smoothstep':
-            [edgePath] = getSmoothStepPath(params);
-            break;
-        default:
-            [edgePath] = getBezierPath(params);
-            break;
-    }
+    const [edgePath] = getBezierPath(params);
 
     return (
         <>
@@ -90,11 +79,11 @@ export function MagneticEdge({
                 path={edgePath}
                 markerEnd={markerEnd}
                 style={{
-                    strokeWidth: data?.isHighlighted ? 4 : (selected ? 3 : 2),
-                    stroke: data?.isHighlighted ? 'var(--color-primary)' : (selected ? '#fff' : 'var(--color-zinc-500)'),
+                    strokeWidth: isHighlighted ? 4 : (selected ? 3 : 2),
+                    stroke: isHighlighted ? 'var(--color-primary)' : (selected ? '#fff' : 'var(--color-zinc-500)'),
                     ...style,
                 }}
-                className={`react-flow__edge-path opacity-80 ${data?.isHighlighted ? 'drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]' : ''}`}
+                className={`react-flow__edge-path opacity-80 ${isHighlighted ? 'drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]' : ''}`}
             />
 
             {/* Drag-to-Disconnect Hit Area (Invisible/Secret) */}

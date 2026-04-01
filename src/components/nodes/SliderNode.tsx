@@ -4,20 +4,21 @@ import { NodeProps, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { Settings2 } from 'lucide-react';
-import { useNodeDebounce } from './hooks/useNodeDebounce';
+import { useNodeUpdate } from './hooks/useNodeDebounce';
 
 export const SliderNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
 
     // Internal state for immediate UI feedback (Snappy UX)
-    // Synchronizes with Brain after 100ms delay (Perf Law #4)
+    // Synchronizes with Brain at 30fps during drag (Throttle Mode)
     const initialValue = Number(PayloadUtils.unwrap(data.value)) || 0;
-    const [localValue, setLocalValue] = useNodeDebounce<number>(
+    const [localValue, setLocalValue] = useNodeUpdate<number>(
         id,
         initialValue,
-        (val) => ({ value: val }),
-        100
+        (val: number) => ({ value: val }),
+        33.3, // ~30fps
+        { mode: 'throttle' }
     );
 
     const [showSettings, setShowSettings] = useState(false);

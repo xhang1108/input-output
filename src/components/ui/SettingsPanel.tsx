@@ -9,8 +9,6 @@ interface SettingsPanelProps {
     setSnapping: (enabled: boolean) => void;
     showDebugStats: boolean;
     setShowDebugStats: (visible: boolean) => void;
-    edgeType: string;
-    setEdgeType: (type: string) => void;
     layoutAlgorithm: LayoutAlgorithm;
     setLayoutAlgorithm: (type: LayoutAlgorithm) => void;
     panOnScroll: boolean;
@@ -28,7 +26,6 @@ import { GraphExportModal } from './GraphExportModal';
 export function SettingsPanel({
     isSnapping, setSnapping,
     showDebugStats, setShowDebugStats,
-    edgeType, setEdgeType,
     layoutAlgorithm, setLayoutAlgorithm,
     panOnScroll, setPanOnScroll,
     onReset,
@@ -91,20 +88,7 @@ export function SettingsPanel({
                         onClick={() => { setSnapping(!isSnapping); }}
                     />
 
-                    <Divider />
 
-                    {/* Edge Type Selector */}
-                    <SegmentedControl
-                        label="Connection Style"
-                        value={edgeType}
-                        onChange={setEdgeType}
-                        options={[
-                            { value: 'bezier', label: 'Bezier' },
-                            { value: 'smoothstep', label: 'S-Step' }
-                        ]}
-                    />
-
-                    <Divider />
 
                     {/* Layout Controls */}
                     <SegmentedControl

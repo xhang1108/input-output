@@ -91,7 +91,7 @@ export function FlowCanvas({
     const brain = useBrain();
     const { data: session } = useSession();
 
-    const { fitView, getViewport, setViewport, setNodes, setEdges, getNodes } = useReactFlow();
+    const { fitView, getViewport, setViewport, setNodes, setEdges, getNodes, getEdges } = useReactFlow();
     const router = useRouter();
     const mousePosRef = useRef({ x: 0, y: 0 });
     const [isModifierActive, setIsModifierActive] = useState(false);
@@ -101,8 +101,6 @@ export function FlowCanvas({
     const setManualSnap = useAppStore(s => s.setManualSnap);
     const showDebugStats = useAppStore(s => s.showDebugStats);
     const setShowDebugStats = useAppStore(s => s.setShowDebugStats);
-    const edgeType = useAppStore(s => s.edgeType);
-    const setEdgeType = useAppStore(s => s.setEdgeType);
     const layoutAlgorithm = useAppStore(s => s.layoutAlgorithm);
     const setLayoutAlgorithm = useAppStore(s => s.setLayoutAlgorithm);
     const panOnScroll = useAppStore(s => s.panOnScroll);
@@ -120,6 +118,7 @@ export function FlowCanvas({
     const effectiveSnap = isSnapping || manualSnap;
 
     const isRestoring = useHistoryStore(s => s.isRestoring);
+    const pushHistory = useHistoryStore(s => s.push);
     const { undo, redo } = useHistoryExecutor();
 
     const { focusOn, resetView } = useEye();
@@ -199,23 +198,33 @@ export function FlowCanvas({
     }, [isModifierActive, isReadOnly, getNodes, setNodes, brain]);
 
     const onEdgesChangeSafe = useCallback((changes: EdgeChange[]) => {
-        const isDestructive = (changes as any[]).some(c => c.type === 'remove');
-        if (isReadOnly && isDestructive) return;
-        
-        // Uncontrolled mode auto removes edges when user presses Delete. 
-        // We MUST tell the brain to sever the logical link!
-        const txs: import('../engine/types').Transaction[] = [];
-        changes.forEach(c => {
-            if (c.type === 'remove') {
-                txs.push({ type: 'DISCONNECT', payload: c.id });
-                logAction('Disconnect Edge(s)');
+        const removeChanges = changes.filter(c => c.type === 'remove') as { id: string, type: 'remove' }[];
+        if (isReadOnly && removeChanges.length > 0) return;
+        if (removeChanges.length === 0) return;
+
+        const currentEdges = getEdges();
+        const forward: import('../engine/types').Transaction[] = [];
+        const inverse: import('../engine/types').Transaction[] = [];
+
+        removeChanges.forEach(c => {
+            const edge = currentEdges.find(e => e.id === c.id);
+            if (edge) {
+                forward.push({ type: 'DISCONNECT', payload: edge.id });
+                inverse.push({ type: 'CONNECT', payload: { ...edge } });
             }
         });
 
-        if (txs.length > 0) {
-            brain.applyTransaction({ type: 'BATCH', payload: txs });
+        if (forward.length > 0) {
+            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            pushHistory({
+                id: `delete_edge_${Date.now()}`,
+                description: `Delete ${forward.length} edge(s)`,
+                forward,
+                inverse
+            });
+            logAction('Disconnect Edge(s)');
         }
-    }, [isReadOnly, brain, logAction]);
+    }, [isReadOnly, brain, logAction, getEdges, pushHistory]);
 
     const clearMemory = useCallback(() => {
         if (isReadOnly) return;
@@ -238,23 +247,11 @@ export function FlowCanvas({
         }
     }, [isReadOnly]);
 
-    const { detectAutoInsert, performAutoInsert, highlightedEdgeId } = useAutoInsert({
+    const { detectAutoInsert, performAutoInsert } = useAutoInsert({
         mode,
-        edgeType,
-        setEdges,
+        brain,
         logAction,
     });
-
-    useEffect(() => {
-        setEdges(eds => eds.map(e => ({
-            ...e,
-            data: {
-                ...e.data,
-                pathType: edgeType,
-                isHighlighted: e.id === highlightedEdgeId
-            }
-        })));
-    }, [edgeType, highlightedEdgeId, setEdges]);
 
     // useBrainSync interceptor logic will be integrated into onNodesChangeSafe
     // useBrainSync(nodes, edges); // REMOVED
@@ -320,7 +317,6 @@ export function FlowCanvas({
     } = useRelink({
         setEdges,
         logAction,
-        edgeType,
         onSmartLinkSearch: (params) => {
             setPalettePosition(params.position);
             setShowPalette(true);
@@ -347,7 +343,6 @@ export function FlowCanvas({
 
     const relinkValue = {
         ...relinkState,
-        edgeType,
         startEdgeDragDisconnect
     };
 
@@ -677,18 +672,13 @@ export function FlowCanvas({
                     preventScrolling={true}
                     panOnScrollSpeed={1}
                     selectionMode={SelectionMode.Partial}
-                    connectionLineType={{
-                        bezier: ConnectionLineType.Bezier,
-                        straight: ConnectionLineType.Straight,
-                        step: ConnectionLineType.Step,
-                        smoothstep: ConnectionLineType.SmoothStep,
-                    }[edgeType as 'bezier' | 'straight' | 'step' | 'smoothstep'] || ConnectionLineType.Bezier}
+                    connectionLineType={ConnectionLineType.Bezier}
                     connectionLineStyle={{ stroke: 'var(--color-zinc-500)', strokeWidth: 2 }}
                     edgeTypes={edgeTypes}
                     defaultEdgeOptions={{
                         type: 'magnetic',
                         animated: false,
-                        data: { pathType: edgeType }
+                        data: { pathType: 'bezier' }
                     }}
 
                     nodeOrigin={[0, 0]}

@@ -10,6 +10,7 @@ import { resolveHandlePosition } from '../../utils/handleUtils';
 import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
+import { useHistoryStore } from '../../store/useHistoryStore';
 
 // Re-export HandleConfig for backward compatibility
 export type { HandleConfig } from '../../types/NodeDefinition';
@@ -36,6 +37,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     const sourceConnections = useNodeConnections({ handleType: 'source' });
     const connections = [...targetConnections, ...sourceConnections];
     const preview = useCapsulePreview();
+    const pushHistory = useHistoryStore(s => s.push);
 
     const definition = NODE_DEFINITIONS.find((d) => d.id === type);
 
@@ -95,19 +97,39 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     };
 
     const handleSubmit = () => {
-        if (isError) return; // Prevent saving if invalid
+        if (isError) return;
+        commitRename();
         setIsRenaming(false);
-        updateNodeData(id, { label: title });
+    };
+
+    const commitRename = () => {
+        const currentLabel = (data.label as string) || '';
+        if (title.trim() !== currentLabel) {
+            const forwardTx = { type: 'UPDATE_NODE_DATA' as const, payload: { id, data: { label: title } } };
+            const inverseTx = { type: 'UPDATE_NODE_DATA' as const, payload: { id, data: { label: currentLabel } } };
+
+            // 1. APPLY TO BRAIN
+            brain.applyTransaction(forwardTx);
+
+            // 2. RECORD TO HISTORY
+            pushHistory({
+                id: `rename_${id}_${Date.now()}`,
+                description: `Rename node: ${title}`,
+                forward: [forwardTx],
+                inverse: [inverseTx]
+            });
+
+            // 3. IMMEDIATE UI UPDATE
+            updateNodeData(id, { label: title });
+        }
     };
 
     const handleBlur = () => {
         if (isError) {
-            // "Blur-to-Revert": If input is invalid, revert to original and close
             setTitle((data.label as string) || 'Node');
             setIsError(false);
         } else {
-            // If valid, treat blur as a commit
-            updateNodeData(id, { label: title });
+            commitRename();
         }
         setIsRenaming(false);
     };

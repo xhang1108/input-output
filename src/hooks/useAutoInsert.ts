@@ -2,13 +2,16 @@
 
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
-import { generateNodeId } from '../utils/idGenerator';
+import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { Brain } from '../engine/Brain';
+import { useHistoryStore } from '../store/useHistoryStore';
+import { Transaction } from '../engine/types';
+import { useAppStore } from '../store/useStore';
 
 interface UseAutoInsertProps {
     mode: string;
-    edgeType: string;
-    setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
+    brain: Brain;
     logAction: (msg: string) => void;
 }
 
@@ -20,15 +23,31 @@ interface UseAutoInsertProps {
  */
 export function useAutoInsert({
     mode,
-    edgeType,
-    setEdges,
+    brain,
     logAction,
 }: UseAutoInsertProps) {
-    const [highlightedEdgeId, setHighlightedEdgeId] = useState<string | null>(null);
-    const { screenToFlowPosition, getNodes, getEdges } = useReactFlow();
+    const highlightedEdgeId = useAppStore(s => s.highlightedEdgeId);
+    const setHighlightedEdgeId = useAppStore(s => s.setHighlightedEdgeId);
+
+    const { getNodes, getEdges } = useReactFlow();
+    const pushHistory = useHistoryStore(s => s.push);
     
     // rAF Orchestration Refs
     const rafId = useRef<number | null>(null);
+    const dragStartPosRef = useRef<{ x: number, y: number } | null>(null);
+
+    // Capture Drag Start Position for atomic Undo
+    useEffect(() => {
+        if (mode === 'GRABBING') {
+            const selectedNodes = getNodes().filter(n => n.selected);
+            if (selectedNodes.length === 1) {
+                dragStartPosRef.current = { ...selectedNodes[0].position };
+            }
+        } else if (mode === 'IDLE') {
+            // Keep reference for a few ms to allow performAutoInsert to read it
+            setTimeout(() => { dragStartPosRef.current = null; }, 100);
+        }
+    }, [mode, getNodes]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -45,7 +64,7 @@ export function useAutoInsert({
             return;
         }
 
-        // Layer 0: rAF Guard (Cleanup previous if exists to ensure latest frame)
+        // Layer 0: rAF Guard
         if (rafId.current !== null) {
             cancelAnimationFrame(rafId.current);
         }
@@ -76,11 +95,8 @@ export function useAutoInsert({
             const cx = node.position.x + SENSING_OFFSET_X;
             const cy = node.position.y + SENSING_OFFSET_Y;
 
-            // Hysteresis: Buffer expansion based on current state
-            // Entry: 100px detection radius
-            // Exit: 110px detection radius (to prevent flickering)
             const currentPadding = highlightedEdgeId ? 110 : 100;
-            const detRadius = 15; // The actual sampling hit-box size (smaller than AABB)
+            const detRadius = 15;
             
             const left = cx - detRadius;
             const top = cy - detRadius;
@@ -92,26 +108,21 @@ export function useAutoInsert({
 
             const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-            // 2. Optimized Loop with AABB Fast Rejection
+            // 2. Optimized Loop
             for (const edge of edges) {
                 if (edge.source === node.id || edge.target === node.id) continue;
 
-                // LAYER 1: Curved AABB Rejection
                 const sourceNode = nodeMap.get(edge.source);
                 const targetNode = nodeMap.get(edge.target);
                 if (!sourceNode || !targetNode) continue;
 
-                // Simple AABB covering both nodes + large padding for curve
-                // We use the Hysteresis padding here as the rejection boundary
                 const edgeMinX = Math.min(sourceNode.position.x, targetNode.position.x) - currentPadding;
                 const edgeMaxX = Math.max(sourceNode.position.x, targetNode.position.x) + currentPadding;
                 const edgeMinY = Math.min(sourceNode.position.y, targetNode.position.y) - currentPadding;
                 const edgeMaxY = Math.max(sourceNode.position.y, targetNode.position.y) + currentPadding;
 
-                // Fast AABB check
                 if (cx < edgeMinX || cx > edgeMaxX || cy < edgeMinY || cy > edgeMaxY) continue;
 
-                // LAYER 2: Precision SVG Sampling (Fast-Path because AABB pruned 95%+)
                 const edgeContainer = document.querySelector(`[data-id="${edge.id}"]`);
                 if (!edgeContainer) continue;
 
@@ -122,9 +133,6 @@ export function useAutoInsert({
 
                 try {
                     const totalLength = pathEl.getTotalLength();
-                    if (totalLength === 0) continue;
-
-                    // Sample every 20px along the curve path (slightly larger step for performance)
                     const STEP = 20;
                     const steps = Math.ceil(totalLength / STEP);
 
@@ -133,7 +141,6 @@ export function useAutoInsert({
 
                     for (let i = 0; i <= steps; i++) {
                         const point = pathEl.getPointAtLength(Math.min(i * STEP, totalLength));
-
                         if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) {
                             collided = true;
                             const distToCenter = Math.hypot(point.x - cx, point.y - cy);
@@ -145,16 +152,12 @@ export function useAutoInsert({
                         minCenterDist = closestDist;
                         bestEdge = edge.id;
                     }
-                } catch (err) {
-                    // Ignore empty path errors
-                }
+                } catch (err) {}
             }
 
-            if (bestEdge !== highlightedEdgeId) {
-                setHighlightedEdgeId(bestEdge);
-            }
+            if (bestEdge !== highlightedEdgeId) setHighlightedEdgeId(bestEdge);
         });
-    }, [mode, highlightedEdgeId, getNodes, getEdges]);
+    }, [mode, highlightedEdgeId, getNodes, getEdges, setHighlightedEdgeId]);
 
     const performAutoInsert = useCallback(() => {
         if (highlightedEdgeId) {
@@ -167,7 +170,6 @@ export function useAutoInsert({
             if (edge && node) {
                 const sourceId = edge.source;
                 const targetId = edge.target;
-
                 const nodeDef = NODE_DEFINITIONS.find(d => d.id === node.type);
 
                 let inputHandle = 'in';
@@ -181,34 +183,61 @@ export function useAutoInsert({
                 }
 
                 const e1: Edge = {
-                    id: generateNodeId('edge'),
+                    id: generateEdgeId(),
                     source: sourceId,
                     sourceHandle: edge.sourceHandle,
                     target: node.id,
                     targetHandle: inputHandle,
                     type: 'magnetic',
-                    data: { pathType: edgeType }
+                    data: { pathType: 'bezier' }
                 };
 
                 const e2: Edge = {
-                    id: generateNodeId('edge'),
+                    id: generateEdgeId(),
                     source: node.id,
                     sourceHandle: outputHandle,
                     target: targetId,
                     targetHandle: edge.targetHandle,
                     type: 'magnetic',
-                    data: { pathType: edgeType }
+                    data: { pathType: 'bezier' }
                 };
 
-                setEdges(eds => eds.filter(e => e.id !== highlightedEdgeId).concat([e1, e2]));
+                const forwardTxs: Transaction[] = [
+                    { type: 'DISCONNECT', payload: highlightedEdgeId },
+                    { type: 'CONNECT', payload: e1 },
+                    { type: 'CONNECT', payload: e2 }
+                ];
+
+                const inverseTxs: Transaction[] = [
+                    { type: 'DISCONNECT', payload: e1.id },
+                    { type: 'DISCONNECT', payload: e2.id },
+                    { type: 'CONNECT', payload: { ...edge } }
+                ];
+
+                // If we have the starting position, wrap the node move into the inverse transaction
+                if (dragStartPosRef.current) {
+                    inverseTxs.push({
+                        type: 'MOVE_NODE',
+                        payload: { id: node.id, position: { ...dragStartPosRef.current } }
+                    });
+                }
+
+                brain.applyTransaction({ type: 'BATCH', payload: forwardTxs });
+
+                pushHistory({
+                    id: `autoinsert_${Date.now()}`,
+                    description: `Auto-insert ${node.id} into ${edge.id}`,
+                    forward: forwardTxs,
+                    inverse: inverseTxs
+                });
+
                 logAction(`Auto Insert: ${node.id} into ${edge.id}`);
             }
             setHighlightedEdgeId(null);
         }
-    }, [highlightedEdgeId, edgeType, setEdges, logAction, getNodes, getEdges]);
+    }, [highlightedEdgeId, brain, logAction, getNodes, getEdges, setHighlightedEdgeId, pushHistory]);
 
     return {
-        highlightedEdgeId,
         detectAutoInsert,
         performAutoInsert,
     };

@@ -19,7 +19,6 @@ export interface PendingConnection {
 
 interface UseNodeSpawnerProps {
     palettePosition: { x: number; y: number };
-    edgeType: string;
     setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
     logAction: (msg: string) => void;
@@ -32,7 +31,6 @@ interface UseNodeSpawnerProps {
  */
 export function useNodeSpawner({
     palettePosition,
-    edgeType,
     setNodes,
     setEdges,
     logAction,
@@ -123,7 +121,7 @@ export function useNodeSpawner({
                         target: pendingConnection.handleType === 'target' ? pendingConnection.nodeId : newId,
                         targetHandle: pendingConnection.handleType === 'target' ? pendingConnection.handleId : companionHandle.id,
                         type: 'magnetic',
-                        data: { pathType: edgeType }
+                        data: { pathType: 'bezier' }
                     };
 
                     forward.push({ type: 'CONNECT', payload: newEdge });
@@ -149,7 +147,7 @@ export function useNodeSpawner({
         });
 
         return newNode;
-    }, [setNodes, setEdges, palettePosition, project, pendingConnection, edgeType, logAction, getCurrentZoom, pushHistory]);
+    }, [setNodes, setEdges, palettePosition, project, pendingConnection, logAction, getCurrentZoom, pushHistory, brain]);
 
     return {
         pendingConnection,
