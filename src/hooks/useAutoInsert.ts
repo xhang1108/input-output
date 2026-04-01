@@ -2,9 +2,11 @@
 
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
-import { generateNodeId } from '../utils/idGenerator';
+import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
 import { Brain } from '../engine/Brain';
+import { useHistoryStore } from '../store/useHistoryStore';
+import { Transaction } from '../engine/types';
 
 interface UseAutoInsertProps {
     mode: string;
@@ -28,7 +30,8 @@ export function useAutoInsert({
     logAction,
 }: UseAutoInsertProps) {
     const [highlightedEdgeId, setHighlightedEdgeId] = useState<string | null>(null);
-    const { screenToFlowPosition, getNodes, getEdges } = useReactFlow();
+    const { screenToFlowPosition, getNodes, getEdges, setEdges: rfSetEdges } = useReactFlow();
+    const pushHistory = useHistoryStore(s => s.push);
     
     // rAF Orchestration Refs
     const rafId = useRef<number | null>(null);
@@ -184,7 +187,7 @@ export function useAutoInsert({
                 }
 
                 const e1: Edge = {
-                    id: generateNodeId('edge'),
+                    id: generateEdgeId(),
                     source: sourceId,
                     sourceHandle: edge.sourceHandle,
                     target: node.id,
@@ -194,7 +197,7 @@ export function useAutoInsert({
                 };
 
                 const e2: Edge = {
-                    id: generateNodeId('edge'),
+                    id: generateEdgeId(),
                     source: node.id,
                     sourceHandle: outputHandle,
                     target: targetId,
@@ -203,14 +206,38 @@ export function useAutoInsert({
                     data: { pathType: edgeType }
                 };
 
-                // Sync with Brain
+                // Sync with Brain with History Support
+                const forwardTxs: Transaction[] = [
+                    { type: 'DISCONNECT', payload: highlightedEdgeId },
+                    { type: 'CONNECT', payload: e1 },
+                    { type: 'CONNECT', payload: e2 }
+                ];
+
+                const inverseTxs: Transaction[] = [
+                    { type: 'DISCONNECT', payload: e1.id },
+                    { type: 'DISCONNECT', payload: e2.id },
+                    { 
+                        type: 'CONNECT', 
+                        payload: { 
+                            id: highlightedEdgeId, 
+                            source: edge.source, 
+                            target: edge.target,
+                            sourceHandle: edge.sourceHandle,
+                            targetHandle: edge.targetHandle
+                        } 
+                    }
+                ];
+
                 brain.applyTransaction({
                     type: 'BATCH',
-                    payload: [
-                        { type: 'DISCONNECT', payload: highlightedEdgeId },
-                        { type: 'CONNECT', payload: e1 },
-                        { type: 'CONNECT', payload: e2 }
-                    ]
+                    payload: forwardTxs
+                });
+
+                pushHistory({
+                    id: `autoinsert_${Date.now()}`,
+                    description: `Auto-insert ${node.id} into ${edge.id}`,
+                    forward: forwardTxs,
+                    inverse: inverseTxs
                 });
 
                 logAction(`Auto Insert: ${node.id} into ${edge.id}`);

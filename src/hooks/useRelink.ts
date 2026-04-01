@@ -42,6 +42,7 @@ export function useRelink({
 
     const removedEdgeIds = useRef<string[]>([]);
     const removedEdgesBackup = useRef<Edge[]>([]);
+    const processingRelinkRef = useRef(false); // New lock ref
 
     const lastMousePosRef = useRef({ x: 0, y: 0 });
     useEffect(() => {
@@ -62,7 +63,7 @@ export function useRelink({
     const submitRelinkBatch = useCallback((newEdges: Edge[]) => {
         const removedIds = removedEdgeIds.current;
         const beforeEdgeIds = edges.map(e => e.id);
-        const removedEdgesFull = edges.filter(e => removedIds.includes(e.id));
+        const removedEdgesFull = removedEdgesBackup.current; // Use the backup!
         
         let updated = edges.filter(e => !removedIds.includes(e.id));
 
@@ -205,16 +206,23 @@ export function useRelink({
             }
         }
 
-        if (newEdgesToCreate.length === 0) return;
-
         removedEdgeIds.current = Array.from(new Set(edgesToRemove));
-        submitRelinkBatch(newEdgesToCreate);
-
-        const detail = newEdgesToCreate.length > 1
-            ? `${newEdgesToCreate.length} wires`
-            : `${newEdgesToCreate[0].source}:${newEdgesToCreate[0].sourceHandle} -> ${newEdgesToCreate[0].target}:${newEdgesToCreate[0].targetHandle}`;
-
-        logAction(`Relinked: ${detail}`);
+        
+        if (newEdgesToCreate.length > 0) {
+            submitRelinkBatch(newEdgesToCreate);
+            const detail = newEdgesToCreate.length > 1
+                ? `${newEdgesToCreate.length} wires`
+                : `${newEdgesToCreate[0].source}:${newEdgesToCreate[0].sourceHandle} -> ${newEdgesToCreate[0].target}:${newEdgesToCreate[0].targetHandle}`;
+            logAction(`Relinked: ${detail}`);
+        } else {
+            // RESTORATION: Put original wires back into the UI state
+            if (removedEdgesBackup.current.length > 0) {
+                setEdges(eds => [...eds, ...removedEdgesBackup.current]);
+                logAction(`Relink Blocked: Connection restored to original source`);
+                // Clear backup to prevent double-restoration
+                removedEdgesBackup.current = [];
+            }
+        }
 
     }, [edgeType, logAction, edges, submitRelinkBatch, brain]);
 
@@ -302,19 +310,52 @@ export function useRelink({
     const isValidRelinkConnection = useCallback(
         (connection: Edge | Connection) => {
             if (!connection.source || !connection.target) return false;
-            const targetNode = brain.getNode(connection.target);
-            const variant = getHandleVariant(targetNode, connection.targetHandle || '');
+            
+            const state = relinkStateRef.current;
+            
+            let sourceId = connection.source;
+            let sourceHandle = connection.sourceHandle;
+            let targetId = connection.target;
+            let targetHandle = connection.targetHandle;
+
+            // SEMANTIC FIX: If Relink is active, the "Fixed" end is the source/target 
+            // of the validation, NOT React Flow's proposed source/target.
+            if (state.active) {
+                if (state.type === 'source') {
+                    // We are dragging the Target end. Fixed end is the Source.
+                    sourceId = state.targetNodeId!;
+                    sourceHandle = state.targetHandleId;
+                    // The "Moving" end (connection.target or connection.source) is the new Target.
+                    // React Flow might swap source/target in Loose mode, so we pick the one that's NOT the fixed node.
+                    const movingNodeId = connection.source === state.targetNodeId ? connection.target : connection.source;
+                    const movingHandleId = connection.source === state.targetNodeId ? connection.targetHandle : connection.sourceHandle;
+                    targetId = movingNodeId;
+                    targetHandle = movingHandleId || null;
+                } else {
+                    // We are dragging the Source end. Fixed end is the Target.
+                    targetId = state.targetNodeId!;
+                    targetHandle = state.targetHandleId;
+                    // The "Moving" end is the new Source.
+                    const movingNodeId = connection.source === state.targetNodeId ? connection.target : connection.source;
+                    const movingHandleId = connection.source === state.targetNodeId ? connection.targetHandle : connection.sourceHandle;
+                    sourceId = movingNodeId;
+                    sourceHandle = movingHandleId || null;
+                }
+            }
+
+            const targetNode = brain.getNode(targetId);
+            const variant = getHandleVariant(targetNode, targetHandle || '');
             const isReplacementTarget = variant === 'single';
 
             const edgesForValidation = isReplacementTarget
-                ? edges.filter(e => !(e.target === connection.target && e.targetHandle === connection.targetHandle))
+                ? edges.filter(e => !(e.target === targetId && e.targetHandle === targetHandle))
                 : edges;
 
             const validation = brain.validateConnection(
-                connection.source,
-                connection.sourceHandle,
-                connection.target,
-                connection.targetHandle,
+                sourceId,
+                sourceHandle,
+                targetId,
+                targetHandle,
                 edgesForValidation
             );
 
@@ -326,7 +367,8 @@ export function useRelink({
     const onRelinkConnect = useCallback(
         (params: Connection) => {
             const state = relinkStateRef.current;
-            if (state.active) return;
+            // Block if Relink is active OR was just processed in the same JS tick
+            if (state.active || processingRelinkRef.current) return;
 
             const targetHandle = params.targetHandle;
             const existingEdge = edges.find(e =>
@@ -383,6 +425,12 @@ export function useRelink({
         const state = relinkStateRef.current;
         const wasRelinking = state.active;
 
+        if (wasRelinking) {
+            processingRelinkRef.current = true;
+            // Clear the lock after 100ms to allow future standard connections
+            setTimeout(() => { processingRelinkRef.current = false; }, 100);
+        }
+
         let { toNode, toHandle, isValid } = connectionState || {};
         
         // Log for debugging (visible in UI action log)
@@ -399,10 +447,17 @@ export function useRelink({
             if (toNode && toHandle) {
                 performRelink(toNode.id, toHandle.id || null);
             } else {
-                removedEdgeIds.current.forEach(eid => {
-                    brain.applyTransaction({ type: 'DISCONNECT', payload: eid });
-                });
-                logAction(`Relink canceled — wire deleted`);
+                // RESTORATION: Snap back instead of creating a history entry for deletion
+                if (removedEdgesBackup.current.length > 0) {
+                    setEdges(eds => [...eds, ...removedEdgesBackup.current]);
+                    logAction(`Relink canceled — wire snapped back`);
+                } else {
+                    // Fallback for cases where no backup exists (shouldn't happen)
+                    removedEdgeIds.current.forEach(eid => {
+                        brain.applyTransaction({ type: 'DISCONNECT', payload: eid });
+                    });
+                    logAction(`Relink canceled — wire deleted`);
+                }
             }
             resetRelink();
         } else {

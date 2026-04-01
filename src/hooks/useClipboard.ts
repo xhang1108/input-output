@@ -1,6 +1,9 @@
 import { useCallback } from 'react';
 import { useReactFlow, Node, Edge } from '@xyflow/react';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
+import { useBrain } from '../context/BrainContext';
+import { useHistoryStore } from '../store/useHistoryStore';
+import { Transaction } from '../engine/types';
 
 const CLIPBOARD_KEY = 'Input-Output_clipboard';
 
@@ -9,7 +12,9 @@ const CLIPBOARD_KEY = 'Input-Output_clipboard';
  * Handles clone, copy, paste, and duplicate operations on nodes and edges.
  */
 export function useClipboard() {
-    const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
+    const { getNodes, setNodes, getEdges, setEdges: rfSetEdges } = useReactFlow();
+    const brain = useBrain();
+    const pushHistory = useHistoryStore(s => s.push);
 
     // --- Helper: Clone Nodes & Edges (Internal) ---
     const cloneElements = useCallback((nodesToClone: Node[], edgesToClone: Edge[], offset: { x: number, y: number } = { x: 0, y: 0 }) => {
@@ -64,12 +69,34 @@ export function useClipboard() {
         const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
         const edgesToClone = getEdges().filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target));
 
-        const { newNodes, newEdges } = cloneElements(selectedNodes, edgesToClone, { x: 0, y: 0 });
+        const { newNodes, newEdges } = cloneElements(selectedNodes, edgesToClone, { x: 20, y: 20 });
 
+        const forwardTxs: Transaction[] = [
+            ...newNodes.map((n: Node) => ({ type: 'ADD_NODE', payload: n } as Transaction)),
+            ...newEdges.map((e: Edge) => ({ type: 'CONNECT', payload: e } as Transaction))
+        ];
+
+        const inverseTxs: Transaction[] = [
+            ...newEdges.map((e: Edge) => ({ type: 'DISCONNECT', payload: e.id } as Transaction)),
+            ...newNodes.map((n: Node) => ({ type: 'REMOVE_NODE', payload: n.id } as Transaction))
+        ];
+
+        brain.applyTransaction({ type: 'BATCH', payload: forwardTxs });
+        
+        pushHistory({
+            id: `duplicate_${Date.now()}`,
+            description: `Duplicate ${newNodes.length} nodes`,
+            forward: forwardTxs,
+            inverse: inverseTxs
+        });
+
+        // UI Update (Optimistic)
+        rfSetEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
+        // Note: setNodes is handled by brain sync, but we can do it here for zero-latency
         setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
-        setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
+
         return { nodes: newNodes, edges: newEdges };
-    }, [getNodes, getEdges, setNodes, setEdges, cloneElements]);
+    }, [getNodes, getEdges, setNodes, rfSetEdges, cloneElements, brain, pushHistory]);
 
     // --- Command: Copy to Clipboard ---
     const copyToClipboard = useCallback(() => {
@@ -102,7 +129,6 @@ export function useClipboard() {
             let offset = { x: 20, y: 20 };
 
             if (targetPos && clipboardNodes.length > 0) {
-                // Calculate group's top-left Red Dot anchor (minX, minY)
                 let minX = Infinity, minY = Infinity;
                 clipboardNodes.forEach(n => {
                     minX = Math.min(minX, n.position.x);
@@ -116,12 +142,33 @@ export function useClipboard() {
             }
 
             const { newNodes, newEdges } = cloneElements(clipboardNodes, clipboardEdges, offset);
+
+            const forwardTxs: Transaction[] = [
+                ...newNodes.map((n: Node) => ({ type: 'ADD_NODE', payload: n } as Transaction)),
+                ...newEdges.map((e: Edge) => ({ type: 'CONNECT', payload: e } as Transaction))
+            ];
+
+            const inverseTxs: Transaction[] = [
+                ...newEdges.map((e: Edge) => ({ type: 'DISCONNECT', payload: e.id } as Transaction)),
+                ...newNodes.map((n: Node) => ({ type: 'REMOVE_NODE', payload: n.id } as Transaction))
+            ];
+
+            brain.applyTransaction({ type: 'BATCH', payload: forwardTxs });
+            
+            pushHistory({
+                id: `paste_${Date.now()}`,
+                description: `Paste ${newNodes.length} nodes`,
+                forward: forwardTxs,
+                inverse: inverseTxs
+            });
+
+            rfSetEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
             setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
-            setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
+
         } catch (e) {
             console.error("Failed to paste items", e);
         }
-    }, [setNodes, setEdges, cloneElements]);
+    }, [setNodes, rfSetEdges, cloneElements, brain, pushHistory]);
 
     return {
         duplicateSelected,
