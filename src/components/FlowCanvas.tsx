@@ -241,6 +241,7 @@ export function FlowCanvas({
     const { detectAutoInsert, performAutoInsert, highlightedEdgeId } = useAutoInsert({
         mode,
         edgeType,
+        brain,
         setEdges,
         logAction,
     });

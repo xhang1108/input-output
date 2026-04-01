@@ -4,10 +4,12 @@ import { useCallback, useState, useRef, useEffect } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { Brain } from '../engine/Brain';
 
 interface UseAutoInsertProps {
     mode: string;
     edgeType: string;
+    brain: Brain;
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
     logAction: (msg: string) => void;
 }
@@ -21,6 +23,7 @@ interface UseAutoInsertProps {
 export function useAutoInsert({
     mode,
     edgeType,
+    brain,
     setEdges,
     logAction,
 }: UseAutoInsertProps) {
@@ -200,12 +203,21 @@ export function useAutoInsert({
                     data: { pathType: edgeType }
                 };
 
-                setEdges(eds => eds.filter(e => e.id !== highlightedEdgeId).concat([e1, e2]));
+                // Sync with Brain
+                brain.applyTransaction({
+                    type: 'BATCH',
+                    payload: [
+                        { type: 'DISCONNECT', payload: highlightedEdgeId },
+                        { type: 'CONNECT', payload: e1 },
+                        { type: 'CONNECT', payload: e2 }
+                    ]
+                });
+
                 logAction(`Auto Insert: ${node.id} into ${edge.id}`);
             }
             setHighlightedEdgeId(null);
         }
-    }, [highlightedEdgeId, edgeType, setEdges, logAction, getNodes, getEdges]);
+    }, [highlightedEdgeId, edgeType, brain, logAction, getNodes, getEdges]);
 
     return {
         highlightedEdgeId,
