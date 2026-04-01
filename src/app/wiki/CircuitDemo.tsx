@@ -156,7 +156,7 @@ const CircuitDemoInner: React.FC<CircuitDemoProps> = React.memo(({ iogl, label, 
                             height: node.height || node.measured?.height || node.data.height
                         } 
                     }
-                }, false, true);
+                }, false);
             });
         }
     }, [nodes, namespace, brain]);

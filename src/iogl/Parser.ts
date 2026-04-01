@@ -310,7 +310,7 @@ export class Parser {
         }
       });
       this.advance();
-      if (this.current.type === 'ID') {
+      if ((this.current.type as TokenType) === 'ID') {
           handle = this.current.value;
           this.advance();
       }
@@ -337,9 +337,9 @@ export class Parser {
     // Step 1: Create all nodes
     let nodeIndex = 0;
     this.nodes.forEach((raw, tempId) => {
-      let def = NODE_DEFINITIONS.find(d => d.id === raw.id);
+      let def = NODE_DEFINITIONS.find((d: any) => d.id === raw.id);
       if (!def) {
-          def = NODE_DEFINITIONS.find(d => d.aliases?.includes(raw.id.toLowerCase()));
+          def = NODE_DEFINITIONS.find((d: any) => d.aliases?.includes(raw.id.toLowerCase()));
       }
       
       if (!def) {

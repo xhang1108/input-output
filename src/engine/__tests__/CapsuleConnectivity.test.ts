@@ -7,7 +7,8 @@ describe('Capsule Registry Guard', () => {
     let brain: Brain;
 
     beforeEach(() => {
-        brain = new Brain();
+        brain = Brain.getComputeSession('test-capsule');
+        brain.silentReset();
     });
 
     // Automatically audit ALL nodes in the system for Capsule compliance

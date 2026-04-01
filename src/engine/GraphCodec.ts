@@ -17,7 +17,11 @@ export class GraphCodec {
      */
     public static parse(IOGL: string): { graph: InjectableGraph, diagnostics: string[] } {
         const parser = new Parser(IOGL);
-        return parser.parse();
+        const result = parser.parse();
+        return { 
+            graph: result.graph, 
+            diagnostics: result.diagnostics.map((d: any) => typeof d === 'string' ? d : d.message) 
+        };
     }
 
     /**

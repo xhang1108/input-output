@@ -85,14 +85,14 @@ describe('Node Integrity Benchmarks', () => {
                         position: node.position,
                         initialValue: node.value
                     }
-                }, false, true);
+                }, false);
             });
 
             graph.edges.forEach(edge => {
                 brain.applyTransaction({
                     type: 'CONNECT',
                     payload: edge
-                }, false, true);
+                }, false);
             });
 
             // Trigger evaluation of all Result nodes defined in the Golden Results

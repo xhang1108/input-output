@@ -12,7 +12,7 @@ import { RoundingNode } from '../components/nodes/RoundingNode';
 import { MatrixInputNode } from '../components/nodes/MatrixInputNode';
 import { ColorNode } from '../components/nodes/ColorNode';
 import { AbacusNode } from '../components/nodes/AbacusNode';
-import { NumberTheoryNode } from '../components/nodes/NumberTheoryNode';
+
 import { FractionNode } from '../components/nodes/FractionNode';
 import { PlotNode } from '../components/nodes/PlotNode';
 import { LogicNode } from '../components/nodes/LogicNode';
