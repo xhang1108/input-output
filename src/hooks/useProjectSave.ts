@@ -26,7 +26,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
     const router = useRouter();
     const brain = useBrain();
     const isNavigatingRef = useRef(false);
-    
+
     // Status & Dirty Tracking
     const saveStatus = useAppStore(s => s.saveStatus);
     const setSaveStatus = useAppStore(s => s.setSaveStatus);
@@ -110,8 +110,8 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
     const isOwner = !isCloud || (session?.user?.id !== undefined && projectMeta?.userId === session.user.id);
     const isReadOnly = isCloud && (session?.user?.id === undefined || (projectMeta !== null && projectMeta.userId !== session.user.id));
 
-    const saveProject = useCallback(async (silent = false, options: { 
-        keepalive?: boolean; 
+    const saveProject = useCallback(async (silent = false, options: {
+        keepalive?: boolean;
         visibilityOverride?: 'private' | 'public';
         cloudSync?: boolean; // Tiered Sync Flag
     } = {}) => {
@@ -138,13 +138,13 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             const currentData: any = {
                 nodes: nodes.map(n => {
                     // [V4.0] Lean Payload: Prune redundant UI metadata from data object
-                    const { 
-                        handles, 
-                        measured, 
-                        selected, 
-                        dragging, 
+                    const {
+                        handles,
+                        measured,
+                        selected,
+                        dragging,
                         visualTick, // These are local-only animations
-                        ...leanData 
+                        ...leanData
                     } = (n.data || {}) as any;
 
                     return {
@@ -194,7 +194,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                     settings as unknown as Record<string, unknown>,
                     currentSlotIdRef.current || (isCloud ? `cloud:${actualId}` : undefined)
                 );
-                
+
                 // Clarify log: this is a local save to a cloud-prefixed slot
                 console.log(`[useProjectSave] Local backup updated ${isCloud ? '(Cloud Slot)' : ''}. Slot: ${id}. Size: ${Math.round(encoded.length / 1024)}KB`);
                 currentSlotIdRef.current = id;
@@ -295,7 +295,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 if (result.visibility) {
                     setProjectMeta(prev => prev ? { ...prev, visibility: result.visibility } : result);
                 }
-                
+
                 // Cleanup: If this was a "New" project that just got its first Cloud ID, remove the temp local backup
                 if (isFirstCloudSync && tempNewIdRef.current) {
                     console.log(`[useProjectSave] First cloud sync successful. Cleaning up temp buffer: ${tempNewIdRef.current}`);
@@ -305,7 +305,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
                 // SUCCESS: Cloud is confirmed
                 hasSyncedRef.current = true;
-                lastSyncedPayloadRef.current = encoded; 
+                lastSyncedPayloadRef.current = encoded;
                 lastLocalSavePayloadRef.current = encoded; // Cloud success also satisfies local backup baseline
                 setIsCloudDirty(false); // Clean!
 
@@ -352,7 +352,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
     const resetCloudTimer = useCallback(() => {
         if (cloudTimerRef.current) clearTimeout(cloudTimerRef.current);
-        
+
         // Internal auto-sync helper
         const syncIfDirty = async () => {
             if (!isCloudDirty || isReadOnly) {
@@ -373,7 +373,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 type: e.type,
                 data: e.data as any
             }));
-            
+
             const currentData: any = {
                 nodes: nodes.map(n => ({
                     id: n.id,
@@ -395,7 +395,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
             console.log("[useProjectSave] Tier 2 (Full Sync): 10-minute auto-sync triggered.");
             await saveProject(true, { cloudSync: true });
-            
+
             // Reschedule regardless of success (saveProject updates isCloudDirty on success)
             cloudTimerRef.current = setTimeout(syncIfDirty, 600000);
         };
@@ -431,7 +431,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 settings: settings as any
             };
             lastSyncedPayloadRef.current = Serializer.serializeData(initialData);
-            
+
             resetCloudTimer();
         }
         return () => {
@@ -510,7 +510,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             // Layer 1: Immediate UI Feedback (Orange Warning)
             setSaveStatus('DIRTY'); // Local React state
             setIsCloudDirty(true);
-            
+
             // Layer 2: Stable Debounce
             autoSave.trigger();
         }
@@ -519,7 +519,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
     // NEW: Proactive Brain Listener for Data Changes (e.g. Sliders)
     useEffect(() => {
         if (isReadOnly) return;
-        
+
         const unsubscribe = brain.on('transactionApplied', (tx: any) => {
             // Only trigger if the transaction actually changes graph state
             // and NOT if it's already in the middle of being resolved or purely visual
@@ -533,7 +533,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             if (typeof unsubscribe === 'function') unsubscribe();
         };
     }, [brain, isReadOnly, triggerDirty]);
-    
+
     const loadProject = useCallback((encoded: string) => {
         const data = Serializer.deserialize(encoded);
         if (!data) {
@@ -581,10 +581,10 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 }
 
                 await brain.injectNodes({ nodes: [], edges: [] }, true);
-                
+
                 // Set initial baseline for brand new
                 lastSyncedPayloadRef.current = Serializer.serializeData({ nodes: [], edges: [], settings: useAppStore.getState() });
-                
+
                 setSaveStatus('SAVED');
                 setIsLoaded(true);
                 return;
@@ -593,21 +593,21 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             // 2. LOAD DATA HELPER (Strict Sequence)
             const loadGraphData = async (sourceData: any, sourceTag: 'CLOUD' | 'LOCAL') => {
                 if (!sourceData) return;
-                
+
                 if (sourceData.settings) restoreSettings(sourceData.settings);
                 const graph = (sourceData as any).graph || { nodes: sourceData.nodes, edges: sourceData.edges };
-                
+
                 if (graph.nodes) {
                     console.log(`[useProjectSave] Injecting ${sourceTag} graph...`);
                     await brain.injectNodes(graph, true, true);
-                    
+
                     // Step 4 & 5: Baseline and Reveal
-                    lastSyncedPayloadRef.current = Serializer.serializeData({ 
-                        nodes: graph.nodes, 
-                        edges: graph.edges, 
-                        settings: useAppStore.getState() 
+                    lastSyncedPayloadRef.current = Serializer.serializeData({
+                        nodes: graph.nodes,
+                        edges: graph.edges,
+                        settings: useAppStore.getState()
                     });
-                    
+
                     setSaveStatus(sourceTag === 'CLOUD' ? 'CLOUD_SYNCED' : 'LOCAL_SAVED');
                     fitViewToScene({ duration: 0 });
                     revealAfterPaint();
@@ -623,10 +623,10 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                 try {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 10000);
-                    
+
                     const res = await fetch(`/api/graphs/${actualId}`, { signal: controller.signal });
                     clearTimeout(timeoutId);
-                    
+
                     if (res.ok) {
                         const cloudData = await res.json();
                         setIsCloud(true); // Elevate to cloud mode
@@ -641,13 +641,13 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
                                 toast('⚠️ Version Conflict Detected', {
                                     description: 'Local backup is newer than Cloud version.',
                                     duration: Infinity,
-                                    action: { 
-                                        label: 'Load Local', 
-                                        onClick: () => loadGraphData(SaveManager.load(currentSlotIdRef.current!), 'LOCAL') 
+                                    action: {
+                                        label: 'Load Local',
+                                        onClick: () => loadGraphData(SaveManager.load(currentSlotIdRef.current!), 'LOCAL')
                                     },
-                                    cancel: { 
-                                        label: 'Use Cloud', 
-                                        onClick: () => loadGraphData(parsedCloud, 'CLOUD') 
+                                    cancel: {
+                                        label: 'Use Cloud',
+                                        onClick: () => loadGraphData(parsedCloud, 'CLOUD')
                                     }
                                 });
                             } else {
@@ -715,7 +715,7 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
     }, [isCloud, isReadOnly, saveProject]);
 
     const navigateWithSave = useCallback(async (path: string) => {
-        const isDirty = isCloud 
+        const isDirty = isCloud
             ? (isCloudDirty || saveStatus !== 'CLOUD_SYNCED')
             : (saveStatus !== 'SAVED' && saveStatus !== 'LOCAL_SAVED');
 
@@ -753,13 +753,13 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
 
             // Use getState() for real-time check without re-binding
             const store = useAppStore.getState();
-            const currentDirty = isCloud 
+            const currentDirty = isCloud
                 ? (isCloudDirtyRef.current || store.saveStatus !== 'CLOUD_SYNCED')
                 : (store.saveStatus !== 'SAVED' && store.saveStatus !== 'LOCAL_SAVED');
 
             if (currentDirty) {
                 e.preventDefault();
-                e.returnValue = ''; 
+                e.returnValue = '';
                 return '';
             }
         };
@@ -768,16 +768,16 @@ export function useProjectSave(projectId: string, setNodes: (nds: any[] | ((prev
             if (isNavigatingRef.current) return;
 
             const store = useAppStore.getState();
-            const currentDirty = isCloud 
+            const currentDirty = isCloud
                 ? (isCloudDirtyRef.current || store.saveStatus !== 'CLOUD_SYNCED')
                 : (store.saveStatus !== 'SAVED' && store.saveStatus !== 'LOCAL_SAVED');
 
             if (currentDirty && isLoaded && !isReadOnly) {
                 console.log("[useProjectSave] Back button detected in dirty state. Locking.");
-                
+
                 // RESTORE LOCK: Use pushState to offset the browser's pop
                 window.history.pushState({ projectLocked: true }, '', window.location.href);
-                
+
                 const toastId = toast.loading('Saving before you leave...', { duration: Infinity });
                 try {
                     await saveProject(true);

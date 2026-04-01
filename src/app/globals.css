@@ -88,7 +88,14 @@ body {
   --glow-scalar:      0 0 4px rgba(var(--color-scalar-rgb), 0.2);
 
   /* ── Node Category Tokens ── */
-  --color-math:       hsl(217, 91%, 60%);  /* Match matrix/compute */
+  --color-node-input:     hsl(142, 69%, 58%);  /* Emerald */
+  --color-node-output:    hsl(0, 84%, 60%);    /* Red */
+  --color-node-math:      hsl(217, 91%, 60%);  /* Blue */
+  --color-node-calculus:  hsl(271, 91%, 65%);  /* Purple */
+  --color-node-data:      hsl(195, 85%, 48%);  /* Cyan */
+  --color-node-transform: hsl(324, 70%, 65%);  /* Pink */
+  --color-node-logic:     hsl(38, 92%, 55%);   /* Amber */
+  --color-node-utility:   hsl(240, 5%, 45%);   /* Zinc */
 
 
   /* ── Interaction & Semantic Tokens ── */
@@ -112,6 +119,7 @@ body {
   --node-border:        hsl(240, 4%, 22%);
   --node-border-hover:  hsl(240, 4%, 34%);
   --node-border-selected: hsl(0, 0%, 70%);
+  --node-accent:        transparent;
 
   /* System */
   --color-sidebar: var(--sidebar);
@@ -215,6 +223,40 @@ body {
 }
 .animate-ring-pulse {
   animation: ring-pulse 2s infinite ease-in-out;
+}
+
+/* Node Category Variants (Tinting Header & Border) */
+.node-cat-input {
+  --node-bg-header: color-mix(in srgb, var(--color-node-input) 15%, var(--color-surface-light));
+  --node-border:    color-mix(in srgb, var(--color-node-input) 25%, var(--color-surface-dim));
+}
+.node-cat-output {
+  --node-bg-header: color-mix(in srgb, var(--color-node-output) 15%, var(--color-surface-light));
+  --node-border:    color-mix(in srgb, var(--color-node-output) 25%, var(--color-surface-dim));
+}
+.node-cat-math {
+  --node-bg-header: color-mix(in srgb, var(--color-node-math) 15%, var(--color-surface-light));
+  --node-border:    color-mix(in srgb, var(--color-node-math) 25%, var(--color-surface-dim));
+}
+.node-cat-calculus {
+  --node-bg-header: color-mix(in srgb, var(--color-node-calculus) 15%, var(--color-surface-light));
+  --node-border:    color-mix(in srgb, var(--color-node-calculus) 25%, var(--color-surface-dim));
+}
+.node-cat-data {
+  --node-bg-header: color-mix(in srgb, var(--color-node-data) 15%, var(--color-surface-light));
+  --node-border:    color-mix(in srgb, var(--color-node-data) 25%, var(--color-surface-dim));
+}
+.node-cat-transform {
+  --node-bg-header: color-mix(in srgb, var(--color-node-transform) 15%, var(--color-surface-light));
+  --node-border:    color-mix(in srgb, var(--color-node-transform) 25%, var(--color-surface-dim));
+}
+.node-cat-logic {
+  --node-bg-header: color-mix(in srgb, var(--color-node-logic) 15%, var(--color-surface-light));
+  --node-border:    color-mix(in srgb, var(--color-node-logic) 25%, var(--color-surface-dim));
+}
+.node-cat-utility {
+  --node-bg-header: color-mix(in srgb, var(--color-node-utility) 15%, var(--color-surface-light));
+  --node-border:    color-mix(in srgb, var(--color-node-utility) 25%, var(--color-surface-dim));
 }
 
 

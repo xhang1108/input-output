@@ -38,8 +38,20 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     const connections = [...targetConnections, ...sourceConnections];
     const preview = useCapsulePreview();
 
-    // Find definition for fallback handles
     const definition = NODE_DEFINITIONS.find((d) => d.id === type);
+
+    const categoryClass = useMemo(() => {
+        const cat = definition?.category?.toLowerCase() || '';
+        if (cat.includes('input')) return 'node-cat-input';
+        if (cat.includes('output')) return 'node-cat-output';
+        if (cat.includes('math')) return 'node-cat-math';
+        if (cat.includes('calculus')) return 'node-cat-calculus';
+        if (cat.includes('data')) return 'node-cat-data';
+        if (cat.includes('transform')) return 'node-cat-transform';
+        if (cat.includes('logic')) return 'node-cat-logic';
+        if (cat.includes('utility')) return 'node-cat-utility';
+        return '';
+    }, [definition]);
 
     // Sync edges and internal state when data changes
     useEffect(() => {
@@ -241,7 +253,8 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             ref={ref}
             className={cn(
                 "relative rounded-xl border transition duration-200 group flex flex-col",
-                selected ? "border-zinc-400" : "border-zinc-700 hover:border-zinc-500"
+                selected ? "border-zinc-400" : "border-zinc-700 hover:border-zinc-500",
+                categoryClass
             )}
             style={{
                 minHeight: `${minHeight}px`,

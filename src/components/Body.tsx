@@ -49,7 +49,6 @@ import { SaveManager } from '../services/SaveManager';
 import { useBrain } from '../context/BrainContext';
 import { useBrainUpdates } from '../hooks/useBrainUpdates';
 import { useAutoLayout } from '../hooks/useAutoLayout';
-import { useExampleListener } from '../hooks/useExampleListener';
 import { useAppStore } from '../store/useStore';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { useRouter } from 'next/navigation';
@@ -77,8 +76,6 @@ export function Body({
     const { data: session } = useSession();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-
-    useExampleListener();
 
     const { fitView, getViewport, setViewport } = useReactFlow();
     const router = useRouter();
