@@ -79,12 +79,16 @@ export function Body({
         if (permissionError && onForbidden) onForbidden();
     }, [permissionError, onForbidden]);
 
+    // Reactive handles for nodes and edges directly from useReactFlow to ensure
+    // we don't pass empty arrows which would break the immediate UI feedback.
+    const { setNodes, setEdges } = useReactFlow();
+
     // Lifted generic UI logics
     const { pendingConnection, setPendingConnection, spawnNode } = useNodeSpawner({
         palettePosition,
         edgeType,
-        setNodes: () => {}, // Handled by Brain inside spawnNode largely, but UI might need to just useReactFlow().setNodes
-        setEdges: () => {},
+        setNodes, 
+        setEdges,
         logAction,
     });
 
