@@ -110,14 +110,15 @@ export class TransactionManager {
             }
 
             case 'DISCONNECT': {
-                const edgeId = tx.payload as string;
-                const edgeToRemove = state.edges.find(e => e.id === edgeId);
-                if (edgeToRemove) {
-                    state.edges = state.edges.filter(e => e.id !== edgeId);
+                const id = tx.payload as string;
+                const idx = state.edges.findIndex(e => e.id === id);
+                if (idx !== -1) {
+                    const edgeToRemove = state.edges[idx];
+                    state.edges.splice(idx, 1);
                     hooks.onEdgeRemoved?.(edgeToRemove);
-                    return { success: true };
+                    hooks.onGraphChanged?.();
                 }
-                return { success: false, reason: 'Edge not found' };
+                return { success: true };
             }
 
             case 'MOVE_NODE': {
@@ -198,12 +199,17 @@ export class TransactionManager {
                 return { success: false, reason: 'Node not found' };
             }
 
-            case 'BATCH':
-                (tx.payload as Transaction[]).forEach((t: Transaction) => {
-                    this.applyTransaction(t, state, hooks);
+            case 'BATCH': {
+                const results = (tx.payload as Transaction[]).map((t: Transaction) => {
+                    return this.applyTransaction(t, state, hooks);
                 });
                 hooks.onGraphChanged?.();
+                
+                const firstFailure = results.find(r => !r.success);
+                if (firstFailure) return firstFailure;
+                
                 return { success: true };
+            }
 
             case 'REORDER_EDGES': {
                 const orderedIds = tx.payload as string[];

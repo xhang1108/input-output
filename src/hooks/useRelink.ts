@@ -449,20 +449,29 @@ export function useRelink({
             if (!validation.isValid) {
                 logAction(`Blocked: ${validation.reason}`);
                 toast.error(formatIdentifier(validation.reason || 'Invalid connection'));
+                
                 // 5.0 EMERGENCY UI RESTORE: If replacement is blocked, restore the original edge to the UI immediately.
                 // This prevents 'Clean UI vs Dirty Brain' desynchronization.
                 if (existingEdge && isReplacementTarget) {
                     setEdges(eds => [...eds, existingEdge]);
                 }
+                
+                brain.setInteracting(false);
                 return;
             }
 
+            // Normalization: Ensure source is ALWAYS an output handle
+            const finalSource = validation.normalized?.source || params.source;
+            const finalSHandle = validation.normalized?.sourceHandle || params.sourceHandle;
+            const finalTarget = validation.normalized?.target || params.target;
+            const finalTHandle = validation.normalized?.targetHandle || params.targetHandle;
+
             const newEdge: Edge = {
                 id: nanoid(),
-                source: params.source,
-                sourceHandle: params.sourceHandle,
-                target: params.target,
-                targetHandle: params.targetHandle,
+                source: finalSource,
+                sourceHandle: finalSHandle,
+                target: finalTarget,
+                targetHandle: finalTHandle,
                 type: 'magnetic' as const,
                 data: { pathType: 'bezier' }
             };

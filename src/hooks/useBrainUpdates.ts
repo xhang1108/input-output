@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
@@ -28,6 +28,8 @@ export function useBrainUpdates(
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>
 ) {
     const brain = useBrain();
+    const recentlyAddedNodes = useRef<Map<string, number>>(new Map());
+
     useEffect(() => {
 
         const handleGraphChange = (payload?: unknown) => {
@@ -71,11 +73,13 @@ export function useBrainUpdates(
                     // 1. Remove nodes not in Brain
                     for (let i = nextNodes.length - 1; i >= 0; i--) {
                         if (!brainNodes.has(nextNodes[i].id)) {
-                            console.warn(`[useBrainUpdates] Removing node ${nextNodes[i].id} because it is missing from Brain state.`, {
-                                nodeType: nextNodes[i].type,
-                                hasParent: !!nextNodes[i].parentId,
-                                currentNodesCount: nextNodes.length
-                            });
+                            // RECOVERY GUARD: Check for recently added nodes to prevent race removals
+                            const addedTime = recentlyAddedNodes.current.get(nextNodes[i].id);
+                            if (addedTime && Date.now() - addedTime < 150) {
+                                continue;
+                            }
+
+                            console.log(`[useBrainUpdates] Syncing node removal: ${nextNodes[i].id} (missing from Brain state)`);
                             nextNodes.splice(i, 1);
                             changed = true;
                         }
@@ -144,6 +148,7 @@ export function useBrainUpdates(
                                 style: style,
                                 selected: logicNode.selected || false
                             } as Node);
+                            recentlyAddedNodes.current.set(id, Date.now());
                             changed = true;
                         } else {
                             // Update existing node
