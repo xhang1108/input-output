@@ -36,8 +36,8 @@ import { useRelink } from '../hooks/useRelink';
 import { useAutoInsert } from '../hooks/useAutoInsert';
 import { useNodeSpawner } from '../hooks/useNodeSpawner';
 import { useProjectSave } from '../hooks/useProjectSave';
-import { NodePicker } from './ui/NodePicker';
 import { DebugOverlay } from './ui/DebugOverlay';
+import { findUpstreamPath } from '../utils/graphUtils';
 import { NPanel } from './ui/NPanel';
 import { SettingsPanel } from './ui/SettingsPanel';
 import { ContextMenu } from './ui/ContextMenu';
@@ -105,6 +105,8 @@ export function FlowCanvas({
     const panOnScroll = useAppStore(s => s.panOnScroll);
     const setPanOnScroll = useAppStore(s => s.setPanOnScroll);
     const logAction = useAppStore(s => s.logAction);
+    const setHighlightedPath = useAppStore(s => s.setHighlightedPath);
+    const clearHighlightedPath = useAppStore(s => s.clearHighlightedPath);
 
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
@@ -367,7 +369,9 @@ export function FlowCanvas({
             logAction('Close Panels (Esc)');
             return;
         }
-    }, [mode, cancelGrab, setNodes, showPalette, showNPanel, closePalette, setShowNPanel, logAction, getNodes]);
+
+        clearHighlightedPath();
+    }, [mode, cancelGrab, setNodes, showPalette, showNPanel, closePalette, setShowNPanel, logAction, getNodes, clearHighlightedPath]);
 
     const autoConfirm = useCallback((fn: (e: any) => void) => (e: any) => {
         if (mode !== 'IDLE') confirmGrab();
@@ -406,6 +410,14 @@ export function FlowCanvas({
                     const selected = getNodes().filter(n => n.selected);
                     const actionName = focusOn(selected);
                     logAction(`${actionName} (.)`);
+                }
+            },
+            'nodes:trace-upstream': (e) => {
+                const selected = getNodes().find(n => n.selected);
+                if (selected) {
+                    const { nodeIds, edgeIds } = findUpstreamPath(selected.id, getEdges());
+                    setHighlightedPath(nodeIds, edgeIds);
+                    logAction(`Trace Upstream: ${selected.id} (Alt+T)`);
                 }
             },
             'transform:grab': autoConfirm((e) => {
@@ -576,7 +588,8 @@ export function FlowCanvas({
         if (showPalette) setShowPalette(false);
         if (contextMenu) setContextMenu(null);
         if (['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) confirmGrab();
-    }, [mode, confirmGrab, showPalette, contextMenu, setShowPalette, setContextMenu]);
+        clearHighlightedPath();
+    }, [mode, confirmGrab, showPalette, contextMenu, setShowPalette, setContextMenu, clearHighlightedPath]);
 
     return (
         <RelinkContext.Provider value={relinkValue}>
@@ -616,6 +629,7 @@ export function FlowCanvas({
                         y: e.clientY,
                         type: 'CANVAS'
                     });
+                    clearHighlightedPath();
                 }}
             >
                 {!isLoaded && (
@@ -662,6 +676,7 @@ export function FlowCanvas({
                             y: e.clientY,
                             type: 'CANVAS'
                         });
+                        clearHighlightedPath();
                     }}
 
                     onNodeContextMenu={(e, node) => {
@@ -733,6 +748,14 @@ export function FlowCanvas({
                                     deleteSelected,
                                     viewSpecs: () => { },
                                     alignSelectedNodes,
+                                    traceUpstream: () => {
+                                        const selected = getNodes().find(n => n.selected);
+                                        if (selected) {
+                                            const { nodeIds, edgeIds } = findUpstreamPath(selected.id, getEdges());
+                                            setHighlightedPath(nodeIds, edgeIds);
+                                            logAction(`Trace Upstream: ${selected.id}`);
+                                        }
+                                    },
                                     logAction,
                                 }, contextMenu.x, contextMenu.y)
                                 : (() => {
@@ -762,6 +785,14 @@ export function FlowCanvas({
                                         detachSelected,
                                         deleteSelected,
                                         alignSelectedNodes,
+                                        traceUpstream: () => {
+                                            const targetId = contextMenu.nodeId || getNodes().find(n => n.selected)?.id;
+                                            if (targetId) {
+                                                const { nodeIds, edgeIds } = findUpstreamPath(targetId, getEdges());
+                                                setHighlightedPath(nodeIds, edgeIds);
+                                                logAction(`Trace Upstream: ${targetId}`);
+                                            }
+                                        },
                                         logAction,
                                     }, hasSpecs);
                                 })()

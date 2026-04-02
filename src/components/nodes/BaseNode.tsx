@@ -12,6 +12,7 @@ import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
 import { useHistoryStore } from '../../store/useHistoryStore';
 import { getUniqueLabel } from '../../utils/labelUtils';
+import { useAppStore } from '../../store/useStore';
 
 // Re-export HandleConfig for backward compatibility
 export type { HandleConfig } from '../../types/NodeDefinition';
@@ -60,6 +61,8 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
         updateNodeInternals(id);
         if (data.label) setTitle(data.label as string);
     }, [id, data.handles, data.width, data.height, data.label, updateNodeInternals]);
+    
+    const isHighlighted = useAppStore(s => s.highlightedNodeIds.includes(id));
 
     // Visual State (Strict DOM Isolation)
     const brain = useBrain();
@@ -283,6 +286,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             className={cn(
                 "relative rounded-xl border transition duration-200 group flex flex-col",
                 selected ? "border-zinc-400" : "border-zinc-700 hover:border-zinc-500",
+                isHighlighted && "border-blue-400/80 shadow-[0_0_20px_rgba(59,130,246,0.3)]",
                 categoryClass
             )}
             style={{

@@ -42,6 +42,12 @@ export const COMMAND_REGISTRY: ShortcutDefinition[] = [
         category: 'Utility',
         keys: { default: '.' }
     },
+    {
+        id: 'nodes:trace-upstream',
+        label: 'Trace Upstream',
+        category: 'Utility',
+        keys: { default: 'alt+t' }
+    },
 
     // --- Transform ---
     {

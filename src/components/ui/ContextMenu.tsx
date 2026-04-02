@@ -50,7 +50,8 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                     key={index}
                     className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between group hover:bg-zinc-800 ${item.danger ? 'text-red-400 hover:text-red-300' : 'text-zinc-300 hover:text-white'
                         }`}
-                    onClick={() => {
+                    onClick={(e) => {
+                        e.stopPropagation();
                         item.action();
                         onClose();
                     }}

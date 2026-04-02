@@ -29,8 +29,8 @@ export function MagneticEdge({
     const siblingEdgesCount = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).length);
     const myIndex = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).findIndex((e) => e.id === id));
     
-    const highlightedEdgeId = useAppStore(s => s.highlightedEdgeId);
-    const isHighlighted = highlightedEdgeId === id;
+    const highlightedEdgeIds = useAppStore(s => s.highlightedEdgeIds);
+    const isHighlighted = highlightedEdgeIds.includes(id);
     const preview = useCapsulePreview();
 
     // Selection Tracking: Link edge highlight to connected nodes
