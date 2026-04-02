@@ -39,8 +39,6 @@ export class Serializer {
                     selected, 
                     dragging, 
                     visualTick,
-                    width,
-                    height,
                     zIndex,
                     ...leanData 
                 } = (n.data || {}) as any;
@@ -50,7 +48,9 @@ export class Serializer {
                     type: n.type || 'io:val',
                     position: n.position,
                     data: leanData,
-                    parentId: n.parentId
+                    parentId: n.parentId,
+                    width: n.width !== undefined ? Math.round(n.width) : undefined,
+                    height: n.height !== undefined ? Math.round(n.height) : undefined
                 };
             }),
             edges: (data.edges || []).map((e: any) => ({

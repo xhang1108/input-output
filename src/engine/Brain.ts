@@ -690,7 +690,7 @@ export class Brain {
     public resizeNode(id: string, width: number, height: number, oldSize?: { width: number; height: number }) {
         this.applyTransaction({
             type: 'RESIZE_NODE',
-            payload: { id, width, height, oldSize }
+            payload: { id, width: Math.round(width), height: Math.round(height), oldSize }
         });
     }
 
@@ -940,7 +940,9 @@ export class Brain {
             position: n.position || { x: 0, y: 0 },
             data: n.data,
             value: n.value,
-            parentId: n.parentId // Phase 4.1: Top-level parent tracking
+            parentId: n.parentId,
+            width: n.width,
+            height: n.height
         }));
 
         const edges = this.state.edges.map(e => ({
@@ -1042,7 +1044,7 @@ export class Brain {
         const node = this.state.nodes.get(id);
         if (!node) return;
         const abs = this.getAbsolutePosition(id);
-        node.boundingBox = { width: box.width, height: box.height, x: abs.x, y: abs.y };
+        node.boundingBox = { width: Math.round(box.width), height: Math.round(box.height), x: abs.x, y: abs.y };
     }
 
     /**

@@ -151,7 +151,9 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
                         type: n.type || 'io:val',
                         position: n.position,
                         data: leanData,
-                        parentId: n.parentId
+                        parentId: n.parentId,
+                        width: n.width !== undefined ? Math.round(n.width) : undefined,
+                        height: n.height !== undefined ? Math.round(n.height) : undefined
                     };
                 }),
                 edges: brain.getEdges().map(e => ({
@@ -522,7 +524,7 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
         const unsubscribe = brain.on('transactionApplied', (tx: any) => {
             // Only trigger if the transaction actually changes graph state
             // and NOT if it's already in the middle of being resolved or purely visual
-            if (tx.type === 'MOVE_NODE' || tx.type === 'RESIZE_NODE') return;
+            if (tx.type === 'MOVE_NODE') return;
 
             console.log("[useProjectSave] Transaction detected, dirtying project status.");
             triggerDirty();

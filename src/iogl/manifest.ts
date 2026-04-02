@@ -209,6 +209,6 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   "OT-04": { ...SINGLE_IN },
 
   // --- 7. Utility Family ---
-  "UT-01": { modeProperty: "bgColor", data: ["markdown", "textSize"] },
+  "UT-01": { modeProperty: "bgColor", data: ["markdown", "textSize"], auxiliary: ["width", "height"] },
   "UT-02": { ...SINGLE_IN, ...SINGLE_OUT }
 };

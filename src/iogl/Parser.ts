@@ -433,7 +433,13 @@ export class Parser {
 
         if (manifest.auxiliary) {
           manifest.auxiliary.forEach(key => {
-            if (raw.props[key] !== undefined) data[key] = raw.props[key];
+            if (raw.props[key] !== undefined) {
+                let val = raw.props[key];
+                if ((key === 'width' || key === 'height') && typeof val === 'number') {
+                    val = Math.round(val);
+                }
+                data[key] = val;
+            }
           });
         }
         

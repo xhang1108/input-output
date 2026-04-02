@@ -58,6 +58,8 @@ export interface AddNodePayload {
     data?: Record<string, unknown>;
     position?: { x: number; y: number };
     parentId?: string;
+    width?: number;
+    height?: number;
 }
 
 export interface MoveNodePayload {
@@ -91,6 +93,8 @@ export interface InjectableGraph {
         data?: Record<string, unknown>;
         value?: unknown;
         parentId?: string;
+        width?: number;
+        height?: number;
     }[];
     edges: {
         id: string;

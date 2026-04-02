@@ -152,7 +152,12 @@ export function useBrainUpdates(
 
                             // Check data changes
                             let dataChanged = false;
-                            if (!deepEqual(uiNode.data, targetData)) {
+                            
+                            // LOCAL STATE GUARD: If the node is currently being edited in the UI, 
+                            // we skip overwriting its data object to prevent losing user typing.
+                            const isNodeEditing = uiNode.data.isEditing === true || uiNode.data.isTyping === true;
+                            
+                            if (!isNodeEditing && !deepEqual(uiNode.data, targetData)) {
                                 dataChanged = true;
                                 needsUpdate = true;
                             }

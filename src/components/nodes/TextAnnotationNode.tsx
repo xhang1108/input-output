@@ -6,6 +6,7 @@ import { useNodeDimensions } from './hooks/useNodeDimensions';
 import { useContentMetrics } from './hooks/useContentMetrics';
 import ReactMarkdown from 'react-markdown';
 import { useHistoryStore } from '../../store/useHistoryStore';
+import { useBrain } from '../../context/BrainContext';
 import { Transaction } from '../../engine/types';
 import remarkGfm from 'remark-gfm';
 
@@ -20,13 +21,14 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
     const pushHistory = useHistoryStore(s => s.push);
     const isRestoring = useHistoryStore(s => s.isRestoring);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const brain = useBrain();
     const originalValue = useRef<string | null>(null);
     const nodeRef = useRef<HTMLDivElement>(null);
 
     // Dimension management via unified hook
     const { width, height, onResize, onResizeStart, onResizeEnd } = useNodeDimensions({
         id,
-        type: 'UI-01',
+        type: 'UT-01',
         data
     });
 
@@ -37,11 +39,22 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
 
     // Sync from external data changes (e.g., NPanel edits)
     const [prevMarkdown, setPrevMarkdown] = useState(data.markdown);
+    
+    // --- Debounced Brain Sync ---
+    // Rule #4: 50ms delay for Brain update on transient state (using 400ms for heavy text)
     useEffect(() => {
-        if (data.markdown !== prevMarkdown) {
+        if (!isEditing || data.markdown === prevMarkdown) return;
+
+        const timer = setTimeout(() => {
+            brain.applyTransaction({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id, data: { markdown: data.markdown } }
+            });
             setPrevMarkdown(data.markdown);
-        }
-    }, [data.markdown, prevMarkdown]);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [data.markdown, isEditing, id, brain, prevMarkdown]);
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         updateNodeData(id, { markdown: e.target.value });
