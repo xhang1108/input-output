@@ -39,7 +39,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
 
     // Sync from external data changes (e.g., NPanel edits)
     const [prevMarkdown, setPrevMarkdown] = useState(data.markdown);
-    
+
     // --- Debounced Brain Sync ---
     // Rule #4: 50ms delay for Brain update on transient state (using 400ms for heavy text)
     useEffect(() => {

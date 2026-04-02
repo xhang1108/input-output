@@ -40,7 +40,6 @@ import { NodePicker } from './ui/NodePicker';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { NPanel } from './ui/NPanel';
 import { SettingsPanel } from './ui/SettingsPanel';
-import { useBrainSync } from '../hooks/useBrainSync';
 import { ContextMenu } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
 import { Brain } from '../engine/Brain';
@@ -158,44 +157,46 @@ export function FlowCanvas({
     } = useHand();
 
     const onNodesChangeSafe = useCallback((changes: NodeChange[]) => {
-        const isDestructive = changes.some(c => c.type === 'remove' || c.type === 'position' || c.type === 'dimensions');
-        if (isReadOnly && isDestructive) return;
-
-        // In Uncontrolled mode, React Flow applies internal interactions (selection/drag) automatically.
-        // We catch selection events to sync with the additive selection behavior and update the Brain.
-        // We drop 'remove' because useSelection perfectly handles it.
-        // We drop 'position' because useHand perfectly handles it.
+        if (isReadOnly) {
+            const isDestructive = changes.some(c => c.type === 'remove' || c.type === 'position' || c.type === 'dimensions');
+            if (isDestructive) return;
+        }
 
         const txs: import('../engine/types').Transaction[] = [];
-        const currentlySelected = new Set(getNodes().filter(n => n.selected).map(n => n.id));
+        const isResolving = isResolvingTransform();
+        const isTransforming = mode !== 'IDLE';
+        
+        // Use Brain Nodes Map as the source of truth for current selection state
+        const brainNodes = brain.getNodesMap();
 
         changes.forEach(c => {
             if (c.type === 'select') {
                 let finalSelection = c.selected;
-                // Enforce modifier additive selection
-                if (isModifierActive && !c.selected && currentlySelected.has(c.id)) {
+                
+                // Selection Guard:
+                // 1. Modifier Active (Shift) -> Keep selected
+                // 2. Currently Transforming (Dragging/Grabbing) -> Keep selected
+                // 3. Just Resolved Transform (100ms Window) -> Keep selected to prevent confirm-click deselection
+                const wasSelectedInBrain = brainNodes.get(c.id)?.selected;
+                if ((isModifierActive || isResolving || isTransforming) && !c.selected && wasSelectedInBrain) {
                     finalSelection = true;
                 }
                 
-                // If it's a valid change, instruct the Brain
                 txs.push({
                     type: 'UPDATE_NODE_DATA',
                     payload: { id: c.id, data: { selected: finalSelection } }
                 });
 
-                // Since we are uncontrolled, React Flow's internal change already ran asynchronously or uses default behavior.
-                // We MUST override the internal store natively if our modifier dictates a block:
                 if (finalSelection !== c.selected) {
                     setNodes(nds => nds.map(n => n.id === c.id ? { ...n, selected: finalSelection } : n));
                 }
             }
         });
 
-        // Use silent mode for selection updates to avoid triggering BATCH re-evaluations
         if (txs.length > 0) {
             brain.applyTransaction({ type: 'BATCH', payload: txs }, true);
         }
-    }, [isModifierActive, isReadOnly, getNodes, setNodes, brain]);
+    }, [isModifierActive, isReadOnly, setNodes, brain, mode]);
 
     const onEdgesChangeSafe = useCallback((changes: EdgeChange[]) => {
         const removeChanges = changes.filter(c => c.type === 'remove') as { id: string, type: 'remove' }[];
@@ -585,12 +586,37 @@ export function FlowCanvas({
                 onMouseDown={onMouseDown}
                 onMouseUp={onMouseUp}
                 onClick={onClick}
-                onClickCapture={(e) => {
-                    if (isResolvingTransform() || ['GRABBING', 'SCALING', 'ROTATING'].includes(mode)) {
+                onMouseDownCapture={(e) => {
+                    if (isResolvingTransform()) {
                         e.stopPropagation();
                     }
                 }}
-                onContextMenu={(e) => e.preventDefault()}
+                onMouseUpCapture={(e) => {
+                    if (isResolvingTransform()) {
+                        e.stopPropagation();
+                    }
+                }}
+                onClickCapture={(e) => {
+                    if (isResolvingTransform()) {
+                        e.stopPropagation();
+                    }
+                }}
+                onContextMenu={(e) => {
+                    e.preventDefault();
+                    if (Date.now() - lastCancelTimestamp.current < 100) return;
+
+                    if (mode !== 'IDLE') {
+                        cancelGrab(true);
+                        return;
+                    }
+                    if (isReadOnly) return;
+                    setContextMenu({
+                        isOpen: true,
+                        x: e.clientX,
+                        y: e.clientY,
+                        type: 'CANVAS'
+                    });
+                }}
             >
                 {!isLoaded && (
                     <div className="absolute inset-0 z-9999 bg-zinc-800 flex items-center justify-center">

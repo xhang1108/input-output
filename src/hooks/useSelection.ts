@@ -251,18 +251,27 @@ export function useSelection() {
         if (txs.length > 0) {
             brain.applyTransaction({ type: 'BATCH', payload: txs });
         }
-    }, [getNodes, brain]);
+
+        // Also clear UI edge selection
+        setEdges(eds => eds.map(e => e.selected ? { ...e, selected: false } : e));
+    }, [getNodes, brain, setEdges]);
 
     const selectNode = useCallback((id: string, exclusive: boolean = true) => {
         const nodes = getNodes();
         const txs: Transaction[] = [];
 
         if (exclusive) {
-            nodes.forEach(n => {
-                if (n.selected && n.id !== id) {
-                    txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: n.id, data: { selected: false } } });
+            // Robust Exclusivity: Check the Brain's state directly, as UI (getNodes) 
+            // might be in the middle of a selection transition and show stale values.
+            const brainNodes = brain.getNodesMap();
+            for (const [nodeId, node] of brainNodes) {
+                if (node.selected && nodeId !== id) {
+                    txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: nodeId, data: { selected: false } } });
                 }
-            });
+            }
+
+            // Also clear UI edge selection
+            setEdges(eds => eds.map(e => e.selected ? { ...e, selected: false } : e));
         }
 
         const targetNode = nodes.find(n => n.id === id);
@@ -274,7 +283,7 @@ export function useSelection() {
             // Use non-silent transaction to trigger graphChanged update for UI sync
             brain.applyTransaction({ type: 'BATCH', payload: txs });
         }
-    }, [getNodes, brain]);
+    }, [getNodes, brain, setEdges]);
 
     return {
         deleteSelected,

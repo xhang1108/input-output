@@ -7,6 +7,7 @@ import { PayloadUtils } from '../utils/PayloadUtils';
 import { useAppStore } from '../store/useStore';
 import deepEqual from 'fast-deep-equal';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { useHistoryStore } from '../store/useHistoryStore';
 
 import { DEFAULT_UI_ORIGIN } from '../types/NodeDefinition';
 
@@ -191,8 +192,11 @@ export function useBrainUpdates(
                             }
 
                             if (needsUpdate || uiNode.selected !== logicNode.selected) {
-                                // Selection logic (UI wins for false-positives)
-                                const finalSelected = logicNode.selected ?? uiNode.selected;
+                                // Selection logic: Trust UI during active interactions.
+                                // Brain selection only wins if we are restoring history (Undo/Redo) 
+                                // otherwise we trust UI to keep stable and Brain to deselect.
+                                const isRestoring = useHistoryStore.getState().isRestoring;
+                                const finalSelected = isRestoring ? (logicNode.selected ?? uiNode.selected) : logicNode.selected;
 
                                 nextNodes[existingIndex] = {
                                     ...uiNode,

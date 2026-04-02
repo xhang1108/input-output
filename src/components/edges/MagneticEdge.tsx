@@ -33,6 +33,11 @@ export function MagneticEdge({
     const isHighlighted = highlightedEdgeId === id;
     const preview = useCapsulePreview();
 
+    // Selection Tracking: Link edge highlight to connected nodes
+    const isSourceSelected = useStore(s => s.nodeLookup.get(source)?.selected);
+    const isTargetSelected = useStore(s => s.nodeLookup.get(target)?.selected);
+    const effectivelySelected = selected || isSourceSelected || isTargetSelected;
+
     let finalTargetY = targetY;
     if (siblingEdgesCount > 0 && myIndex !== -1) {
         const isPreviewActive = preview.active && preview.nodeId === target && preview.handleId === targetHandleId;
@@ -79,8 +84,8 @@ export function MagneticEdge({
                 path={edgePath}
                 markerEnd={markerEnd}
                 style={{
-                    strokeWidth: isHighlighted ? 4 : (selected ? 3 : 2),
-                    stroke: isHighlighted ? 'var(--color-primary)' : (selected ? '#fff' : 'var(--color-zinc-500)'),
+                    strokeWidth: isHighlighted ? 4 : (effectivelySelected ? 3 : 2),
+                    stroke: isHighlighted ? 'var(--color-primary)' : (effectivelySelected ? '#fff' : 'var(--color-zinc-500)'),
                     ...style,
                 }}
                 className={`react-flow__edge-path opacity-80 ${isHighlighted ? 'drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]' : ''}`}
