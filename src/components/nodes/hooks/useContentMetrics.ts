@@ -46,7 +46,8 @@ export function useContentMetrics(
 
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                const { width, height } = entry.contentRect;
+                const width = Math.round(entry.contentRect.width);
+                const height = Math.round(entry.contentRect.height);
 
                 if (timerRef.current) clearTimeout(timerRef.current);
                 timerRef.current = setTimeout(() => {
@@ -59,7 +60,7 @@ export function useContentMetrics(
 
         // Initial read so Brain has at least one measurement on mount
         const rect = el.getBoundingClientRect();
-        flush(rect.width, rect.height);
+        flush(Math.round(rect.width), Math.round(rect.height));
 
         return () => {
             observer.disconnect();

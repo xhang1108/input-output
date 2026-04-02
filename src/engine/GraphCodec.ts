@@ -2,6 +2,7 @@
 import { InjectableGraph } from './types';
 import { Parser } from '../iogl/Parser';
 import { Encoder } from '../iogl/Encoder';
+import { IOGLUtils } from '../iogl/IOGLUtils';
 
 /**
  * GraphCodec 3.0
@@ -48,9 +49,9 @@ export class GraphCodec {
         const num = parseFloat(trimmed);
         if (!isNaN(num) && String(num) === trimmed) return num;
 
-        // Strings (strip quotes)
+        // Strings (robust unescaping)
         if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-            return trimmed.slice(1, -1);
+            return IOGLUtils.unescapeString(trimmed);
         }
 
         // JSON Fallback (for complex arrays/objects)

@@ -53,6 +53,8 @@ export class TransactionManager {
                     isInDirtyChain: true,
                     selected: (p as any).selected || false,
                     parentId: p.parentId,
+                    width: p.width,
+                    height: p.height,
                 };
                 state.nodes.set(p.id, newNode);
                 hooks.onNodeAdded?.(newNode);
@@ -108,14 +110,15 @@ export class TransactionManager {
             }
 
             case 'DISCONNECT': {
-                const edgeId = tx.payload as string;
-                const edgeToRemove = state.edges.find(e => e.id === edgeId);
-                if (edgeToRemove) {
-                    state.edges = state.edges.filter(e => e.id !== edgeId);
+                const id = tx.payload as string;
+                const idx = state.edges.findIndex(e => e.id === id);
+                if (idx !== -1) {
+                    const edgeToRemove = state.edges[idx];
+                    state.edges.splice(idx, 1);
                     hooks.onEdgeRemoved?.(edgeToRemove);
-                    return { success: true };
+                    hooks.onGraphChanged?.();
                 }
-                return { success: false, reason: 'Edge not found' };
+                return { success: true };
             }
 
             case 'MOVE_NODE': {
@@ -151,8 +154,8 @@ export class TransactionManager {
                 const p = tx.payload as ResizeNodePayload;
                 const node = state.nodes.get(p.id);
                 if (node) {
-                    const w = Number.isFinite(p.width) && p.width > 10 ? p.width : (node.width || 150);
-                    const h = Number.isFinite(p.height) && p.height > 10 ? p.height : (node.height || 50);
+                    const w = Math.round(Number.isFinite(p.width) && p.width > 10 ? p.width : (node.width || 150));
+                    const h = Math.round(Number.isFinite(p.height) && p.height > 10 ? p.height : (node.height || 50));
 
                     node.width = w;
                     node.height = h;
@@ -174,13 +177,13 @@ export class TransactionManager {
                         tNode.selected = !!selected;
                     }
 
-                    // Width/Height Guard: Prevent UI collapsing
+                    // Width/Height Guard: Prevent UI collapsing + integer rounding
                     if (width !== undefined && typeof width === 'number' && Number.isFinite(width)) {
-                        tNode.width = Math.max(10, width);
+                        tNode.width = Math.round(Math.max(10, width));
                         (remainingData as any).width = tNode.width;
                     }
                     if (height !== undefined && typeof height === 'number' && Number.isFinite(height)) {
-                        tNode.height = Math.max(10, height);
+                        tNode.height = Math.round(Math.max(10, height));
                         (remainingData as any).height = tNode.height;
                     }
 
@@ -196,12 +199,17 @@ export class TransactionManager {
                 return { success: false, reason: 'Node not found' };
             }
 
-            case 'BATCH':
-                (tx.payload as Transaction[]).forEach((t: Transaction) => {
-                    this.applyTransaction(t, state, hooks);
+            case 'BATCH': {
+                const results = (tx.payload as Transaction[]).map((t: Transaction) => {
+                    return this.applyTransaction(t, state, hooks);
                 });
                 hooks.onGraphChanged?.();
+                
+                const firstFailure = results.find(r => !r.success);
+                if (firstFailure) return firstFailure;
+                
                 return { success: true };
+            }
 
             case 'REORDER_EDGES': {
                 const orderedIds = tx.payload as string[];

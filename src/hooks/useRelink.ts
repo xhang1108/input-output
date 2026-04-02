@@ -142,7 +142,7 @@ export function useRelink({
     removedEdgesBackup.current = [];
     }, [edges, brain, pushHistory]);
 
-    /** Helper to transform internal IDs like 'MA-01_hash:in_a' to '[Basic Math - 01] A' */
+    /** Helper to transform internal IDs like 'MA-01_hash:in_a' to '[Basic Math-01] A' */
     const formatIdentifier = useCallback((id: string) => {
         // Regex to find 'NodeID:HandleID' or just 'NodeID'
         return id.replace(/([A-Z0-9-]+)_([a-z0-9]+)(:[a-z0-9_]+)?/g, (match, typeId, hash, handlePart) => {
@@ -449,20 +449,29 @@ export function useRelink({
             if (!validation.isValid) {
                 logAction(`Blocked: ${validation.reason}`);
                 toast.error(formatIdentifier(validation.reason || 'Invalid connection'));
+                
                 // 5.0 EMERGENCY UI RESTORE: If replacement is blocked, restore the original edge to the UI immediately.
                 // This prevents 'Clean UI vs Dirty Brain' desynchronization.
                 if (existingEdge && isReplacementTarget) {
                     setEdges(eds => [...eds, existingEdge]);
                 }
+                
+                brain.setInteracting(false);
                 return;
             }
 
+            // Normalization: Ensure source is ALWAYS an output handle
+            const finalSource = validation.normalized?.source || params.source;
+            const finalSHandle = validation.normalized?.sourceHandle || params.sourceHandle;
+            const finalTarget = validation.normalized?.target || params.target;
+            const finalTHandle = validation.normalized?.targetHandle || params.targetHandle;
+
             const newEdge: Edge = {
                 id: nanoid(),
-                source: params.source,
-                sourceHandle: params.sourceHandle,
-                target: params.target,
-                targetHandle: params.targetHandle,
+                source: finalSource,
+                sourceHandle: finalSHandle,
+                target: finalTarget,
+                targetHandle: finalTHandle,
                 type: 'magnetic' as const,
                 data: { pathType: 'bezier' }
             };
@@ -537,39 +546,6 @@ export function useRelink({
                     inverse
                 });
                 logAction(`Relink failed or dropped — connection deleted physically`);
-            } else {
-                // Check for Smart Link Trigger
-                if (capturedStartParams?.nodeId && onSmartLinkSearch) {
-                    logAction(`Smart Link Triggered from ${capturedStartParams.nodeId}`);
-                    let screenX, screenY;
-                    if ('clientX' in event) {
-                        screenX = (event as MouseEvent).clientX;
-                        screenY = (event as MouseEvent).clientY;
-                    } else {
-                        const touch = (event as TouchEvent).changedTouches[0] || (event as TouchEvent).touches[0];
-                        screenX = touch?.clientX || 0;
-                        screenY = touch?.clientY || 0;
-                    }
-
-                    const startNode = brain.getNode(capturedStartParams.nodeId);
-                    const startNodeDef = NODE_DEFINITIONS.find(d => d.id === startNode?.type);
-                    const startHandleDef = (startNode?.data?.handles as any[])?.find(h => h.id === capturedStartParams?.handleId)
-                        || startNodeDef?.handles.find((h: any) => h.id === capturedStartParams?.handleId);
-
-                    const handleColor = startHandleDef 
-                        ? (startHandleDef.dynamicColor && startNode?.data 
-                            ? getHandleColorByConfig({ ...startHandleDef, dataType: startHandleDef.dynamicColor(startNode.data) })
-                            : getHandleColorByConfig(startHandleDef)) 
-                        : 'var(--color-any)';
-
-                    onSmartLinkSearch({
-                        nodeId: capturedStartParams.nodeId,
-                        handleId: capturedStartParams.handleId!,
-                        handleType: capturedStartParams.handleType as 'source' | 'target',
-                        handleColor,
-                        position: { x: screenX, y: screenY }
-                    });
-                }
             }
             
             resetRelink();
@@ -584,6 +560,37 @@ export function useRelink({
                     sourceHandle: capturedStartParams.handleId || null,
                     target: MagneticSnapState.nodeId!,
                     targetHandle: MagneticSnapState.handleId! || null,
+                });
+            } else if (!nativeConnectWillFire && !toNode && capturedStartParams?.nodeId && onSmartLinkSearch) {
+                // SMART LINK: Trigger menu if dropped in air
+                logAction(`Smart Link Triggered from ${capturedStartParams.nodeId}`);
+                let screenX, screenY;
+                if ('clientX' in event) {
+                    screenX = (event as MouseEvent).clientX;
+                    screenY = (event as MouseEvent).clientY;
+                } else {
+                    const touch = (event as TouchEvent).changedTouches[0] || (event as TouchEvent).touches[0];
+                    screenX = touch?.clientX || 0;
+                    screenY = touch?.clientY || 0;
+                }
+
+                const startNode = brain.getNode(capturedStartParams.nodeId);
+                const startNodeDef = NODE_DEFINITIONS.find(d => d.id === startNode?.type);
+                const startHandleDef = (startNode?.data?.handles as any[])?.find(h => h.id === capturedStartParams?.handleId)
+                    || startNodeDef?.handles.find((h: any) => h.id === capturedStartParams?.handleId);
+
+                const handleColor = startHandleDef 
+                    ? (startHandleDef.dynamicColor && startNode?.data 
+                        ? getHandleColorByConfig({ ...startHandleDef, dataType: startHandleDef.dynamicColor(startNode.data) })
+                        : getHandleColorByConfig(startHandleDef)) 
+                    : 'var(--color-any)';
+
+                onSmartLinkSearch({
+                    nodeId: capturedStartParams.nodeId,
+                    handleId: capturedStartParams.handleId!,
+                    handleType: capturedStartParams.handleType as 'source' | 'target',
+                    handleColor,
+                    position: { x: screenX, y: screenY }
                 });
             }
         }

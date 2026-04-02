@@ -36,8 +36,8 @@ export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResiz
     const definition = NODE_DEFINITIONS.find(d => d.id === type);
 
     // Resolved width/height: local visual state > persisted data > definition default > safe fallback
-    const width = localSize?.w ?? (data.width as number) ?? definition?.minWidth ?? 100;
-    const height = localSize?.h ?? (data.height as number) ?? definition?.minHeight ?? 40;
+    const width = Math.round(localSize?.w ?? (data.width as number) ?? definition?.minWidth ?? 100);
+    const height = Math.round(localSize?.h ?? (data.height as number) ?? definition?.minHeight ?? 40);
 
     const onResize = useCallback(({ screenW, screenH }: ResizeDimensions) => {
         const projected = onProject ? onProject(screenW, screenH) : null;
@@ -49,8 +49,8 @@ export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResiz
 
         // Immediate sync to React Flow for relative positioning of children/handles
         // Brain.isResizing blocks this from being recorded to history
-        const nextW = projected?.w ?? screenW;
-        const nextH = projected?.h ?? screenH;
+        const nextW = Math.round(projected?.w ?? screenW);
+        const nextH = Math.round(projected?.h ?? screenH);
 
         updateNodeData(id, {
             width: nextW,
@@ -81,8 +81,8 @@ export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResiz
 
         // Project the final coordinate bounds
         const projected = onProject ? onProject(screenW, screenH) : null;
-        const finalW = projected?.w ?? screenW;
-        const finalH = projected?.h ?? screenH;
+        const finalW = Math.round(projected?.w ?? screenW);
+        const finalH = Math.round(projected?.h ?? screenH);
 
         const oldSize = startSizeRef.current
             ? { width: startSizeRef.current.w, height: startSizeRef.current.h }
@@ -93,7 +93,7 @@ export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResiz
 
         if (finalNodeData && startDataRef.current && startSizeRef.current) {
             // Exclude non-structural/ephemeral metadata
-            const { value: _v, width: _dw, height: _dh, ...currentStructuralData } = finalNodeData as Record<string, unknown>;
+            const { value: _v, ...currentStructuralData } = finalNodeData as Record<string, unknown>;
 
             const forward: Transaction[] = [
                 { type: 'UPDATE_NODE_DATA', payload: { id, data: structuredClone(currentStructuralData) } },

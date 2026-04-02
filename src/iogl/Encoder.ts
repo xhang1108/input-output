@@ -68,7 +68,12 @@ export class Encoder {
         if (manifest.auxiliary) {
           manifest.auxiliary.forEach(key => {
             if (data[key] !== undefined) {
-              props.push(`${key}: ${JSON.stringify(data[key])}`);
+              let val = data[key];
+              // Round size-related auxiliary properties to 1-pixel precision
+              if ((key === 'width' || key === 'height') && typeof val === 'number') {
+                val = Math.round(val);
+              }
+              props.push(`${key}: ${JSON.stringify(val)}`);
             }
           });
         }

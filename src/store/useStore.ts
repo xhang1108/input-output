@@ -26,6 +26,8 @@ interface AppState {
     mode: 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
     transformValue: string;
     highlightedEdgeId: string | null;
+    highlightedNodeIds: string[];
+    highlightedEdgeIds: string[];
 
     // State
     actionLog: string[];
@@ -52,6 +54,8 @@ interface AppState {
     setMode: (mode: 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING') => void;
     setTransformValue: (val: string) => void;
     setHighlightedEdgeId: (id: string | null) => void;
+    setHighlightedPath: (nodeIds: string[], edgeIds: string[]) => void;
+    clearHighlightedPath: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -79,6 +83,8 @@ export const useAppStore = create<AppState>()(
                 mode: 'IDLE',
                 transformValue: '',
                 highlightedEdgeId: null,
+                highlightedNodeIds: [],
+                highlightedEdgeIds: [],
                 actionLog: [],
 
                 // Setters
@@ -103,6 +109,8 @@ export const useAppStore = create<AppState>()(
                 setMode: (mode) => set({ mode }),
                 setTransformValue: (transformValue) => set({ transformValue }),
                 setHighlightedEdgeId: (highlightedEdgeId) => set({ highlightedEdgeId }),
+                setHighlightedPath: (nodeIds, edgeIds) => set({ highlightedNodeIds: nodeIds, highlightedEdgeIds: edgeIds }),
+                clearHighlightedPath: () => set({ highlightedNodeIds: [], highlightedEdgeIds: [] }),
             }),
             {
                 name: 'Input-Output-settings-v3',

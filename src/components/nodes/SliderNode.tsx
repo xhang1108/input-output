@@ -1,6 +1,6 @@
-import { memo, useCallback, useState, useRef } from 'react';
+import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps, useReactFlow } from '@xyflow/react';
+import { NodeProps, useReactFlow, useStore, ReactFlowState } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { Settings2 } from 'lucide-react';
@@ -29,6 +29,33 @@ export const SliderNode = memo((props: NodeProps) => {
     const min = typeof data.min === 'number' ? data.min : 0;
     const max = typeof data.max === 'number' ? data.max : 100;
     const step = typeof data.step === 'number' ? data.step : 1;
+
+    const selectedCount = useStore((s: ReactFlowState) => s.nodes.filter((n) => n.selected).length);
+
+    // Node-level keyboard control: Adjust value when node is selected
+    useEffect(() => {
+        if (!props.selected || selectedCount > 1) return;
+
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            // Ignore if user is typing in an input or textarea
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                e.stopPropagation();
+                setLocalValue(prev => Math.max(min, prev - step));
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                e.stopPropagation();
+                setLocalValue(prev => Math.min(max, prev + step));
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown, { capture: true });
+    }, [props.selected, selectedCount, min, max, step, setLocalValue]);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const val = parseFloat(e.target.value);
@@ -61,12 +88,18 @@ export const SliderNode = memo((props: NodeProps) => {
                             <Settings2 size={12} />
                         </button>
                     </div>
-                    <span
-                        className="text-xs font-mono px-1.5 py-0.5 rounded-sm border border-zinc-800"
-                        style={{ background: 'var(--node-bg)', color: 'var(--color-scalar)' }}
-                    >
-                        {localValue}
-                    </span>
+                    <input
+                        type="number"
+                        value={localValue}
+                        onChange={handleChange}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className="nodrag text-lg font-mono font-bold bg-transparent border-none outline-none text-right w-20 focus:text-cyan-400 transition-colors"
+                        style={{ color: 'var(--color-scalar)' }}
+                        min={min}
+                        max={max}
+                        step={step}
+                    />
                 </div>
 
                 {showSettings && (
@@ -118,6 +151,7 @@ export const SliderNode = memo((props: NodeProps) => {
                         step={step}
                         value={localValue}
                         onChange={handleChange}
+                        onKeyDown={(e) => e.stopPropagation()}
                         onPointerDown={(e) => {
                             isInteracting.current = true;
                             e.stopPropagation();

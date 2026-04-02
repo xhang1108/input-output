@@ -6,6 +6,7 @@ import { useNodeDimensions } from './hooks/useNodeDimensions';
 import { useContentMetrics } from './hooks/useContentMetrics';
 import ReactMarkdown from 'react-markdown';
 import { useHistoryStore } from '../../store/useHistoryStore';
+import { useBrain } from '../../context/BrainContext';
 import { Transaction } from '../../engine/types';
 import remarkGfm from 'remark-gfm';
 
@@ -20,13 +21,14 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
     const pushHistory = useHistoryStore(s => s.push);
     const isRestoring = useHistoryStore(s => s.isRestoring);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const brain = useBrain();
     const originalValue = useRef<string | null>(null);
     const nodeRef = useRef<HTMLDivElement>(null);
 
     // Dimension management via unified hook
     const { width, height, onResize, onResizeStart, onResizeEnd } = useNodeDimensions({
         id,
-        type: 'UI-01',
+        type: 'UT-01',
         data
     });
 
@@ -37,11 +39,22 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
 
     // Sync from external data changes (e.g., NPanel edits)
     const [prevMarkdown, setPrevMarkdown] = useState(data.markdown);
+
+    // --- Debounced Brain Sync ---
+    // Rule #4: 50ms delay for Brain update on transient state
     useEffect(() => {
-        if (data.markdown !== prevMarkdown) {
+        if (!isEditing || data.markdown === prevMarkdown) return;
+
+        const timer = setTimeout(() => {
+            brain.applyTransaction({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id, data: { markdown: data.markdown } }
+            });
             setPrevMarkdown(data.markdown);
-        }
-    }, [data.markdown, prevMarkdown]);
+        }, 50);
+
+        return () => clearTimeout(timer);
+    }, [data.markdown, isEditing, id, brain, prevMarkdown]);
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         updateNodeData(id, { markdown: e.target.value });
@@ -61,17 +74,27 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         const currentValue = e.target.value; // Stale State Defense: Direct DOM Access
         const initialValue = originalValue.current;
 
-        if (initialValue !== null && initialValue !== currentValue && !isRestoring) {
-            pushHistory({
-                id: `edit_${id}_${Date.now()}`,
-                description: 'Edit Text',
-                forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: currentValue } } }],
-                inverse: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: initialValue } } }]
+        // Immediate SSOT Sync: Force Brain to accept the final value BEFORE we toggle isEditing.
+        // This prevents useBrainUpdates from seeing 'isEditing: false' and reverting to old Brain data.
+        if (initialValue !== null && initialValue !== currentValue) {
+            brain.applyTransaction({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id, data: { markdown: currentValue } }
             });
+
+            if (!isRestoring) {
+                pushHistory({
+                    id: `edit_${id}_${Date.now()}`,
+                    description: 'Edit Text',
+                    forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: currentValue } } }],
+                    inverse: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: initialValue } } }]
+                });
+            }
         }
+
         originalValue.current = null;
         updateNodeData(id, { isEditing: false });
-    }, [id, pushHistory, isRestoring, updateNodeData]);
+    }, [id, pushHistory, isRestoring, updateNodeData, brain]);
 
     const toggleEdit = useCallback(() => {
         if (!isEditing) {

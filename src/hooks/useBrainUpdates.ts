@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
@@ -7,6 +7,7 @@ import { PayloadUtils } from '../utils/PayloadUtils';
 import { useAppStore } from '../store/useStore';
 import deepEqual from 'fast-deep-equal';
 import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { useHistoryStore } from '../store/useHistoryStore';
 
 import { DEFAULT_UI_ORIGIN } from '../types/NodeDefinition';
 
@@ -28,6 +29,8 @@ export function useBrainUpdates(
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>
 ) {
     const brain = useBrain();
+    const recentlyAddedNodes = useRef<Map<string, number>>(new Map());
+
     useEffect(() => {
 
         const handleGraphChange = (payload?: unknown) => {
@@ -71,11 +74,13 @@ export function useBrainUpdates(
                     // 1. Remove nodes not in Brain
                     for (let i = nextNodes.length - 1; i >= 0; i--) {
                         if (!brainNodes.has(nextNodes[i].id)) {
-                            console.warn(`[useBrainUpdates] Removing node ${nextNodes[i].id} because it is missing from Brain state.`, {
-                                nodeType: nextNodes[i].type,
-                                hasParent: !!nextNodes[i].parentId,
-                                currentNodesCount: nextNodes.length
-                            });
+                            // RECOVERY GUARD: Check for recently added nodes to prevent race removals
+                            const addedTime = recentlyAddedNodes.current.get(nextNodes[i].id);
+                            if (addedTime && Date.now() - addedTime < 150) {
+                                continue;
+                            }
+
+                            console.log(`[useBrainUpdates] Syncing node removal: ${nextNodes[i].id} (missing from Brain state)`);
                             nextNodes.splice(i, 1);
                             changed = true;
                         }
@@ -144,6 +149,7 @@ export function useBrainUpdates(
                                 style: style,
                                 selected: logicNode.selected || false
                             } as Node);
+                            recentlyAddedNodes.current.set(id, Date.now());
                             changed = true;
                         } else {
                             // Update existing node
@@ -152,7 +158,12 @@ export function useBrainUpdates(
 
                             // Check data changes
                             let dataChanged = false;
-                            if (!deepEqual(uiNode.data, targetData)) {
+                            
+                            // LOCAL STATE GUARD: If the node is currently being edited in the UI, 
+                            // we skip overwriting its data object to prevent losing user typing.
+                            const isNodeEditing = uiNode.data.isEditing === true || uiNode.data.isTyping === true;
+                            
+                            if (!isNodeEditing && !deepEqual(uiNode.data, targetData)) {
                                 dataChanged = true;
                                 needsUpdate = true;
                             }
@@ -181,8 +192,11 @@ export function useBrainUpdates(
                             }
 
                             if (needsUpdate || uiNode.selected !== logicNode.selected) {
-                                // Selection logic (UI wins for false-positives)
-                                const finalSelected = (uiNode.selected && !logicNode.selected) ? true : (logicNode.selected ?? false);
+                                // Selection logic: Trust UI during active interactions.
+                                // Brain selection only wins if we are restoring history (Undo/Redo) 
+                                // otherwise we trust UI to keep stable and Brain to deselect.
+                                const isRestoring = useHistoryStore.getState().isRestoring;
+                                const finalSelected = isRestoring ? (logicNode.selected ?? uiNode.selected) : logicNode.selected;
 
                                 nextNodes[existingIndex] = {
                                     ...uiNode,

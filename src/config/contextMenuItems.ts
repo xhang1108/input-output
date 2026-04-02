@@ -7,7 +7,7 @@ export interface ContextMenuItemDef {
     action: () => void;
 }
 
-interface ContextMenuActions {
+export interface ContextMenuActions {
     openPalette: (x: number, y: number) => void;
     resetView: () => void;
     pasteFromClipboard: () => void;
@@ -19,12 +19,14 @@ interface ContextMenuActions {
     deleteSelected: () => void;
     viewSpecs: () => void;
     alignSelectedNodes: (axis: 'X' | 'Y') => void;
+    traceUpstream: () => void;
     logAction: (msg: string) => void;
 }
 
 export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: number): ContextMenuItemDef[] {
     return [
         { label: 'Command Palette', shortcut: 'Shift+A', action: () => actions.openPalette(x, y) },
+        { label: 'Trace Upstream', shortcut: 'Alt+T', action: () => actions.traceUpstream() },
         { label: 'Reset View', action: () => actions.resetView() },
         { label: 'Paste', shortcut: 'Ctrl+V', action: () => actions.pasteFromClipboard() },
         { label: 'Select All', shortcut: 'A', action: () => actions.selectAll() },
@@ -36,6 +38,7 @@ export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: nu
 export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean = false): ContextMenuItemDef[] {
     const items: ContextMenuItemDef[] = [
         { label: 'Rename', shortcut: 'Enter', action: () => actions.rename() },
+        { label: 'Trace Upstream', shortcut: 'Alt+T', action: () => actions.traceUpstream() },
     ];
 
     if (hasSpecs) {

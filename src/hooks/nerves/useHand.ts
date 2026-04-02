@@ -66,7 +66,7 @@ export function useHand() {
     const lastAngleRef = useRef(0);
 
     // Drag Initiation
-    const pendingGrabStart = useRef<{ x: number, y: number, altKey: boolean } | null>(null);
+    const pendingGrabStart = useRef<{ x: number, y: number, altKey: boolean, nodeId?: string } | null>(null);
     const isResolvingRef = useRef(false);
 
     // Autopan
@@ -641,7 +641,7 @@ export function useHand() {
                         } else {
                             selectNode(nodeId, false);
                         }
-                        pendingGrabStart.current = { x: e.clientX, y: e.clientY, altKey: e.altKey };
+                        pendingGrabStart.current = { x: e.clientX, y: e.clientY, altKey: e.altKey, nodeId };
                     }
                 }
             }
@@ -666,7 +666,23 @@ export function useHand() {
             );
             const config = brain.getPhysicsConfig();
             if (dist > config.interaction.dragThreshold) {
-                startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey, undefined, false);
+                let overrideNodes: Node[] | undefined = undefined;
+
+                // Handle "Direct Grab": If the clicked node is not yet selected in UI 
+                // (due to React state lag), we force-inject it as the grab target.
+                const nodeId = pendingGrabStart.current.nodeId;
+                if (nodeId) {
+                    const uiNodes = getNodes();
+                    const clickedNode = uiNodes.find(n => n.id === nodeId);
+                    if (clickedNode && !clickedNode.selected) {
+                        overrideNodes = [clickedNode];
+                        // Persist Selection: Officially record the selection in Brain 
+                        // so it doesn't revert to unselected on MouseUp reconciliation.
+                        selectNode(nodeId, true);
+                    }
+                }
+
+                startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey, overrideNodes, false);
                 pendingGrabStart.current = null;
                 return;
             }

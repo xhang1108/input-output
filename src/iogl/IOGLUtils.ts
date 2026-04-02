@@ -11,18 +11,48 @@ import { IOGLSchema } from './manifest';
 export class IOGLUtils {
     /**
      * Shared logic for detecting booleans and numbers from raw strings.
+     * Also handles unescaping for quoted strings.
      */
     public static parseLiteral(val: string): any {
-        if (val === 'true') return true;
-        if (val === 'false') return false;
-        if (val === 'null') return null;
+        if (!val) return val;
+        
+        // 1. Quoted String handling (Robust Unescaping)
+        if (val.startsWith('"') && val.endsWith('"')) {
+            return this.unescapeString(val);
+        }
 
-        const n = parseFloat(val);
+        const trimmed = val.trim();
+        if (trimmed === 'true') return true;
+        if (trimmed === 'false') return false;
+        if (trimmed === 'null') return null;
+
+        const n = parseFloat(trimmed);
         // Flexible numeric check: Valid number and matches standard numeric pattern
-        if (!isNaN(n) && isFinite(n) && /^[ \t]*[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?[ \t]*$/.test(val)) {
+        if (!isNaN(n) && isFinite(n) && /^[ \t]*[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?[ \t]*$/.test(trimmed)) {
             return n;
         }
         return val;
+    }
+
+    /**
+     * Robustly unescapes an IOGL string using JSON standards.
+     * Handles multiline strings by temporarily escaping real newlines.
+     */
+    public static unescapeString(raw: string): string {
+        if (!raw) return '';
+        
+        // Ensure it has quotes for JSON.parse
+        let jsonStr = raw;
+        if (!jsonStr.startsWith('"')) jsonStr = `"${jsonStr}"`;
+        if (!jsonStr.endsWith('"')) jsonStr = `${jsonStr}"`;
+
+        // JSON doesn't allow literal newlines, so we temporarily escape them
+        // to let JSON.parse handle the REST of the standard escapes (\n, \t, etc.)
+        const sanitizedForJson = jsonStr
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r');
+            
+        return JSON.parse(sanitizedForJson);
     }
 
     /**

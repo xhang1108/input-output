@@ -4,19 +4,19 @@
 
 /**
  * Generates a unique label by appending an incremental suffix if a collision is detected.
- * Uses smart regex-based suffixing to prevent nested suffixes (e.g., [Math - 01 - 01]).
+ * Uses smart regex-based suffixing to prevent nested suffixes (e.g., [Math-01-01]).
  * 
  * @param suggested The initial label to check for uniqueness.
  * @param existing All currently existing labels in the context.
- * @returns A unique label with an optional '- 01' style suffix.
+ * @returns A unique label with an optional '-01' style suffix.
  */
 export function getUniqueLabel(suggested: string, existing: string[]): string {
-    if (!existing.includes(suggested)) {
+    const existingLower = existing.map(l => l.toLowerCase());
+    if (!existingLower.includes(suggested.toLowerCase())) {
         return suggested;
     }
 
-    // Regex to find a base and an existing suffix (e.g., "Math - 01" -> ["Math", "01"])
-    const suffixRegex = /(.*) - (\d+)$/;
+    const suffixRegex = /(.*)-(\d+)$/;
     const match = suggested.match(suffixRegex);
 
     let base = suggested;
@@ -30,7 +30,7 @@ export function getUniqueLabel(suggested: string, existing: string[]): string {
     let finalLabel = formatLabelWithSuffix(base, startNum);
     let attempts = startNum;
 
-    while (existing.includes(finalLabel)) {
+    while (existingLower.includes(finalLabel.toLowerCase())) {
         attempts++;
         finalLabel = formatLabelWithSuffix(base, attempts);
         
@@ -42,5 +42,5 @@ export function getUniqueLabel(suggested: string, existing: string[]): string {
 }
 
 function formatLabelWithSuffix(base: string, num: number): string {
-    return `${base} - ${num.toString().padStart(2, '0')}`;
+    return `${base}-${num.toString().padStart(2, '0')}`;
 }

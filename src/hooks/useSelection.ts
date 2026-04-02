@@ -38,8 +38,7 @@ export function useSelection() {
         const edgesToRemove = edges.filter(e => selectedIds.has(e.source) || selectedIds.has(e.target));
 
         const forward: Transaction[] = [
-            ...Array.from(selectedIds).map(id => ({ type: 'REMOVE_NODE' as const, payload: id })),
-            ...edgesToRemove.map(e => ({ type: 'DISCONNECT' as const, payload: e.id }))
+            ...Array.from(selectedIds).map(id => ({ type: 'REMOVE_NODE' as const, payload: id }))
         ];
 
         const inverse: Transaction[] = [
@@ -243,26 +242,48 @@ export function useSelection() {
 
     // --- Selection Helpers ---
     const clearSelection = useCallback(() => {
-        setNodes(nds => nds.map(n => ({ ...n, selected: false })));
-    }, [setNodes]);
+        const nodes = getNodes();
+        const txs: Transaction[] = nodes.filter(n => n.selected).map(n => ({
+            type: 'UPDATE_NODE_DATA',
+            payload: { id: n.id, data: { selected: false } }
+        }));
+        
+        if (txs.length > 0) {
+            brain.applyTransaction({ type: 'BATCH', payload: txs });
+        }
+
+        // Also clear UI edge selection
+        setEdges(eds => eds.map(e => e.selected ? { ...e, selected: false } : e));
+    }, [getNodes, brain, setEdges]);
 
     const selectNode = useCallback((id: string, exclusive: boolean = true) => {
-        setNodes(nds => {
-            const targetNode = nds.find(n => n.id === id);
-            if (!targetNode) return nds;
+        const nodes = getNodes();
+        const txs: Transaction[] = [];
 
-            const currentlySelectedIds = new Set(nds.filter(n => n.selected).map(n => n.id));
-            const newSelectedIds = new Set(exclusive ? [id] : [...currentlySelectedIds, id]);
+        if (exclusive) {
+            // Robust Exclusivity: Check the Brain's state directly, as UI (getNodes) 
+            // might be in the middle of a selection transition and show stale values.
+            const brainNodes = brain.getNodesMap();
+            for (const [nodeId, node] of brainNodes) {
+                if (node.selected && nodeId !== id) {
+                    txs.push({ type: 'UPDATE_NODE_DATA', payload: { id: nodeId, data: { selected: false } } });
+                }
+            }
 
-            const unselected = nds.filter(n => !newSelectedIds.has(n.id)).map(n => ({ ...n, selected: false }));
-            const selected = nds.filter(n => newSelectedIds.has(n.id)).map(n => ({ ...n, selected: true }));
+            // Also clear UI edge selection
+            setEdges(eds => eds.map(e => e.selected ? { ...e, selected: false } : e));
+        }
 
-            const selectedOthers = selected.filter(n => n.id !== id);
-            const target = selected.find(n => n.id === id)!;
+        const targetNode = nodes.find(n => n.id === id);
+        if (targetNode && !targetNode.selected) {
+            txs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { selected: true } } });
+        }
 
-            return [...unselected, ...selectedOthers, target];
-        });
-    }, [setNodes]);
+        if (txs.length > 0) {
+            // Use non-silent transaction to trigger graphChanged update for UI sync
+            brain.applyTransaction({ type: 'BATCH', payload: txs });
+        }
+    }, [getNodes, brain, setEdges]);
 
     return {
         deleteSelected,

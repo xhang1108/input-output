@@ -31,8 +31,9 @@ export class Brain {
     private dirtyNodes: Set<string> = new Set();
 
     private isInteracting = false;
+    private lastInteractingTime = 0;
+    private readonly INTERACTION_TIMEOUT = 30000;
     private interactionWatchdog: NodeJS.Timeout | null = null;
-    private readonly INTERACTION_TIMEOUT = 5000;
 
     private lastSolveMs = 0;
 
@@ -295,6 +296,7 @@ export class Brain {
     public setInteracting(value: boolean) {
         if (this.isDisposed) return;
         this.isInteracting = value;
+        if (value) this.lastInteractingTime = Date.now();
 
         if (this.interactionWatchdog) {
             clearTimeout(this.interactionWatchdog);
@@ -303,8 +305,11 @@ export class Brain {
 
         if (value) {
             this.interactionWatchdog = setTimeout(() => {
-                console.warn('️ [Brain] Interaction Watchdog Fired: Forcing resume.');
-                this.isInteracting = false;
+                const now = Date.now();
+                if (this.isInteracting && now - this.lastInteractingTime >= this.INTERACTION_TIMEOUT) {
+                    console.warn(`[Brain] Interaction Watchdog Fired: Forcing resume. (Recalculating: ${this.isRecalculating}, Dirty: ${this.dirtyNodes.size})`);
+                    this.setInteracting(false);
+                }
                 this.interactionWatchdog = null;
             }, this.INTERACTION_TIMEOUT);
         }
@@ -690,7 +695,7 @@ export class Brain {
     public resizeNode(id: string, width: number, height: number, oldSize?: { width: number; height: number }) {
         this.applyTransaction({
             type: 'RESIZE_NODE',
-            payload: { id, width, height, oldSize }
+            payload: { id, width: Math.round(width), height: Math.round(height), oldSize }
         });
     }
 
@@ -940,7 +945,9 @@ export class Brain {
             position: n.position || { x: 0, y: 0 },
             data: n.data,
             value: n.value,
-            parentId: n.parentId // Phase 4.1: Top-level parent tracking
+            parentId: n.parentId,
+            width: n.width,
+            height: n.height
         }));
 
         const edges = this.state.edges.map(e => ({
@@ -1042,7 +1049,7 @@ export class Brain {
         const node = this.state.nodes.get(id);
         if (!node) return;
         const abs = this.getAbsolutePosition(id);
-        node.boundingBox = { width: box.width, height: box.height, x: abs.x, y: abs.y };
+        node.boundingBox = { width: Math.round(box.width), height: Math.round(box.height), x: abs.x, y: abs.y };
     }
 
     /**
@@ -1298,8 +1305,6 @@ export class Brain {
             const shouldAutoLayout = !skipLayout && !graph.hasExplicitPositions && graph.nodes.length <= 100;
             if (shouldAutoLayout) {
                 this.emit('RE-LAYOUT', null);
-            } else if (graph.nodes.length > 100) {
-                diagnostics.push(`[Performance] Auto-layout skipped for ${graph.nodes.length} nodes to prevent UI freeze. Use 'L' to layout manually.`);
             }
 
             // Phase 4.1: injectNodes = full graph change → force Worker sync
