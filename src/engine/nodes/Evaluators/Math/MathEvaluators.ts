@@ -481,7 +481,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const isCustom = data.unit === 'CUSTOM';
         const targetUnit = isCustom ? data.customUnit : (data.unit || 'm');
         const valPayload = inputs['in_a'];
-        if (!valPayload) return PayloadUtils.createScalar(0);
+        if (!valPayload) return PayloadUtils.createScalar(0, targetUnit);
 
         try {
             const raw = PayloadUtils.unwrap(valPayload);

@@ -413,10 +413,10 @@ export class Brain {
     // Deep propagation will now happen stepwise during recalculateDirtyChain
     // if and only if the parent's actual computed value changed.
     private triggerDirtyChain(startNodeId: string) {
-        this.topology.triggerDirtyChain(startNodeId, this.state.nodes);
-        // Sync the Set with any nodes the topology manager might have marked
-        for (const [id, node] of this.state.nodes) {
-            if (node.isInDirtyChain) this.dirtyNodes.add(id);
+        const affectedIds = this.topology.triggerDirtyChain(startNodeId, this.state.nodes);
+        // Sync the Set with only the nodes the topology manager actually marked
+        for (const id of affectedIds) {
+            this.dirtyNodes.add(id);
         }
     }
 
