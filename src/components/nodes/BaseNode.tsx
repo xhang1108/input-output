@@ -11,6 +11,7 @@ import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
 import { useHistoryStore } from '../../store/useHistoryStore';
+import { getUniqueLabel } from '../../utils/labelUtils';
 
 // Re-export HandleConfig for backward compatibility
 export type { HandleConfig } from '../../types/NodeDefinition';
@@ -97,15 +98,32 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     };
 
     const handleSubmit = () => {
-        if (isError) return;
+        if (title.trim() === '') return;
         commitRename();
         setIsRenaming(false);
     };
 
     const commitRename = () => {
+        const trimmed = title.trim();
         const currentLabel = (data.label as string) || '';
-        if (title.trim() !== currentLabel) {
-            const forwardTx = { type: 'UPDATE_NODE_DATA' as const, payload: { id, data: { label: title } } };
+
+        if (trimmed === '') {
+            setTitle(currentLabel);
+            return;
+        }
+
+        // Performance: Use the pre-scanned labels from handleRename fallback or live scan
+        // Actually, better to live scan to be safe
+        const allLabels = Array.from(brain.getNodesMap().values())
+            .filter(n => n.id !== id)
+            .map(n => n.data?.label as string)
+            .filter(Boolean);
+
+        const finalizedLabel = getUniqueLabel(trimmed, allLabels);
+        setTitle(finalizedLabel);
+
+        if (finalizedLabel !== currentLabel) {
+            const forwardTx = { type: 'UPDATE_NODE_DATA' as const, payload: { id, data: { label: finalizedLabel } } };
             const inverseTx = { type: 'UPDATE_NODE_DATA' as const, payload: { id, data: { label: currentLabel } } };
 
             // 1. APPLY TO BRAIN
@@ -114,29 +132,25 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             // 2. RECORD TO HISTORY
             pushHistory({
                 id: `rename_${id}_${Date.now()}`,
-                description: `Rename node: ${title}`,
+                description: `Rename node: ${finalizedLabel}`,
                 forward: [forwardTx],
                 inverse: [inverseTx]
             });
 
             // 3. IMMEDIATE UI UPDATE
-            updateNodeData(id, { label: title });
+            updateNodeData(id, { label: finalizedLabel });
         }
     };
 
     const handleBlur = () => {
-        if (isError) {
-            setTitle((data.label as string) || 'Node');
-            setIsError(false);
-        } else {
-            commitRename();
-        }
+        commitRename();
+        setIsError(false);
         setIsRenaming(false);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
-            if (isError) {
+            if (title.trim() === '') {
                 e.preventDefault();
             } else {
                 handleSubmit();

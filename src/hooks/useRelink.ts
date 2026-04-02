@@ -142,7 +142,7 @@ export function useRelink({
     removedEdgesBackup.current = [];
     }, [edges, brain, pushHistory]);
 
-    /** Helper to transform internal IDs like 'MA-01_hash:in_a' to '[Basic Math - 01] A' */
+    /** Helper to transform internal IDs like 'MA-01_hash:in_a' to '[Basic Math-01] A' */
     const formatIdentifier = useCallback((id: string) => {
         // Regex to find 'NodeID:HandleID' or just 'NodeID'
         return id.replace(/([A-Z0-9-]+)_([a-z0-9]+)(:[a-z0-9_]+)?/g, (match, typeId, hash, handlePart) => {
