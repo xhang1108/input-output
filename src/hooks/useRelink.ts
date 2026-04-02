@@ -537,39 +537,6 @@ export function useRelink({
                     inverse
                 });
                 logAction(`Relink failed or dropped — connection deleted physically`);
-            } else {
-                // Check for Smart Link Trigger
-                if (capturedStartParams?.nodeId && onSmartLinkSearch) {
-                    logAction(`Smart Link Triggered from ${capturedStartParams.nodeId}`);
-                    let screenX, screenY;
-                    if ('clientX' in event) {
-                        screenX = (event as MouseEvent).clientX;
-                        screenY = (event as MouseEvent).clientY;
-                    } else {
-                        const touch = (event as TouchEvent).changedTouches[0] || (event as TouchEvent).touches[0];
-                        screenX = touch?.clientX || 0;
-                        screenY = touch?.clientY || 0;
-                    }
-
-                    const startNode = brain.getNode(capturedStartParams.nodeId);
-                    const startNodeDef = NODE_DEFINITIONS.find(d => d.id === startNode?.type);
-                    const startHandleDef = (startNode?.data?.handles as any[])?.find(h => h.id === capturedStartParams?.handleId)
-                        || startNodeDef?.handles.find((h: any) => h.id === capturedStartParams?.handleId);
-
-                    const handleColor = startHandleDef 
-                        ? (startHandleDef.dynamicColor && startNode?.data 
-                            ? getHandleColorByConfig({ ...startHandleDef, dataType: startHandleDef.dynamicColor(startNode.data) })
-                            : getHandleColorByConfig(startHandleDef)) 
-                        : 'var(--color-any)';
-
-                    onSmartLinkSearch({
-                        nodeId: capturedStartParams.nodeId,
-                        handleId: capturedStartParams.handleId!,
-                        handleType: capturedStartParams.handleType as 'source' | 'target',
-                        handleColor,
-                        position: { x: screenX, y: screenY }
-                    });
-                }
             }
             
             resetRelink();
@@ -584,6 +551,37 @@ export function useRelink({
                     sourceHandle: capturedStartParams.handleId || null,
                     target: MagneticSnapState.nodeId!,
                     targetHandle: MagneticSnapState.handleId! || null,
+                });
+            } else if (!nativeConnectWillFire && !toNode && capturedStartParams?.nodeId && onSmartLinkSearch) {
+                // SMART LINK: Trigger menu if dropped in air
+                logAction(`Smart Link Triggered from ${capturedStartParams.nodeId}`);
+                let screenX, screenY;
+                if ('clientX' in event) {
+                    screenX = (event as MouseEvent).clientX;
+                    screenY = (event as MouseEvent).clientY;
+                } else {
+                    const touch = (event as TouchEvent).changedTouches[0] || (event as TouchEvent).touches[0];
+                    screenX = touch?.clientX || 0;
+                    screenY = touch?.clientY || 0;
+                }
+
+                const startNode = brain.getNode(capturedStartParams.nodeId);
+                const startNodeDef = NODE_DEFINITIONS.find(d => d.id === startNode?.type);
+                const startHandleDef = (startNode?.data?.handles as any[])?.find(h => h.id === capturedStartParams?.handleId)
+                    || startNodeDef?.handles.find((h: any) => h.id === capturedStartParams?.handleId);
+
+                const handleColor = startHandleDef 
+                    ? (startHandleDef.dynamicColor && startNode?.data 
+                        ? getHandleColorByConfig({ ...startHandleDef, dataType: startHandleDef.dynamicColor(startNode.data) })
+                        : getHandleColorByConfig(startHandleDef)) 
+                    : 'var(--color-any)';
+
+                onSmartLinkSearch({
+                    nodeId: capturedStartParams.nodeId,
+                    handleId: capturedStartParams.handleId!,
+                    handleType: capturedStartParams.handleType as 'source' | 'target',
+                    handleColor,
+                    position: { x: screenX, y: screenY }
                 });
             }
         }
