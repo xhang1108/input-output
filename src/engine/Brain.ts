@@ -446,9 +446,10 @@ export class Brain {
         }
     }
 
-    private markAllDirty() {
+    public markAllDirty() {
         this.state.nodes.forEach(node => {
             node.isInDirtyChain = true;
+            this.dirtyNodes.add(node.id);
         });
     }
 
@@ -569,14 +570,9 @@ export class Brain {
      */
     private async recalculateDirtyChain(): Promise<Map<string, NodePayload>> {
         const patches = new Map<string, NodePayload>();
-        console.log('[Brain] recalculateDirtyChain, useWorker:', this.worker.useWorker, 'hasProxy:', !!this.worker.workerProxy);
 
         if (this.worker.useWorker && this.worker.workerProxy) {
-            console.log('[Brain] Requesting worker EVAL');
             const workerPatches = await this.worker.workerProxy.evaluate();
-            // Assuming workerPatches is already a Map<string, NodePayload> or similar
-            // If it's an array of objects, you might need to convert it.
-            // For now, let's assume it's directly usable to populate `patches`.
             workerPatches.forEach((payload: NodePayload, id: string) => {
                 patches.set(id, payload);
                 const node = this.state.nodes.get(id);
@@ -585,23 +581,33 @@ export class Brain {
                     node.isInDirtyChain = false;
                 }
             });
-            return patches; // Exit early if worker handles evaluation
+            return patches;
         }
-
-        const dirtyChainNodeIds = Array.from(this.state.nodes.values())
-            .filter(n => n.isInDirtyChain)
-            .map(n => n.id);
 
         // Pulse Protection: Clear the visual tracking set to avoid infinite heartbeats
         this.dirtyNodes.clear();
 
-        for (const id of dirtyChainNodeIds) {
-            const node = this.state.nodes.get(id);
-            if (!node) continue;
+        // ── Convergence Loop (V5.6.0 Fix) ──
+        // Support multi-step propagation in a single heartbeat for non-worker mode.
+        let maxPasses = 500;
+        while (maxPasses-- > 0) {
+            const dirtyChainNodeIds = Array.from(this.state.nodes.values())
+                .filter(n => n.isInDirtyChain)
+                .map(n => n.id);
 
-            // Trigger Pull
-            const newPayload = await this.getValue(id);
-            patches.set(id, newPayload);
+            if (dirtyChainNodeIds.length === 0) break;
+
+            for (const id of dirtyChainNodeIds) {
+                const node = this.state.nodes.get(id);
+                if (!node) continue;
+
+                const newPayload = await this.getValue(id);
+                patches.set(id, newPayload);
+            }
+        }
+
+        if (maxPasses <= 0) {
+            console.warn('[Brain] Convergence limit hit during main-thread recalculation.');
         }
 
         return patches;
@@ -1302,7 +1308,8 @@ export class Brain {
                 this.emit('RE-LAYOUT', null);
             }
 
-            // Phase 4.1: injectNodes = full graph change → force Worker sync
+            // Phase 4.1: injectNodes = full graph change → force Worker sync and full re-eval
+            this.markAllDirty();
             if (this.worker.isEnabled()) {
                 this.syncWorker();
             }
