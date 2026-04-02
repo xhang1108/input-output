@@ -1305,8 +1305,6 @@ export class Brain {
             const shouldAutoLayout = !skipLayout && !graph.hasExplicitPositions && graph.nodes.length <= 100;
             if (shouldAutoLayout) {
                 this.emit('RE-LAYOUT', null);
-            } else if (graph.nodes.length > 100) {
-                diagnostics.push(`[Performance] Auto-layout skipped for ${graph.nodes.length} nodes to prevent UI freeze. Use 'L' to layout manually.`);
             }
 
             // Phase 4.1: injectNodes = full graph change → force Worker sync

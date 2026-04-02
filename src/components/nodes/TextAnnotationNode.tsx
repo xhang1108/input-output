@@ -41,7 +41,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
     const [prevMarkdown, setPrevMarkdown] = useState(data.markdown);
 
     // --- Debounced Brain Sync ---
-    // Rule #4: 50ms delay for Brain update on transient state (using 400ms for heavy text)
+    // Rule #4: 50ms delay for Brain update on transient state
     useEffect(() => {
         if (!isEditing || data.markdown === prevMarkdown) return;
 
@@ -51,7 +51,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                 payload: { id, data: { markdown: data.markdown } }
             });
             setPrevMarkdown(data.markdown);
-        }, 400);
+        }, 50);
 
         return () => clearTimeout(timer);
     }, [data.markdown, isEditing, id, brain, prevMarkdown]);
@@ -74,17 +74,27 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         const currentValue = e.target.value; // Stale State Defense: Direct DOM Access
         const initialValue = originalValue.current;
 
-        if (initialValue !== null && initialValue !== currentValue && !isRestoring) {
-            pushHistory({
-                id: `edit_${id}_${Date.now()}`,
-                description: 'Edit Text',
-                forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: currentValue } } }],
-                inverse: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: initialValue } } }]
+        // Immediate SSOT Sync: Force Brain to accept the final value BEFORE we toggle isEditing.
+        // This prevents useBrainUpdates from seeing 'isEditing: false' and reverting to old Brain data.
+        if (initialValue !== null && initialValue !== currentValue) {
+            brain.applyTransaction({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id, data: { markdown: currentValue } }
             });
+
+            if (!isRestoring) {
+                pushHistory({
+                    id: `edit_${id}_${Date.now()}`,
+                    description: 'Edit Text',
+                    forward: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: currentValue } } }],
+                    inverse: [{ type: 'UPDATE_NODE_DATA', payload: { id, data: { markdown: initialValue } } }]
+                });
+            }
         }
+
         originalValue.current = null;
         updateNodeData(id, { isEditing: false });
-    }, [id, pushHistory, isRestoring, updateNodeData]);
+    }, [id, pushHistory, isRestoring, updateNodeData, brain]);
 
     const toggleEdit = useCallback(() => {
         if (!isEditing) {

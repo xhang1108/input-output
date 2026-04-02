@@ -187,11 +187,6 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
                         </div>
                     )}
 
-                    {isProcessing && progress && progress.total > 200 && (
-                        <div className="text-[10px] text-warning/60 bg-warning/5 border border-warning/10 rounded-sm mt-2 italic text-center">
-                            Large graph detected. Auto-layout skipped to maintain performance.
-                        </div>
-                    )}
 
                     {success && (
                         <div className="text-xs text-success bg-success/10 border border-success/20 p-2 rounded flex items-center gap-2">

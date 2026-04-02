@@ -1,3 +1,4 @@
+import { IOGLUtils } from './IOGLUtils';
 
 export type TokenType =
   | 'LBRACKET' | 'RBRACKET'  // []
@@ -137,18 +138,35 @@ export class Lexer {
   private readQuotedString(): Token {
     const startLine = this.line;
     const startCol = this.col;
-    this.advanceChars(1);
-    let val = '';
-    while (this.pos < this.input.length && this.input[this.pos] !== '"') {
-      if (this.input[this.pos] === '\\' && this.input[this.pos + 1] === '"') {
-        val += '"';
-        this.advanceChars(2);
-      } else {
-        val += this.input[this.pos];
-        this.advanceChars(1);
+    const startPos = this.pos;
+    
+    // 1. Find the closing quote, respecting escapes
+    this.advanceChars(1); // Skip opening "
+    while (this.pos < this.input.length) {
+      if (this.input[this.pos] === '"') {
+        // Count preceding backslashes to check if this quote is escaped
+        let backslashes = 0;
+        let i = this.pos - 1;
+        while (i >= 0 && this.input[i] === '\\') {
+          backslashes++;
+          i--;
+        }
+        if (backslashes % 2 === 0) break; // Even number = quote is NOT escaped (or escape is double-escaped)
       }
+      this.advanceChars(1);
     }
-    if (this.input[this.pos] === '"') this.advanceChars(1);
+    
+    if (this.pos < this.input.length) {
+      this.advanceChars(1); // Skip closing "
+    } else {
+      // Unclosed string: return what we have (parser will handle)
+      console.warn(`[Lexer] Unclosed quoted string at ${startLine}:${startCol}`);
+    }
+    
+    const raw = this.input.substring(startPos, this.pos);
+    
+    // 2. Unescape using centralized utility (JSON Standard compliant)
+    const val = IOGLUtils.unescapeString(raw);
     return { type: 'RAW_VALUE', value: val, line: startLine, col: startCol };
   }
 
