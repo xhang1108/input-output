@@ -838,11 +838,6 @@ export class Brain {
                 if (handleFromData) return handleFromData.type;
             }
 
-            if (node.type === 'SY-05') {
-                if (handleId === 'out') return 'source';
-                return 'target';
-            }
-
             // 3. Check Static Definition
             const def = NODE_DEFINITIONS.find(d => d.id === node.type);
             if (!def) return null;
