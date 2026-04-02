@@ -125,15 +125,25 @@ export function useAutoLayout(
                     const found = finalNodes.find(ln => ln.id === n.id);
                     return found ? found : n;
                 }));
+                
+                // --- Brain Persistence for Partial Layout ---
+                brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+
                 logAction('Layout Selected (L)');
             } else {
                 setNodes([...finalNodes]);
                 setEdges([...layouted.edges]);
+                
+                // --- Brain Persistence (V5 Final) ---
+                // We apply the transaction directly to Brain so it's committed 
+                // BEFORE any subsequent user interaction/sync.
+                brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+
                 setTimeout(() => fitView({ duration: 800 }), 50); // Global focus
                 logAction('Layout Global (L)');
             }
         }
-    }, [setNodes, setEdges, layoutAlgorithm, logAction, fitView, interactionMode, isRestoring, pushHistory, getNodes, getEdges]);
+    }, [brain, setNodes, setEdges, layoutAlgorithm, logAction, fitView, interactionMode, isRestoring, pushHistory, getNodes, getEdges]);
 
 
     // --- Interaction & Queuing Logic (v4 Final) ---
@@ -189,10 +199,19 @@ export function useAutoLayout(
                 direction: 'RIGHT'
             });
 
-            setNodes([...layouted.nodes]);
-            setEdges([...layouted.edges]);
-            setTimeout(() => fitView({ duration: 800 }), 50);
-            logAction('Layout Triggered via Brain (RE-LAYOUT)');
+            // --- Brain Persistence for Remote Triggers ---
+            const forward: Transaction[] = layouted.nodes.map(n => ({
+                type: 'MOVE_NODE',
+                payload: { id: n.id, position: { ...n.position } }
+            }));
+
+            if (forward.length > 0) {
+                brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+                setNodes([...layouted.nodes]);
+                setEdges([...layouted.edges]);
+                setTimeout(() => fitView({ duration: 800 }), 50);
+                logAction('Layout Triggered via Brain (RE-LAYOUT)');
+            }
         });
 
         return () => {
