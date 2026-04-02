@@ -182,7 +182,7 @@ export function useBrainUpdates(
 
                             if (needsUpdate || uiNode.selected !== logicNode.selected) {
                                 // Selection logic (UI wins for false-positives)
-                                const finalSelected = (uiNode.selected && !logicNode.selected) ? true : (logicNode.selected ?? false);
+                                const finalSelected = logicNode.selected ?? uiNode.selected;
 
                                 nextNodes[existingIndex] = {
                                     ...uiNode,

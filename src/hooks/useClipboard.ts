@@ -71,14 +71,21 @@ export function useClipboard() {
 
         const { newNodes, newEdges } = cloneElements(selectedNodes, edgesToClone, { x: 20, y: 20 });
 
+        const deselectTxs: Transaction[] = selectedNodes.map(n => ({
+            type: 'UPDATE_NODE_DATA',
+            payload: { id: n.id, data: { selected: false } }
+        } as Transaction));
+
         const forwardTxs: Transaction[] = [
+            ...deselectTxs,
             ...newNodes.map((n: Node) => ({ type: 'ADD_NODE', payload: n } as Transaction)),
             ...newEdges.map((e: Edge) => ({ type: 'CONNECT', payload: e } as Transaction))
         ];
 
         const inverseTxs: Transaction[] = [
             ...newEdges.map((e: Edge) => ({ type: 'DISCONNECT', payload: e.id } as Transaction)),
-            ...newNodes.map((n: Node) => ({ type: 'REMOVE_NODE', payload: n.id } as Transaction))
+            ...newNodes.map((n: Node) => ({ type: 'REMOVE_NODE', payload: n.id } as Transaction)),
+            ...selectedNodes.map(n => ({ type: 'UPDATE_NODE_DATA', payload: { id: n.id, data: { selected: true } } } as Transaction))
         ];
 
         brain.applyTransaction({ type: 'BATCH', payload: forwardTxs });
@@ -90,13 +97,8 @@ export function useClipboard() {
             inverse: inverseTxs
         });
 
-        // UI Update (Optimistic)
-        rfSetEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
-        // Note: setNodes is handled by brain sync, but we can do it here for zero-latency
-        setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
-
         return { nodes: newNodes, edges: newEdges };
-    }, [getNodes, getEdges, setNodes, rfSetEdges, cloneElements, brain, pushHistory]);
+    }, [getNodes, getEdges, rfSetEdges, cloneElements, brain, pushHistory]);
 
     // --- Command: Copy to Clipboard ---
     const copyToClipboard = useCallback(() => {
@@ -141,16 +143,24 @@ export function useClipboard() {
                 };
             }
 
+            const selectedNodes = getNodes().filter(n => n.selected);
+            const deselectTxs: Transaction[] = selectedNodes.map(n => ({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id: n.id, data: { selected: false } }
+            } as Transaction));
+
             const { newNodes, newEdges } = cloneElements(clipboardNodes, clipboardEdges, offset);
 
             const forwardTxs: Transaction[] = [
+                ...deselectTxs,
                 ...newNodes.map((n: Node) => ({ type: 'ADD_NODE', payload: n } as Transaction)),
                 ...newEdges.map((e: Edge) => ({ type: 'CONNECT', payload: e } as Transaction))
             ];
 
             const inverseTxs: Transaction[] = [
                 ...newEdges.map((e: Edge) => ({ type: 'DISCONNECT', payload: e.id } as Transaction)),
-                ...newNodes.map((n: Node) => ({ type: 'REMOVE_NODE', payload: n.id } as Transaction))
+                ...newNodes.map((n: Node) => ({ type: 'REMOVE_NODE', payload: n.id } as Transaction)),
+                ...selectedNodes.map(n => ({ type: 'UPDATE_NODE_DATA', payload: { id: n.id, data: { selected: true } } } as Transaction))
             ];
 
             brain.applyTransaction({ type: 'BATCH', payload: forwardTxs });
@@ -162,13 +172,10 @@ export function useClipboard() {
                 inverse: inverseTxs
             });
 
-            rfSetEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges]);
-            setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
-
         } catch (e) {
             console.error("Failed to paste items", e);
         }
-    }, [setNodes, rfSetEdges, cloneElements, brain, pushHistory]);
+    }, [getNodes, rfSetEdges, cloneElements, brain, pushHistory]);
 
     return {
         duplicateSelected,
