@@ -5,23 +5,23 @@
 [Price moving] IN-02 -0.1, -2, 2, 0.1 @353,64
 [Basic Math-01] MA-01 { mode: "ADD" } @1113,218
 [Home to Gas Station] IN-01 5 @351,685
-[Unit] TR-01 "" @1111,481
+[Unit] TR-01 "km" @1111,481
 [Litre] IN-02 9, 0, 50, 1 @353,989
 [KM] IN-02 100, 0, 100, 1 @353,1199
 [Basic Math-03] MA-01 { mode: "MUL" } @1287,481
 [Number] IN-01 2 @1287,610
 [Return distance] OT-01 { mode: "auto" } @2350,582
 [Unit-01] TR-01 "l" @1161,850
-[Unit-02] TR-01 "" @1161,1009
+[Unit-02] TR-01 "km" @1161,1009
 [Basic Math-02] MA-01 { mode: "DIV" } @1342,850
 [Basic Math-04] MA-01 { mode: "DIV" } @1342,1009
-[Result] OT-01 "-1" { mode: "auto" } @571,926
-[Result-03] OT-01 "2" { mode: "auto" } @571,1179
+[Result] OT-01 -1 { mode: "auto" } @571,926
+[Result-03] OT-01 2 { mode: "auto" } @571,1179
 [Basic Math-05] MA-01 { mode: "DIV" } @1506,1008
 [Fuel to station] OT-01 { mode: "auto" } @2350,835
 [Basic Math-06] MA-01 { mode: "MUL" } @1669,1010
 [Cost to station] OT-01 { mode: "auto" } @2350,1085
-[Unit-03] TR-01 "" @1857,1017
+[gggg] TR-01 "" @1857,1017
 [Basic Math-07] MA-01 { mode: "MUL" } @1287,96
 [Diff] OT-01 { mode: "auto" } @2630,134
 [Basic Math-08] MA-01 { mode: "MUL" } @1285,350
