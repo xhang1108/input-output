@@ -60,15 +60,15 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: {
             type: 'color',
-            value: { 
-                type: 'color', 
+            value: {
+                type: 'color',
                 value: {
                     hex: '#3b82f6',
                     rgb: [59, 130, 246],
                     vec3: [0.231, 0.510, 0.965]
-                }, 
-                symbol: null, 
-                meta: { role: 'color' } 
+                },
+                symbol: null,
+                meta: { role: 'color' }
             }
         },
         params: [
@@ -229,10 +229,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'max', label: 'Max', type: 'number', hidden: (d: any) => d.mode !== 'Uniform' },
             { id: 'mean', label: 'Mean (μ)', type: 'number', hidden: (d: any) => d.mode !== 'Normal' },
             { id: 'stdDev', label: 'StdDev (σ)', type: 'number', min: 0, hidden: (d: any) => d.mode !== 'Normal' },
-            { id: 'lambda', label: 'Lambda (λ)', type: 'number', min: 0.0001, hidden: (d: any) => {
-                const mode = String(d.mode || '').split(':')[0];
-                return mode !== 'Poisson' && mode !== 'Exponential' && mode !== 'Exp';
-            } },
+            {
+                id: 'lambda', label: 'Lambda (λ)', type: 'number', min: 0.0001, hidden: (d: any) => {
+                    const mode = String(d.mode || '').split(':')[0];
+                    return mode !== 'Poisson' && mode !== 'Exponential' && mode !== 'Exp';
+                }
+            },
             { id: 'rows', label: 'Rows', type: 'number', min: 1, step: 1 },
             { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1 }
         ]
@@ -298,12 +300,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         category: 'Math',
         handles: [
             { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'x' },
-            { 
-                id: 'in_b', 
-                type: 'target', 
-                position: Position.Left, 
-                variant: 'single', 
-                dataType: 'scalar', 
+            {
+                id: 'in_b',
+                type: 'target',
+                position: Position.Left,
+                variant: 'single',
+                dataType: 'scalar',
                 label: 'Base',
                 hidden: (d) => d.mode !== 'LOGN'
             },
@@ -402,30 +404,30 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Divisibility & Primes',
         category: 'Math',
         handles: [
-            { 
-                id: 'in_a', 
-                type: 'target', 
-                position: Position.Left, 
-                variant: 'single', 
-                dataType: 'array', 
+            {
+                id: 'in_a',
+                type: 'target',
+                position: Position.Left,
+                variant: 'single',
+                dataType: 'array',
                 label: 'A',
                 dynamicColor: (d) => d.mode === 'MOD' ? 'scalar' : 'array'
             },
-            { 
-                id: 'in_b', 
-                type: 'target', 
-                position: Position.Left, 
-                variant: 'single', 
-                dataType: 'scalar', 
+            {
+                id: 'in_b',
+                type: 'target',
+                position: Position.Left,
+                variant: 'single',
+                dataType: 'scalar',
                 label: 'B',
                 hidden: (d) => d.mode === 'ISPRIME',
                 dynamicColor: (d) => d.mode === 'MOD' ? 'scalar' : 'array'
             },
-            { 
-                id: 'out_a', 
-                type: 'source', 
-                position: Position.Right, 
-                variant: 'single', 
+            {
+                id: 'out_a',
+                type: 'source',
+                position: Position.Right,
+                variant: 'single',
                 dataType: 'scalar',
                 dynamicColor: (d) => d.mode === 'ISPRIME' ? 'array' : 'scalar'
             }
@@ -720,6 +722,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             {
                 id: 'unit', label: 'Unit', type: 'select', options: [
+                    { label: 'REMOVE UNIT', value: 'REMOVE' },
                     { label: 'Meter (m)', value: 'm' },
                     { label: 'Centimeter (cm)', value: 'cm' },
                     { label: 'Millimeter (mm)', value: 'mm' },
@@ -1035,6 +1038,20 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'reroute' },
         draggable: false
+    },
+    {
+        id: 'UT-03',
+        label: 'Concatenate',
+        category: 'Utility',
+        handles: [
+            { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'any', label: 'Inputs' },
+            { id: 'out_a', type: 'source', variant: 'single', dataType: 'string', label: 'Text' }
+        ],
+        defaultData: { delimiter: '' },
+        aliases: ['join', 'concat', 'string builder', 'text join'],
+        params: [
+            { id: 'delimiter', label: 'Delimiter', type: 'string', hint: 'Separator between inputs' }
+        ]
     }
 ];
 

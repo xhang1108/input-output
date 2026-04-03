@@ -24,7 +24,9 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
 
         const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
 
-        const payload = PayloadUtils.createScalar(val, extractedUnit);
+        const payload = PayloadUtils.wrap(val);
+        if (extractedUnit) payload.meta.unit = extractedUnit;
+        
         return {
             ...payload,
             meta: { ...payload.meta, ...original.meta, unit: extractedUnit }
@@ -69,23 +71,27 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     'OT-01': (node, inputs) => {
         const payload = inputs['in_a'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as Record<string, unknown>;
-        const precision = data.precision as number | undefined;
+        const rawPrec = data.precision;
+        const precision = (typeof rawPrec === 'string' || typeof rawPrec === 'number') ? parseInt(String(rawPrec)) : undefined;
 
-        if (precision !== undefined && (payload.type === DataType.Scalar || payload.type === DataType.Array)) {
+        if (precision !== undefined && !isNaN(precision) && (payload.type === DataType.Scalar || payload.type === DataType.Array)) {
             const math = InputOutputEngine.getInstance().getMathInstance();
             const val = PayloadUtils.unwrap(payload);
             try {
                 const hydrated = PayloadUtils.hydrate(val, math);
-                // Fix: Handle plain Arrays as well as mathjs objects
                 const rounded = (typeof hydrated === 'number' || Array.isArray(hydrated) || (hydrated && typeof hydrated === 'object' && ((hydrated as any).isBigNumber || (hydrated as any).isFraction || (hydrated as any).isComplex || (hydrated as any).isMatrix)))
                     ? math.round(hydrated, precision)
                     : hydrated;
 
-                const wrapped = PayloadUtils.wrap(rounded);
-                return {
-                    ...wrapped,
-                    meta: { ...payload.meta, ...wrapped.meta }
-                };
+                if (payload.type === DataType.Array) {
+                    const result = PayloadUtils.createArray(rounded, payload.meta?.unit);
+                    return {
+                        ...result,
+                        meta: { ...payload.meta, ...result.meta }
+                    };
+                }
+                
+                return PayloadUtils.createScalar(rounded, payload.meta?.unit);
             } catch (e: any) {
                 console.error(`[OT-01] Precision Failed: ${e.message}`, { val, precision });
                 return payload;
@@ -130,7 +136,43 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     // TR-07 is now redundant and has been merged into IN-03.
     // Logic extracted to ColorUtils.ts for better reuse.
     'UT-03': (node, inputs) => {
-        return inputs['in_a'] || PayloadUtils.createArray([]);
+        const data = (node.data || {}) as Record<string, unknown>;
+        const delimiter = String(data.delimiter ?? '');
+        const rawInput = inputs['in_a'];
+
+        // Normalize capsule input to array of payloads
+        let payloadList: any[] = [];
+        if (Array.isArray(rawInput)) {
+            payloadList = rawInput;
+        } else if (rawInput && typeof rawInput === 'object') {
+            // Handle multi-link object if provided by engine as such
+            const rv = rawInput as any;
+            if (rv.type === 'object' && rv.value && typeof rv.value === 'object' && !Array.isArray(rv.value) && !('type' in rv.value)) {
+                payloadList = Object.values(rv.value).flat() as any[];
+            } else if ('type' in rawInput) {
+                payloadList = [rawInput];
+            }
+        }
+
+        // Map to string representations and join
+        const result = payloadList
+            .map(p => {
+                const val = PayloadUtils.unwrap(p);
+                if (val === null || val === undefined) return '';
+
+                const baseStr = String(val);
+                const unit = p.meta?.unit;
+
+                // If unit exists and is not empty, append it
+                if (unit && typeof unit === 'string' && unit.trim() !== '') {
+                    return baseStr + unit;
+                }
+
+                return baseStr;
+            })
+            .join(delimiter);
+
+        return PayloadUtils.createString(result);
     },
     'IN-08': (node) => {
         let total = 0;

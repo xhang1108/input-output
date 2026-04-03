@@ -210,5 +210,6 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
 
   // --- 7. Utility Family ---
   "UT-01": { modeProperty: "bgColor", data: ["markdown", "textSize"], auxiliary: ["width", "height"] },
-  "UT-02": { ...SINGLE_IN, ...SINGLE_OUT }
+  "UT-02": { ...SINGLE_IN, ...SINGLE_OUT },
+  "UT-03": { inputs: ["in_a"], ...SINGLE_OUT, data: ["delimiter"] }
 };

@@ -11,6 +11,7 @@ import { NodeOpSelect } from './NodeOpSelect';
 import { CategorizedMenuItem } from '../ui/CategorizedMenu';
 
 const PREDEFINED_UNIT_IDS = [
+    'REMOVE',
     'm', 'cm', 'mm', 'km', 'ft', 'in',
     'kg', 'g', 'lb',
     's', 'min', 'h',
