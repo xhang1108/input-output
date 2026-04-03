@@ -46,24 +46,15 @@ export const UnitNode = memo((props: NodeProps) => {
         }
     }, [remoteUnit, remoteCustom]);
 
-    const validateAndApply = useCallback((unit: string, forceCustom: boolean = false) => {
-        const math = InputOutputEngine.getInstance().getMathInstance();
-        let isMathJSUnit = false;
-        try {
-            math.unit(unit);
-            isMathJSUnit = true;
-        } catch (e) {
-            isMathJSUnit = false;
-        }
-
-        setIsValid(true); // Always valid as a label now
-
+    const validateAndApply = useCallback((unit: string, forceCustom: boolean = false, overrideMode?: 'select' | 'custom') => {
+        const activeMode = overrideMode || mode;
         const updates: any = {};
-        if (forceCustom || mode === 'custom') {
+        if (forceCustom || activeMode === 'custom') {
             updates.unit = 'CUSTOM';
             updates.customUnit = unit;
         } else {
             updates.unit = unit;
+            updates.customUnit = ''; // Clear custom label when switching back to predefined
         }
 
         brain.applyTransaction({
@@ -82,14 +73,14 @@ export const UnitNode = memo((props: NodeProps) => {
         } else {
             setLocalUnit(item.id);
             setMode('select');
-            validateAndApply(item.id);
+            validateAndApply(item.id, false, 'select');
         }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setLocalUnit(value);
-        validateAndApply(value, true);
+        validateAndApply(value, true, 'custom');
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -97,18 +88,19 @@ export const UnitNode = memo((props: NodeProps) => {
     };
 
     const toggleMode = () => {
-        const newMode = mode === 'select' ? 'custom' : 'select';
-        setMode(newMode);
-        if (newMode === 'select') {
-            // Default back to meter if switching back
-            const fallback = 'm';
-            setLocalUnit(fallback);
-            validateAndApply(fallback);
-        } else {
+        if (mode === 'select') {
+            // Switching to Custom
+            setMode('custom');
             brain.applyTransaction({
                 type: 'UPDATE_NODE_DATA',
                 payload: { id, data: { unit: 'CUSTOM' } }
             });
+        } else {
+            // Switching back to Select (Predefined)
+            const fallback = 'm';
+            setLocalUnit(fallback);
+            setMode('select');
+            validateAndApply(fallback, false, 'select');
         }
     };
 

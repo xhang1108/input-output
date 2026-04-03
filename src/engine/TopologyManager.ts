@@ -49,14 +49,24 @@ export class TopologyManager {
         return this.reverseAdjacency.get(nodeId) || [];
     }
 
-    public triggerDirtyChain(startNodeId: string, nodes: Map<string, NodeLogic>) {
+    public triggerDirtyChain(startNodeId: string, nodes: Map<string, NodeLogic>): string[] {
+        const affected: string[] = [];
+        // Mark the starting node itself as dirty if it exists
+        const startNode = nodes.get(startNodeId);
+        if (startNode) {
+            startNode.isInDirtyChain = true;
+            affected.push(startNodeId);
+        }
+
         const children = this.getChildren(startNodeId);
         for (const childId of children) {
             const childNode = nodes.get(childId);
             if (childNode && !childNode.isInDirtyChain) {
                 childNode.isInDirtyChain = true;
+                affected.push(childId);
             }
         }
+        return affected;
     }
 
     public syncFromGraph(edges: Edge[]) {

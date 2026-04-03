@@ -46,6 +46,55 @@ test('MA-01 Basic Math: Operations and Unit Propagation', async () => {
     expect(resMixed.meta?.unit).toBe('kg');
 });
 
+test('MA-01 Unit Conversion: Same-dimension ADD converts correctly', async () => {
+    // km + m → should convert m to km and add: 1km + 500m = 1.5km
+    const res = await evalMath('MA-01', 'ADD', {
+        in_a: PayloadUtils.createScalar(1, 'km'),
+        in_b: PayloadUtils.createScalar(500, 'm')
+    });
+    expect(res.value).toBeCloseTo(1.5);
+    expect(res.meta?.unit).toBe('km');
+});
+
+test('MA-01 Unit Conversion: Same-dimension SUB converts correctly', async () => {
+    // 1km - 200m = 0.8km
+    const res = await evalMath('MA-01', 'SUB', {
+        in_a: PayloadUtils.createScalar(1, 'km'),
+        in_b: PayloadUtils.createScalar(200, 'm')
+    });
+    expect(res.value).toBeCloseTo(0.8);
+    expect(res.meta?.unit).toBe('km');
+});
+
+test('MA-01 Unit Conversion: Triple mixed units ADD', async () => {
+    // 1km + 1.01m = 1.00101 km
+    const res = await evalMath('MA-01', 'ADD', {
+        in_a: PayloadUtils.createScalar(1, 'km'),
+        in_b: PayloadUtils.createScalar(1.01, 'm')
+    });
+    expect(res.value).toBeCloseTo(1.00101, 5);
+    expect(res.meta?.unit).toBe('km');
+});
+
+test('MA-01 Unit Error: Incompatible dimensions return error', async () => {
+    // s + km → error (time + distance)
+    const res = await evalMath('MA-01', 'ADD', {
+        in_a: PayloadUtils.createScalar(1, 's'),
+        in_b: PayloadUtils.createScalar(1, 'km')
+    });
+    expect(res.meta?.error).toBeDefined();
+});
+
+test('MA-01 Unit Algebra: MUL produces correct compound unit', async () => {
+    // km * km → km^2
+    const res = await evalMath('MA-01', 'MUL', {
+        in_a: PayloadUtils.createScalar(3, 'km'),
+        in_b: PayloadUtils.createScalar(4, 'km')
+    });
+    expect(res.value).toBeCloseTo(12);
+    expect(res.meta?.unit).toBe('km^2');
+});
+
 test('MA-01 Handle ID Resilience', async () => {
     // Passing non-existent handles like 'foo'. The engine should default inputs to 0. 0 + 0 = 0.
     const resDefault = await evalMath('MA-01', 'ADD', {

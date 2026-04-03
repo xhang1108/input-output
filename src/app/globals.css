@@ -108,6 +108,11 @@ body {
   --color-success:    hsl(142, 69%, 58%);  /* Emerald - Success/Tip */
   --color-danger:     hsl(0, 84%, 60%);    /* Red - Error/Destructive */
 
+  /* ── Z-Index Tokens ── */
+  --z-index-100: 100;
+  --z-index-9999: 9999;
+  --z-index-10000: 10000;
+
   /* ── Surface Tokens (App Chrome) ── */
   --color-surface-base:  hsl(240, 6%, 10%);   /* Zinc 900 - Background */
   --color-surface-dim:   hsl(240, 10%, 4%);    /* Zinc 950 - Darker */

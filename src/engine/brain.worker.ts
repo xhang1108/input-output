@@ -244,11 +244,13 @@ async function getValue(
         node.value = resultPayload;
         node.isInDirtyChain = false;
 
-        // Stepwise propagation: mark children dirty only if value changed
-        // Optimization: compare dehydrated values for better performance and to avoid issues with hydrated objects
+        // Stepwise propagation: mark children dirty if value OR unit changed
+        // Optimization: compare dehydrated values for better performance
         const oldVal = oldPayload ? PayloadUtils.dehydrate(oldPayload.value) : undefined;
         const newVal = PayloadUtils.dehydrate(resultPayload.value);
-        const changed = !oldPayload || !deepEqual(oldVal, newVal);
+        const oldUnit = oldPayload?.meta?.unit;
+        const newUnit = resultPayload.meta?.unit;
+        const changed = !oldPayload || !deepEqual(oldVal, newVal) || oldUnit !== newUnit;
 
         if (changed) {
             const children = adjacency.get(nodeId) || [];
@@ -285,7 +287,8 @@ async function computeDirtyChainNodes(): Promise<Record<string, SerializedPayloa
 
     // Loop until convergence: computing a node may dirty its children,
     // which need to be computed in the next pass
-    let maxPasses = 20; // Safety limit to prevent infinite loops
+    let maxPasses = 500; // Increased from 20 to 500 for large graphs (V5.6.0 Fix)
+    const initialPasses = maxPasses;
     while (maxPasses-- > 0) {
         const dirtyChainNodeIds = Array.from(nodes.values())
             .filter(n => n.isInDirtyChain)
@@ -306,6 +309,10 @@ async function computeDirtyChainNodes(): Promise<Record<string, SerializedPayloa
                 meta: PayloadUtils.dehydrate(newPayload.meta) as Record<string, unknown>,
             };
         }
+    }
+
+    if (maxPasses <= 0) {
+        console.warn(`[Worker] Convergence limit hit (${initialPasses} passes). Some downstream nodes may not be updated.`);
     }
 
     return patches;

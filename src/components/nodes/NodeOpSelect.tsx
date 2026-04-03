@@ -87,7 +87,7 @@ export const NodeOpSelect = memo(({
         }
 
         closeMenu();
-    }, [nodeId, paramId, brain, closeMenu, onSelect]);
+    }, [nodeId, paramId, brain, closeMenu, onSelect, currentValue, pushHistory]);
 
     return (
         <div className="flex flex-col gap-1.5 p-1 min-w-[120px]">
