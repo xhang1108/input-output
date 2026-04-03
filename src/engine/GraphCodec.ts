@@ -1,8 +1,8 @@
 
 import { InjectableGraph } from './types';
-import { Parser } from '../iogl/Parser';
-import { Encoder } from '../iogl/Encoder';
-import { IOGLUtils } from '../iogl/IOGLUtils';
+import { Parser } from '@/engine/iogl/Parser';
+import { Encoder } from '@/engine/iogl/Encoder';
+import { IOGLUtils } from '@/engine/iogl/IOGLUtils';
 
 /**
  * GraphCodec 3.0
@@ -67,3 +67,4 @@ export class GraphCodec {
         return trimmed;
     }
 }
+

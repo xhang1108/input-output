@@ -433,3 +433,4 @@ self.addEventListener('unhandledrejection', (event) => {
 self.addEventListener('error', (event) => {
     respond({ type: 'ERROR', epoch: 0, error: `Global Sync Error: ${event.message} at ${event.filename}:${event.lineno}` });
 });
+

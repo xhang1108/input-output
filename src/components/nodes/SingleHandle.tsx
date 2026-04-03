@@ -2,7 +2,7 @@ import { memo, useEffect } from 'react';
 import { Position, useUpdateNodeInternals } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
-import { HandleConfig } from '../../types/NodeDefinition';
+import { HandleConfig } from '../../types/nodeDefinitions';
 import { getHandleColorByConfig as getHandleColor, resolveHandlePosition } from '../../utils/handleUtils';
 
 interface SingleHandleProps {
@@ -55,3 +55,4 @@ export const SingleHandle = memo(({ h, id, isConnectable, nodeData }: SingleHand
 });
 
 SingleHandle.displayName = 'SingleHandle';
+

@@ -22,12 +22,12 @@ import '@xyflow/react/dist/style.css';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { FormulaRenderer } from '../utils/FormulaRenderer';
-import { nodeTypes, edgeTypes } from '../config/nodeTypeMap';
-import { getCanvasMenuItems, getNodeMenuItems } from '../config/contextMenuItems';
+import { nodeTypes, edgeTypes } from '@/constants/nodeTypeMap';
+import { getCanvasMenuItems, getNodeMenuItems } from '@/constants/contextMenuItems';
 import { useEar } from '../hooks/nerves/useEar';
 import { useHand } from '../hooks/nerves/useHand';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
-import { getEarShortcuts, Platform } from '../config/shortcuts';
+import { getEarShortcuts, Platform } from '@/constants/shortcuts';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 import { useEye } from '../hooks/nerves/useEye';
@@ -51,7 +51,7 @@ import { useAutoLayout } from '../hooks/useAutoLayout';
 import { useAppStore } from '../store/useStore';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { useRouter } from 'next/navigation';
-import { getDocInfo } from '../config/docRegistry';
+import { getDocInfo } from '@/constants/docRegistry';
 import { FloatingProjectControls } from './ui/FloatingProjectControls';
 
 export interface FlowCanvasProps {
@@ -825,3 +825,4 @@ export function FlowCanvas({
         </RelinkContext.Provider>
     );
 }
+

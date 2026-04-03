@@ -33,3 +33,4 @@ export const LatexView: React.FC<LatexViewProps> = memo(({ formula }) => {
 });
 
 LatexView.displayName = 'LatexView';
+

@@ -34,3 +34,4 @@ export function initializeNodes() {
         return input || node.value || PayloadUtils.createScalar(0);
     });
 }
+

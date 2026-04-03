@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
-import { HandleConfig } from '../../types/NodeDefinition';
+import { HandleConfig } from '../../types/nodeDefinitions';
 import { useBrain } from '../../context/BrainContext';
 
 const BASES = ['BIN', 'QUAT', 'OCT', 'DEC', 'DUO', 'HEX'] as const;
@@ -93,3 +93,4 @@ export const BaseConverterNode = memo((props: NodeProps) => {
 });
 
 BaseConverterNode.displayName = 'BaseConverterNode';
+

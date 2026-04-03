@@ -128,3 +128,4 @@ export const ColorView: React.FC<ColorViewProps> = memo(({ payload, depth, onDep
 });
 
 ColorView.displayName = 'ColorView';
+

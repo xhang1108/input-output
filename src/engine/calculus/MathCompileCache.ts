@@ -49,3 +49,4 @@ export class MathCompileCache {
         return compiled.evaluate(scope);
     }
 }
+

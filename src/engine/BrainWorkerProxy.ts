@@ -20,7 +20,7 @@ import type {
     IncrementalPatch,
 } from './SerializableGraph';
 import type { Edge } from '@xyflow/react';
-import { debugManager } from '../debug/DebugManager';
+import { debugManager } from '../services/debug/DebugManager';
 
 // ─── Audit Log ─────────────────────────────────────────────────────
 
@@ -376,3 +376,4 @@ export class BrainWorkerProxy {
         };
     }
 }
+

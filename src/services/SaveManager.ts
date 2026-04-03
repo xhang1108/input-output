@@ -1,7 +1,7 @@
 
 import { Serializer } from '../engine/Serializer';
 import { Brain } from '../engine/Brain';
-import { ProjectData, InjectableGraph } from '../engine/types';
+import { ProjectData, InjectableGraph } from '../engine/types/engineTypes';
 
 // ─── Types ────────────────────────────────────────────
 
@@ -341,3 +341,4 @@ export class SaveManager {
         console.log(`[SaveManager] Purged ${purgeableIds.length} cloud projects from cache. Preserved pending ones.`);
     }
 }
+

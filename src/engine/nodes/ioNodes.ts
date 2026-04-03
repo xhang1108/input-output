@@ -18,3 +18,4 @@ export function registerIONodes() {
     NodeRegistry.register('TR-07', IOEvaluators['TR-07']); // Color Standardizer
     NodeRegistry.register('UT-03', IOEvaluators['UT-03']); // Concatenate
 }
+

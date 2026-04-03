@@ -17,3 +17,4 @@ export type MathConfig = ReturnType<typeof getMathConfig>;
 
 // Legacy export for initial sync before settings are fully loaded
 export const MATH_CONFIG = getMathConfig(64);
+

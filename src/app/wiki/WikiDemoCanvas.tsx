@@ -42,3 +42,4 @@ export const WikiDemoCanvas: React.FC<WikiDemoCanvasProps> = ({ children, height
         </div>
     );
 };
+

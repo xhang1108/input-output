@@ -13,7 +13,7 @@ import { useNodeSpawner } from '../hooks/useNodeSpawner';
 import { useAppStore } from '../store/useStore';
 import { useEye } from '../hooks/nerves/useEye';
 import { useEar } from '../hooks/nerves/useEar';
-import { getEarShortcuts, Platform } from '../config/shortcuts';
+import { getEarShortcuts, Platform } from '@/constants/shortcuts';
 import { useBrain } from '../context/BrainContext';
 
 interface BodyProps {
@@ -181,3 +181,4 @@ export function Body({
         </div>
     );
 }
+

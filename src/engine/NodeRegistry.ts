@@ -1,6 +1,7 @@
-import { NodeLogic } from './types';
+import { DataType } from '@/types';
+import { NodeLogic } from '@/engine/types';
 import { InputOutputEngine } from './InputOutputEngine';
-import { NodePayload, DataType, ASTNode } from '../types/payload';
+import { NodePayload, ASTNode } from '../types/payload';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { NerdamerService } from './calculus/NerdamerService';
 import { RuntimeGuard } from './calculus/RuntimeGuard';
@@ -12,7 +13,7 @@ import { RuntimeGuard } from './calculus/RuntimeGuard';
  * Supports auto-propagation of symbolic ASTs for formula generation.
  */
 
-export type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => Promise<NodePayload> | NodePayload;
+export type NodeEvaluator = (node: NodeLogic, inputs: Record<string, NodePayload>) => NodePayload;
 export type NodeSymbolizer = (node: NodeLogic, inputs: Record<string, ASTNode>) => ASTNode;
 
 export class NodeRegistry {
@@ -145,3 +146,4 @@ import { initializeNodes as initNodes } from './nodes/nodeIndex';
 export { initNodes as initializeNodes };
 
 // IO-11: Result (Display)
+

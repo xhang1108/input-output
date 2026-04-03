@@ -76,3 +76,4 @@ export const capsulePreviewState = { set, clear, getSnapshot };
 export function useCapsulePreview(): CapsulePreviewSnapshot {
     return useSyncExternalStore(subscribe, getSnapshot);
 }
+

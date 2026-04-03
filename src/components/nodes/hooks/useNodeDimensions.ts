@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { ResizeDimensions } from './useFlexibleResize';
-import { NODE_DEFINITIONS } from '../../../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useHistoryStore } from '../../../store/useHistoryStore';
-import { Transaction } from '../../../engine/types';
+import { Transaction } from '../../../engine/types/engineTypes';
 import { Brain } from '../../../engine/Brain';
 import { useBrain } from '../../../context/BrainContext';
 
@@ -136,3 +136,4 @@ export const useNodeDimensions = ({ id, type, data, onProject, onResize: onResiz
         onResizeEnd
     };
 };
+

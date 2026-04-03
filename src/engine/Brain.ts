@@ -3,7 +3,7 @@ import { PayloadUtils } from '../utils/PayloadUtils';
 import { Edge } from '@xyflow/react';
 import { GraphState, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload } from './types';
 import { NodeRegistry } from './NodeRegistry'; // Static Import
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { getHandleVariant, isProbablyInputHandle } from '../utils/handleUtils';
 // BrainWorkerProxy is imported DYNAMICALLY in initWorker() to avoid circular dependency
 import type { IncrementalPatch } from './SerializableGraph';
@@ -1346,5 +1346,6 @@ export class Brain {
     public undo(): void { }
     public redo(): void { }
 }
+
 
 

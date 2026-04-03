@@ -3,10 +3,10 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { Brain } from '../engine/Brain';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { Transaction } from '../engine/types';
+import { Transaction } from '../engine/types/engineTypes';
 import { useAppStore } from '../store/useStore';
 
 interface UseAutoInsertProps {
@@ -242,3 +242,4 @@ export function useAutoInsert({
         performAutoInsert,
     };
 }
+

@@ -1,7 +1,7 @@
 import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { useHistoryStore } from '../../store/useHistoryStore';
-import { Transaction } from '../../engine/types';
+import { Transaction } from '../../engine/types/engineTypes';
 import * as math from 'mathjs';
 import { BaseNode } from './BaseNode';
 import { ResizeHandle } from './ResizeHandle';
@@ -240,3 +240,4 @@ export const MatrixInputNode = memo((props: NodeProps) => {
 });
 
 MatrixInputNode.displayName = 'MatrixInputNode';
+

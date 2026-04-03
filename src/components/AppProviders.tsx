@@ -6,7 +6,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
 import { NextAuthProvider } from './NextAuthProvider';
 import { ErrorBoundary } from './common/ErrorBoundary';
-import { debugManager } from '../debug/DebugManager';
+import { debugManager } from '../services/debug/DebugManager';
 import { DebugOverlay } from './debug/DebugOverlay';
 import { useTemplateInitialization } from '../hooks/useTemplateInitialization';
 
@@ -62,3 +62,4 @@ function InternalProviders({ children }: { children: React.ReactNode }) {
         </>
     );
 }
+

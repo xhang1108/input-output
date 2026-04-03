@@ -44,3 +44,4 @@ export function getUniqueLabel(suggested: string, existing: string[]): string {
 function formatLabelWithSuffix(base: string, num: number): string {
     return `${base}-${num.toString().padStart(2, '0')}`;
 }
+

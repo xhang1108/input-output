@@ -3,10 +3,10 @@ import { useReactFlow, Node, Edge } from '@xyflow/react';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
-import { Transaction } from '../engine/types';
+import { Transaction } from '../engine/types/engineTypes';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
-import { HandleConfig } from '../types/NodeDefinition';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
+import { HandleConfig } from '../types/nodeDefinitions';
 
 /**
  * useSelection
@@ -296,3 +296,4 @@ export function useSelection() {
         selectNode,
     };
 }
+

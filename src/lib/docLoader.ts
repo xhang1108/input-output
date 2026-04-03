@@ -169,3 +169,4 @@ export function getAvailableDocIds(): string[] {
     scan(DOCS_PATH);
     return allIds;
 }
+

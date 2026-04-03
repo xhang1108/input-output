@@ -2,7 +2,7 @@
 import { memo, useMemo, useState, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow, useNodes, useNodeConnections, Position } from '@xyflow/react';
-import { HandleConfig } from '../../types/NodeDefinition';
+import { HandleConfig } from '../../types/nodeDefinitions';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { NodeOpSelect } from './NodeOpSelect';
 import { CategorizedMenuItem } from '../ui/CategorizedMenu';
@@ -112,3 +112,4 @@ export const SolverNode = memo((props: NodeProps) => {
 });
 
 SolverNode.displayName = 'SolverNode';
+

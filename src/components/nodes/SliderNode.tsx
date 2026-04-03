@@ -181,3 +181,4 @@ export const SliderNode = memo((props: NodeProps) => {
 });
 
 SliderNode.displayName = 'SliderNode';
+

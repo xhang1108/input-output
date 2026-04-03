@@ -271,3 +271,4 @@ function ToggleRow({ label, icon, active, onClick }: { label: string, icon: Reac
         </button>
     );
 }
+

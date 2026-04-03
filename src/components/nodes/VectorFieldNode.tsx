@@ -104,3 +104,4 @@ export const VectorFieldNode = memo((props: NodeProps) => {
 });
 
 VectorFieldNode.displayName = 'VectorFieldNode';
+

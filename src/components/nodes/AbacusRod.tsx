@@ -108,3 +108,4 @@ const Bead = memo(({ isActive, onClick, isTop, travelDistance }: BeadProps) => {
 });
 
 Bead.displayName = 'Bead';
+

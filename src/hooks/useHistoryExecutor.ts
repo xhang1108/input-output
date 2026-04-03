@@ -2,7 +2,7 @@ import { useReactFlow, useStore, Node, Edge } from '@xyflow/react';
 import { useCallback } from 'react';
 import { useHistoryStore, HistoryEntry } from '../store/useHistoryStore';
 import { useBrain } from '../context/BrainContext';
-import { Transaction } from '../engine/types';
+import { Transaction } from '../engine/types/engineTypes';
 
 /**
  * Focus Defense: If user is typing in an input/textarea,
@@ -247,3 +247,4 @@ export function useHistoryExecutor() {
         canRedo: future.length > 0
     };
 }
+

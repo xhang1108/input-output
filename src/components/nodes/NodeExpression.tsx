@@ -2,7 +2,7 @@ import { memo, useState, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
-import { HandleConfig } from '../../types/NodeDefinition';
+import { HandleConfig } from '../../types/nodeDefinitions';
 
 export const NodeExpression = memo((props: NodeProps) => {
     const { id, data } = props;
@@ -58,3 +58,4 @@ export const NodeExpression = memo((props: NodeProps) => {
 });
 
 NodeExpression.displayName = 'NodeExpression';
+

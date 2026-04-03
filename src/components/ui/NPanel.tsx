@@ -4,8 +4,8 @@ import { useStore, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { X, Cpu } from 'lucide-react';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
-import { NodeParameter } from '../../types/NodeDefinition';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
+import { NodeParameter } from '../../types/nodeDefinitions';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 
 // ─── Atomic Field Components ──────────────────────────────────────────────────
@@ -426,3 +426,4 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         </div>
     );
 }
+

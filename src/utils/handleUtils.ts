@@ -1,7 +1,7 @@
 import { Node, Edge, Position } from '@xyflow/react';
 import { DataType } from '../types/payload';
-import { NodeDefinition, HandleConfig, HandleDataType } from '../types/NodeDefinition';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { NodeDefinition, HandleConfig, HandleDataType } from '../types/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 
 /**
  * Helper to resolve the position of a handle if not explicitly provided.
@@ -136,3 +136,4 @@ export function isGenericColor(color: string): boolean {
 export function getHandleColorByConfig(config: HandleConfig): string {
     return config.color || getHandleColor(config.dataType || 'scalar');
 }
+

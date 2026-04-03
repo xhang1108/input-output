@@ -33,3 +33,4 @@ export const analytics = {
   shareGraph: (platform: string) => trackEvent({ name: 'share_graph', params: { platform } }),
   runCalculation: (node_count: number) => trackEvent({ name: 'run_calculation', params: { node_count } }),
 };
+

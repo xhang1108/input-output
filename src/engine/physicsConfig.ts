@@ -24,3 +24,4 @@ export const PHYSICS_CONFIG = {
 } as const;
 
 export type PhysicsConfig = typeof PHYSICS_CONFIG;
+

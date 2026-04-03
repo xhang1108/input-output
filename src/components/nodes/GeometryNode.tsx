@@ -78,3 +78,4 @@ export const GeometryNode = memo((props: NodeProps) => {
 });
 
 GeometryNode.displayName = 'GeometryNode';
+

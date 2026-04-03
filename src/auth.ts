@@ -135,3 +135,4 @@ export async function requireAuth() {
     if (!session?.user?.id) return null;
     return session.user;
 }
+

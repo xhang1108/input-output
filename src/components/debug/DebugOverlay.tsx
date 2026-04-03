@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { debugManager } from '../../debug/DebugManager';
+import { debugManager } from '../../services/debug/DebugManager';
 
 export function DebugOverlay({ visible, onClose }: { visible: boolean; onClose: () => void }) {
     const [logs, setLogs] = useState(debugManager.getLogs());
@@ -115,3 +115,4 @@ export function DebugOverlay({ visible, onClose }: { visible: boolean; onClose: 
         </div>
     );
 }
+

@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow, Position } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
-import { HandleConfig } from '../../types/NodeDefinition';
+import { HandleConfig } from '../../types/nodeDefinitions';
 
 export const FractionNode = memo((props: NodeProps) => {
     const { id, data } = props;
@@ -56,3 +56,4 @@ export const FractionNode = memo((props: NodeProps) => {
 });
 
 FractionNode.displayName = 'FractionNode';
+

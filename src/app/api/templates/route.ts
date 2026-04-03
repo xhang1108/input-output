@@ -4,7 +4,7 @@ import path from 'path';
 
 export async function GET() {
     try {
-        const templatesDir = path.join(process.cwd(), 'src/templates');
+        const templatesDir = path.join(process.cwd(), 'src/assets/templates');
         
         // Ensure directory exists
         try {
@@ -31,3 +31,4 @@ export async function GET() {
         return NextResponse.json({ success: false, error: 'Failed to read templates' }, { status: 500 });
     }
 }
+

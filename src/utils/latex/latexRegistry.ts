@@ -104,3 +104,4 @@ export function findConfigByLatex(token: string): LatexNodeConfig | undefined {
 export function findConfigByOp(op: string): LatexNodeConfig | undefined {
     return LATEX_REGISTRY.find(c => c.op.toUpperCase() === op.toUpperCase());
 }
+

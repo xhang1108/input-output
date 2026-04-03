@@ -28,3 +28,4 @@ export const MATH_ALIASES: Record<string, string> = {
     'arcsin': 'asin',
     'arccos': 'acos'
 };
+

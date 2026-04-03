@@ -102,3 +102,4 @@ export class TopologyManager {
         this.reverseAdjacency.clear();
     }
 }
+
