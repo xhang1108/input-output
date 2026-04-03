@@ -66,7 +66,7 @@ export class Encoder {
 
         // Auxiliary props
         if (manifest.auxiliary) {
-          manifest.auxiliary.forEach(key => {
+          manifest.auxiliary.forEach((key: string) => {
             if (data[key] !== undefined) {
               let val = data[key];
               // Round size-related auxiliary properties to 1-pixel precision

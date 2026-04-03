@@ -1,26 +1,4 @@
-/**
- * Defines the mapping between the IOGL 1.0 script syntax and internal node properties.
- */
-export interface IOGLSchema {
-  /** Internal property name mapping to the IOGL 'mode' selector (e.g. 'op', 'method'). */
-  modeProperty?: string;
-  /** Mapping for values in the 'mode' selector. (e.g. {"Rows": 0, "Cols": 1}) */
-  modeMapping?: Record<string, any>;
-  /** Positional data schema: maps array indices to internal property names. */
-  data?: string[] | Record<string, string[]>;
-  /** Auxiliary properties that are appended at the end of the data array. */
-  auxiliary?: string[];
-  /** If true, the primary 'value' property will be wrapped in a NodePayload. If string, wraps that specific property. */
-  wrapPayload?: boolean | string;
-  /** The type of payload to wrap as (e.g. 'scalar', 'array'). Defaults to 'scalar'. */
-  payloadType?: 'scalar' | 'array' | 'color' | 'string' | 'boolean';
-  /** Hidden properties to be injected regardless of IOGL input. */
-  fixedData?: Record<string, any>;
-  /** Valid input handle IDs. Can be a fixed list or a mapping per mode. */
-  inputs?: string[] | Record<string, string[]>;
-  /** Valid output handle IDs. Can be a fixed list or a mapping per mode. */
-  outputs?: string[] | Record<string, string[]>;
-}
+import { IOGLSchema } from './IOGLUtils';
 
 /**
  * IOGL Schema Templates for De-duplication.
@@ -160,8 +138,11 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   // --- 5. Transform Family ---
   "TR-01": {
     ...SINGLE_OUT,
-    data: ["customUnit"],
-    fixedData: { unit: "CUSTOM" }
+    modeProperty: "unit",
+    data: {
+      "CUSTOM": ["customUnit"],
+      "REMOVE": []
+    }
   },
   "TR-02": { ...SINGLE_OUT, data: ["toBase"] },
   "TR-03": {
