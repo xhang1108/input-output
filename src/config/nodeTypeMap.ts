@@ -112,6 +112,7 @@ export const nodeTypes = {
     // ─── 9. Utility ─────────────────────────────────────────
     'UT-01': TextAnnotationNode,
     'UT-02': RerouteNode,
+    'UT-03': BaseNode,
 
     // ─── Fallback & Special ─────────────────────────────────
     'baseNode': BaseNode,

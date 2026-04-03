@@ -16,4 +16,5 @@ export function registerIONodes() {
     NodeRegistry.register('OT-03', IOEvaluators['OT-03'], IOSymbolizers['OT-03'] || undefined); // Plot
     NodeRegistry.register('OT-02', IOEvaluators['OT-02'], IOSymbolizers['OT-02'] || undefined); // Status
     NodeRegistry.register('TR-07', IOEvaluators['TR-07']); // Color Standardizer
+    NodeRegistry.register('UT-03', IOEvaluators['UT-03']); // Concatenate
 }

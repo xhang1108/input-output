@@ -1038,6 +1038,20 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         ],
         defaultData: { type: 'reroute' },
         draggable: false
+    },
+    {
+        id: 'UT-03',
+        label: 'Concatenate',
+        category: 'Utility',
+        handles: [
+            { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'any', label: 'Inputs' },
+            { id: 'out_a', type: 'source', variant: 'single', dataType: 'string', label: 'Text' }
+        ],
+        defaultData: { delimiter: '' },
+        aliases: ['join', 'concat', 'string builder', 'text join'],
+        params: [
+            { id: 'delimiter', label: 'Delimiter', type: 'string', hint: 'Separator between inputs' }
+        ]
     }
 ];
 

@@ -136,7 +136,43 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
     // TR-07 is now redundant and has been merged into IN-03.
     // Logic extracted to ColorUtils.ts for better reuse.
     'UT-03': (node, inputs) => {
-        return inputs['in_a'] || PayloadUtils.createArray([]);
+        const data = (node.data || {}) as Record<string, unknown>;
+        const delimiter = String(data.delimiter ?? '');
+        const rawInput = inputs['in_a'];
+
+        // Normalize capsule input to array of payloads
+        let payloadList: any[] = [];
+        if (Array.isArray(rawInput)) {
+            payloadList = rawInput;
+        } else if (rawInput && typeof rawInput === 'object') {
+            // Handle multi-link object if provided by engine as such
+            const rv = rawInput as any;
+            if (rv.type === 'object' && rv.value && typeof rv.value === 'object' && !Array.isArray(rv.value) && !('type' in rv.value)) {
+                payloadList = Object.values(rv.value).flat() as any[];
+            } else if ('type' in rawInput) {
+                payloadList = [rawInput];
+            }
+        }
+
+        // Map to string representations and join
+        const result = payloadList
+            .map(p => {
+                const val = PayloadUtils.unwrap(p);
+                if (val === null || val === undefined) return '';
+
+                const baseStr = String(val);
+                const unit = p.meta?.unit;
+
+                // If unit exists and is not empty, append it
+                if (unit && typeof unit === 'string' && unit.trim() !== '') {
+                    return baseStr + unit;
+                }
+
+                return baseStr;
+            })
+            .join(delimiter);
+
+        return PayloadUtils.createString(result);
     },
     'IN-08': (node) => {
         let total = 0;
