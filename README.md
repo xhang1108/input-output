@@ -1,6 +1,6 @@
 # <img src="./public/logo.webp" height="48" align="center" style="margin-right: 12px;" /> input-output
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Version](https://img.shields.io/badge/Version-1.0-green)](https://github.com/xhang1108/input-output)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Donate-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/nobaggage2rome)
 [![Visit Other Website](https://img.shields.io/badge/Website-nobaggage2rome-red)](https://www.nobaggage2rome.com)
