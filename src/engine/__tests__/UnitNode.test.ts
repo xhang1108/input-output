@@ -29,7 +29,7 @@ describe('UnitNode Engine Logic', () => {
 
         const result = await brain.getValue('Res');
         expect(result.meta?.unit).toBe('m/s');
-        expect(PayloadUtils.unwrap(result)).toBe(10);
+        expect(Number(PayloadUtils.unwrap(result))).toBe(10);
     });
 
     it('should convert units correctly when mixed', async () => {
@@ -65,7 +65,7 @@ describe('UnitNode Engine Logic', () => {
         });
 
         const result = await brain.getValue('Res');
-        expect(PayloadUtils.unwrap(result)).toBe(10);
+        expect(Number(PayloadUtils.unwrap(result))).toBe(10);
         expect(result.meta?.unit).toBe('apple');
     });
 
@@ -84,7 +84,7 @@ describe('UnitNode Engine Logic', () => {
 
         const result = await brain.getValue('Res');
         expect(result.meta?.unit).toBe('cm');
-        expect(PayloadUtils.unwrap(result)).toBe(100);
+        expect(Number(PayloadUtils.unwrap(result))).toBe(100);
     });
 
     it('should handle custom unit conversion (m/s to km/h)', async () => {
@@ -121,6 +121,6 @@ describe('UnitNode Engine Logic', () => {
 
         const result = await brain.getValue('Res');
         expect(result.type).toBe('error');
-        expect(result.meta?.error).toContain('Unit operation failed for m');
+        expect(result.meta?.error).toContain('Cannot convert kg to m');
     });
 });

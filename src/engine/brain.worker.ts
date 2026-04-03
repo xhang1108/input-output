@@ -244,11 +244,13 @@ async function getValue(
         node.value = resultPayload;
         node.isInDirtyChain = false;
 
-        // Stepwise propagation: mark children dirty only if value changed
-        // Optimization: compare dehydrated values for better performance and to avoid issues with hydrated objects
+        // Stepwise propagation: mark children dirty if value OR unit changed
+        // Optimization: compare dehydrated values for better performance
         const oldVal = oldPayload ? PayloadUtils.dehydrate(oldPayload.value) : undefined;
         const newVal = PayloadUtils.dehydrate(resultPayload.value);
-        const changed = !oldPayload || !deepEqual(oldVal, newVal);
+        const oldUnit = oldPayload?.meta?.unit;
+        const newUnit = resultPayload.meta?.unit;
+        const changed = !oldPayload || !deepEqual(oldVal, newVal) || oldUnit !== newUnit;
 
         if (changed) {
             const children = adjacency.get(nodeId) || [];

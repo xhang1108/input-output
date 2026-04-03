@@ -92,6 +92,8 @@ export class WorkerOrchestrator {
             if (node.isInDirtyChain) dirtyChainNodeIds.push(node.id);
         }
         for (const nodeId of this.freshlyUpdatedNodeIds) {
+            // Include the updated node itself (so its evaluator re-runs with new data)
+            if (!dirtyChainNodeIds.includes(nodeId)) dirtyChainNodeIds.push(nodeId);
             const children = adjacency.getChildren(nodeId);
             for (const childId of children) {
                 if (!dirtyChainNodeIds.includes(childId)) dirtyChainNodeIds.push(childId);

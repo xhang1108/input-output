@@ -1,6 +1,7 @@
 import { DataType, NodePayload, PayloadValue, ASTNode, Matrix, PayloadMetadata } from "../types/payload";
 import { MATH_ALIASES } from "../engine/mathAliases";
 import { DisplayUtils } from "./DisplayUtils";
+import { UnitAlgebra } from "./UnitAlgebra";
 
 /**
  * ️ Utility functions for creating and manipulating NodePayloads.
@@ -86,9 +87,19 @@ export const PayloadUtils = {
         if (typeof payload === 'object' && payload !== null) {
             const p = payload as any;
             // 1. Standard Payload unwrap
-            if ('value' in p && p.type) return p.value;
+            if ('value' in p && p.type) {
+                const inner = p.value;
+                // Recursive unwrap for dehydrated MathJS objects (BigNumber/Fraction)
+                if (inner && typeof inner === 'object' && 'mathjs' in inner && 'value' in inner) {
+                    return (inner as any).value;
+                }
+                return inner;
+            }
 
-            // 2. MathJS Internal unwrap (if raw object leaked)
+            // 2. Direct dehydrated MathJS object unwrap
+            if (p.mathjs && 'value' in p) return p.value;
+
+            // 3. MathJS Internal unwrap (if raw object leaked)
             if (p._data && p._size) return p._data;
         }
         return payload;
@@ -194,26 +205,7 @@ export const PayloadUtils = {
      * Future: Integrate mathjs.Unit
      */
     mergeUnits(unitA: string | undefined, unitB: string | undefined, op: 'ADD' | 'SUB' | 'MUL' | 'DIV'): string | undefined {
-        if (!unitA && !unitB) return undefined;
-        if (!unitA) return unitB; // Treat missing unit as scalar (1)
-        if (!unitB) return unitA;
-
-        switch (op) {
-            case 'ADD':
-            case 'SUB':
-                if (unitA === unitB) return unitA;
-                return `${unitA}|${unitB}`; // Temporary Mismatch Indicator
-
-            case 'MUL':
-                return `${unitA}*${unitB}`;
-
-            case 'DIV':
-                if (unitA === unitB) return undefined; // m/m = scalar
-                return `${unitA}/${unitB}`;
-
-            default:
-                return undefined;
-        }
+        return UnitAlgebra.merge(unitA, unitB, op);
     },
 
     /**

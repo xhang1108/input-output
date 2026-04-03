@@ -2,6 +2,7 @@ import { InputOutputEngine } from '../../../InputOutputEngine';
 import { DataType, NodePayload } from '../../../../types/payload';
 import { PayloadUtils } from '../../../../utils/PayloadUtils';
 import { NodeEvaluator } from '../../../NodeRegistry';
+import { UnitAlgebra } from '../../../../utils/UnitAlgebra';
 
 
 
@@ -35,10 +36,14 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             if (!p) return 0;
             const hydrated = PayloadUtils.unwrap(p);
             const mathHydrated = PayloadUtils.hydrate(hydrated, mathInstance);
-            const h = mathHydrated as { isBigNumber?: boolean };
-            if (p.meta?.unit && (typeof mathHydrated === 'number' || (h && h.isBigNumber))) {
-                const m = mathInstance as unknown as Record<string, (v: unknown, u: string) => unknown>;
-                try { return m.unit(mathHydrated, p.meta.unit); } catch (e: unknown) { return mathHydrated; }
+            // Strip Unit objects: if hydrate reconstructed a mathjs Unit from cached
+            // {mathjs:'Unit'} values, extract the plain number. Unit algebra is handled
+            // exclusively via metadata + UnitAlgebra.
+            if (mathHydrated && typeof mathHydrated === 'object') {
+                const obj = mathHydrated as any;
+                if (obj.isUnit || obj.constructor?.name === 'Unit') {
+                    try { return obj.toNumber(obj.formatUnits()); } catch { return obj.value ?? 0; }
+                }
             }
             return mathHydrated;
         };
@@ -72,8 +77,6 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         if (op === 'ADD' || op === 'SUB') {
             const hA = procA as any;
             const hB = procB as any;
-            const isUnitA = hA && (hA.isUnit || hA.constructor?.name === 'Unit');
-            const isUnitB = hB && (hB.isUnit || hB.constructor?.name === 'Unit');
             const isArrayA = hA && (Array.isArray(hA) || hA.isMatrix || hA.constructor?.name === 'Matrix');
             const isArrayB = hB && (Array.isArray(hB) || hB.isMatrix || hB.constructor?.name === 'Matrix');
 
@@ -81,8 +84,28 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 return PayloadUtils.createError("Strict Mode: Cannot add/sub Array and Scalar");
             }
 
-            if (isUnitA && !isUnitB && (mathInstance as any).equal(procB, 0)) procB = (mathInstance as any).unit(0, hA.formatUnits());
-            else if (!isUnitA && isUnitB && (mathInstance as any).equal(procA, 0)) procA = (mathInstance as any).unit(0, hB.formatUnits());
+            // Unit-aware ADD/SUB
+            const unitA = (inputs['in_a']?.meta?.unit as string) || undefined;
+            const unitB = (inputs['in_b']?.meta?.unit as string) || undefined;
+
+            if (unitA && unitB && unitA !== unitB) {
+                // Different unit strings: try mathjs dimension-compatible conversion
+                const mi = mathInstance as any;
+                try {
+                    // Convert BigNumbers to plain numbers for mathjs unit()
+                    const numA = (procA as any).isBigNumber ? (procA as any).toNumber() : Number(procA);
+                    const numB = (procB as any).isBigNumber ? (procB as any).toNumber() : Number(procB);
+                    const uA = mi.unit(numA, unitA);
+                    const uB = mi.unit(numB, unitB);
+                    const converted = (op === 'ADD') ? mi.add(uA, uB) : mi.subtract(uA, uB);
+                    // Extract numeric result in unitA's dimension
+                    const numResult = converted.toNumber(unitA);
+                    return { ...PayloadUtils.wrap(mi.bignumber(numResult)), meta: { unit: unitA } };
+                } catch {
+                    // mathjs doesn't know one/both units, or they're incompatible dimensions
+                    return PayloadUtils.createError(`Cannot ${op === 'ADD' ? 'add' : 'subtract'}: ${unitA} and ${unitB} are incompatible`);
+                }
+            }
         }
 
         try {
@@ -105,27 +128,26 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 default: result = m.add(procA, procB);
             }
 
-            let finalValue = result;
-            let finalUnit: string | undefined;
+            // Guard: If the math result is a Unit object (e.g. from mathjs internal coercion),
+            // extract its numeric value so PayloadUtils.wrap produces a clean Scalar.
+            if (result && typeof result === 'object') {
+                const obj = result as any;
+                if (obj.isUnit || obj.constructor?.name === 'Unit') {
+                    try { result = obj.toNumber(obj.formatUnits()); } catch { result = obj.value; }
+                }
+            }
+
             const metaA = inputs['in_a']?.meta || {};
             const metaB = inputs['in_b']?.meta || {};
             const combinedMeta: Record<string, unknown> = {};
 
-            if (metaA.unit && metaB.unit && metaA.unit === metaB.unit) combinedMeta.unit = metaA.unit;
-            else if (metaA.unit && !metaB.unit) combinedMeta.unit = metaA.unit;
-            else if (!metaA.unit && metaB.unit) combinedMeta.unit = metaB.unit;
+            // Algebraic unit merge via UnitAlgebra
+            combinedMeta.unit = UnitAlgebra.merge(
+                metaA.unit as string | undefined,
+                metaB.unit as string | undefined,
+                op
+            );
 
-            if (result && typeof result === 'object') {
-                const obj = result as any;
-                if (obj.isUnit || obj.constructor?.name === 'Unit') {
-                    finalUnit = obj.formatUnits();
-                    try { finalValue = obj.toNumber(finalUnit); } catch (e) { finalValue = obj.value; }
-                    return {
-                        ...PayloadUtils.createScalar(PayloadUtils.dehydrate(finalValue), finalUnit),
-                        meta: { ...combinedMeta, unit: finalUnit }
-                    };
-                }
-            }
             return { ...PayloadUtils.wrap(result), meta: combinedMeta };
         } catch (e: any) {
             return PayloadUtils.createError(e.message);
@@ -487,18 +509,28 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             const raw = PayloadUtils.unwrap(valPayload);
             const sourceUnit = valPayload.meta?.unit;
 
-            // Standard Conversion logic
-            if (sourceUnit && sourceUnit !== targetUnit && !isCustom) {
+            // Unit conversion logic:
+            // If the input already has a unit different from target, we MUST try to convert or error.
+            if (sourceUnit && sourceUnit !== targetUnit) {
                 try {
-                    const result = math.unit(raw, sourceUnit).to(targetUnit);
-                    return PayloadUtils.createScalar(PayloadUtils.dehydrate(result.toNumber(targetUnit)), targetUnit);
+                    // Correctly hydrate the value (e.g. from dehydrated BigNumber) before numeric conversion
+                    const hydrated = PayloadUtils.hydrate(valPayload.value, math);
+                    const num = (hydrated as any).toNumber ? (hydrated as any).toNumber() : Number(hydrated);
+                    
+                    const uA = math.unit(num, sourceUnit);
+                    const result = uA.to(targetUnit);
+                    const numResult = result.toNumber(targetUnit);
+                    return {
+                        ...PayloadUtils.wrap(math.bignumber(numResult)),
+                        meta: { unit: targetUnit }
+                    };
                 } catch (e: any) {
-                    // If it was not a custom unit and conversion fails, it's an error.
-                    return PayloadUtils.createError(`Unit operation failed for ${targetUnit}: ${e.message}`);
+                    // Division by zero or incompatible dimensions
+                    return PayloadUtils.createError(`Cannot convert ${sourceUnit} to ${targetUnit}: ${e.message}`);
                 }
             }
 
-            // Otherwise just assign the label (Custom or Standard label)
+            // Labels: If no source unit, just assign the target unit (labeling mode)
             return PayloadUtils.createScalar(raw, targetUnit);
         } catch (e: any) {
             return PayloadUtils.createError(`Unit operation failed for ${targetUnit}`);
