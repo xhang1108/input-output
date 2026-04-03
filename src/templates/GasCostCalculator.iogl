@@ -1,62 +1,98 @@
-[Local Station ($/L)] IN-02 4.50, 0, 10, 0.01 @0,0
-[Further Station ($/L)] IN-02 4.20, 0, 10, 0.01 @0,150
-[Refill Amount (L)] IN-02 50, 10, 100, 1 @0,300
-[Dist (1-way km)] IN-02 10, 1, 100, 1 @0,450
-[Cons (L/100km)] IN-02 8, 2, 25, 0.5 @0,600
+[Fuel Price] IN-01 1.99 @353,232
+[Gas Tank] IN-02 33, 0, 50, 1 @353,397
+[Basic Math] MA-01 { mode: "MUL" } @1283,222
+[New Price] OT-01 { mode: "auto" } @2344,229
+[Price moving] IN-02 -0.1, -2, 2, 0.1 @353,64
+[Basic Math-01] MA-01 { mode: "ADD" } @1113,218
+[Home to Gas Station] IN-01 5 @351,685
+[Unit] TR-01 "" @1111,481
+[Litre] IN-02 9, 0, 50, 1 @353,989
+[KM] IN-02 100, 0, 100, 1 @353,1199
+[Basic Math-03] MA-01 { mode: "MUL" } @1287,481
+[Number] IN-01 2 @1287,610
+[Return distance] OT-01 { mode: "auto" } @2350,582
+[Unit-01] TR-01 "l" @1161,850
+[Unit-02] TR-01 "" @1161,1009
+[Basic Math-02] MA-01 { mode: "DIV" } @1342,850
+[Basic Math-04] MA-01 { mode: "DIV" } @1342,1009
+[Result] OT-01 "-1" { mode: "auto" } @571,926
+[Result-03] OT-01 "2" { mode: "auto" } @571,1179
+[Basic Math-05] MA-01 { mode: "DIV" } @1506,1008
+[Fuel to station] OT-01 { mode: "auto" } @2350,835
+[Basic Math-06] MA-01 { mode: "MUL" } @1669,1010
+[Cost to station] OT-01 { mode: "auto" } @2350,1085
+[Unit-03] TR-01 "" @1857,1017
+[Basic Math-07] MA-01 { mode: "MUL" } @1287,96
+[Diff] OT-01 { mode: "auto" } @2630,134
+[Basic Math-08] MA-01 { mode: "MUL" } @1285,350
+[Previous Price] OT-01 { mode: "auto" } @2344,-43
+[Logic Gate] LG-01 { mode: "Less" } @1754,1186
+[Result-01] OT-01 { mode: "auto" } @2352,1335
+[Logic Switch] LG-02 @1961,1247
+[String] IN-04 "Go Now ! You save " @1499,1235
+[String-01] IN-04 "Hold on ! You loss " @1508,1449
+[Concatenate] UT-03 "" @1760,1326
+[Concatenate-01] UT-03 "" @1756,1451
+[Advanced Math] MA-02 { mode: "ABS" } @1542,1341
+[Basic Math-09] MA-01 { mode: "SUB" } @1374,1333
+[Advanced Math-01] MA-02 { mode: "ABS" } @1166,1327
+[Basic Math-10] MA-01 { mode: "ADD" } @1574,1557
+[Sticky Note] UT-01 "Car fuel consumption\n\nAdjust the slider to match the results using your preferred units." { width: 270, height: 353 } @62,990
+[Sticky Note-01] UT-01 "The distance between your place and Gas Station" { width: 306, height: 115 } @32,671
+[Sticky Note-02] UT-01 "How many litre you want to fill" { width: 306, height: 115 } @29,412
+[Sticky Note-03] UT-01 "Normal fuel price" { width: 306, height: 115 } @31,217
+[Sticky Note-04] UT-01 "Fluctuating fuel price" { width: 306, height: 115 } @32,79
+[Sticky Note-05] UT-01 "Price without fluctuating " { width: 306, height: 115 } @2630,-3
+[Sticky Note-06] UT-01 "Price with fluctuating" { width: 306, height: 115 } @2630,390
+[Sticky Note-07] UT-01 "The different between two price" { width: 306, height: 115 } @2911,136
+[Sticky Note-08] UT-01 "Two ways distance from your place to gas station" { width: 306, height: 115 } @2633,583
+[Sticky Note-09] UT-01 "Fuel used from your place to gas station" { width: 306, height: 115 } @2637,839
+[Sticky Note-10] UT-01 "Fuel cost from your place to gas station\n- Fluctuating oil prices" { width: 306, height: 115 } @2636,1085
+[Sticky Note-11] UT-01 "# Fuel Cost Calculator\nDetermine if filling up is worth it or how much you lose during price fluctuations." { width: 321, height: 151 } @1186,-253
 
-[Price Diff] MA-01 { mode: "SUB" } @400,75
-[Gross Savings] MA-01 { mode: "MUL" } @850,225
-
-[Total Dist (km)] MA-01 { mode: "MUL" } @400,450
-[Const: 2] IN-01 2 @400,550
-
-[Const: 100] IN-01 100 @850,550
-[L per km] MA-01 { mode: "DIV" } @850,450
-[Fuel for Trip] MA-01 { mode: "MUL" } @1300,525
-
-[Trip Gas Cost] MA-01 { mode: "MUL" } @1750,450
-[Net Benefit] MA-01 { mode: "SUB" } @1750,300
-
-[Zero] IN-01 0 @2200,450
-[Is Profitable?] LG-01 { mode: "GT" } @2200,300
-
-[Msg: YES] IN-04 "YES! Go now." @2650,400
-[Msg: NO] IN-04 "NO! Too costly." @2650,500
-[Switch] LG-02 @2650,300
-
-[Net Savings ($)] OT-01 { viewMode: "auto", precision: 2 } @3100,100
-[Final Verdict] OT-01 { viewMode: "text" } @3100,300
-
-[Sticky Note] UT-01 "# Gas Logic\nNet = (Liters * PriceDiff) - (Usage * Dist * TargetPrice)\n\nIf positive, it pays for itself." @400,-100
-
-# Edges
-[Local Station ($/L)].out_a -> [Price Diff].in_a
-[Further Station ($/L)].out_a -> [Price Diff].in_b
-
-[Price Diff].out_a -> [Gross Savings].in_a
-[Refill Amount (L)].out_a -> [Gross Savings].in_b
-
-[Dist (1-way km)].out_a -> [Total Dist (km)].in_a
-[Const: 2].out_a -> [Total Dist (km)].in_b
-
-[Total Dist (km)].out_a -> [L per km].in_a
-[Const: 100].out_a -> [L per km].in_b
-
-[L per km].out_a -> [Fuel for Trip].in_a
-[Cons (L/100km)].out_a -> [Fuel for Trip].in_b
-
-[Fuel for Trip].out_a -> [Trip Gas Cost].in_a
-[Further Station ($/L)].out_a -> [Trip Gas Cost].in_b
-
-[Gross Savings].out_a -> [Net Benefit].in_a
-[Trip Gas Cost].out_a -> [Net Benefit].in_b
-
-[Net Benefit].out_a -> [Is Profitable?].in_a
-[Zero].out_a -> [Is Profitable?].in_b
-
-[Is Profitable?].out_a -> [Switch].in_a
-[Msg: YES].out_a -> [Switch].in_b
-[Msg: NO].out_a -> [Switch].in_c
-
-[Net Benefit].out_a -> [Net Savings ($)].in_a
-[Switch].out_a -> [Final Verdict].in_a
+[Gas Tank].a -> [Basic Math].b
+[Fuel Price].a -> [Basic Math-01].a
+[Basic Math-01].a -> [Basic Math].a
+[Price moving].a -> [Basic Math-01].b
+[Home to Gas Station].a -> [Unit].a
+[Unit].a -> [Basic Math-03].a
+[Number].a -> [Basic Math-03].b
+[Basic Math].a -> [New Price].a
+[Litre].a -> [Unit-01].a
+[KM].a -> [Unit-02].a
+[Unit-01].a -> [Basic Math-02].a
+[Unit-02].a -> [Basic Math-02].b
+[Unit-01].a -> [Basic Math-04].b
+[Basic Math-02].a -> [Result].a
+[Basic Math-04].a -> [Result-03].a
+[Unit-02].a -> [Basic Math-04].a
+[Basic Math-03].a -> [Return distance].a
+[Basic Math-03].a -> [Basic Math-05].a
+[Basic Math-05].a -> [Fuel to station].a
+[Basic Math-04].a -> [Basic Math-05].b
+[Basic Math-05].a -> [Basic Math-06].b
+[Basic Math-01].a -> [Basic Math-06].a
+[Basic Math-06].a -> [Unit-03].a
+[Unit-03].a -> [Cost to station].a
+[Gas Tank].a -> [Basic Math-07].b
+[Price moving].a -> [Basic Math-07].a
+[Basic Math-07].a -> [Diff].a
+[Fuel Price].a -> [Basic Math-08].a
+[Gas Tank].a -> [Basic Math-08].b
+[Basic Math-08].a -> [Previous Price].a
+[Unit-03].a -> [Logic Gate].b
+[Basic Math-07].a -> [Logic Gate].a
+[Logic Gate].a -> [Logic Switch].a
+[Logic Switch].a -> [Result-01].a
+[String].a -> [Concatenate].a
+[Advanced Math].a -> [Concatenate].a
+[Concatenate].a -> [Logic Switch].b
+[Unit-03].a -> [Basic Math-09].b
+[Basic Math-07].a -> [Advanced Math-01].a
+[Advanced Math-01].a -> [Basic Math-09].a
+[Basic Math-09].a -> [Advanced Math].a
+[Concatenate-01].a -> [Logic Switch].c
+[Basic Math-07].a -> [Basic Math-10].a
+[Unit-03].a -> [Basic Math-10].b
+[String-01].a -> [Concatenate-01].a
+[Basic Math-10].a -> [Concatenate-01].a
