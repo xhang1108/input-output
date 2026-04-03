@@ -61,6 +61,8 @@ export function CategorizedMenu({
     const [isPositioned, setIsPositioned] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [dynamicMaxHeight, setDynamicMaxHeight] = useState<string>(maxHeight);
+    const initialFlipYRef = useRef<boolean | null>(null);
 
     const { getViewport } = useReactFlow();
     const { zoom } = getViewport();
@@ -263,7 +265,10 @@ export function CategorizedMenu({
     const [flipState, setFlipState] = useState({ x: false, y: false });
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            initialFlipYRef.current = null;
+            return;
+        }
 
         let requestId: number;
 
@@ -289,21 +294,39 @@ export function CategorizedMenu({
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
 
-            // 1. Position Y (flip up if no space below)
             const menuRawHeight = menuEl.offsetHeight;
             const scaledHeight = menuRawHeight * currentZoom;
-            const shouldFlipY = y + scaledHeight > viewportHeight;
-            const finalY = shouldFlipY ? Math.max(0, flipY - menuRawHeight) : y;
+            
+            // 1. Determine Flip Logic (Locked on first open to prevent jitter)
+            const padding = 20; // Safety margin in physical pixels
+            const rect = trigger ? trigger.getBoundingClientRect() : { bottom: y, top: y, left: x, width: 0 };
+            
+            const spaceBelow = viewportHeight - rect.bottom - padding;
+            const spaceAbove = rect.top - padding;
+
+            if (initialFlipYRef.current === null) {
+                // Force always downward as requested
+                initialFlipYRef.current = false;
+            }
+
+            const shouldFlipY = false; // Forced downward
+            const finalY = y; // Always use current Y (button bottom)
 
             // 2. Position X (Flip left if no space on right)
             const menuRawWidth = menuEl.offsetWidth;
             const scaledWidth = menuRawWidth * currentZoom;
             const shouldFlipX = x + scaledWidth > viewportWidth - 20;
             
-            // If flipping X, align the right edge of the menu with the right edge of the trigger (if exists)
             const finalX = shouldFlipX 
                 ? Math.max(10, x + (trigger ? trigger.offsetWidth : 0) - menuRawWidth) 
                 : x;
+
+            // 3. Dynamic Max Height Calculation (Zoom Aware)
+            // CSS maxHeight applies to the unscaled element, so we must divide physical space by zoom
+            let availablePhysicalSpace = shouldFlipY ? spaceAbove : spaceBelow;
+            let finalMaxH = Math.max(150, availablePhysicalSpace / currentZoom);
+            
+            setDynamicMaxHeight(`${finalMaxH}px`);
 
             menuEl.style.left = `${finalX}px`;
             menuEl.style.top = `${finalY}px`;
@@ -406,7 +429,7 @@ export function CategorizedMenu({
                     isPositioned ? 'animate-in fade-in duration-200 ease-out opacity-100' : 'opacity-0'
                 }`}
                 style={{
-                    maxHeight: maxHeight,
+                    maxHeight: dynamicMaxHeight,
                     maxWidth: '95vw',
                     width: menuLayout === 'horizontal' ? 'auto' : (width.startsWith('w-') ? undefined : `${parseInt(width) * 4}px`),
                 }}
@@ -434,11 +457,11 @@ export function CategorizedMenu({
                 {/* Items Container */}
                 <div
                     ref={scrollContainerRef}
-                    className={`px-1 pb-1 gap-1 overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${menuLayout === 'horizontal'
+                    className={`px-1 py-1.5 pr-1 gap-1 overflow-y-auto overflow-x-hidden transition-colors menu-scrollbar ${menuLayout === 'horizontal'
                         ? 'flex flex-row overflow-y-hidden pt-1'
                         : 'flex flex-col overflow-x-hidden pt-0'
                         }`}
-                    style={{ maxHeight: `calc(${maxHeight} - ${showSearch ? '60px' : '40px'})` }}
+                    style={{ maxHeight: `calc(${dynamicMaxHeight} - ${showSearch ? '70px' : '30px'})` }}
                 >
                     {filteredItems.length === 0 ? (
                         <div className="px-4 py-8 text-zinc-500 text-[10px] text-center italic w-full">
@@ -578,3 +601,5 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
         </button>
     );
 }
+
+

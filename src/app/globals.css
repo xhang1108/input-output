@@ -37,6 +37,17 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Specialized scrollbar for CategorizedMenu with inset thumb */
+.menu-scrollbar::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.menu-scrollbar::-webkit-scrollbar-track {
+  margin-top: 14px !important;
+  margin-bottom: 14px !important;
+  background: transparent !important;
+}
+
 @theme inline {
   --color-primary: #FF8C00;
   --color-secondary: #B0B0B0;
