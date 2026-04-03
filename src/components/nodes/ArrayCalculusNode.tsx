@@ -2,7 +2,7 @@ import { memo, useMemo } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { NodeOpSelect } from './NodeOpSelect';
-import { HandleConfig, HandleDataType } from '../../types/NodeDefinition';
+import { HandleConfig, HandleDataType } from '../../types/nodeDefinitions';
 
 /**
  * ArrayCalculusNode (DT-06)

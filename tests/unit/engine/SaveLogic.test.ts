@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { Serializer } from '@/engine/Serializer';
-import { ProjectData } from '@/engine/types/types';
+import { ProjectData } from '@/engine/types/engineTypes';
 
 describe('Serializer / Save Logic (v4.0)', () => {
     

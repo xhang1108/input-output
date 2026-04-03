@@ -50,7 +50,7 @@ if (decodedMarkdown === originalMarkdown) {
 // Additional Test: Literal \n in IOGL file (manually crafted)
 console.log('\n--- Test: Single backslash-n in IOGL string ---');
 const manualIogl = '[Test] UT-01 "A\\nB" @0,0';
-const manualDecoded = GraphCodec.parse(manualIogl).graph.nodes[0].data.markdown;
+const manualDecoded = GraphCodec.parse(manualIogl).graph.nodes[0]?.data?.markdown;
 if (manualDecoded === 'A\nB') {
     console.log('SUCCESS: "A\\nB" became real newline');
 } else {
@@ -60,7 +60,7 @@ if (manualDecoded === 'A\nB') {
 // Additional Test: Double backslash-n in IOGL string
 console.log('\n--- Test: Double backslash-n in IOGL string ---');
 const manualIogl2 = '[Test] UT-01 "A\\\\nB" @0,0';
-const manualDecoded2 = GraphCodec.parse(manualIogl2).graph.nodes[0].data.markdown;
+const manualDecoded2 = GraphCodec.parse(manualIogl2).graph.nodes[0]?.data?.markdown;
 if (manualDecoded2 === 'A\\nB') {
     console.log('SUCCESS: "A\\\\nB" became literal \\n');
 } else {

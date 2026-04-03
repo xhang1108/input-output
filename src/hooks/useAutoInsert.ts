@@ -6,7 +6,7 @@ import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { Brain } from '../engine/Brain';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { Transaction } from '../engine/types/types';
+import { Transaction } from '../engine/types/engineTypes';
 import { useAppStore } from '../store/useStore';
 
 interface UseAutoInsertProps {

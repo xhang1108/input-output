@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import { ResizeDimensions } from './useFlexibleResize';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useHistoryStore } from '../../../store/useHistoryStore';
-import { Transaction } from '../../../engine/types/types';
+import { Transaction } from '../../../engine/types/engineTypes';
 import { Brain } from '../../../engine/Brain';
 import { useBrain } from '../../../context/BrainContext';
 

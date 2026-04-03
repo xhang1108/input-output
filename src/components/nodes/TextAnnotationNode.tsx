@@ -7,7 +7,7 @@ import { useContentMetrics } from './hooks/useContentMetrics';
 import ReactMarkdown from 'react-markdown';
 import { useHistoryStore } from '../../store/useHistoryStore';
 import { useBrain } from '../../context/BrainContext';
-import { Transaction } from '../../engine/types/types';
+import { Transaction } from '../../engine/types/engineTypes';
 import remarkGfm from 'remark-gfm';
 
 /**

@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest';
-import { NodeRegistry } from '../NodeRegistry';
-import { PayloadUtils } from '@/engine/utils/PayloadUtils';
+import { NodeRegistry } from '@/engine/NodeRegistry';
+import { PayloadUtils } from '@/utils/PayloadUtils';
 
 test('Manual Verification: Gaussian Field Gradient', async () => {
     console.log('--- Starting Manual Verification ---');

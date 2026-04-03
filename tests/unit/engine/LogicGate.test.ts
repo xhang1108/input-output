@@ -20,7 +20,7 @@ describe('Logic Gate (LG-01)', () => {
             value: { type: DataType.Scalar, value: 0, symbol: null, meta: {} },
             selected: false,
             isInDirtyChain: false
-        } as unknown as import('../types').NodeLogic;
+        } as unknown as import('@/engine/types').NodeLogic;
 
         const inputs: Record<string, NodePayload> = {};
         if (a !== undefined) inputs.in_a = PayloadUtils.createScalar(a, aUnit);

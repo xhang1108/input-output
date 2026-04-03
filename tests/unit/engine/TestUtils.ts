@@ -1,4 +1,4 @@
-import { NodeLogic } from '@/engine/types/types';
+import { NodeLogic } from '@/engine/types/engineTypes';
 import { Edge } from '@xyflow/react';
 import { NodePayload } from '@/engine/../types/payload';
 

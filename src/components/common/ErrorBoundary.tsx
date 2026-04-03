@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { debugManager } from '../../debug/DebugManager';
+import { debugManager } from '../../services/debug/DebugManager';
 
 interface Props {
     children: ReactNode;

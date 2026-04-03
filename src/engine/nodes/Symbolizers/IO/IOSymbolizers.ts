@@ -1,7 +1,7 @@
-import { PayloadUtils } from '../../../../utils/PayloadUtils';
-import { NodeSymbolizer } from '../../../NodeRegistry';
-import { Brain } from '../../../Brain';
-import { NodeLogic } from '../../../types';
+import { NodeSymbolizer } from '@/engine/NodeRegistry';
+import { Brain } from '@/engine/Brain';
+import { NodeLogic } from '@/engine/types';
+import { PayloadUtils } from '@/utils/PayloadUtils';
 
 export const IOSymbolizers: Record<string, NodeSymbolizer> = {
     'IN-01': (node) => {

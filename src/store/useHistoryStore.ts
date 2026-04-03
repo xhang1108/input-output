@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Transaction } from '../engine/types/types';
+import { Transaction } from '../engine/types/engineTypes';
 
 export type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 

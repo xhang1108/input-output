@@ -8,7 +8,7 @@ import { useCanvasProjection } from './useCanvasProjection';
 import { getHandleColorByConfig } from '../utils/handleUtils';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { useBrain } from '../context/BrainContext';
-import { Transaction } from '../engine/types/types';
+import { Transaction } from '../engine/types/engineTypes';
 
 export interface PendingConnection {
     nodeId: string;

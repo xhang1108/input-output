@@ -1,5 +1,5 @@
-import { GraphCodec } from '../engine/GraphCodec';
-import { useAppStore } from '../store/useStore';
+import { GraphCodec } from '@/engine/GraphCodec';
+import { useAppStore } from '@/store/useStore';
 
 interface DebugLog {
     timestamp: number;

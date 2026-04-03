@@ -6,7 +6,7 @@
  */
 
 import { Position } from '@xyflow/react';
-import { DEFAULT_UI_ORIGIN, DEFAULT_PHYSICAL_ANCHOR } from '../types/NodeDefinition';
+import { DEFAULT_UI_ORIGIN, DEFAULT_PHYSICAL_ANCHOR } from '../types/nodeDefinitions';
 
 export interface BBox {
     x: number;

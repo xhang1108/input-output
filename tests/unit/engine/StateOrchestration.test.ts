@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Brain } from '@/engine/Brain';
 import { DataType } from '@/types/payload';
 import { NodeRegistry } from '@/engine/NodeRegistry';
-import { NodeLogic } from '@/engine/types/types';
+import { NodeLogic } from '@/engine/types/engineTypes';
 
 describe('State Orchestration (Integration)', () => {
     let brain: Brain;

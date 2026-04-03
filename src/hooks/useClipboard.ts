@@ -3,7 +3,7 @@ import { useReactFlow, Node, Edge } from '@xyflow/react';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { useBrain } from '../context/BrainContext';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { Transaction } from '../engine/types/types';
+import { Transaction } from '../engine/types/engineTypes';
 
 const CLIPBOARD_KEY = 'Input-Output_clipboard';
 

@@ -15,7 +15,7 @@ import {
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { MagneticSnapState } from './useHandleMagnet';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { Transaction } from '../engine/types/types';
+import { Transaction } from '../engine/types/engineTypes';
 
 type UseRelinkProps = {
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;

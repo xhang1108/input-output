@@ -1,7 +1,7 @@
 
 import { Serializer } from '../engine/Serializer';
 import { Brain } from '../engine/Brain';
-import { ProjectData, InjectableGraph } from '../engine/types/types';
+import { ProjectData, InjectableGraph } from '../engine/types/engineTypes';
 
 // ─── Types ────────────────────────────────────────────
 

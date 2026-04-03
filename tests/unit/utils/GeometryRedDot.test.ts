@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { GeometryUtils } from '@/utils/GeometryUtils';
-import { DEFAULT_UI_ORIGIN, DEFAULT_PHYSICAL_ANCHOR } from '@/types/NodeDefinition';
+import { DEFAULT_UI_ORIGIN, DEFAULT_PHYSICAL_ANCHOR } from '@/types/nodeDefinitions';
 
 /**
  * GeometryRedDot.test.ts

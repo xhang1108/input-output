@@ -1,6 +1,6 @@
 import { Lexer, Token, TokenType } from './Lexer';
 import { IOGL_MANIFEST } from './manifest';
-import { InjectableGraph } from '@/engine/types/types';
+import { InjectableGraph } from '@/engine/types/engineTypes';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { generateNodeId, generateEdgeId } from '@/utils/idGenerator';
 import { DataType, NodePayload } from '@/types/payload';

@@ -4,7 +4,7 @@ import path from 'path';
 
 export async function GET() {
     try {
-        const templatesDir = path.join(process.cwd(), 'src/templates');
+        const templatesDir = path.join(process.cwd(), 'src/assets/templates');
         
         // Ensure directory exists
         try {

@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { Transaction, TransactionType } from '../../engine/types/types';
+import { Transaction, TransactionType } from '../../engine/types/engineTypes';
 import { LATEX_REGISTRY, findConfigByLatex } from './latexRegistry';
 
 const generateNodeId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 6)}`;

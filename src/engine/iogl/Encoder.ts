@@ -1,4 +1,4 @@
-import { InjectableGraph } from '@/engine/types/types';
+import { InjectableGraph } from '@/engine/types/engineTypes';
 import { IOGL_MANIFEST } from './manifest';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { IOGLUtils } from './IOGLUtils';

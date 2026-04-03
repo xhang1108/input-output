@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useReactFlow, XYPosition, Edge } from '@xyflow/react';
 import { useCanvasProjection } from './useCanvasProjection';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { Transaction } from '../engine/types/types';
+import { Transaction } from '../engine/types/engineTypes';
 import { FALLBACK_SIZE } from '../utils/GeometryUtils';
 
 /**

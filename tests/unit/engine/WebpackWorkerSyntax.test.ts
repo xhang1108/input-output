@@ -39,7 +39,7 @@ describe('Webpack Web Worker Syntax Enforcer', () => {
 
     test('All `new Worker` calls MUST strictly inline `new URL(..., import.meta.url)`', () => {
         // Point to src/
-        const srcDir = path.resolve(__dirname, '../../');
+        const srcDir = path.resolve(__dirname, '../../../src/');
         const allFiles = getAllFiles(srcDir);
 
         let workerInstancesFound = 0;

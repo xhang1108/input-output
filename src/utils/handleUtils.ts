@@ -1,6 +1,6 @@
 import { Node, Edge, Position } from '@xyflow/react';
 import { DataType } from '../types/payload';
-import { NodeDefinition, HandleConfig, HandleDataType } from '../types/NodeDefinition';
+import { NodeDefinition, HandleConfig, HandleDataType } from '../types/nodeDefinitions';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 
 /**

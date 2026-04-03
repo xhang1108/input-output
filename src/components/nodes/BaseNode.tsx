@@ -5,7 +5,7 @@ import { useBrain } from '../../context/BrainContext';
 import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
-import { HandleConfig } from '../../types/NodeDefinition';
+import { HandleConfig } from '../../types/nodeDefinitions';
 import { resolveHandlePosition } from '../../utils/handleUtils';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
@@ -15,7 +15,7 @@ import { getUniqueLabel } from '../../utils/labelUtils';
 import { useAppStore } from '../../store/useStore';
 
 // Re-export HandleConfig for backward compatibility
-export type { HandleConfig } from '../../types/NodeDefinition';
+export type { HandleConfig } from '../../types/nodeDefinitions';
 import { SingleHandle } from './SingleHandle';
 import { CapsuleHandle } from './CapsuleHandle';
 

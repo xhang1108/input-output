@@ -13,9 +13,9 @@ describe('UT-03 Concatenate Node', () => {
                 PayloadUtils.createString('Hello'),
                 PayloadUtils.createString('World')
             ]
-        };
+        } as any;
 
-        const result = evaluator(node as any, inputs);
+        const result = evaluator(node as any, inputs as any);
         expect(result.type).toBe(DataType.String);
         expect(result.value).toBe('HelloWorld');
     });
@@ -30,7 +30,7 @@ describe('UT-03 Concatenate Node', () => {
             ]
         };
 
-        const result = evaluator(node as any, inputs);
+        const result = evaluator(node as any, inputs as any);
         expect(result.value).toBe('Apple, Banana, Cherry');
     });
 
@@ -44,7 +44,7 @@ describe('UT-03 Concatenate Node', () => {
             ]
         };
 
-        const result = evaluator(node as any, inputs);
+        const result = evaluator(node as any, inputs as any);
         // PayloadUtils.createArray([1,2,3]) unwraps to [[1,2,3]] usually, 
         // String([[1,2,3]]) in JS is "1,2,3"
         expect(result.value).toBe('Score: 42: 1,2,3');
@@ -54,7 +54,7 @@ describe('UT-03 Concatenate Node', () => {
         const node = { id: 'n1', type: 'UT-03', data: {} };
         const inputs = { 'in_a': [] };
 
-        const result = evaluator(node as any, inputs);
+        const result = evaluator(node as any, inputs as any);
         expect(result.value).toBe('');
     });
 

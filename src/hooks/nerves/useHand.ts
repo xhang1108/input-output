@@ -3,7 +3,7 @@ import { useReactFlow, Node, XYPosition } from '@xyflow/react';
 import { useCanvasProjection } from '../useCanvasProjection';
 import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
-import { Transaction } from '../../engine/types/types';
+import { Transaction } from '../../engine/types/engineTypes';
 import { useHistoryStore, InteractionMode as HistoryMode } from '../../store/useHistoryStore';
 import { useClipboard } from '../useClipboard';
 import { useSelection } from '../useSelection';
