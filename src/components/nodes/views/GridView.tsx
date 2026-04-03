@@ -45,3 +45,4 @@ export const GridView: React.FC<GridViewProps> = ({ grid, precision }) => {
         </div>
     );
 };
+

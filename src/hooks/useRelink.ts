@@ -12,10 +12,10 @@ import {
     findNearestSlot,
     getHandleColorByConfig
 } from '../utils/handleUtils';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { MagneticSnapState } from './useHandleMagnet';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { Transaction } from '../engine/types';
+import { Transaction } from '../engine/types/types';
 
 type UseRelinkProps = {
     setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
@@ -631,3 +631,4 @@ export function useRelink({
         startEdgeDragDisconnect
     };
 }
+

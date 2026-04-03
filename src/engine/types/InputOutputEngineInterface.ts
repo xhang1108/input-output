@@ -6,3 +6,4 @@ export interface InputOutputEngineInterface {
     getMathInstance(): unknown;
     convertUnit(val: number, fromUnit: string, toUnit: string): number;
 }
+

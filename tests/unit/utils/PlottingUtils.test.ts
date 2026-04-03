@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PlottingUtils } from './PlottingUtils';
+import { PlottingUtils } from '@/utils/PlottingUtils';
 
 describe('PlottingUtils Phase 1', () => {
     describe('1.1 & 1.2 Symbolic Sampling and Asymptote Handling', () => {
@@ -84,4 +84,5 @@ describe('PlottingUtils Phase 1', () => {
         });
     });
 });
+
 

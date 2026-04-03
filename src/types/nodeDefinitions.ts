@@ -1068,3 +1068,4 @@ export function getDefinitionsByCategory(): { category: string; items: NodeDefin
     const results = Array.from(map.entries()).map(([category, items]) => ({ category, items }));
     return sortCategories(results, (item) => item.category);
 }
+

@@ -9,7 +9,7 @@
  */
 
 import { useCallback } from 'react';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { CategorizedMenuItem } from '../components/ui/CategorizedMenu';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
@@ -67,3 +67,4 @@ export function useNodeParam(
 
     return { options, currentValue, currentLabel, dispatch };
 }
+

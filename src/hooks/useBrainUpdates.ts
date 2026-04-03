@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
-import { NodeLogic } from '../engine/types';
+import { NodeLogic } from '../engine/types/types';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { useAppStore } from '../store/useStore';
 import deepEqual from 'fast-deep-equal';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useHistoryStore } from '../store/useHistoryStore';
 
 import { DEFAULT_UI_ORIGIN } from '../types/NodeDefinition';
@@ -311,3 +311,4 @@ export function useBrainUpdates(
         };
     }, [setNodes, setEdges]);
 }
+

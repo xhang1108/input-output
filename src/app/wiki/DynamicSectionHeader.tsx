@@ -47,3 +47,4 @@ export const DynamicSectionHeader: React.FC<DynamicSectionHeaderProps> = ({ id, 
         </div>
     );
 };
+

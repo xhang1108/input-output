@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
 import { HandleConfig } from '../../types/NodeDefinition';
 import { resolveHandlePosition } from '../../utils/handleUtils';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
 import { useHistoryStore } from '../../store/useHistoryStore';
@@ -381,3 +381,4 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
 }));
 
 BaseNode.displayName = 'BaseNode';
+

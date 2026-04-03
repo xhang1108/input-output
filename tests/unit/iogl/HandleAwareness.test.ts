@@ -1,4 +1,4 @@
-import { Parser } from '@/iogl/Parser';
+import { Parser } from '@/engine/iogl/Parser';
 import { describe, it, expect } from 'vitest';
 
 describe('IOGL Handle Awareness', () => {
@@ -65,4 +65,5 @@ describe('IOGL Handle Awareness', () => {
         expect(diagnostics[0].message).toContain("does not have output handle '.b'");
     });
 });
+
 

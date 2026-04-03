@@ -1,6 +1,6 @@
-import { InjectableGraph } from '../engine/types';
+import { InjectableGraph } from '@/engine/types/types';
 import { IOGL_MANIFEST } from './manifest';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { IOGLUtils } from './IOGLUtils';
 
 /**
@@ -131,3 +131,4 @@ export class Encoder {
     return result;
   }
 }
+

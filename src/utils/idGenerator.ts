@@ -30,3 +30,4 @@ export function generateNodeId(type: string): string {
 export function generateEdgeId(): string {
     return `e_${nanoid()}`;
 }
+

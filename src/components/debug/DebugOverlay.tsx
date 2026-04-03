@@ -115,3 +115,4 @@ export function DebugOverlay({ visible, onClose }: { visible: boolean; onClose: 
         </div>
     );
 }
+

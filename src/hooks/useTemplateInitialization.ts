@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Parser } from '../iogl/Parser';
+import { Parser } from '@/engine/iogl/Parser';
 import { SaveManager } from '../services/SaveManager';
 import { Serializer } from '../engine/Serializer';
 
@@ -68,3 +68,4 @@ export function useTemplateInitialization() {
         initializeTemplates();
     }, []);
 }
+

@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { Transaction, TransactionType } from '../../engine/types';
+import { Transaction, TransactionType } from '../../engine/types/types';
 import { LATEX_REGISTRY, findConfigByLatex } from './latexRegistry';
 
 const generateNodeId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 6)}`;
@@ -173,3 +173,4 @@ export function parseLatexToGraph(latex: string, startPos: { x: number, y: numbe
 
     return [...nodeTransactions, ...edgeTransactions];
 }
+

@@ -73,3 +73,4 @@ export function Forbidden({ onBack }: ForbiddenProps) {
         </div>
     );
 }
+

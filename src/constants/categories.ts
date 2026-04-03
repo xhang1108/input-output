@@ -39,3 +39,4 @@ export function sortCategories<T>(
         return catA.localeCompare(catB);
     });
 }
+

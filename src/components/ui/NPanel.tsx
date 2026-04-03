@@ -4,7 +4,7 @@ import { useStore, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { X, Cpu } from 'lucide-react';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { NodeParameter } from '../../types/NodeDefinition';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 
@@ -426,3 +426,4 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         </div>
     );
 }
+

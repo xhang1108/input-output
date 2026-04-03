@@ -70,3 +70,4 @@ export const CapsuleHandle = memo(({ h, id, isConnectable, nodeData }: CapsuleHa
 });
 
 CapsuleHandle.displayName = 'CapsuleHandle';
+

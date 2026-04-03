@@ -61,3 +61,4 @@ export interface NodeDefinition {
     minHeight?: number;      // [0.11.3] Minimum physical height constraint
 }
 
+

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { getDefinitionsByCategory } from '../../definitions/nodeDefinitions';
+import { getDefinitionsByCategory } from '@/types/nodeDefinitions';
 import { CategorizedMenu, CategorizedMenuItem } from './CategorizedMenu';
 import { getHandleColorByConfig, isGenericColor } from '../../utils/handleUtils';
 
@@ -135,3 +135,4 @@ export function NodePicker({ isOpen, position, onClose, onSelect, pendingConnect
         />
     );
 }
+

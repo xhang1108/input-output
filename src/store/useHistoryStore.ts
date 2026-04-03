@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Transaction } from '../engine/types';
+import { Transaction } from '../engine/types/types';
 
 export type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -93,3 +93,4 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
         });
     }
 }));
+

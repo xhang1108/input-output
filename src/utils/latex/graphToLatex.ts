@@ -1,7 +1,7 @@
 import { Node, Edge } from '@xyflow/react';
 import { FormulaRenderer } from '../FormulaRenderer';
 import { ASTNode } from '../../types/payload';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 
 /**
  * Builds an AST (Symbol) from the React Flow graph (nodes and edges).
@@ -152,3 +152,4 @@ export async function exportGraphToLatex(nodeId: string, nodes: Node[], edges: E
         return '\\text{Error}';
     }
 }
+

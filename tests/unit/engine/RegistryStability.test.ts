@@ -1,6 +1,6 @@
 import { NodeRegistry } from '@/engine/NodeRegistry';
 import { initializeNodes } from '@/engine/NodeRegistry';
-import { nodeTypes } from '@/config/nodeTypeMap';
+import { nodeTypes } from '@/constants/nodeTypeMap';
 
 describe('NodeRegistry Stability Architect', () => {
 
@@ -36,4 +36,5 @@ describe('NodeRegistry Stability Architect', () => {
         expect(missingEvaluators).toEqual([]);
     });
 });
+
 

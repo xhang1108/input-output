@@ -79,3 +79,4 @@ describe('Webpack Web Worker Syntax Enforcer', () => {
     });
 });
 
+

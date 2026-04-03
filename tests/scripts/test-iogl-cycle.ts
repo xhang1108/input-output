@@ -67,3 +67,4 @@ if (manualDecoded2 === 'A\\nB') {
     console.log('FAILURE: "A\\\\nB" became:', JSON.stringify(manualDecoded2));
 }
 
+

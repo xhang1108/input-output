@@ -2,7 +2,7 @@ import { memo, useMemo } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { NodeOpSelect } from './NodeOpSelect';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 
 /**
  * GenericSelectorNode
@@ -40,3 +40,4 @@ export const GenericSelectorNode = memo((props: NodeProps) => {
 });
 
 GenericSelectorNode.displayName = 'GenericSelectorNode';
+

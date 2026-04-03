@@ -31,3 +31,4 @@ export const FormulaView: React.FC<FormulaViewProps> = memo(({ formula }) => {
 });
 
 FormulaView.displayName = 'FormulaView';
+

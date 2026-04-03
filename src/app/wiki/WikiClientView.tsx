@@ -10,7 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { SystemHeader } from '@/components/ui/SystemHeader';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { getDocInfo } from '@/config/docRegistry';
+import { getDocInfo } from '@/constants/docRegistry';
 import { useRouter } from 'next/navigation';
 import { Footer } from '@/components/ui/Footer';
 import { BrainProvider } from '@/context/BrainContext';
@@ -479,3 +479,4 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
         </BrainProvider>
     );
 };
+

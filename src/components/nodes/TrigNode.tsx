@@ -51,3 +51,4 @@ export const TrigNode = memo((props: NodeProps) => {
     );
 });
 TrigNode.displayName = 'TrigNode';
+

@@ -27,3 +27,4 @@ export function VisualClock() {
 
     return null; // Side-effect only component
 }
+

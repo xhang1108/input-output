@@ -4,7 +4,7 @@ import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
 import { getLayoutedElements, LayoutAlgorithm, LayoutDirection } from './layoutEngine';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { Transaction } from '../engine/types';
+import { Transaction } from '../engine/types/types';
 import { useHistoryExecutor } from './useHistoryExecutor';
 
 export function useAutoLayout(
@@ -221,4 +221,5 @@ export function useAutoLayout(
 
     return { handleAutoLayout };
 }
+
 

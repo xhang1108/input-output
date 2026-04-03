@@ -1,5 +1,5 @@
 import { create, all } from 'mathjs';
-import { InputOutputEngineInterface } from './interfaces/InputOutputEngineInterface';
+import { InputOutputEngineInterface } from '@/engine/types/InputOutputEngineInterface';
 import { MATH_CONFIG } from './mathConfig';
 import { MATH_ALIASES } from './mathAliases';
 
@@ -117,3 +117,4 @@ export class InputOutputEngine implements InputOutputEngineInterface {
         }
     }
 }
+

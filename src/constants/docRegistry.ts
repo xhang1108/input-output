@@ -192,3 +192,4 @@ export function getDocInfo(nodeType: string, opToken?: string): { sectionId: str
 export function hasDocForToken(nodeType: string, opToken?: string): boolean {
   return !!getDocInfo(nodeType, opToken);
 }
+

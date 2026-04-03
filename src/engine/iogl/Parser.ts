@@ -1,10 +1,10 @@
 import { Lexer, Token, TokenType } from './Lexer';
 import { IOGL_MANIFEST } from './manifest';
-import { InjectableGraph } from '../engine/types';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
-import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
-import { DataType, NodePayload } from '../types/payload';
-import { PayloadUtils } from '../utils/PayloadUtils';
+import { InjectableGraph } from '@/engine/types/types';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
+import { generateNodeId, generateEdgeId } from '@/utils/idGenerator';
+import { DataType, NodePayload } from '@/types/payload';
+import { PayloadUtils } from '@/utils/PayloadUtils';
 import { IOGLUtils } from './IOGLUtils';
 
 interface RawNode {
@@ -542,3 +542,4 @@ export class Parser {
     return IOGLUtils.resolveHandle(handle, isSource);
   }
 }
+

@@ -56,3 +56,4 @@ export const FractionNode = memo((props: NodeProps) => {
 });
 
 FractionNode.displayName = 'FractionNode';
+

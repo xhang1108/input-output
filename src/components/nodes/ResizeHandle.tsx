@@ -2,7 +2,7 @@ import { memo, useCallback } from 'react';
 import { useReactFlow, Node } from '@xyflow/react';
 import { useFlexibleResize, ResizeDimensions } from './hooks/useFlexibleResize';
 import { cn } from '@/lib/utils';
-import { NODE_DEFINITIONS } from '../../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
 
@@ -126,3 +126,4 @@ export const ResizeHandle = memo(({
 });
 
 ResizeHandle.displayName = 'ResizeHandle';
+

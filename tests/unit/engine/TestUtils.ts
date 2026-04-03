@@ -1,4 +1,4 @@
-import { NodeLogic } from '@/engine/types';
+import { NodeLogic } from '@/engine/types/types';
 import { Edge } from '@xyflow/react';
 import { NodePayload } from '@/engine/../types/payload';
 
@@ -29,4 +29,5 @@ export function createMockEdge(id: string, source: string, target: string, sourc
         targetHandle
     };
 }
+
 

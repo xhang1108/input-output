@@ -86,3 +86,4 @@ export function useHandleMagnet(targetX: number, targetY: number) {
         snappedHandleId
     };
 }
+

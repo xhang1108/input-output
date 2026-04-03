@@ -2,7 +2,7 @@ import { memo, useCallback, useState, useEffect, useRef } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { useHistoryStore } from '../../store/useHistoryStore';
-import { Transaction } from '../../engine/types';
+import { Transaction } from '../../engine/types/types';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 
@@ -132,3 +132,4 @@ export const InputNode = memo((props: NodeProps) => {
     );
 });
 InputNode.displayName = 'InputNode';
+

@@ -193,3 +193,4 @@ export function getEarShortcuts(platform: Platform, handlers: Record<string, (e:
 
     return result;
 }
+

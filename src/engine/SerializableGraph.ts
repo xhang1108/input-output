@@ -77,3 +77,4 @@ export type WorkerResponse =
     | { type: 'RESULT'; epoch: number; patches: Record<string, SerializedPayload> }
     | { type: 'ERROR'; epoch: number; error: string }
     | { type: 'HEALTH'; nodeCount: number; edgeCount: number; sampleHashes?: Record<string, string> };
+

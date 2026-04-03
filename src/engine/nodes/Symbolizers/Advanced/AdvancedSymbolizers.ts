@@ -154,3 +154,4 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         return PayloadUtils.createSymbol('Literal', { value: normalized || 'Expert' });
     }
 };
+

@@ -96,3 +96,4 @@ export function registerLogicNodes() {
         return PayloadUtils.createBoolean(!!PayloadUtils.unwrap(data.value));
     }, (node) => PayloadUtils.createSymbol('Literal', { value: !!PayloadUtils.unwrap((node.data || {}).value) }));
 }
+

@@ -72,3 +72,4 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
         return PayloadUtils.createSymbol('Literal', { value: total });
     }
 };
+

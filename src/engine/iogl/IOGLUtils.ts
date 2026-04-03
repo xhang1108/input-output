@@ -1,6 +1,6 @@
-import { DataType, NodePayload } from '../types/payload';
-import { PayloadUtils } from '../utils/PayloadUtils';
-import { ColorUtils } from '../utils/ColorUtils';
+import { DataType, NodePayload } from '@/types/payload';
+import { PayloadUtils } from '@/utils/PayloadUtils';
+import { ColorUtils } from '@/utils/ColorUtils';
 import { IOGLSchema } from './manifest';
 
 /**
@@ -158,3 +158,4 @@ export class IOGLUtils {
         return arr.every(item => this.checkNumeric(item));
     }
 }
+

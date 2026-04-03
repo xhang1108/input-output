@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useReactFlow, XYPosition, Edge } from '@xyflow/react';
 import { useCanvasProjection } from './useCanvasProjection';
 import { useHistoryStore } from '../store/useHistoryStore';
-import { Transaction } from '../engine/types';
+import { Transaction } from '../engine/types/types';
 import { FALLBACK_SIZE } from '../utils/GeometryUtils';
 
 /**
@@ -117,3 +117,4 @@ function linesIntersect(a: number, b: number, c: number, d: number, p: number, q
     const gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
     return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
 }
+

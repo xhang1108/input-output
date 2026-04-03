@@ -165,3 +165,4 @@ export const StatusBar = React.memo(function StatusBar() {
         />
     );
 });
+

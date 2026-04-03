@@ -1,5 +1,5 @@
 import { Edge, Node } from '@xyflow/react';
-import { NodePayload } from '../types/payload';
+import { NodePayload } from '@/types/payload';
 
 
 
@@ -117,3 +117,4 @@ export interface ProjectData extends InjectableGraph {
     settings?: Record<string, any>;
     viewport?: { x: number; y: number; zoom: number };
 }
+

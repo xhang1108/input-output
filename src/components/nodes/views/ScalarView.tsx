@@ -77,3 +77,4 @@ function toBase12(num: number): string {
     }
     return result;
 }
+

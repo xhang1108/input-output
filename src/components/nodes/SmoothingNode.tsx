@@ -37,3 +37,4 @@ export const SmoothingNode = memo((props: NodeProps) => {
 });
 
 SmoothingNode.displayName = 'SmoothingNode';
+

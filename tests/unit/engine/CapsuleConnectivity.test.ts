@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Brain } from '@/engine/Brain';
-import { NODE_DEFINITIONS } from '@/definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { getHandleVariant } from '@/utils/handleUtils';
 
 describe('Capsule Registry Guard', () => {
@@ -59,4 +59,5 @@ describe('Capsule Registry Guard', () => {
          expect(validation2.reason).toBe('Handle already connected');
     });
 });
+
 

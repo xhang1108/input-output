@@ -69,3 +69,4 @@ export const graphs = pgTable("graph", {
     createdAt: timestamp("createdAt", { mode: "date" }).notNull(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull(),
 });
+

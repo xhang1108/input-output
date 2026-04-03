@@ -3,8 +3,8 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { ReactFlow, ReactFlowProvider, Node, Edge, useNodesState, useEdgesState, useStore, ReactFlowState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { nodeTypes, edgeTypes } from '@/config/nodeTypeMap';
-import { NODE_DEFINITIONS } from '@/definitions/nodeDefinitions';
+import { nodeTypes, edgeTypes } from '@/constants/nodeTypeMap';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useBrain } from '@/context/BrainContext';
 import { WikiDemoCanvas } from './WikiDemoCanvas';
 import { PayloadUtils } from '@/utils/PayloadUtils';
@@ -293,3 +293,4 @@ export const IOPlayground: React.FC<IOPlaygroundProps> = React.memo((props) => {
 });
 
 IOPlayground.displayName = 'IOPlayground';
+

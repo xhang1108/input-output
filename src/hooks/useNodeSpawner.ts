@@ -3,12 +3,12 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { Node, Edge, addEdge, useReactFlow } from '@xyflow/react';
 import { generateNodeId } from '../utils/idGenerator';
-import { NODE_DEFINITIONS } from '../definitions/nodeDefinitions';
+import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useCanvasProjection } from './useCanvasProjection';
 import { getHandleColorByConfig } from '../utils/handleUtils';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { useBrain } from '../context/BrainContext';
-import { Transaction } from '../engine/types';
+import { Transaction } from '../engine/types/types';
 
 export interface PendingConnection {
     nodeId: string;
@@ -155,3 +155,4 @@ export function useNodeSpawner({
         spawnNode,
     };
 }
+

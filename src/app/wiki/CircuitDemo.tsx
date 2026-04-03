@@ -3,7 +3,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { ReactFlow, ReactFlowProvider, Node, Edge, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { nodeTypes, edgeTypes } from '@/config/nodeTypeMap';
+import { nodeTypes, edgeTypes } from '@/constants/nodeTypeMap';
 import { useBrain, BrainProvider } from '@/context/BrainContext';
 import { WikiDemoCanvas } from './WikiDemoCanvas';
 import { PayloadUtils } from '@/utils/PayloadUtils';
@@ -253,3 +253,4 @@ export const CircuitDemo: React.FC<CircuitDemoProps> = React.memo((props: Circui
 
 CircuitDemo.displayName = 'CircuitDemo';
 CircuitDemoInner.displayName = 'CircuitDemoInner';
+
