@@ -27,7 +27,7 @@ export const ResultNode = memo((props: NodeProps) => {
     const nodeData = data;
     const value = data.value;
 
-    const precision = typeof data.precision === 'number' ? data.precision : -1;
+    const precision = (typeof data.precision === 'number' || typeof data.precision === 'string') ? parseInt(String(data.precision)) : -1;
     const payload = (typeof value === 'object' && value !== null && 'type' in value)
         ? value as import('../../types/payload').NodePayload
         : (value !== undefined ? PayloadUtils.wrap(value) : null);

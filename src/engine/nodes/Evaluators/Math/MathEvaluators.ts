@@ -98,9 +98,11 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                     const uA = mi.unit(numA, unitA);
                     const uB = mi.unit(numB, unitB);
                     const converted = (op === 'ADD') ? mi.add(uA, uB) : mi.subtract(uA, uB);
-                    // Extract numeric result in unitA's dimension
-                    const numResult = converted.toNumber(unitA);
-                    return { ...PayloadUtils.wrap(mi.bignumber(numResult)), meta: { unit: unitA } };
+                    // Extraction: Target unitA dimension.
+                    // IMPORTANT: mathjs.unit.value is always in SI base units.
+                    // We must use .toNumber(unitA) or equivalent to get 1.5 for "1.5 km".
+                    const numResult = converted.toNumber(unitA); 
+                    return PayloadUtils.createScalar(numResult, unitA);
                 } catch {
                     // mathjs doesn't know one/both units, or they're incompatible dimensions
                     return PayloadUtils.createError(`Cannot ${op === 'ADD' ? 'add' : 'subtract'}: ${unitA} and ${unitB} are incompatible`);
@@ -133,7 +135,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             if (result && typeof result === 'object') {
                 const obj = result as any;
                 if (obj.isUnit || obj.constructor?.name === 'Unit') {
-                    try { result = obj.toNumber(obj.formatUnits()); } catch { result = obj.value; }
+                    result = obj.value; // Keep as BigNumber
                 }
             }
 
@@ -148,7 +150,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 op
             );
 
-            return { ...PayloadUtils.wrap(result), meta: combinedMeta };
+            return PayloadUtils.createScalar(result, combinedMeta.unit as string);
         } catch (e: any) {
             return PayloadUtils.createError(e.message);
         }
@@ -178,7 +180,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'FACTORIAL') result = math.factorial(n);
             else result = math.combinations(n, r);
 
-            return PayloadUtils.wrap(result);
+            return PayloadUtils.createScalar(result);
         } catch (e: any) { return PayloadUtils.createError(`${op} Failed: ${e.message}`); }
     },
     'MA-05': (node, inputs) => {
@@ -195,12 +197,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             else if (op === 'TRUNC') result = math.fix(val);
             else result = math.round(val, prec);
 
-            return {
-                type: DataType.Scalar,
-                value: PayloadUtils.dehydrate(result),
-                symbol: null,
-                meta: { unit: valPayload.meta?.unit }
-            };
+            return PayloadUtils.createScalar(result, valPayload.meta?.unit as string);
         } catch (e) { return PayloadUtils.createError('Op Failed'); }
     },
     'MA-14': (node, inputs) => (MathEvaluators as any)['MA-05'](node, inputs),
@@ -213,7 +210,9 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             if (raw === null || raw === undefined) return PayloadUtils.createScalar(0);
             // Important: mathjs.fraction(BigNumber) creates huge numerators/denominators for decimals.
             // Using Number(raw) allows fraction.js to use rational approximation for results like 1/3 (0.333...).
-            const f = math.fraction(typeof raw === 'object' && (raw as any).isBigNumber ? (raw as any).toNumber() : raw);
+            // We use a small epsilon or rely on mathjs's internal precision handling.
+            const valNum = typeof raw === 'object' && (raw as any).isBigNumber ? (raw as any).toNumber() : Number(raw);
+            const f = math.fraction(valNum);
             let n = Number(f.n), d = Number(f.d), integerPart = 0;
             let str = math.format(f);
             let latex = str;
@@ -306,7 +305,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             }
 
             const finalValue = (result as any)?.isBigNumber ? (result as any).toNumber() : result;
-            return { type: DataType.Scalar, value: PayloadUtils.dehydrate(finalValue), symbol: null, meta: {} };
+            return PayloadUtils.createScalar(finalValue);
         } catch (e: any) {
             return PayloadUtils.createError(`${op} Failed: ${e.message}`);
         }
@@ -327,7 +326,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 }
             }
         }
-        return { type: DataType.Scalar, value: finalValue, symbol: inputPayload?.symbol || null, meta: { unit: targetBase } };
+        return PayloadUtils.createScalar(finalValue, targetBase);
     },
     'MA-03_OLD': (node, inputs) => MathEvaluators['MA-03'](node, inputs), // Alias if needed
     'MA-04': (node, inputs) => {
@@ -358,7 +357,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 try { result = math.multiply(result, math.divide(180, math.pi)); } catch (e) { }
             }
 
-            return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
+            return PayloadUtils.createScalar(result);
         } catch (e) { return PayloadUtils.createError('Trig Failed'); }
     },
     'MA-03': (node, inputs) => {
@@ -372,7 +371,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
             if (op === 'LOG10') result = math.log10(val);
             else if (op === 'LOGN') result = math.log(val, (inputs['in_b']) ? PayloadUtils.hydrate(PayloadUtils.unwrap(inputs['in_b']), math) : 10);
             else result = math.log(val);
-            return { type: DataType.Scalar, value: PayloadUtils.dehydrate(result), symbol: null, meta: {} };
+            return PayloadUtils.createScalar(result);
         } catch (e) { return PayloadUtils.createError('Log Failed'); }
     },
     'MA-17': (node, inputs) => MathEvaluators['MA-04'](node, inputs),
@@ -505,6 +504,12 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         const valPayload = inputs['in_a'];
         if (!valPayload) return PayloadUtils.createScalar(0, targetUnit);
 
+        // Feature: Remove Unit
+        if (data.unit === 'REMOVE') {
+            const raw = PayloadUtils.unwrap(valPayload);
+            return PayloadUtils.createScalar(raw);
+        }
+
         try {
             const raw = PayloadUtils.unwrap(valPayload);
             const sourceUnit = valPayload.meta?.unit;
@@ -515,15 +520,12 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 try {
                     // Correctly hydrate the value (e.g. from dehydrated BigNumber) before numeric conversion
                     const hydrated = PayloadUtils.hydrate(valPayload.value, math);
-                    const num = (hydrated as any).toNumber ? (hydrated as any).toNumber() : Number(hydrated);
+                    const result = math.unit(hydrated, sourceUnit).to(targetUnit);
+                    // result.value is in SI base units. To get it in target units with high precision:
+                    const targetFactor = math.unit(1, targetUnit).value;
+                    const convertedValue = math.divide(result.value, targetFactor);
                     
-                    const uA = math.unit(num, sourceUnit);
-                    const result = uA.to(targetUnit);
-                    const numResult = result.toNumber(targetUnit);
-                    return {
-                        ...PayloadUtils.wrap(math.bignumber(numResult)),
-                        meta: { unit: targetUnit }
-                    };
+                    return PayloadUtils.createScalar(convertedValue, targetUnit);
                 } catch (e: any) {
                     // Division by zero or incompatible dimensions
                     return PayloadUtils.createError(`Cannot convert ${sourceUnit} to ${targetUnit}: ${e.message}`);
@@ -598,7 +600,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 case 'Sum': result = math.sum(arr); break;
                 default: result = math.mean(arr);
             }
-            return PayloadUtils.createScalar(PayloadUtils.dehydrate(result));
+            return PayloadUtils.createScalar(result);
         } catch (e: any) { return PayloadUtils.createError(`Stats Failed: ${e.message}`); }
     },
     // TR-05: Smoothing (2D Spatial Moving Average)

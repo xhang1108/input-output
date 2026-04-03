@@ -23,11 +23,8 @@ describe('Expression Node (IN-09) Reproduction', () => {
         
         expect(result.type).toBe(DataType.Scalar);
         const val = PayloadUtils.unwrap(result);
-        if (typeof val === 'object' && val !== null && (val as any).mathjs === 'BigNumber') {
-            expect((val as any).value).toBe('3');
-        } else {
-            expect(val).toBe(3);
-        }
+        const strVal = typeof val === 'object' && val !== null && (val as any).mathjs === 'BigNumber' ? (val as any).value : String(val);
+        expect(strVal).toBe('3');
     });
 
     it('should return Symbolic for expressions with variables', async () => {

@@ -56,10 +56,26 @@ export const DisplayUtils = {
         if (typeof val === 'string') {
             // If it's a numeric string and precision is set, try to format it
             if (precision >= 0 && !isNaN(Number(val)) && val.trim() !== '') {
-                return this.formatValue(Number(val), precision);
+                // For very high precision strings, don't just use Number()
+                // Use mathjs BigNumber if possible to avoid precision loss during rounding
+                try {
+                    const math = (globalThis as any).mathjs || (globalThis as any).math;
+                    if (math && math.bignumber) {
+                        const bn = math.bignumber(val);
+                        return bn.toFixed(precision);
+                    }
+                    
+                    const n = parseFloat(val);
+                    if (Number.isFinite(n)) {
+                        return n.toLocaleString(undefined, {
+                            minimumFractionDigits: precision,
+                            maximumFractionDigits: precision
+                        });
+                    }
+                } catch (e) {}
             }
             // Truncate very long symbolic or numeric results for UI safety
-            if (val.length > 1000) return val.substring(0, 100) + '... (truncated)';
+            if (val.length > 200) return val.substring(0, 50) + '...';
             return val;
         }
 
@@ -107,24 +123,44 @@ export const DisplayUtils = {
             // Check this BEFORE generic object keys to catch serialized BigNumbers etc.
             if (val.mathjs) {
                 switch (val.mathjs) {
-                    case 'BigNumber': return this.formatValue(val.value, precision);
+                    case 'BigNumber': 
+                        return (precision >= 0) 
+                            ? this.formatValue(val.value, precision) 
+                            : String(val.value);
                     case 'Fraction': return `${val.n}/${val.d}`;
                     case 'Complex':
-                        const re = this.formatValue(val.re, precision);
-                        const im = this.formatValue(val.im, precision);
-                        return `${re}${val.im >= 0 ? '+' : ''}${im}i`;
-                    case 'Unit': return `${val.value} ${this.formatUnit(val.unit)}`.trim();
+                        const reC = this.formatValue(val.re, precision);
+                        const imC = this.formatValue(val.im, precision);
+                        return `${reC}${val.im >= 0 ? '+' : ''}${imC}i`;
+                    case 'Unit': 
+                        const unitVal = this.formatValue(val.value, precision);
+                        return `${unitVal} ${this.formatUnit(val.unit)}`.trim();
                     case 'Matrix': return this.formatValue(val.data, precision);
                 }
             }
 
             // --- Live MathJS Objects ---
-            if (val.isBigNumber === true) return this.formatValue(val.toString(), precision);
+            if (val.isBigNumber === true) {
+                if (precision >= 0) {
+                    try { return val.toFixed(precision); } catch { return val.toString(); }
+                }
+                return val.toString();
+            }
             if (val.isComplex === true) {
                 return `${this.formatValue(val.re, precision)}${val.im >= 0 ? '+' : ''}${this.formatValue(val.im, precision)}i`;
             }
             if (val.isFraction === true) return `${val.n}/${val.d}`;
-            if (val.isUnit === true) return val.toString();
+            if (val.isUnit === true) {
+                if (precision >= 0) {
+                    try {
+                        const unitMagnitude = val.toNumber(val.formatUnits());
+                        return this.formatValue(unitMagnitude, precision);
+                    } catch {
+                        return val.toString();
+                    }
+                }
+                return val.toString();
+            }
             if (val.isMatrix === true) return this.formatValue(val.toArray ? val.toArray() : val._data, precision);
 
             // --- Standard Arrays ---

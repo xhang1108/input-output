@@ -52,7 +52,7 @@ test('MA-01 Unit Conversion: Same-dimension ADD converts correctly', async () =>
         in_a: PayloadUtils.createScalar(1, 'km'),
         in_b: PayloadUtils.createScalar(500, 'm')
     });
-    expect(res.value).toBeCloseTo(1.5);
+    expect(Number(res.value)).toBeCloseTo(1.5);
     expect(res.meta?.unit).toBe('km');
 });
 
@@ -62,7 +62,7 @@ test('MA-01 Unit Conversion: Same-dimension SUB converts correctly', async () =>
         in_a: PayloadUtils.createScalar(1, 'km'),
         in_b: PayloadUtils.createScalar(200, 'm')
     });
-    expect(res.value).toBeCloseTo(0.8);
+    expect(Number(res.value)).toBeCloseTo(0.8);
     expect(res.meta?.unit).toBe('km');
 });
 
@@ -72,7 +72,7 @@ test('MA-01 Unit Conversion: Triple mixed units ADD', async () => {
         in_a: PayloadUtils.createScalar(1, 'km'),
         in_b: PayloadUtils.createScalar(1.01, 'm')
     });
-    expect(res.value).toBeCloseTo(1.00101, 5);
+    expect(Number(res.value)).toBeCloseTo(1.00101, 5);
     expect(res.meta?.unit).toBe('km');
 });
 
@@ -119,8 +119,10 @@ test('MA-02 Advanced Math: Full Operator Coverage', async () => {
     expect(resSignZero.value).toBe(0);
 
     // 3. CBRT: ∛27 = 3
-    const resCbrt = await evalMath('MA-02', 'CBRT', { in_a: PayloadUtils.createScalar(27) });
-    expect(resCbrt.value).toBe(3);
+    const result = await evalMath('MA-02', 'CBRT', { in_a: PayloadUtils.createScalar(27) });
+    expect(result.type).toBe(DataType.Scalar);
+    const val = PayloadUtils.unwrap(result) as any;
+    expect(String(val.value || val)).toBe('3');
 
     // 4. FACT: 5! = 120
     const resFact = await evalMath('MA-02', 'FACT', { in_a: PayloadUtils.createScalar(5) });

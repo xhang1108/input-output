@@ -55,11 +55,12 @@ export const NodeOpSelect = memo(({
     const { options: staticOptions, currentValue, currentLabel: staticLabel } = useNodeParam(nodeId, defId, paramId, data);
 
     const options = overrideOptions || staticOptions;
-    
+
     // Determine the label to show in the trigger button
-    const currentLabel = overrideOptions 
-        ? (overrideOptions.find(opt => opt.id === currentValue)?.label || String(currentValue || placeholder || 'Select...'))
-        : staticLabel;
+    const activeValue = currentValue === 'REMOVE' ? 'Remove Unit' : (currentValue || placeholder || 'Select...');
+    const currentLabel = overrideOptions
+        ? (overrideOptions.find(opt => opt.id === currentValue)?.label || String(activeValue))
+        : (currentValue === 'REMOVE' ? 'Remove Unit' : staticLabel);
 
     const handleSelect = useCallback((item: CategorizedMenuItem) => {
         const newValue = item.id;

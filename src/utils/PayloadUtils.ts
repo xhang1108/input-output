@@ -20,8 +20,13 @@ export const PayloadUtils = {
         let type = DataType.Scalar;
         const meta: PayloadMetadata = {};
 
-        if (typeof value === 'string') type = DataType.String;
-        else if (typeof value === 'boolean') type = DataType.Boolean;
+        if (typeof value === 'string') {
+            const isNumeric = !isNaN(Number(value)) && value.trim() !== '';
+            type = isNumeric ? DataType.Scalar : DataType.String;
+        }
+        else if (typeof value === 'boolean') {
+            type = DataType.Boolean;
+        }
         else if (Array.isArray(value) || (value && (value as any).isMatrix)) {
             type = DataType.Array;
             const dims = this.calculateDimensions(value);
@@ -30,11 +35,13 @@ export const PayloadUtils = {
         }
         else if (typeof value === 'object' && value !== null) {
             const val = value as any;
-            // BigNumbers, Fractions, and Complex numbers are Scalars in our system
-            if (val.isBigNumber || val.isFraction || val.isComplex) {
+            const isHydratedScalar = val.isBigNumber || val.isFraction || val.isComplex;
+            const isDehydratedScalar = val.mathjs === 'BigNumber' || val.mathjs === 'Fraction' || val.mathjs === 'Complex';
+
+            if (isHydratedScalar || isDehydratedScalar) {
                 type = DataType.Scalar;
             } else {
-                type = DataType.Array; // Unified Struct/Tensor
+                type = DataType.Array;
                 const dims = this.calculateDimensions(value);
                 meta.dimensions = dims;
                 meta.rank = dims.length;
@@ -132,16 +139,20 @@ export const PayloadUtils = {
     /**
      * Safe Scalar Creator
      */
-    createScalar(value: PayloadValue, unit?: string): NodePayload {
+    createScalar(value: PayloadValue | unknown, unit?: string): NodePayload {
         if (value && typeof value === 'object' && 'type' in (value as any) && (value as any).type === DataType.Scalar) {
-            return value as NodePayload;
+            const p = value as NodePayload;
+            if (unit && p.meta) p.meta.unit = unit;
+            return p;
         }
-        return {
-            type: DataType.Scalar,
-            value: this.dehydrate(value),
-            symbol: null,
-            meta: { unit, rank: 0, dimensions: [] }
-        };
+
+        const p = this.wrap(value);
+        // Ensure Scalar type even if wrap fallback to something else (e.g. for raw number constants)
+        p.type = DataType.Scalar;
+        if (unit) {
+            p.meta = { ...p.meta, unit };
+        }
+        return p;
     },
 
     /**
@@ -427,6 +438,7 @@ export const PayloadUtils = {
             return this.createError(`Type Mismatch: Expected ${expected}, got ${payload.type}`);
         }
 
+        // 2. Scalar -> String
         // 2. Scalar -> String
         if (payload.type === DataType.Scalar && expected === DataType.String) {
             return {
