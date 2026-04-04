@@ -36,6 +36,7 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   "IN-06": { ...SINGLE_OUT, modeProperty: "val", data: ["precision"] },
   "IN-07": { ...ARRAY_INPUT, ...SINGLE_OUT },
   "IN-08": { ...ARRAY_INPUT, ...SINGLE_OUT },
+  "IN-11": { ...SINGLE_OUT, data: ["initialValue", "currentValue", "step", "interval", "running"] },
   "IN-09": { ...SINGLE_OUT, data: ["code"] },
   "IN-10": {
     ...MODE_ONLY,

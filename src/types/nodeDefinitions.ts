@@ -295,6 +295,29 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'cols', label: 'Cols', type: 'number', min: 1, step: 1 }
         ]
     },
+    {
+        id: 'IN-11',
+        label: 'Timer',
+        category: 'Input',
+        aliases: ['clock', 'time', 'counter', 'ticker', 'stopwatch'],
+        handles: [
+            { id: 'out_a', type: 'source', variant: 'single', dataType: 'scalar' }
+        ],
+        defaultData: {
+            initialValue: 0,
+            currentValue: 0,
+            step: 1,
+            interval: 1000,
+            running: false
+        },
+        params: [
+            { id: 'initialValue', label: 'Initial Value', type: 'number' },
+            { id: 'currentValue', label: 'Current Value', type: 'number' },
+            { id: 'step', label: 'Step', type: 'number' },
+            { id: 'interval', label: 'Interval (ms)', type: 'number', min: 1, hint: 'Time between increments' },
+            { id: 'running', label: 'Running', type: 'boolean' }
+        ]
+    },
 
     {
         id: 'MA-01',

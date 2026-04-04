@@ -302,6 +302,11 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             symbol: null,
             meta: {}
         };
+    },
+    'IN-11': (node) => {
+        const data = (node.data || {}) as Record<string, unknown>;
+        const currentValue = data.currentValue !== undefined ? Number(data.currentValue) : 0;
+        return PayloadUtils.createScalar(currentValue);
     }
 };
 

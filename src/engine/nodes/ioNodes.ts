@@ -10,6 +10,7 @@ export function registerIONodes() {
     NodeRegistry.register('IN-07', IOEvaluators['IN-07'], IOSymbolizers['IN-07']); // Matrix Input
     NodeRegistry.register('IN-03', IOEvaluators['IN-03'], IOSymbolizers['IN-03']); // Color
     NodeRegistry.register('IN-08', IOEvaluators['IN-08'], IOSymbolizers['IN-08']); // Abacus
+    NodeRegistry.register('IN-11', IOEvaluators['IN-11']); // Timer
 
     // ─── 8. Output ──────────────────────────────────────────
     NodeRegistry.register('OT-01', IOEvaluators['OT-01'], IOSymbolizers['OT-01']); // Result
