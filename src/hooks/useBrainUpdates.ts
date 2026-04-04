@@ -101,9 +101,15 @@ export function useBrainUpdates(
 
                         const isInput = logicNode.id.startsWith('IN-') || logicNode.type?.startsWith('IN-');
 
-                        // SIGNAL FALLBACK: Prioritize result signal, fallback to persistent data state
                         const sourceVal = unwrappedValue ?? logicNode.data.value;
-                        const finalValue = isInput ? PayloadUtils.unwrap(sourceVal) : sourceVal;
+                        let finalValue = isInput ? PayloadUtils.unwrap(sourceVal) : sourceVal;
+
+                        // NEW GUARD: Input Persistence Guard
+                        // Prevent transient engine 'null' (due to batch reconciliation race) 
+                        // from overwriting a valid persistent user input in the UI.
+                        if (isInput && (finalValue === null || finalValue === undefined) && existingNode?.data?.value != null) {
+                            finalValue = existingNode.data.value;
+                        }
 
                         // 1. Determine structural props (parentId and Origin)
                         const d = logicNode.data || {};

@@ -13,6 +13,12 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         // Fix: Support both 'value' and 'val' keys from different UI components
         const rawVal = data.value ?? data.val;
         let val = rawVal !== undefined ? (PayloadUtils.unwrap(rawVal) as number) : PayloadUtils.unwrap(original);
+        
+        // Resilience Guard: If the UI accidentally sends 'null' (due to transient sync errors), 
+        // fallback to the Brain's persistent 'original' value if available.
+        if (val === null && original && PayloadUtils.unwrap(original) !== null) {
+            val = PayloadUtils.unwrap(original) as number;
+        }
 
         // Support precision rounding for Constant node (IN-01 variant)
         const rawPrecision = data.precision ?? data.accuracy;
@@ -36,9 +42,13 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const data = (node.data || {}) as Record<string, unknown>;
         const math = InputOutputEngine.getInstance().getMathInstance();
         const original = node.value || PayloadUtils.createScalar(0);
-        // Fix: Support both 'value' and 'val'
         const rawVal = data.value ?? data.val;
         let val = rawVal !== undefined ? (PayloadUtils.unwrap(rawVal) as number) : PayloadUtils.unwrap(original);
+
+        // Resilience Guard: Fallback to persistent Brain value if UI sends 'null' (Sync race)
+        if (val === null && original && PayloadUtils.unwrap(original) !== null) {
+            val = PayloadUtils.unwrap(original) as number;
+        }
 
         // Support precision rounding for Slider node
         const rawPrecision = data.precision ?? data.accuracy;
@@ -61,6 +71,11 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
         const original = node.value || PayloadUtils.createString('');
         const rawVal = PayloadUtils.unwrap(data.value ?? data.val);
         let val = rawVal !== undefined ? rawVal : PayloadUtils.unwrap(original);
+
+        // Resilience Guard: Fallback to persistent Brain value if UI sends 'null'
+        if ((val === null || val === undefined || val === '') && original && PayloadUtils.unwrap(original)) {
+            val = PayloadUtils.unwrap(original);
+        }
         const meta = { ...original.meta } as any;
         if (data.unit) meta.unit = String(data.unit);
         return {
