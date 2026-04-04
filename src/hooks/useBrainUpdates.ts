@@ -115,6 +115,13 @@ export function useBrainUpdates(
                         const d = logicNode.data || {};
                         const { width: _dataWidth, height: _dataHeight, parentId: _dataParentId, ...displayData } = d;
 
+                        // TRANSIENT STATE ISOLATION: 
+                        // Strip keys that strictly belong to UI-only logic (focus, editing mode).
+                        // This prevents a stale Brain state from "re-activating" editing mode 
+                        // in a node that the UI has just blurred.
+                        const TRANSIENT_KEYS = ['isEditing', 'isTyping', 'isPending'];
+                        TRANSIENT_KEYS.forEach(k => delete (displayData as any)[k]);
+
                         // Prioritize top-level width/height (updated by RESIZE_NODE)
                         const width = logicNode.width ?? _dataWidth;
                         const height = logicNode.height ?? _dataHeight;
