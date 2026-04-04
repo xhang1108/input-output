@@ -1,0 +1,198 @@
+[Your current age] IN-01 28 @431,426
+[Basic Math] MA-01 { mode: "MUL" } @1161,463
+[Used day] OT-01 -1 { mode: "auto" } @2927,-625
+[Estimated lifespan] IN-01 55 @431,671
+[Basic Math-01] MA-01 { mode: "SUB" } @946,464
+[Basic Math-02] MA-01 { mode: "MUL" } @1165,587
+[Number-01] IN-01 365 @1135,362
+[Time spent working] IN-02 7.5, 0, 12, 0.5 @424,920
+[Commute time] IN-02 1, 0, 5, 0.5 @425,1087
+[Sleep time] IN-02 8, 0, 12, 0.5 @423,1248
+[Eat time] IN-02 1.5, 0, 5, 0.5 @423,1411
+[Basic Math-03] MA-01 { mode: "ADD" } @919,1038
+[Basic Math-04] MA-01 { mode: "ADD" } @922,1333
+[Basic Math-05] MA-01 { mode: "ADD" } @1115,1178
+[Result] OT-01 -1 { mode: "auto" } @2927,642
+[Basic Math-06] MA-01 { mode: "SUB" } @1298,1173
+[Number-02] IN-01 24 @1263,1070
+[Working days per week] IN-02 5, 0, 7, 1 @429,1738
+[Number-03] IN-01 7 @918,1903
+[Basic Math-10] MA-01 { mode: "DIV" } @1154,1889
+[Number-07] IN-01 365 @921,1790
+[Basic Math-15] MA-01 { mode: "MUL" } @1329,1883
+[Basic Math-16] MA-01 { mode: "SUB" } @1507,1885
+[Basic Math-17] MA-01 { mode: "MUL" } @1849,1735
+[Basic Math-18] MA-01 { mode: "MUL" } @1848,1866
+[Basic Math-19] MA-01 { mode: "SUB" } @1301,1298
+[Basic Math-20] MA-01 { mode: "ADD" } @2016,1860
+[Result-10] OT-01 4 { mode: "auto" } @2927,2220
+[Sticky Note] UT-01 "Time spent working days" { width: 202, height: 318 } @200,920
+[Sticky Note-01] UT-01 "Your personal time per week" { width: 265, height: 98 } @3224,1165
+[Sticky Note-03] UT-01 "Time \"stolen\" from you per week" { width: 263, height: 109 } @3224,1410
+[Sticky Note-02] UT-01 "Your personal time per month" { width: 265, height: 98 } @3224,1691
+[Sticky Note-04] UT-01 "Time \"stolen\" from you per month" { width: 263, height: 109 } @3224,1936
+[Sticky Note-05] UT-01 "Your personal time per year" { width: 265, height: 98 } @3224,2220
+[Sticky Note-06] UT-01 "Time \"stolen\" from you per year" { width: 263, height: 109 } @3224,2467
+[Sticky Note-07] UT-01 "How much total time you have left." { width: 265, height: 98 } @3214,-114
+[Sticky Note-08] UT-01 "How much of your own time is left?" { width: 263, height: 109 } @3291,138
+[Sticky Note-09] UT-01 "How much of your remaining time is no longer yours?" { width: 263, height: 109 } @3291,393
+[Basic Math-12] MA-01 { mode: "MUL" } @1163,1755
+[Number-05] IN-01 24 @919,1680
+[Basic Math-13] MA-01 { mode: "SUB" } @1959,1454
+[Result-11] OT-01 4 { mode: "auto" } @2927,2467
+[Result-12] OT-01 4 { mode: "auto" } @2927,1691
+[Result-13] OT-01 4 { mode: "auto" } @2927,1936
+[Result-14] OT-01 4 { mode: "auto" } @2927,1165
+[Result-15] OT-01 4 { mode: "auto" } @2927,1410
+[Basic Math-14] MA-01 { mode: "DIV" } @2563,1937
+[Basic Math-21] MA-01 { mode: "DIV" } @2417,1689
+[Basic Math-22] MA-01 { mode: "DIV" } @2557,1396
+[Basic Math-23] MA-01 { mode: "DIV" } @2422,1164
+[Number-06] IN-01 12 @2193,1696
+[Number-09] IN-01 52.1428 @2205,1171
+[Basic Math-24] MA-01 { mode: "MUL" } @1719,550
+[Number-10] IN-01 24 @1717,672
+[Result-16] OT-01 -1 { mode: "auto" } @2927,-114
+[Result-17] OT-01 4 { mode: "auto" } @3003,138
+[Result-18] OT-01 4 { mode: "auto" } @3003,393
+[Basic Math-25] MA-01 { mode: "MUL" } @2344,143
+[Basic Math-26] MA-01 { mode: "MUL" } @2674,391
+[Result-01] OT-01 -1 { mode: "auto" } @2927,888
+[Sticky Note-12] UT-01 "Your free time on workdays" { width: 265, height: 98 } @3224,642
+[Sticky Note-13] UT-01 "Your free time on days off" { width: 263, height: 109 } @3224,888
+[Holidays per year] IN-01 20 @427,1918
+[Basic Math-07] MA-01 { mode: "ADD" } @1678,1884
+[Basic Math-08] MA-01 { mode: "SUB" } @1664,1752
+[Retirement age] IN-01 50 @432,557
+[Basic Math-09] MA-01 { mode: "SUB" } @946,600
+[Basic Math-11] MA-01 { mode: "MUL" } @1657,858
+[Basic Math-27] MA-01 { mode: "MUL" } @1828,854
+[Basic Math-28] MA-01 { mode: "ADD" } @2509,143
+[Basic Math-29] MA-01 { mode: "ADD" } @2434,-120
+[Basic Math-30] MA-01 { mode: "SUB" } @942,724
+[Result-02] OT-01 -1 { mode: "auto" } @2927,-371
+[Basic Math-31] MA-01 { mode: "MUL" } @1169,711
+[Sticky Note-10] UT-01 "How many days you’ve already used up." { width: 265, height: 98 } @3214,-626
+[Sticky Note-11] UT-01 "How many days you have left." { width: 265, height: 98 } @3214,-371
+[Unit] TR-01 "Day" { mode: "CUSTOM" } @2755,-625
+[Unit-01] TR-01 "Day" { mode: "CUSTOM" } @2755,-371
+[Unit-02] TR-01 { mode: "h" } @2755,-114
+[Unit-03] TR-01 { mode: "h" } @2835,143
+[Unit-04] TR-01 { mode: "h" } @2835,393
+[Unit-05] TR-01 { mode: "h" } @2739,642
+[Unit-06] TR-01 { mode: "h" } @2739,888
+[Unit-07] TR-01 { mode: "h" } @2739,1165
+[Unit-08] TR-01 { mode: "h" } @2739,1410
+[Unit-09] TR-01 { mode: "h" } @2739,1691
+[Unit-10] TR-01 { mode: "h" } @2739,1936
+[Unit-11] TR-01 { mode: "h" } @2739,2220
+[Unit-12] TR-01 { mode: "h" } @2739,2467
+[Sticky Note-19] UT-01 "Daily routine (whether you're working or not)" { width: 202, height: 318 } @203,1248
+[Basic Math-32] MA-01 { mode: "SUB" } @2573,2234
+[Timer] IN-11 0, 0, 0.000278, 1000, true @1735,2012
+[Basic Math-34] MA-01 { mode: "SUB" } @2575,1689
+[Basic Math-35] MA-01 { mode: "SUB" } @2584,1163
+[Basic Math-37] MA-01 { mode: "SUB" } @2672,143
+[Basic Math-38] MA-01 { mode: "SUB" } @2595,-119
+[Sticky Note-14] UT-01 "This is a calculator for your time. It shows how much time is under your control, and how much is not. \n\nBecause I only calculated by years, the results are just for reference. \nIf I have time, I'll calculate it down to the days. Hope to update it later." { width: 576, height: 175 } @1441,-620
+
+[Your current age].a -> [Basic Math].a
+[Your current age].a -> [Basic Math-01].b
+[Number-01].a -> [Basic Math-02].b
+[Basic Math-01].a -> [Basic Math-02].a
+[Time spent working].a -> [Basic Math-03].a
+[Commute time].a -> [Basic Math-03].b
+[Sleep time].a -> [Basic Math-04].a
+[Eat time].a -> [Basic Math-04].b
+[Basic Math-03].a -> [Basic Math-05].a
+[Basic Math-04].a -> [Basic Math-05].b
+[Basic Math-05].a -> [Basic Math-06].b
+[Number-02].a -> [Basic Math-06].a
+[Working days per week].a -> [Basic Math-10].a
+[Number-03].a -> [Basic Math-10].b
+[Number-07].a -> [Basic Math-15].a
+[Basic Math-10].a -> [Basic Math-15].b
+[Basic Math-15].a -> [Basic Math-16].b
+[Number-07].a -> [Basic Math-16].a
+[Basic Math-06].a -> [Basic Math-17].a
+[Basic Math-04].a -> [Basic Math-19].b
+[Basic Math-19].a -> [Basic Math-18].a
+[Basic Math-17].a -> [Basic Math-20].a
+[Basic Math-18].a -> [Basic Math-20].b
+[Number-07].a -> [Basic Math-12].a
+[Number-05].a -> [Basic Math-12].b
+[Basic Math-12].a -> [Basic Math-13].a
+[Basic Math-20].a -> [Basic Math-13].b
+[Basic Math-13].a -> [Basic Math-14].a
+[Basic Math-13].a -> [Basic Math-22].a
+[Basic Math-20].a -> [Basic Math-21].a
+[Number-06].a -> [Basic Math-21].b
+[Number-06].a -> [Basic Math-14].b
+[Basic Math-20].a -> [Basic Math-23].a
+[Number-09].a -> [Basic Math-23].b
+[Number-09].a -> [Basic Math-22].b
+[Basic Math-02].a -> [Basic Math-24].a
+[Number-10].a -> [Basic Math-24].b
+[Basic Math-01].a -> [Basic Math-25].a
+[Basic Math-01].a -> [Basic Math-26].a
+[Basic Math-13].a -> [Basic Math-26].b
+[Basic Math-20].a -> [Basic Math-25].b
+[Holidays per year].a -> [Basic Math-07].a
+[Basic Math-16].a -> [Basic Math-07].b
+[Holidays per year].a -> [Basic Math-08].b
+[Basic Math-15].a -> [Basic Math-08].a
+[Basic Math-07].a -> [Basic Math-18].b
+[Basic Math-08].a -> [Basic Math-17].b
+[Estimated lifespan].a -> [Basic Math-09].a
+[Retirement age].a -> [Basic Math-09].b
+[Basic Math-19].a -> [Basic Math-11].a
+[Number-01].a -> [Basic Math-11].b
+[Basic Math-09].a -> [Basic Math-27].a
+[Basic Math-11].a -> [Basic Math-27].b
+[Retirement age].a -> [Basic Math-01].a
+[Basic Math-27].a -> [Basic Math-28].a
+[Basic Math-25].a -> [Basic Math-28].b
+[Basic Math-24].a -> [Basic Math-29].a
+[Basic Math-27].a -> [Basic Math-29].b
+[Estimated lifespan].a -> [Basic Math-30].a
+[Your current age].a -> [Basic Math-30].b
+[Basic Math-30].a -> [Basic Math-31].a
+[Basic Math].a -> [Unit].a
+[Unit].a -> [Used day].a
+[Basic Math-31].a -> [Unit-01].a
+[Unit-01].a -> [Result-02].a
+[Unit-02].a -> [Result-16].a
+[Unit-03].a -> [Result-17].a
+[Unit-04].a -> [Result-18].a
+[Basic Math-06].a -> [Unit-05].a
+[Unit-05].a -> [Result].a
+[Basic Math-19].a -> [Unit-06].a
+[Unit-06].a -> [Result-01].a
+[Unit-07].a -> [Result-14].a
+[Basic Math-22].a -> [Unit-08].a
+[Unit-08].a -> [Result-15].a
+[Unit-09].a -> [Result-12].a
+[Basic Math-14].a -> [Unit-10].a
+[Unit-10].a -> [Result-13].a
+[Unit-11].a -> [Result-10].a
+[Basic Math-13].a -> [Unit-12].a
+[Unit-12].a -> [Result-11].a
+[Number-02].a -> [Basic Math-19].a
+[Number-01].a -> [Basic Math].b
+[Number-01].a -> [Basic Math-31].b
+[Basic Math-20].a -> [Basic Math-32].a
+[Basic Math-32].a -> [Unit-11].a
+[Basic Math-21].a -> [Basic Math-34].a
+[Basic Math-34].a -> [Unit-09].a
+[Basic Math-23].a -> [Basic Math-35].a
+[Basic Math-35].a -> [Unit-07].a
+[Timer].a -> [Basic Math-32].b
+[Timer].a -> [Basic Math-34].b
+[Timer].a -> [Basic Math-35].b
+[Basic Math-28].a -> [Basic Math-37].a
+[Basic Math-37].a -> [Unit-03].a
+[Timer].a -> [Basic Math-37].b
+[Basic Math-29].a -> [Basic Math-38].a
+[Basic Math-38].a -> [Unit-02].a
+[Timer].a -> [Basic Math-38].b
+[Basic Math-26].a -> [Unit-04].a
