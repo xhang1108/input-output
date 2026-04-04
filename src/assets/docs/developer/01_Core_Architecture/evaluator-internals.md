@@ -1,12 +1,11 @@
 ---
 title: Evaluator Internals
 order: 4
-icon: Cpu
 ---
 
 # System Evaluator Internals
 
-The **Evaluator Engine** is the execution heart of the I/O system, responsible for resolving the entire node graph into concrete mathematical payloads. It lives primarily within `Brain.ts` and `NodeRegistry.ts`.
+The **Evaluator Engine** is the execution heart of the I/O system, responsible for resolving the entire node graph into concrete mathematical payloads. It lives primarily within `src/engine/Brain.ts` and `src/engine/NodeRegistry.ts`.
 
 ## 1. Topological Sorting
 Before evaluation begins, the Brain must determine the correct order of execution to satisfy all dependencies. This is done via **Topological Sorting**:

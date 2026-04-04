@@ -1,7 +1,6 @@
 ---
 title: Math Nodes
 order: 3
-icon: Zap
 ---
 
 # Math & Arithmetic

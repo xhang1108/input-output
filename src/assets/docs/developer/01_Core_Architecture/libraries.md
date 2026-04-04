@@ -1,7 +1,6 @@
 ---
 title: Libraries & Dependencies
 order: 6
-icon: Wrench
 ---
 
 # Libraries & Dependencies

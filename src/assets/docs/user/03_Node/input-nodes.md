@@ -1,7 +1,6 @@
 ---
-title: Output Nodes
-order: 2
-icon: Wrench
+title: Input Nodes
+order: 1
 ---
 
 # Input Operators
@@ -9,7 +8,7 @@ icon: Wrench
 Input nodes are the "Senses" of your calculation. They provide the initial data that flows through your IOGL blueprint.
 
 ## 1. Number Input (IN-01)
-The simplest input node. Type a number or use the scroll wheel to increment/decrement.
+The simplest input node. Type a number or use the keyboard to increment/decrement.
 
 - **Output**: The numeric value entered.
 

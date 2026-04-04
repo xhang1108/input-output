@@ -101,13 +101,26 @@ export function useBrainUpdates(
 
                         const isInput = logicNode.id.startsWith('IN-') || logicNode.type?.startsWith('IN-');
 
-                        // SIGNAL FALLBACK: Prioritize result signal, fallback to persistent data state
                         const sourceVal = unwrappedValue ?? logicNode.data.value;
-                        const finalValue = isInput ? PayloadUtils.unwrap(sourceVal) : sourceVal;
+                        let finalValue = isInput ? PayloadUtils.unwrap(sourceVal) : sourceVal;
+
+                        // NEW GUARD: Input Persistence Guard
+                        // Prevent transient engine 'null' (due to batch reconciliation race) 
+                        // from overwriting a valid persistent user input in the UI.
+                        if (isInput && (finalValue === null || finalValue === undefined) && existingNode?.data?.value != null) {
+                            finalValue = existingNode.data.value;
+                        }
 
                         // 1. Determine structural props (parentId and Origin)
                         const d = logicNode.data || {};
                         const { width: _dataWidth, height: _dataHeight, parentId: _dataParentId, ...displayData } = d;
+
+                        // TRANSIENT STATE ISOLATION: 
+                        // Strip keys that strictly belong to UI-only logic (focus, editing mode).
+                        // This prevents a stale Brain state from "re-activating" editing mode 
+                        // in a node that the UI has just blurred.
+                        const TRANSIENT_KEYS = ['isEditing', 'isTyping', 'isPending'];
+                        TRANSIENT_KEYS.forEach(k => delete (displayData as any)[k]);
 
                         // Prioritize top-level width/height (updated by RESIZE_NODE)
                         const width = logicNode.width ?? _dataWidth;
@@ -194,9 +207,13 @@ export function useBrainUpdates(
                             if (needsUpdate || uiNode.selected !== logicNode.selected) {
                                 // Selection logic: Trust UI during active interactions.
                                 // Brain selection only wins if we are restoring history (Undo/Redo) 
-                                // otherwise we trust UI to keep stable and Brain to deselect.
+                                // OR if there's no active user interaction on the canvas.
                                 const isRestoring = useHistoryStore.getState().isRestoring;
-                                const finalSelected = isRestoring ? (logicNode.selected ?? uiNode.selected) : logicNode.selected;
+                                const isInteracting = brain.getStatus().isInteracting;
+                                
+                                const finalSelected = (isRestoring || isInteracting) 
+                                    ? uiNode.selected 
+                                    : (logicNode.selected ?? uiNode.selected);
 
                                 nextNodes[existingIndex] = {
                                     ...uiNode,

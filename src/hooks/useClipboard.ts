@@ -78,7 +78,7 @@ export function useClipboard() {
 
         const forwardTxs: Transaction[] = [
             ...deselectTxs,
-            ...newNodes.map((n: Node) => ({ type: 'ADD_NODE', payload: n } as Transaction)),
+            ...newNodes.map((n: Node) => ({ type: 'ADD_NODE', payload: { ...n, initialValue: n.data?.value } } as Transaction)),
             ...newEdges.map((e: Edge) => ({ type: 'CONNECT', payload: e } as Transaction))
         ];
 
@@ -153,7 +153,7 @@ export function useClipboard() {
 
             const forwardTxs: Transaction[] = [
                 ...deselectTxs,
-                ...newNodes.map((n: Node) => ({ type: 'ADD_NODE', payload: n } as Transaction)),
+                ...newNodes.map((n: Node) => ({ type: 'ADD_NODE', payload: { ...n, initialValue: n.data?.value } } as Transaction)),
                 ...newEdges.map((e: Edge) => ({ type: 'CONNECT', payload: e } as Transaction))
             ];
 

@@ -1,7 +1,6 @@
 ---
 title: Output Nodes
 order: 2
-icon: Monitor
 ---
 
 # Output Nodes

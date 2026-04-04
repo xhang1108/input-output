@@ -2,7 +2,6 @@
 title: Data Types
 slug: data-types
 order: 2
-icon: Zap
 ---
 
 ## Data Engine Types

@@ -1,7 +1,6 @@
 ---
 title: Calculus & Physics
 order: 6
-icon: Zap
 ---
 
 # Calculus & Physics

@@ -1,7 +1,6 @@
 ---
 title: System Architecture
 order: 1
-icon: Brain
 ---
 
 # System Architecture

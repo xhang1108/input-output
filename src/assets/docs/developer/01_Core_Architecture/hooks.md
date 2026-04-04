@@ -1,7 +1,6 @@
 ---
 title: System Hooks
 order: 2
-icon: GitBranch
 ---
 
 # System Hooks

@@ -12,6 +12,7 @@ import { RoundingNode } from '../components/nodes/RoundingNode';
 import { MatrixInputNode } from '../components/nodes/MatrixInputNode';
 import { ColorNode } from '../components/nodes/ColorNode';
 import { AbacusNode } from '../components/nodes/AbacusNode';
+import { TimerNode } from '../components/nodes/TimerNode';
 
 import { FractionNode } from '../components/nodes/FractionNode';
 import { PlotNode } from '../components/nodes/PlotNode';
@@ -59,6 +60,7 @@ export const nodeTypes = {
     'IN-06': ConstantNode,
     'IN-07': MatrixInputNode,
     'IN-08': AbacusNode,
+    'IN-11': TimerNode,
     'IN-09': NodeExpression,
 
     // ─── 2. Generators ──────────────────────────────────────

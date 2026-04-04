@@ -1,7 +1,6 @@
 ---
 title: Utility Nodes
 order: 8
-icon: Wrench
 ---
 
 # Utility Nodes

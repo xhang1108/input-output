@@ -29,6 +29,10 @@ export class Brain {
     private readonly HEARTBEAT_MS = 16.67;
     private pendingPatch: IncrementalPatch = { dirtyChainNodeIds: [] };
     private dirtyNodes: Set<string> = new Set();
+    
+    // Ticker Registry for O(K) performance (IN-11/Timer Nodes)
+    private activeTickers: Set<string> = new Set();
+    private tickerStates: Map<string, { lastTick: number }> = new Map();
 
     private isInteracting = false;
     private lastInteractingTime = 0;
@@ -206,6 +210,9 @@ export class Brain {
                 node.visualState.visualTick = this.visualTick;
             }
 
+            // 1.7 Process Ticker Nodes (IN-11) - O(K) complexity
+            this.processTickers(now);
+
             // 2. Pulse Guard: Decide if we need to broadcast UI updates
             const isVisualDirty = this.dirtyNodes.size > 0 || this.isRecalculating || this.isInteracting;
             
@@ -350,6 +357,9 @@ export class Brain {
         if (this.isDisposed) return;
         this.isDisposed = true;
 
+        this.activeTickers.clear();
+        this.tickerStates.clear();
+
         if (this.heartbeatInterval) {
             clearInterval(this.heartbeatInterval);
             this.heartbeatInterval = null;
@@ -435,6 +445,8 @@ export class Brain {
 
     /** Clears all state silently — no events emitted. Use before mounting UI. */
     public silentReset() {
+        this.activeTickers.clear();
+        this.tickerStates.clear();
         this.state = {
             nodes: new Map(),
             edges: [],
@@ -715,6 +727,7 @@ export class Brain {
             onNodeAdded: (node) => {
                 // Initial creation does not need to immediately trigger dirty chain 
                 // because it has no inputs. It evaluates on next heartbeat.
+                this.syncTickerRegistry(node.id);
             },
             onEdgeAdded: (edge) => {
                 this.updateAdjacency(edge, 'ADD');
@@ -752,6 +765,7 @@ export class Brain {
                 this.dirtyNodes.delete(id);
                 this.worker.getFreshlyUpdated().delete(id);
                 this.topology.removeNode(id);
+                this.syncTickerRegistry(id);
             },
             onEdgeRemoved: (edgeToRemove) => {
                 this.updateAdjacency(edgeToRemove, 'REMOVE');
@@ -767,6 +781,7 @@ export class Brain {
             onNodeDataUpdated: (id) => {
                 this.worker.setFreshlyUpdated(id);
                 this.triggerDirtyChain(id);
+                this.syncTickerRegistry(id);
             },
             onNodeMoved: (id) => { },
             onGraphChanged: () => {
@@ -1345,6 +1360,64 @@ export class Brain {
     /** No-op stubs to prevent crashes from existing UI calls */
     public undo(): void { }
     public redo(): void { }
+
+    private syncTickerRegistry(nodeId: string) {
+        const node = this.state.nodes.get(nodeId);
+        if (!node || node.type !== 'IN-11') {
+            this.activeTickers.delete(nodeId);
+            this.tickerStates.delete(nodeId);
+            return;
+        }
+
+        const isRunning = !!node.data?.running;
+        // RESET GUARD: If current value matches initial, or just toggled run, sync the tick.
+        const isReset = node.data?.currentValue === node.data?.initialValue;
+
+        if (isRunning) {
+            this.activeTickers.add(nodeId);
+            if (!this.tickerStates.has(nodeId) || isReset) {
+                this.tickerStates.set(nodeId, { lastTick: performance.now() });
+            }
+        } else {
+            this.activeTickers.delete(nodeId);
+            this.tickerStates.delete(nodeId);
+        }
+    }
+
+    private processTickers(now: number) {
+        if (this.activeTickers.size === 0) return;
+
+        for (const id of this.activeTickers) {
+            const node = this.state.nodes.get(id);
+            const state = this.tickerStates.get(id);
+            if (!node || !state) continue;
+
+            const rawInterval = Number(node.data?.interval ?? 1000);
+            const step = Number(node.data?.step ?? 1);
+            
+            // SANITIZATION: 防禦極端輸入 (Allow overclocking down to 1ms)
+            const safeInterval = Math.max(1, rawInterval);
+
+            const elapsed = now - state.lastTick;
+            if (elapsed >= safeInterval) {
+                const ticks = Math.floor(elapsed / safeInterval);
+                
+                // Update numerical value
+                const currentVal = Number(node.data?.currentValue ?? 0);
+                node.data = {
+                    ...node.data,
+                    currentValue: currentVal + (ticks * step)
+                };
+
+                // Precision preserved time tracking (Catch-up logic)
+                state.lastTick += ticks * safeInterval;
+
+                // Propagate changes
+                this.triggerDirtyChain(id);
+                this.worker.setFreshlyUpdated(id);
+            }
+        }
+    }
 }
 
 

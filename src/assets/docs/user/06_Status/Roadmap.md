@@ -1,7 +1,6 @@
 ---
 title: Future Roadmap
 order: 0
-icon: Zap
 ---
 
 # Future Roadmap

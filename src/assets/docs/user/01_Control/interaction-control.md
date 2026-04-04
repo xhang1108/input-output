@@ -2,7 +2,6 @@
 title: Control & Interaction
 slug: control
 order: 1
-icon: MousePointer2
 ---
 
 # Control System

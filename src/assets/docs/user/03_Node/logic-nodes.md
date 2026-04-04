@@ -1,7 +1,6 @@
 ---
 title: Logic & Flow
 order: 5
-icon: Layers
 ---
 
 # Logic & Flow

@@ -50,6 +50,18 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
         nodes.forEach(node => {
             const prevNode = prevNodesRef.current.get(node.id);
 
+            // TRANSIENT STATE ISOLATION: 
+            // Keys that strictly belong to UI-only logic and should NEVER enter the Brain/MathEngine.
+            // This prevents "Focus Stealing" where a stale engine state (isEditing: true) 
+            // overwrites the newer UI state (isEditing: false) on a different node's update.
+            const TRANSIENT_KEYS = ['isEditing', 'isTyping', 'isPending'];
+            const filterTransient = (obj: any) => {
+                if (!obj) return {};
+                const res = { ...obj };
+                TRANSIENT_KEYS.forEach(k => delete res[k]);
+                return res;
+            };
+
             if (!prevNode) {
                 // New Node
                 const existing = brain.getNode(node.id);
@@ -60,7 +72,7 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                             id: node.id,
                             initialValue: node.data?.value,
                             type: node.type,
-                            data: node.data || {},
+                            data: filterTransient(node.data),
                             position: node.position,
                             selected: node.selected || false
                         }
@@ -83,16 +95,20 @@ export function useBrainSync(nodes: Node[], edges: Edge[]) {
                         }, true);
                     }
 
-                    // Check for Data Updates (Excluding internally managed 'value')
-                    const { value: _v, ...currentData } = node.data || {};
-                    const { value: _pv, ...prevData } = prevNode.data || {};
+                    // Check for Data Updates (Excluding internally managed 'value' and transient UI flags)
+                    const currentDataFiltered = filterTransient(node.data);
+                    const prevDataFiltered = filterTransient(prevNode.data);
 
-                    if (!deepEqual(currentData, prevData)) {
+                    // Skip the 'value' key from common data sync as it's managed via UPDATE_VALUE
+                    delete (currentDataFiltered as any).value;
+                    delete (prevDataFiltered as any).value;
+
+                    if (!deepEqual(currentDataFiltered, prevDataFiltered)) {
                         syncTxs.push({
                             type: 'UPDATE_NODE_DATA',
                             payload: {
                                 id: node.id,
-                                data: currentData
+                                data: currentDataFiltered
                             }
                         });
                     }

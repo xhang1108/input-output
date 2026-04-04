@@ -80,7 +80,25 @@ export function useNodeSpawner({
         const forward: Transaction[] = [];
         const inverse: Transaction[] = [];
 
-        // 1. Define Add Node Transaction
+        // 1. Enforce Selection Exclusivity in Brain
+        // This ensures the Brain's logic state matches the UI's intent. 
+        // By including it in the transaction, we ensure Undo/Redo (History) 
+        // can correctly restore previous selections.
+        const brainNodes = brain.getNodesMap();
+        for (const [nodeId, node] of brainNodes) {
+            if (node.selected) {
+                forward.push({ 
+                    type: 'UPDATE_NODE_DATA', 
+                    payload: { id: nodeId, data: { selected: false } } 
+                } as Transaction);
+                inverse.push({ 
+                    type: 'UPDATE_NODE_DATA', 
+                    payload: { id: nodeId, data: { selected: true } } 
+                } as Transaction);
+            }
+        }
+
+        // 2. Define Add Node Transaction
         forward.push({
             type: 'ADD_NODE',
             payload: {
