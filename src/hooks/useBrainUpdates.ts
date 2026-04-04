@@ -200,9 +200,13 @@ export function useBrainUpdates(
                             if (needsUpdate || uiNode.selected !== logicNode.selected) {
                                 // Selection logic: Trust UI during active interactions.
                                 // Brain selection only wins if we are restoring history (Undo/Redo) 
-                                // otherwise we trust UI to keep stable and Brain to deselect.
+                                // OR if there's no active user interaction on the canvas.
                                 const isRestoring = useHistoryStore.getState().isRestoring;
-                                const finalSelected = isRestoring ? (logicNode.selected ?? uiNode.selected) : logicNode.selected;
+                                const isInteracting = brain.getStatus().isInteracting;
+                                
+                                const finalSelected = (isRestoring || isInteracting) 
+                                    ? uiNode.selected 
+                                    : (logicNode.selected ?? uiNode.selected);
 
                                 nextNodes[existingIndex] = {
                                     ...uiNode,
