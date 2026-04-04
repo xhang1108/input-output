@@ -1,7 +1,6 @@
 ---
 title: Introduction
 order: 0
-icon: Zap
 ---
 
 # Why Node-Based?

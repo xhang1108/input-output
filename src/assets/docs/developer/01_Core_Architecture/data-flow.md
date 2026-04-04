@@ -1,7 +1,6 @@
 ---
 title: Data Flow
 order: 3
-icon: Zap
 ---
 
 # Data Flow

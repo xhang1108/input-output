@@ -1,7 +1,6 @@
 ---
 title: Data & Structures
 order: 4
-icon: Layers
 ---
 
 # Data & Structures

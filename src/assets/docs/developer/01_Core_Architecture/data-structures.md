@@ -1,7 +1,6 @@
 ---
 title: Data Structures
 order: 5
-icon: Zap
 ---
 
 # Data Structures

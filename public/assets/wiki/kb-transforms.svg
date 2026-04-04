@@ -37,6 +37,11 @@
         <text x="30" y="22" text-anchor="middle" class="key-text">M</text>
         <text x="30" y="40" text-anchor="middle" class="key-desc">Bypass</text>
       </g>
+      <g transform="translate(350, 0)">
+        <rect width="60" height="50" rx="8" class="key-bg" />
+        <text x="30" y="22" text-anchor="middle" class="key-text">X</text>
+        <text x="30" y="40" text-anchor="middle" class="key-desc">Delete</text>
+      </g>
     </g>
     <g transform="translate(0, 75)" class="row-desc">
       <text y="0">G: Move nodes freely in the workspace.</text>
@@ -44,6 +49,7 @@
       <text y="40">S: Rescale nodes or containers.</text>
       <text y="60">F: Frame active selection for organization.</text>
       <text y="80">M: Bypass current node in the calculation path.</text>
+      <text y="100">X: Fast delete selection (Blender style).</text>
     </g>
   </g>
 </svg>

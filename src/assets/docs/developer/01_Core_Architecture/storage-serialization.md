@@ -1,7 +1,6 @@
 ---
 title: Storage & Serialization
 order: 8
-icon: Save
 ---
 
 # Storage & Serialization
@@ -9,7 +8,7 @@ icon: Save
 The Input-Output platform uses a multi-layered approach to ensure that complex mathematical graphs can be persisted, shared, and versioned with high fidelity and minimal storage footprint.
 
 ## 1. The Persistence Strategy
-The system follows a **Local-First, Cloud-Sync** philosophy orchestrated by the `useProjectSave` hook and the `SaveManager` service.
+The system follows a **Local-First, Cloud-Sync** philosophy orchestrated by the `useProjectSave` hook and the `SaveManager` service (`src/services/SaveManager.ts`).
 
 ### Local Persistence (The Safety Net)
 - **Engine**: `SaveManager.ts`
@@ -33,7 +32,7 @@ interface ProjectData {
 }
 ```
 
-### Compression (`Serializer.ts`)
+### Compression (`src/engine/Serializer.ts`)
 To optimize URL sharing and storage limits, the JSON string is compressed using **LZ-String** (Encoded URI Component). This results in a ~60% reduction in string length, making it suitable for deep-linking.
 
 ## 3. IOGL (Input-Output Graph Language)
@@ -45,7 +44,7 @@ To optimize URL sharing and storage limits, the JSON string is compressed using 
 ### Parsing Pipeline
 1. **Lexer**: Breaks the IOGL script into tokens (IDs, Arrows, RAW_VALUES).
 2. **Parser**: Reconstructs the node definitions and edge connections using the `IOGL_MANIFEST`.
-3. **IOGLUtils**: Centralizes handle mapping (.a -> in_a) and data wrapping (Fidelity Guard) to ensure engine compatibility.
+3. **IOGLUtils**: Centralizes handle mapping (`src/engine/iogl/IOGLUtils.ts`) and data wrapping (Fidelity Guard) to ensure engine compatibility.
 
 ## 4. Architectural Guards
 - **Function Stripping**: To maintain security and JSON compatibility, all functions and transient UI states (like `saveStatus` or `actionLog`) are stripped during the serialization "Cleaning" phase.

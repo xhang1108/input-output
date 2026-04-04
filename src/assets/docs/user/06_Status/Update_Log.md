@@ -1,7 +1,6 @@
 ---
 title: Update Log
 order: 1
-icon: Layers
 ---
 
 # Update Log

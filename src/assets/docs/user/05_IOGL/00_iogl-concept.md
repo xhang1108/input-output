@@ -1,7 +1,6 @@
 ---
 title: IOGL Concept
 order: 0
-icon: Layers
 ---
 
 # IOGL: The Language of Systems

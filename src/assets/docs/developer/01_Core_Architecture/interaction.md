@@ -1,7 +1,6 @@
 ---
 title: Interaction
 order: 4
-icon: MousePointer
 ---
 
 # Interaction

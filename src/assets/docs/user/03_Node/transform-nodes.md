@@ -1,7 +1,6 @@
 ---
 title: Transform & Analysis
 order: 7
-icon: BarChart2
 ---
 
 # Transform & Analysis

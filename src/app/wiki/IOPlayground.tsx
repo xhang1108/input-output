@@ -205,26 +205,19 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
         }
     }, [nodes, namespace, brain]);
 
-    // 5. DYNAMIC SCALE ENGINE
+    // 5. DYNAMIC HEIGHT CALCULATION (DEBOUNCED)
     const nodeLookup = useStore((s: ReactFlowState) => s.nodeLookup);
-    const nodeLookupRef = useRef(nodeLookup);
+    
     useEffect(() => {
-        nodeLookupRef.current = nodeLookup;
-    }, [nodeLookup]);
-
-    useEffect(() => {
-        const checkExpansion = () => {
-            const currentLookup = nodeLookupRef.current;
-            if (currentLookup.size === 0) return;
+        const timer = setTimeout(() => {
+            if (nodeLookup.size === 0) return;
             let minY = Infinity;
             let maxY = -Infinity;
 
-            const nodes = Array.from(currentLookup.values());
-            nodes.forEach((node: any) => {
+            Array.from(nodeLookup.values()).forEach((node: any) => {
                 if (!node.id.startsWith(namespace)) return;
-                const logicNode = brain.getNode(node.id);
+                
                 const nHeight = node.measured?.height
-                    || logicNode?.height
                     || (node.height as number)
                     || (node.data?.height as number)
                     || 150;
@@ -237,13 +230,14 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
 
             if (maxY > minY) {
                 const newHeight = Math.ceil((maxY - minY) + (VERTICAL_PADDING * 2) + 100);
-                setCanvasHeight(newHeight);
+                if (Math.abs(newHeight - canvasHeight) > 2) {
+                    setCanvasHeight(newHeight);
+                }
             }
-        };
+        }, 100); // 100ms debounce to break ResizeObserver loops
 
-        const timer = setInterval(checkExpansion, 30); // 30ms for 30fps smooth resize
-        return () => clearInterval(timer);
-    }, [brain, namespace]);
+        return () => clearTimeout(timer);
+    }, [nodeLookup, namespace, canvasHeight]);
 
     return (
         <WikiDemoCanvas height={canvasHeight}>

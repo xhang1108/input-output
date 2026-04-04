@@ -1,7 +1,6 @@
 ---
 title: LaTeX Functionality
 order: 9
-icon: Sigma
 ---
 
 # LaTeX Functionality
