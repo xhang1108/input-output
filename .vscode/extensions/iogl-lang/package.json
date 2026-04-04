@@ -1,0 +1,33 @@
+{
+  "name": "iogl-lang",
+  "displayName": "IOGL Language Support",
+  "description": "Highlighting for IOGL files in Antigravity.",
+  "version": "1.0",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "iogl",
+        "aliases": [
+          "IOGL",
+          "iogl"
+        ],
+        "extensions": [
+          ".iogl"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "iogl",
+        "scopeName": "source.iogl",
+        "path": "./syntaxes/iogl.tmLanguage.json"
+      }
+    ]
+  }
+}
