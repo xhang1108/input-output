@@ -64,9 +64,22 @@ export class Encoder {
           }
         }
 
-        // Auxiliary props
+        // Auxiliary props (with [V1.1] Dimension Shorthand {W, H} support)
         if (manifest.auxiliary) {
+          const hasWidth = data.width !== undefined;
+          const hasHeight = data.height !== undefined;
+          const useShorthand = hasWidth && hasHeight && manifest.auxiliary.includes('width') && manifest.auxiliary.includes('height');
+
+          if (useShorthand) {
+            const w = Math.round(data.width);
+            const h = Math.round(data.height);
+            props.push(`${w},${h}`);
+          }
+
           manifest.auxiliary.forEach((key: string) => {
+            // Skip width/height if already handled by shorthand
+            if (useShorthand && (key === 'width' || key === 'height')) return;
+
             if (data[key] !== undefined) {
               let val = data[key];
               // Round size-related auxiliary properties to 1-pixel precision
@@ -80,7 +93,7 @@ export class Encoder {
       }
 
       const positionalStr = positionalData.length > 0 ? ` ${positionalData.join(', ')}` : '';
-      const propStr = props.length > 0 ? ` { ${props.join(', ')} }` : '';
+      const propStr = props.length > 0 ? ` {${props.join(',')}}` : '';
       const x = Math.round(node.position.x);
       const y = Math.round(node.position.y);
 

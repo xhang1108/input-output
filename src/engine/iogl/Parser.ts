@@ -143,13 +143,29 @@ export class Parser {
       if (this.current.type === 'LBRACE') {
         this.advance();
         while ((this.current.type as TokenType) !== 'RBRACE' && (this.current.type as TokenType) !== 'EOF') {
-          const key = this.expect('ID').value;
-          this.expect('COLON');
-          props[key] = this.parseValue();
+          // [V1.1] Dimension Shorthand: {356, 131} -> { width: 356, height: 131 }
+          if ((this.current.type as TokenType) === 'NUMBER') {
+            const width = parseFloat(this.current.value);
+            this.advance();
+            props['width'] = width;
+            
+            if ((this.current.type as TokenType) === 'COMMA') {
+              this.advance();
+              if ((this.current.type as TokenType) === 'NUMBER') {
+                const height = parseFloat(this.current.value);
+                this.advance();
+                props['height'] = height;
+              }
+            }
+          } else {
+            const key = this.expect('ID').value;
+            this.expect('COLON');
+            props[key] = this.parseValue();
+          }
           if ((this.current.type as TokenType) === 'COMMA') this.advance();
         }
         this.expect('RBRACE');
-      } else if (this.current.type === 'LPAREN') {
+      } else if ((this.current.type as TokenType) === 'LPAREN') {
         this.advance();
         const val = this.parseValue();
         if (positionalIdx === 0 && manifest?.modeProperty && props.mode === undefined) {

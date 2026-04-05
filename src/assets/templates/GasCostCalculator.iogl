@@ -37,18 +37,18 @@
 [Basic Math-09] MA-01 { mode: "SUB" } @1374,1333
 [Advanced Math-01] MA-02 { mode: "ABS" } @1166,1327
 [Basic Math-10] MA-01 { mode: "ADD" } @1574,1557
-[Sticky Note] UT-01 "Car fuel consumption\n\nAdjust the slider to match the results using your preferred units." { width: 270, height: 353 } @62,990
-[Sticky Note-01] UT-01 "The distance between your place and Gas Station" { width: 306, height: 115 } @32,671
-[Sticky Note-02] UT-01 "How many litre you want to fill" { width: 306, height: 115 } @29,412
-[Sticky Note-03] UT-01 "Normal fuel price" { width: 306, height: 115 } @31,217
-[Sticky Note-04] UT-01 "Fluctuating fuel price" { width: 306, height: 115 } @32,79
-[Sticky Note-05] UT-01 "Price without fluctuating " { width: 306, height: 115 } @2630,-3
-[Sticky Note-06] UT-01 "Price with fluctuating" { width: 306, height: 115 } @2630,390
-[Sticky Note-07] UT-01 "The different between two price" { width: 306, height: 115 } @2911,136
-[Sticky Note-08] UT-01 "Two ways distance from your place to gas station" { width: 306, height: 115 } @2633,583
-[Sticky Note-09] UT-01 "Fuel used from your place to gas station" { width: 306, height: 115 } @2637,839
-[Sticky Note-10] UT-01 "Fuel cost from your place to gas station\n- Fluctuating oil prices" { width: 306, height: 115 } @2636,1085
-[Sticky Note-11] UT-01 "# Fuel Cost Calculator\nDetermine if filling up is worth it or how much you lose during price fluctuations." { width: 321, height: 151 } @1186,-253
+[Sticky Note] UT-01 "Car fuel consumption\n\nAdjust the slider to match the results using your preferred units." {270, 353} @62,990
+[Sticky Note-01] UT-01 "The distance between your place and Gas Station" {306, 115} @32,671
+[Sticky Note-02] UT-01 "How many litre you want to fill" {306, 115} @29,412
+[Sticky Note-03] UT-01 "Normal fuel price" {306, 115} @31,217
+[Sticky Note-04] UT-01 "Fluctuating fuel price" {306, 115} @32,79
+[Sticky Note-05] UT-01 "Price without fluctuating " {306, 115} @2630,-3
+[Sticky Note-06] UT-01 "Price with fluctuating" {306, 115} @2630,390
+[Sticky Note-07] UT-01 "The different between two price" {306, 115} @2911,136
+[Sticky Note-08] UT-01 "Two ways distance from your place to gas station" {306, 115} @2633,583
+[Sticky Note-09] UT-01 "Fuel used from your place to gas station" {306, 115} @2637,839
+[Sticky Note-10] UT-01 "Fuel cost from your place to gas station\n- Fluctuating oil prices" {306, 115} @2636,1085
+[Sticky Note-11] UT-01 "# Fuel Cost Calculator\nDetermine if filling up is worth it or how much you lose during price fluctuations." {321, 151} @1186,-253
 
 [Gas Tank].a -> [Basic Math].b
 [Fuel Price].a -> [Basic Math-01].a
