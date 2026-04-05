@@ -17,19 +17,33 @@ export const GridView: React.FC<GridViewProps> = ({ grid, precision }) => {
             <div className="flex flex-col gap-1 w-full max-w-[240px] overflow-x-auto custom-scrollbar">
                 {grid.slice(0, 10).map((row, r) => (
                     <div key={r} className="flex gap-1 w-max">
-                        {Array.isArray(row) ? row.slice(0, 10).map((val, c) => (
-                            <div
-                                key={c}
-                                className="w-12 h-8 flex shrink-0 items-center justify-center text-[10px] 
-                                         bg-zinc-800/50 border border-zinc-700/50 rounded-(--radius-sm) overflow-hidden px-1"
-                                title={DisplayUtils.formatValue(val, -1)}
-                            >
-                                <span className="truncate">{DisplayUtils.formatValue(val, precision)}</span>
-                            </div>
-                        )) : (
-                            <div className="w-12 h-8 flex shrink-0 items-center justify-center text-[10px] bg-zinc-800/50 border border-zinc-700/50 rounded overflow-hidden px-1">
-                                {DisplayUtils.formatValue(row, precision)}
-                            </div>
+                        {Array.isArray(row) ? row.slice(0, 10).map((val, c) => {
+                            const displayVal = DisplayUtils.formatValue(val, precision);
+                            const isShort = displayVal.length <= 5;
+                            return (
+                                <div
+                                    key={c}
+                                    className={`w-12 h-8 flex shrink-0 items-center ${isShort ? 'justify-center' : 'justify-start'} text-[10px] 
+                                             bg-zinc-800/50 border border-zinc-700/50 rounded-sm overflow-hidden px-1`}
+                                    title={DisplayUtils.formatValue(val, -1)}
+                                >
+                                    <span className={`truncate w-full ${isShort ? 'text-center' : 'text-left'}`}>
+                                        {displayVal}
+                                    </span>
+                                </div>
+                            );
+                        }) : (
+                            (() => {
+                                const displayVal = DisplayUtils.formatValue(row, precision);
+                                const isShort = displayVal.length <= 5;
+                                return (
+                                    <div className={`w-12 h-8 flex shrink-0 items-center ${isShort ? 'justify-center' : 'justify-start'} text-[10px] bg-zinc-800/50 border border-zinc-700/50 rounded-sm overflow-hidden px-1`}>
+                                        <span className={`truncate w-full ${isShort ? 'text-center' : 'text-left'}`}>
+                                            {displayVal}
+                                        </span>
+                                    </div>
+                                );
+                            })()
                         )}
                     </div>
                 ))}
@@ -45,4 +59,3 @@ export const GridView: React.FC<GridViewProps> = ({ grid, precision }) => {
         </div>
     );
 };
-

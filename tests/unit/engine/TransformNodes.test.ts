@@ -33,7 +33,7 @@ describe('TR-05: Smoothing', () => {
         expect(val[1]).toBeCloseTo(13.33, 2);
     });
 
-    test('TR-05: should smooth a column vector (7x1 matrix)', async () => {
+    test('TR-05: should smooth a column vector (7x1 array)', async () => {
         const math = InputOutputEngine.getInstance().getMathInstance();
         const node = {
             id: 'smooth-col',
@@ -46,14 +46,13 @@ describe('TR-05: Smoothing', () => {
         };
 
         // [[0],[10],[0],[10],[0],[10],[0]]
-        const colVec = math.matrix([[0], [10], [0], [10], [0], [10], [0]]);
         const inputs = {
-            'in_a': PayloadUtils.wrap(colVec)
+            'in_a': PayloadUtils.createArray([[0], [10], [0], [10], [0], [10], [0]])
         };
 
         const result = await NodeRegistry.evaluate(node, inputs) as any;
         const out = PayloadUtils.unwrap(result) as any;
-        const arr = out.data || out; // Handle dehydrated Matrix object
+        const arr = out.data || out; // Handle dehydrated Array object
         
         // Window size 3:
         // [0] -> avg([0, 10]) = 5

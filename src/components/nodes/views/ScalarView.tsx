@@ -32,7 +32,7 @@ export const ScalarView: React.FC<ScalarViewProps> = ({ rawValue, precision, uni
         if (numValue < 0) prefix = '-' + prefix;
         const combined = `${prefix}${formatted}`;
         displayValue = (
-            <div className="flex flex-col items-end">
+            <div className="flex flex-col items-start">
                 <div className="flex items-baseline gap-1.5 leading-none">
                     <span className={`font-mono transition-all duration-200 text-2xl text-(--color-scalar)`}>{combined}</span>
                     <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800/50 px-1 rounded-sm">{finalUnit}</span>
@@ -42,7 +42,7 @@ export const ScalarView: React.FC<ScalarViewProps> = ({ rawValue, precision, uni
     } else if (finalUnit) {
         const unitSuffix = UnitAlgebra.prettify(finalUnit);
         displayValue = (
-            <div className="flex flex-col items-end">
+            <div className="flex flex-col items-start">
                 <div className="flex items-baseline gap-1.5 leading-none">
                     <span className={`font-mono transition-all duration-200 text-2xl ${dataTypeColor}`}>{displayString}</span>
                     <span className="text-xs font-bold text-zinc-500 italic">{unitSuffix}</span>

@@ -99,7 +99,7 @@ describe('Expression Node (IN-09) Reproduction', () => {
         expect(result.meta?.label).toBe('x');
     });
 
-    it('should evaluate a Matrix correctly to DataType.Array', async () => {
+    it('should evaluate an Array correctly to DataType.Array', async () => {
         const node = {
             id: 'test-node',
             type: 'IN-09',
@@ -113,7 +113,7 @@ describe('Expression Node (IN-09) Reproduction', () => {
         const result = await NodeRegistry.evaluate(node as any, {});
         
         expect(result.type).toBe(DataType.Array);
-        const val: any = PayloadUtils.unwrap(result);
+        const val: any = result.value;
         expect(val.mathjs).toBe('Matrix');
         // Check structure instead of strict values to ignore BigNumber dehydration noise
         expect(Array.isArray(val.data)).toBe(true);

@@ -74,10 +74,10 @@ describe('Linear Algebra & Array Nodes', () => {
         expect(val.out_a.type).toBe(DataType.Array);
         expect(val.out_a.value).toEqual([2, 5]);
 
-        // out_b: eigenvectors matrix (Identity for diagonal matrix)
+        // out_b: eigenvectors array (Identity for diagonal matrix)
         expect(val.out_b.type).toBe(DataType.Array);
         // mathjs might return Matrix object or flat array based on dehydration logic
-        // but it must be valid array/matrix data
+        // but it must be valid array data
         expect(val.out_b.value).toBeDefined();
     });
 
@@ -117,7 +117,7 @@ describe('Linear Algebra & Array Nodes', () => {
         expect(result.value).toBe(20);
     });
 
-    test('DT-02 (ArrayExtract): Extract from 2D Matrix', async () => {
+    test('DT-02 (ArrayExtract): Extract from 2D Array', async () => {
         const node = {
             id: 'n2-2d',
             type: 'DT-02',
@@ -233,7 +233,7 @@ describe('Linear Algebra & Array Nodes', () => {
         const math = InputOutputEngine.getInstance().getMathInstance();
         const hydrated = PayloadUtils.hydrate(result.value, math);
         const arr = (hydrated as any).toArray ? (hydrated as any).toArray() : hydrated;
-        // Should be [[10, 20]] (2D horizontal matrix)
+        // Should be [[10, 20]] (2D horizontal array)
         expect(arr).toEqual([[10, 20]]);
     });
 });

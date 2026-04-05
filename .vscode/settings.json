@@ -1,46 +1,7 @@
-{
-    "css.lint.unknownAtRules": "ignore",
-    "files.associations": {
-        "*.css": "tailwindcss",
-        "*.iogl": "iogl"
-    },
-    "workbench.iconTheme": "symbols",
-    "editor.tokenColorCustomizations": {
-        "textMateRules": [
-            {
-                "scope": "string.other.label.iogl",
-                "settings": {
-                    "foreground": "#4EC9B0",
-                    "fontStyle": "bold"
-                }
-            },
-            {
-                "scope": "entity.name.type.node.iogl",
-                "settings": {
-                    "foreground": "#DCDCAA",
-                    "fontStyle": "bold"
-                }
-            },
-            {
-                "scope": "keyword.control.arrow.iogl",
-                "settings": {
-                    "foreground": "#CE9178",
-                    "fontStyle": "bold"
-                }
-            },
-            {
-                "scope": "constant.numeric.coordinate.iogl",
-                "settings": {
-                    "foreground": "#C586C0"
-                }
-            },
-            {
-                "scope": "comment.line.number-sign.iogl",
-                "settings": {
-                    "foreground": "#6A9955",
-                    "fontStyle": "italic"
-                }
-            }
-        ]
-    }
-}
+ {
+     "css.lint.unknownAtRules": "ignore",
+     "files.associations": {
+         "*.css": "tailwindcss"
+     },
+     "workbench.iconTheme": "symbols"
+ }

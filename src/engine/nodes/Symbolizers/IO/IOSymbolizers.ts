@@ -6,16 +6,19 @@ import { PayloadUtils } from '@/utils/PayloadUtils';
 export const IOSymbolizers: Record<string, NodeSymbolizer> = {
     'IN-01': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;
-        const name = data.label as string;
-        const value = PayloadUtils.unwrap(node.value);
-        return name
-            ? PayloadUtils.createSymbol('Identifier', { name, value: value as string | number | boolean | undefined })
-            : PayloadUtils.createSymbol('Literal', { value: value as string | number | boolean | undefined });
+        const rawVal = data.value ?? data.val;
+        const unwrapped = rawVal !== undefined ? PayloadUtils.unwrap(rawVal) : PayloadUtils.unwrap(node.value);
+        const value = (unwrapped !== undefined && unwrapped !== null) ? unwrapped : 0;
+        
+        // Per user request: Label is just a display name, not a variable.
+        // Symbols for source nodes should always be the Literal value.
+        return PayloadUtils.createSymbol('Literal', { value: value as string | number | boolean | undefined });
     },
     'IN-04': (node) => {
-        const val = PayloadUtils.unwrap(node.value);
         const data = (node.data || {}) as Record<string, unknown>;
-        const strVal = val !== undefined ? String(val) : String(data.value || '');
+        const rawVal = data.value ?? data.val;
+        const unwrapped = rawVal !== undefined ? PayloadUtils.unwrap(rawVal) : PayloadUtils.unwrap(node.value);
+        const strVal = (unwrapped !== undefined && unwrapped !== null) ? String(unwrapped) : '';
         const sym = PayloadUtils.createSymbol('Literal', { value: strVal });
         if (node.id) sym.sourceId = node.id;
         return sym;
@@ -24,10 +27,8 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
         return inputs['in_a'] || inputs['in'] || Object.values(inputs)[0] || PayloadUtils.createSymbol('Literal', { value: 0 });
     },
     'IN-07': (node) => {
-        const data = (node.data || {}) as Record<string, unknown>;
-        const label = data.label as string;
-        if (label) return PayloadUtils.createSymbol('Identifier', { name: label });
-        return PayloadUtils.createSymbol('Identifier', { name: 'Matrix' });
+        // Standardized name is 'Array' across the engine.
+        return PayloadUtils.createSymbol('Identifier', { name: 'Array' });
     },
     'IN-03': (node) => {
         const val = node.value || { value: '#ffffff' };
@@ -42,7 +43,11 @@ export const IOSymbolizers: Record<string, NodeSymbolizer> = {
         return { ...inputSymbol, unit: targetUnit };
     },
     'IN-02': (node) => {
-        return PayloadUtils.createSymbol('Literal', { value: PayloadUtils.unwrap(node.value) as string | number | boolean | undefined });
+        const data = (node.data || {}) as Record<string, unknown>;
+        const rawVal = data.value ?? data.val;
+        const unwrapped = rawVal !== undefined ? PayloadUtils.unwrap(rawVal) : PayloadUtils.unwrap(node.value);
+        const value = (unwrapped !== undefined && unwrapped !== null) ? unwrapped : 0;
+        return PayloadUtils.createSymbol('Literal', { value: value as string | number | boolean | undefined });
     },
     'IN-10': (node) => {
         const data = (node.data || {}) as Record<string, unknown>;

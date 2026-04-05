@@ -48,7 +48,8 @@ To optimize URL sharing and storage limits, the JSON string is compressed using 
 
 ## 4. Architectural Guards
 - **Function Stripping**: To maintain security and JSON compatibility, all functions and transient UI states (like `saveStatus` or `actionLog`) are stripped during the serialization "Cleaning" phase.
-- **Dehydration**: Mathematical objects (like `math.Matrix`) are dehydrated into raw JSON arrays before storage and re-hydrated by the engine during load.
+- **Dehydration**: Mathematical objects (like Array instances) are dehydrated into raw JSON arrays before storage and re-hydrated by the engine during load.
+
 - **ID Stability**: The system generates stable semantic IDs based on node type and short hashes to ensure that links remain valid across different sessions.
 
 ---

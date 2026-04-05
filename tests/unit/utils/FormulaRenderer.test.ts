@@ -117,9 +117,9 @@ describe('FormulaRenderer (AST to LaTeX)', () => {
         expect(FormulaRenderer.render(integral)).toBe('\\int {x}^{2} \\, dx');
     });
 
-    it('should render matrices correctly', () => {
+    it('should render arrays correctly', () => {
         const mat = PayloadUtils.createSymbol('FunctionCall', {
-            name: 'matrix',
+            name: 'array',
             args: [{
                 type: 'Literal',
                 value: [[1, 2], [3, 4]]

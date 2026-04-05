@@ -1,0 +1,959 @@
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/Antigravity/input-output[39m
+
+[90mstdout[2m | tests/unit/engine/WebpackWorkerSyntax.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/NerdamerPlotting.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/PlotNodeIntegration.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/UnitNode.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/IN01.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/Divisibility.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/BaseConverter.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/ResultNodePrecision.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/TransformNodes.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+stderr | tests/unit/engine/IN01.test.ts > IN-01 Initial Value Standard > should initialize with value 0 when newly created (no data)
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+[90mstdout[2m | tests/unit/engine/Calculus.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/LinearAlgebra.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+stderr | tests/unit/engine/UnitNode.test.ts > UnitNode Engine Logic > should assign a custom unit to a scalar input
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+[90mstdout[2m | tests/unit/engine/ExpressionNode.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/ResultNodePrecision.test.ts[2m > [22m[2mResult Node Precision[2m > [22m[2mshould apply precision to the output of a Result node
+[22m[39mResult node output: {
+  "type": "scalar",
+  "value": 1.23,
+  "symbol": {
+    "type": "Literal",
+    "value": 1.23456789,
+    "sourceId": "IN-1"
+  },
+  "meta": {
+    "rank": 0,
+    "dimensions": []
+  }
+}
+
+[90mstdout[2m | tests/unit/utils/PlottingUtils.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/ResultNodePrecision.test.ts[2m > [22m[2mResult Node Precision[2m > [22m[2mshould apply precision to the output of a Result node (Array)
+[22m[39mResult node output (Array): {
+  "type": "scalar",
+  "value": [
+    1.23,
+    6.79
+  ],
+  "symbol": {
+    "type": "Literal",
+    "value": [
+      1.2345,
+      6.7891
+    ],
+    "sourceId": "IN-2"
+  },
+  "meta": {
+    "dimensions": [
+      2
+    ],
+    "rank": 1
+  }
+}
+
+[90mstdout[2m | tests/unit/scripts/verify_user_request.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/ResultNodePrecision.test.ts[2m > [22mResult Node Precision[2m > [22mshould apply precision to the output of a Result node[32m 33[2mms[22m[39m
+ [31m├ù[39m tests/unit/engine/ResultNodePrecision.test.ts[2m > [22mResult Node Precision[2m > [22mshould apply precision to the output of a Result node (Array)[32m 11[2mms[22m[39m
+[31m   ÔåÆ expected 'scalar' to be 'array' // Object.is equality[39m
+ [32mÔ£ô[39m tests/unit/engine/WebpackWorkerSyntax.test.ts[2m > [22mWebpack Web Worker Syntax Enforcer[2m > [22mAll `new Worker` calls MUST strictly inline `new URL(..., import.meta.url)`[32m 139[2mms[22m[39m
+stderr | tests/unit/engine/UnitNode.test.ts > UnitNode Engine Logic > should convert units correctly when mixed
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+ [32mÔ£ô[39m tests/unit/engine/UnitNode.test.ts[2m > [22mUnitNode Engine Logic[2m > [22mshould assign a custom unit to a scalar input[32m 39[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Divisibility.test.ts[2m > [22mMA-07 GCD: Comprehensive Support[32m 26[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Divisibility.test.ts[2m > [22mMA-07 LCM: Comprehensive Support[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Divisibility.test.ts[2m > [22mMA-07 MOD: Two-Input and Edge Cases[32m 6[2mms[22m[39m
+ [31m├ù[39m tests/unit/engine/Divisibility.test.ts[2m > [22mMA-07 ISPRIME: Filtering behavior[32m 58[2mms[22m[39m
+[31m   ÔåÆ expected { mathjs: 'Matrix', ÔÇª(2) } to deeply equal [ 2, 3, 5, 7 ][39m
+ [32mÔ£ô[39m tests/unit/engine/IN01.test.ts[2m > [22mIN-01 Initial Value Standard[2m > [22mshould initialize with value 0 when newly created (no data)[32m 25[2mms[22m[39m
+ [31m├ù[39m tests/unit/engine/IN01.test.ts[2m > [22mIN-01 Initial Value Standard[2m > [22mshould maintain 0 in symbol even if label is provided but value is empty[32m 69[2mms[22m[39m
+[31m   ÔåÆ expected 'Literal' to be 'Identifier' // Object.is equality[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould auto-detect Source Base from input unit (Hex unit to 10)[32m 16[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould convert Decimal to Binary and set output unit[32m 30[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould fallback to base 10 for unknown units[32m 19[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould default to base 10 for input "1000" if correctly typed as Scalar[32m 26[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-06 (Array Calculus): QR Decomposition Multi-Output[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-06 (Array Calculus): LUP and LU Decomposition[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-06 (Array Calculus): EIGEN Spectral Decomposition[32m 61[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-06 (Array Calculus): Scalar modes (DET, TRACE)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-02 (ArrayExtract): Extract scalar from array[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-02 (ArrayExtract): Extract from 2D Array[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-01 (ArrayBuilder): Unified Join (Scalar to Vector)[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-01 (ArrayBuilder): Unified Join (Vector to Vector)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-01 (ArrayBuilder): Unified Join (Columns)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LinearAlgebra.test.ts[2m > [22mLinear Algebra & Array Nodes[2m > [22mDT-01 (ArrayBuilder): Scalars to Columns[32m 1[2mms[22m[39m
+stderr | tests/unit/engine/IN01.test.ts > IN-01 Initial Value Standard > should prioritize data.value over stale node.value in symbolizer
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+stderr | tests/unit/engine/BaseConverter.test.ts > BaseConverter Node Engine Logic > should return error for invalid input string for base
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+ [32mÔ£ô[39m tests/unit/engine/IN01.test.ts[2m > [22mIN-01 Initial Value Standard[2m > [22mshould prioritize data.value over stale node.value in symbolizer[32m 37[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/BaseConverter.test.ts[2m > [22m[2mBaseConverter Node Engine Logic[2m > [22m[2mshould return error for invalid input string for base
+[22m[39m[Test Error Case Result] {
+  type: [32m'error'[39m,
+  value: [1mnull[22m,
+  symbol: {
+    type: [32m'FunctionCall'[39m,
+    name: [32m'base'[39m,
+    args: [ [36m[Object][39m ],
+    sourceId: [32m'Base'[39m
+  },
+  meta: { error: [32m'Base Conversion Failed'[39m }
+}
+
+stderr | tests/unit/engine/UnitNode.test.ts > UnitNode Engine Logic > should support arbitrary labels like "apple" without conversion failure
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+stderr | tests/unit/engine/BaseConverter.test.ts > BaseConverter Node Engine Logic > should convert Decimal to Base 4 (4 to 10)
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+stderr | tests/unit/engine/UnitNode.test.ts > UnitNode Engine Logic > should handle custom unit conversion (m/s to km/h)
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+ [32mÔ£ô[39m tests/unit/engine/UnitNode.test.ts[2m > [22mUnitNode Engine Logic[2m > [22mshould convert units correctly when mixed[32m 66[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNode.test.ts[2m > [22mUnitNode Engine Logic[2m > [22mshould support arbitrary labels like "apple" without conversion failure[32m 40[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNode.test.ts[2m > [22mUnitNode Engine Logic[2m > [22mshould handle conversion between standard units correctly[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNode.test.ts[2m > [22mUnitNode Engine Logic[2m > [22mshould handle custom unit conversion (m/s to km/h)[32m 17[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNode.test.ts[2m > [22mUnitNode Engine Logic[2m > [22mshould show error for incompatible units[32m 28[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould return error for invalid input string for base[32m 32[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould convert Base 4 to Decimal (10 to 4)[32m 16[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould convert Decimal to Base 4 (4 to 10)[32m 31[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould reject Array input (e.g., RGB)[32m 17[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BaseConverter.test.ts[2m > [22mBaseConverter Node Engine Logic[2m > [22mshould reject generic String input without unit[32m 27[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/NerdamerPlotting.test.ts[2m > [22mNerdamer Function Compilation[2m > [22mshould correctly compile exp(x) and handle e constant[33m 318[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/NerdamerPlotting.test.ts[2m > [22mNerdamer Function Compilation[2m > [22mshould correctly compile abs(x)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/NerdamerPlotting.test.ts[2m > [22mNerdamer Function Compilation[2m > [22mshould handle pi constant[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/NerdamerPlotting.test.ts[2m > [22mNerdamer Function Compilation[2m > [22mshould handle complex formula from user[32m 11[2mms[22m[39m
+[90mstdout[2m | tests/unit/scripts/verify_user_request.test.ts[2m > [22m[2mManual Verification: Gaussian Field Gradient
+[22m[39m--- Starting Manual Verification ---
+Evaluating Gaussian Field Gradient...
+
+[90mstdout[2m | tests/unit/scripts/verify_user_request.test.ts[2m > [22m[2mManual Verification: Gaussian Field Gradient
+[22m[39mSymbolic Result (Gradient): [-2*e^(-x^2-y^2)*x, -2*e^(-x^2-y^2)*y]
+Sampling Density Check: [33m121[39m
+Point (1, 1) -> vx: [33m-0.2706705664732254[39m vy: [33m-0.2706705664732254[39m
+Expected (Calculated at Runtime): [33m-0.2706705664732254[39m
+Gaussian Gradient Verification PASSED
+--- Verification Complete ---
+
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould evaluate a simple constant expression to Scalar[32m 265[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould return Symbolic for expressions with variables[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould handle sin(x) correctly as Symbolic[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould evaluate sin(0) to 0 (Scalar)[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould detect assignment "x = 2" and set meta.label as Symbolic[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould evaluate an Array correctly to DataType.Array[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould handle complex numbers correctly[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould handle booleans correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould stay Symbolic for function definitions (avoiding serialization errors)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ExpressionNode.test.ts[2m > [22mExpression Node (IN-09) Reproduction[2m > [22mshould handle empty expression with an error[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/scripts/verify_user_request.test.ts[2m > [22mManual Verification: Gaussian Field Gradient[32m 268[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PlottingUtils.test.ts[2m > [22mPlottingUtils Phase 1[2m > [22m1.1 & 1.2 Symbolic Sampling and Asymptote Handling[2m > [22mshould linearly sample the function based on min/max and points[32m 272[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PlottingUtils.test.ts[2m > [22mPlottingUtils Phase 1[2m > [22m1.1 & 1.2 Symbolic Sampling and Asymptote Handling[2m > [22mshould handle asymptotes by injecting null[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PlottingUtils.test.ts[2m > [22mPlottingUtils Phase 1[2m > [22m1.1 & 1.2 Symbolic Sampling and Asymptote Handling[2m > [22mshould inject 0 for unassigned variables in formulas like f(x, a)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PlottingUtils.test.ts[2m > [22mPlottingUtils Phase 1[2m > [22m1.3 Adapter Mapping[2m > [22mshould parse Scalar numbers[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PlottingUtils.test.ts[2m > [22mPlottingUtils Phase 1[2m > [22m1.3 Adapter Mapping[2m > [22mshould parse Array Nx1 formats[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PlottingUtils.test.ts[2m > [22mPlottingUtils Phase 1[2m > [22m1.3 Adapter Mapping[2m > [22mshould parse Array Nx2 formats[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PlottingUtils.test.ts[2m > [22mPlottingUtils Phase 1[2m > [22m1.3 Adapter Mapping[2m > [22mshould parse Array Nx3 formats (Bubble size)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PlottingUtils.test.ts[2m > [22mPlottingUtils Phase 1[2m > [22m1.3 Adapter Mapping[2m > [22mshould support mathjs Array pseudo-interface format[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TransformNodes.test.ts[2m > [22mTR-05: Smoothing[2m > [22mshould smooth a 1D array using moving average[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TransformNodes.test.ts[2m > [22mTR-05: Smoothing[2m > [22mTR-05: should smooth a column vector (7x1 array)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TransformNodes.test.ts[2m > [22mTR-05: Smoothing[2m > [22mshould smooth using static windowMode parameter[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TransformNodes.test.ts[2m > [22mTR-04: Vector Field[2m > [22mshould compute gradient for f(x,y)=x^2+y^2[33m 417[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TransformNodes.test.ts[2m > [22mTR-04: Vector Field[2m > [22mshould use configurable range and density[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TransformNodes.test.ts[2m > [22mTR-04: Vector Field[2m > [22mshould compute divergence for [x, y][32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TransformNodes.test.ts[2m > [22mTR-04: Vector Field[2m > [22mshould compute curl for [ -y, x ][32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TransformNodes.test.ts[2m > [22mTR-04: Vector Field[2m > [22mshould compute direct field for P=y, Q=x[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/PlotNodeIntegration.test.ts[2m > [22mPlot Node (OT-03) Integration[2m > [22mshould extract formula from Scalar symbol when Expression Node provides x=2[33m 454[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/PlotNodeIntegration.test.ts[2m > [22mPlot Node (OT-03) Integration[2m > [22mshould handle pure Symbolic input as fallback[32m 10[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-01: Derivative[2m > [22mshould differentiate x^2 to 2*x[33m 337[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-01: Derivative[2m > [22mshould return 0 for derivative of constant[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-02: Integral[2m > [22mshould compute indefinite integral Ôê½x dx = x┬▓/2[32m 11[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-02: Integral[2m > [22mshould compute definite integral Ôê½ÔéÇÔüÁ 1 dx = 5[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould solve simple equation x+3=5[32m 24[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould solve system x=2, y=3+x for y[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould handle labeled inputs automatically[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould hunt equations in arbitrary handle names (Robust Fallback)[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould not crash on object input[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould handle single assignment solve for x=2[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould solve system with multiple inputs on same handle (capsule behavior)[32m 4[2mms[22m[39m
+[90mstdout[2m | tests/unit/iogl/UnitSerialization.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/iogl/UnitSerialization.test.ts[2m > [22mIOGL Unit Node Serialization[2m > [22mshould parse TR-01 REMOVE correctly[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/iogl/UnitSerialization.test.ts[2m > [22mIOGL Unit Node Serialization[2m > [22mshould parse TR-01 km correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/iogl/UnitSerialization.test.ts[2m > [22mIOGL Unit Node Serialization[2m > [22mshould parse TR-01 CUSTOM "myunit" correctly[32m 1[2mms[22m[39m
+ [31m├ù[39m tests/unit/iogl/UnitSerialization.test.ts[2m > [22mIOGL Unit Node Serialization[2m > [22mshould encode TR-01 REMOVE correctly[32m 13[2mms[22m[39m
+[31m   ÔåÆ expected '[un] TR-01 {mode: "REMOVE"} @10,10\n\n' to contain 'TR-01 { mode: "REMOVE" }'[39m
+ [31m├ù[39m tests/unit/iogl/UnitSerialization.test.ts[2m > [22mIOGL Unit Node Serialization[2m > [22mshould encode TR-01 CUSTOM "myunit" correctly[32m 2[2mms[22m[39m
+[31m   ÔåÆ expected '[un] TR-01 "myunit" {mode: "CUSTOM"} ÔÇª' to contain 'TR-01 "myunit" { mode: "CUSTOM" }'[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould return empty array instead of [0] when no solution exists[32m 56[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould return different answers when switching target variable for x+y=5[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould resolve system x=2, y=3+x for both x and y[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould solve 3-variable linear system for each variable[32m 34[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould find both roots of x^2 + x - 6 = 0[32m 14[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould warn for quadratic equation with Unicode x┬▓[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould solve 2a+b=10, b=4 for a and b[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould deduplicate redundant roots for (x-2)^2 = 0[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould cap and sort transcendental solutions for sin(x)=0[32m 42[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould merge numerically similar solutions (precision merging)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCalculus Nodes (CL-01 to CL-04)[2m > [22mCL-04: Equation Solver[2m > [22mshould format complex approximations as clean decimals (e^x=5)[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mCL-05: ODE Solver[2m > [22mshould solve dy/dt = -y (exponential decay, y(0)=1)[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mRuntimeGuard[2m > [22mshould catch NaN results[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mRuntimeGuard[2m > [22mshould catch Infinity results[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mRuntimeGuard[2m > [22mshould catch thrown errors[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mRuntimeGuard[2m > [22mshould pass valid numeric results[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mNerdamerService[2m > [22mshould differentiate correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mNerdamerService[2m > [22mshould manage LRU cache[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Calculus.test.ts[2m > [22mNerdamerService[2m > [22mshould extract variables[32m 2[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/BrainVisual.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+stderr | tests/unit/engine/BrainVisual.test.ts > Brain Visual Isolation > should initialize nodes with a default visual state on first heartbeat
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+stderr | tests/unit/engine/BrainVisual.test.ts > Brain Visual Isolation > should increment visualTick over time (time-based tick)
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+stderr | tests/unit/engine/BrainVisual.test.ts > Brain Visual Isolation > should sync muted state from node data
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+ [32mÔ£ô[39m tests/unit/engine/BrainVisual.test.ts[2m > [22mBrain Visual Isolation[2m > [22mshould initialize nodes with a default visual state on first heartbeat[32m 19[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BrainVisual.test.ts[2m > [22mBrain Visual Isolation[2m > [22mshould increment visualTick over time (time-based tick)[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/BrainVisual.test.ts[2m > [22mBrain Visual Isolation[2m > [22mshould sync muted state from node data[32m 2[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/PropagationConvergence.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+stderr | tests/unit/engine/PropagationConvergence.test.ts > Propagation Convergence > should handle a very long chain (100 nodes) correctly
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+ [32mÔ£ô[39m tests/unit/engine/PropagationConvergence.test.ts[2m > [22mPropagation Convergence[2m > [22mshould propagate through a chain of 30 nodes in a single evaluation session[32m 43[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/PropagationConvergence.test.ts[2m > [22mPropagation Convergence[2m > [22mshould handle a very long chain (100 nodes) correctly[32m 28[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/PropagationConvergence.test.ts[2m > [22mPropagation Convergence[2m > [22mshould evaluate isolated nodes after injection (markAllDirty verification)[32m 10[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/CycleDetection.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+stderr | tests/unit/engine/CycleDetection.test.ts > Cycle Detection > should reject a complex A -> B -> C -> A cycle
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+ [32mÔ£ô[39m tests/unit/engine/CycleDetection.test.ts[2m > [22mCycle Detection[2m > [22mshould reject a direct self-loop via validateConnection[32m 10[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CycleDetection.test.ts[2m > [22mCycle Detection[2m > [22mshould reject a simple A -> B -> A cycle[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CycleDetection.test.ts[2m > [22mCycle Detection[2m > [22mshould reject a complex A -> B -> C -> A cycle[32m 34[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CycleDetection.test.ts[2m > [22mCycle Detection[2m > [22mshould block cycles during injectNodes and report them in diagnostics[32m 42[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/Brain.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mBasic State Management[2m > [22mshould add a node correctly[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mBasic State Management[2m > [22mshould remove a node correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mBasic State Management[2m > [22mshould connect nodes correctly[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mContent Metrics Protocol[2m > [22mupdateNodeBoundingBox should write width/height into NodeLogic[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mContent Metrics Protocol[2m > [22mupdateNodeBoundingBox should store absolute canvas position[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mContent Metrics Protocol[2m > [22mgetNodeBoundingBox should return null before any measurement[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mLayout Authority[2m > [22mcomputeBoundingBox returns null for unknown node[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mLayout Authority[2m > [22mcomputeBoundingBox uses data.width/height when available[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mLayout Authority[2m > [22mcomputeBoundingBox falls back to nodeDefinitions minWidth/minHeight[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mLayout Authority[2m > [22mrefreshBoundingBoxes auto-runs after ADD_NODE[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Brain.test.ts[2m > [22mBrain[2m > [22mLayout Authority[2m > [22mUI-reported bounding box takes priority over engine-computed[32m 0[2mms[22m[39m
+[90mstdout[2m | tests/unit/lifecycle/GraphLifecycle.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+stderr | tests/unit/lifecycle/GraphLifecycle.test.ts > GraphLifecycle Core Stability > should correctly handle MOVE_NODE without breaking existing connections
+[WorkerOrchestrator] syncAndEval skipped: proxy exists? false useWorker: true
+
+ [32mÔ£ô[39m tests/unit/lifecycle/GraphLifecycle.test.ts[2m > [22mGraphLifecycle Core Stability[2m > [22mshould maintain topological integrity through multiple BATCH transactions[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/lifecycle/GraphLifecycle.test.ts[2m > [22mGraphLifecycle Core Stability[2m > [22mshould correctly handle MOVE_NODE without breaking existing connections[32m 24[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/ConstantNodePrecision.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/ConstantNodePrecision.test.ts[2m > [22mConstant Node Precision (IN-06)[2m > [22mshould round pi to 2 decimal places[32m 13[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ConstantNodePrecision.test.ts[2m > [22mConstant Node Precision (IN-06)[2m > [22mshould handle high precision (-1) without crashing[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ConstantNodePrecision.test.ts[2m > [22mConstant Node Precision (IN-06)[2m > [22mshould support 0 decimal places precisely[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ConstantNodePrecision.test.ts[2m > [22mConstant Node Precision (IN-06)[2m > [22mshould work correctly for Euler number (e)[32m 4[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/UnitNodeConversion.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/StateOrchestration.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: Labeling mode (No input unit)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: Automatic conversion (s to min)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: Automatic conversion (61s to min)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: Conversion with Custom Units[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: 0.9833h to min (User reported case)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: Incompatible units error[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: Unknown custom units fallback to labeling if no source unit[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: Unknown custom units error if source unit exists[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: High-Precision Area Conversion (m^2 to km^2)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitNodeConversion.test.ts[2m > [22mUnitNode: High-Precision Volume Conversion (mm^3 to m^3)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/StateOrchestration.test.ts[2m > [22mState Orchestration (Integration)[2m > [22mNode Muting & Signal Flow[2m > [22mshould correctly deactivate downstream edges when a source node is muted[32m 22[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/TimerNode.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/UnitAlgebra.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/TimerNode.test.ts[2m > [22mTimerNode Engine Logic (IN-11)[2m > [22mshould register a timer node in the activeTickers set when added running[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TimerNode.test.ts[2m > [22mTimerNode Engine Logic (IN-11)[2m > [22mshould remain inactive if added in paused state[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TimerNode.test.ts[2m > [22mTimerNode Engine Logic (IN-11)[2m > [22mshould increment value accurately using carry-over logic[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TimerNode.test.ts[2m > [22mTimerNode Engine Logic (IN-11)[2m > [22mshould handle multi-tick catch-up (Overclocking logic)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TimerNode.test.ts[2m > [22mTimerNode Engine Logic (IN-11)[2m > [22mshould implement the Reset Guard to prevent value bursts after manual reset[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TimerNode.test.ts[2m > [22mTimerNode Engine Logic (IN-11)[2m > [22mshould support 1ms high-frequency overclocking (16.6 tick/frame)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TimerNode.test.ts[2m > [22mTimerNode Engine Logic (IN-11)[2m > [22mshould sanitize interval to a minimum of 1ms[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TimerNode.test.ts[2m > [22mTimerNode Engine Logic (IN-11)[2m > [22mshould stop ticking and clean up registry when paused via data update[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould parse a simple unit[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould parse a unit with power[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould parse compound numerator[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould parse division[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould parse complex unit: m/s^2[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould parse compound numerator with denominator: kg*m/s^2[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould parse custom labels[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould return empty map for undefined[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mparse[2m > [22mshould return empty map for empty string[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmultiply[2m > [22mkm * km ÔåÆ km^2[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmultiply[2m > [22mm/s * s ÔåÆ m[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mdivide[2m > [22mkm / km ÔåÆ dimensionless[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mdivide[2m > [22mkm^2 / km ÔåÆ km[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mdivide[2m > [22mm / s ÔåÆ m/s[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mdivide[2m > [22mN*m / m ÔåÆ N[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mpower[2m > [22mm ^ 3 ÔåÆ m^3[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mpower[2m > [22mm/s ^ 2 ÔåÆ m^2/s^2[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mequals[2m > [22mshould match identical units[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mequals[2m > [22mshould not match different units[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mformat[2m > [22mshould format simple unit[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mformat[2m > [22mshould format powered unit[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/MathNodes.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mformat[2m > [22mshould format division[32m 29[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mformat[2m > [22mshould format complex unit[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mformat[2m > [22mshould return undefined for dimensionless[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mADD: same unit ÔåÆ preserve[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mADD: different units ÔåÆ combined[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mADD: one unitless ÔåÆ preserve other[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mSUB: same unit ÔåÆ preserve[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mMUL: km * km ÔåÆ km^2[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mMUL: m/s * s ÔåÆ m[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mMUL: one unitless ÔåÆ preserve other[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mDIV: km / km ÔåÆ undefined (dimensionless)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mDIV: m / s ÔåÆ m/s[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mDIV: km^2 / km ÔåÆ km[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mDIV: N*m / m ÔåÆ N[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mDIV: m/s^2 * s ÔåÆ m/s[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mMUL: apple * apple ÔåÆ apple^2[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mDIV: apple^2 / apple ÔåÆ apple[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mDIV: km/L / km ÔåÆ 1/L (compound fraction cancellation)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mABS: preserves unit[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mNEG: preserves unit[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mSIGN: drops unit[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mmerge[2m > [22mno units ÔåÆ undefined[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mprettify[2m > [22mshould convert ^2 to superscript[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mprettify[2m > [22mshould convert ^3 to superscript[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mprettify[2m > [22mshould convert ^-1 to superscript[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mprettify[2m > [22mshould convert * to middle dot[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mprettify[2m > [22mshould handle complex units[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mprettify[2m > [22mshould preserve + for mixed units[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/UnitAlgebra.test.ts[2m > [22mUnitAlgebra[2m > [22mprettify[2m > [22mshould return empty string for undefined[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-01 Basic Math: Operations and Unit Propagation[32m 15[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-01 Unit Conversion: Same-dimension ADD converts correctly[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-01 Unit Conversion: Same-dimension SUB converts correctly[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-01 Unit Conversion: Triple mixed units ADD[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-01 Unit Error: Incompatible dimensions return error[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-01 Unit Algebra: MUL produces correct compound unit[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-01 Handle ID Resilience[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-02 Advanced Math: Full Operator Coverage[32m 12[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-03 Logarithm: Operations and Handle Fallback[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mMA-04 Trigonometry: Operations and Handle Fallback[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/MathNodes.test.ts[2m > [22mData Type Edge Cases: Strings and Unrelated Types[32m 2[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/FractionNode.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/FractionNode.test.ts[2m > [22mFraction Node (MA-12) & Rounding Node (MA-14)[2m > [22mMA-12: Should convert decimal to fraction[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/FractionNode.test.ts[2m > [22mFraction Node (MA-12) & Rounding Node (MA-14)[2m > [22mMA-12: Should handle repeating decimals[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/FractionNode.test.ts[2m > [22mFraction Node (MA-12) & Rounding Node (MA-14)[2m > [22mMA-12: Should handle strings[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/FractionNode.test.ts[2m > [22mFraction Node (MA-12) & Rounding Node (MA-14)[2m > [22mMA-14: Should perform rounding (Regression)[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/FractionNode.test.ts[2m > [22mFraction Node (MA-12) & Rounding Node (MA-14)[2m > [22mMA-12: Should handle mixed fractions[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/FractionNode.test.ts[2m > [22mFraction Node (MA-12) & Rounding Node (MA-14)[2m > [22mMA-12: Should handle mixed fractions with integer result[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/FractionNode.test.ts[2m > [22mFraction Node (MA-12) & Rounding Node (MA-14)[2m > [22mMA-12: Should handle dehydrated BigNumber from Division (Regression)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/FractionNode.test.ts[2m > [22mFraction Node (MA-12) & Rounding Node (MA-14)[2m > [22mMA-08: Should handle dehydrated BigNumber inputs (Combinatorics Regression)[32m 2[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/IOGL_V1.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m1. Parser & Protocol (Standard Syntax)[2m > [22mshould parse basic nodes with labels and coordinates[32m 14[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m1. Parser & Protocol (Standard Syntax)[2m > [22mshould handle complex positional data mapping (extreme merging surrogate)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m1. Parser & Protocol (Standard Syntax)[2m > [22mshould support semantic mode mapping (Fraction, Builder)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m1. Parser & Protocol (Standard Syntax)[2m > [22mshould correctly parse TR-03 (Geometry) with mode-based inputs[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m1. Parser & Protocol (Standard Syntax)[2m > [22mshould allow multiple connections to the same handle (Capsule support)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m1. Parser & Protocol (Standard Syntax)[2m > [22mshould correctly parse negative coordinates[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m1. Parser & Protocol (Standard Syntax)[2m > [22mshould parse expression nodes (IN-09)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m1. Parser & Protocol (Standard Syntax)[2m > [22mshould handle complex algebraic chains[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/IOGL_V1.test.ts[2m > [22mIOGL 1.0 Master Logic Test[2m > [22m2. Error Handling & Validation[2m > [22mshould detect ghost links (non-existent handles)[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/hooks/BrainInteractions.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/hooks/BrainInteractions.test.ts[2m > [22mBrainInteractions Integration (Hooks)[2m > [22museBrainSync[2m > [22mshould sync new nodes from UI to Brain[32m 20[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/hooks/BrainInteractions.test.ts[2m > [22mBrainInteractions Integration (Hooks)[2m > [22museBrainSync[2m > [22mshould handle node movement separately from structural batches[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/hooks/BrainInteractions.test.ts[2m > [22mBrainInteractions Integration (Hooks)[2m > [22museBrainSync[2m > [22mshould sync edge connections[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/hooks/BrainInteractions.test.ts[2m > [22mBrainInteractions Integration (Hooks)[2m > [22museBrainUpdates[2m > [22mshould update React nodes when Brain results change[32m 6[2mms[22m[39m
+[90mstdout[2m | tests/unit/components/SharePopover.test.tsx
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/components/SharePopover.test.tsx[2m > [22mSharePopover[2m > [22mrenders login reminder for unauthenticated users[32m 55[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/components/SharePopover.test.tsx[2m > [22mSharePopover[2m > [22mrenders "Save to Cloud" hint for local projects when authenticated[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/components/SharePopover.test.tsx[2m > [22mSharePopover[2m > [22mrenders visibility toggles for cloud projects when authenticated[32m 17[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/components/SharePopover.test.tsx[2m > [22mSharePopover[2m > [22mrenders share link when visibility is public[32m 10[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/ArrayCalculus.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/ArrayCalculus.test.ts[2m > [22mArray Calculus (DT-06) Standardization[2m > [22mDT-06: QR Decomposition mapping[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ArrayCalculus.test.ts[2m > [22mArray Calculus (DT-06) Standardization[2m > [22mDT-06: LUP Decomposition mapping[32m 5[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/LogicGate.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/LogicGate.test.ts[2m > [22mLogic Gate (LG-01)[2m > [22mshould correctly compare simple numbers[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LogicGate.test.ts[2m > [22mLogic Gate (LG-01)[2m > [22mshould correctly evaluate standard logic gates[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LogicGate.test.ts[2m > [22mLogic Gate (LG-01)[2m > [22mshould correctly evaluate NEW logic gates (NAND, NOR, XNOR)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LogicGate.test.ts[2m > [22mLogic Gate (LG-01)[2m > [22mshould correctly compare Units[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LogicGate.test.ts[2m > [22mLogic Gate (LG-01)[2m > [22mshould fail gracefully for incompatible units[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LogicGate.test.ts[2m > [22mLogic Gate (LG-01)[2m > [22mshould implement STRICT BINARY logic (User Requirement)[32m 4[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/EngineDurability.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+stderr | tests/unit/engine/EngineDurability.test.ts > Engine Durability (Pulse & Routing) > Multi-Output Data Routing > should correctly route x and y components from AD-09
+[NodeRegistry] No evaluator for type: AD-09. Registered keys: [
+  'IN-01',     'IN-02',      'IN-04', 'IN-07',
+  'IN-03',     'IN-08',      'IN-11', 'OT-01',
+  'OT-03',     'OT-02',      'UT-03', 'IN-06',
+  'IN-10',     'MA-01',      'MA-02', 'MA-03',
+  'MA-04',     'MA-05',      'MA-06', 'MA-07',
+  'MA-08',     'TR-01',      'TR-02', 'TR-06',
+  'TR-05',     'LG-01',      'LG-03', 'LG-02',
+  'IN-05',     'CL-01',      'CL-02', 'CL-03',
+  'CL-04',     'CL-05',      'DT-01', 'DT-02',
+  'DT-03',     'DT-04',      'DT-06', 'DT-05',
+  'TR-03',     'TR-04',      'IN-09', 'UT-01',
+  'UT-02',     'OT-04',      'frame', 'baseNode',
+  'BRIDGE_IN', 'BRIDGE_OUT'
+]
+
+ [32mÔ£ô[39m tests/unit/engine/EngineDurability.test.ts[2m > [22mEngine Durability (Pulse & Routing)[2m > [22mStepwise Propagation (Performance Protection)[2m > [22mshould NOT dirty downstream nodes (C) when B re-computes to the same value[32m 11[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/EngineDurability.test.ts[2m > [22mEngine Durability (Pulse & Routing)[2m > [22mMulti-Output Data Routing[2m > [22mshould correctly route x and y components from AD-09[32m 3[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/ArrayInput.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/ArrayInput.test.ts[2m > [22mIN-07 (Array Input) Evaluator[2m > [22mShould prioritize data.value (New dynamic state)[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ArrayInput.test.ts[2m > [22mIN-07 (Array Input) Evaluator[2m > [22mShould fallback to data.array (Legacy/Initial state)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ArrayInput.test.ts[2m > [22mIN-07 (Array Input) Evaluator[2m > [22mShould use node.value as last resort cache[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ArrayInput.test.ts[2m > [22mIN-07 (Array Input) Evaluator[2m > [22mShould return default 3x3 zeros if no data is present[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/utils/FormulaRenderer.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/utils/FormulaRenderer.test.ts[2m > [22mFormulaRenderer (AST to LaTeX)[2m > [22mshould render literals and identifiers[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/FormulaRenderer.test.ts[2m > [22mFormulaRenderer (AST to LaTeX)[2m > [22mshould render binary expressions correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/FormulaRenderer.test.ts[2m > [22mFormulaRenderer (AST to LaTeX)[2m > [22mshould render function calls correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/FormulaRenderer.test.ts[2m > [22mFormulaRenderer (AST to LaTeX)[2m > [22mshould render template literals correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/FormulaRenderer.test.ts[2m > [22mFormulaRenderer (AST to LaTeX)[2m > [22mshould handle expandSymbols option[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/FormulaRenderer.test.ts[2m > [22mFormulaRenderer (AST to LaTeX)[2m > [22mshould handle operator precedence with parentheses[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/FormulaRenderer.test.ts[2m > [22mFormulaRenderer (AST to LaTeX)[2m > [22mshould render calculus symbols correctly[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/FormulaRenderer.test.ts[2m > [22mFormulaRenderer (AST to LaTeX)[2m > [22mshould render arrays correctly[32m 0[2mms[22m[39m
+[90mstdout[2m | tests/unit/utils/graphUtils.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/utils/graphUtils.test.ts[2m > [22mfindUpstreamPath[2m > [22mshould find ancestors in a simple linear chain[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/graphUtils.test.ts[2m > [22mfindUpstreamPath[2m > [22mshould find ancestors with multiple branches[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/graphUtils.test.ts[2m > [22mfindUpstreamPath[2m > [22mshould handle branched paths that do not lead to target[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/CapsuleConnectivity.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/iogl/HandleAwareness.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/CapsuleConnectivity.test.ts[2m > [22mCapsule Registry Guard[2m > [22mNode: Equation Solver (CL-04)[2m > [22mshould enable multi-input for handle "in_a"[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CapsuleConnectivity.test.ts[2m > [22mCapsule Registry Guard[2m > [22mNode: Array Builder (DT-01)[2m > [22mshould enable multi-input for handle "in_a"[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CapsuleConnectivity.test.ts[2m > [22mCapsule Registry Guard[2m > [22mNode: Graph Plot (OT-03)[2m > [22mshould enable multi-input for handle "in_a"[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CapsuleConnectivity.test.ts[2m > [22mCapsule Registry Guard[2m > [22mNode: Concatenate (UT-03)[2m > [22mshould enable multi-input for handle "in_a"[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CapsuleConnectivity.test.ts[2m > [22mCapsule Registry Guard[2m > [22mshould block multiple connections for standard "single" handles (e.g., MA-01)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/iogl/HandleAwareness.test.ts[2m > [22mIOGL Handle Awareness[2m > [22mshould fail when linking to a non-existent handle in INV mode (DT-06)[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/iogl/HandleAwareness.test.ts[2m > [22mIOGL Handle Awareness[2m > [22mshould pass when linking to .b in QR mode (DT-06)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/iogl/HandleAwareness.test.ts[2m > [22mIOGL Handle Awareness[2m > [22mshould fail when using second input for ABS (MA-02)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/iogl/HandleAwareness.test.ts[2m > [22mIOGL Handle Awareness[2m > [22mshould pass for legitimate second input in POW (MA-02)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/iogl/HandleAwareness.test.ts[2m > [22mIOGL Handle Awareness[2m > [22mshould fail when using non-existent handle on a static node (IN-01.b)[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/SwitchNode.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/utils/PayloadUtils.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+[90mstdout[2m | tests/unit/engine/TopologyProtection.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/SwitchNode.test.ts[2m > [22mSwitch Node Logic[2m > [22mshould switch between true and false inputs based on condition[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/SwitchNode.test.ts[2m > [22mSwitch Node Logic[2m > [22mshould reject invalid connections[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/Precision.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/utils/PayloadUtils.test.ts[2m > [22mPayloadUtils Symbolic Extraction[2m > [22mshould stringify BinaryExpression with POW correctly[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PayloadUtils.test.ts[2m > [22mPayloadUtils Symbolic Extraction[2m > [22mshould extract formula string from a Scalar with Complex Symbol[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PayloadUtils.test.ts[2m > [22mPayloadUtils Symbolic Extraction[2m > [22mshould extract formula string from a Literal Symbol (Expression node case)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PayloadUtils.test.ts[2m > [22mPayloadUtils Symbolic Extraction[2m > [22mshould handle MOD operator[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PayloadUtils.test.ts[2m > [22mPayloadUtils Symbolic Extraction[2m > [22mshould handle Unary NEG correctly[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PayloadUtils.test.ts[2m > [22mPayloadUtils Symbolic Extraction[2m > [22mshould handle mis-categorized Binary NEG correctly (fallback)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PayloadUtils.test.ts[2m > [22mPayloadUtils Symbolic Extraction[2m > [22mshould expand Input Node Identifiers with dehydrated BigNumbers[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/PayloadUtils.test.ts[2m > [22mPayloadUtils Symbolic Extraction[2m > [22mshould handle Factorial as function call[32m 0[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/CoordinateNormalization.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/TopologyProtection.test.ts[2m > [22mTopology Protection & Durable Safety[2m > [22mCircular Dependency Guard[2m > [22mshould reject a direct cycle (A -> B -> A)[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/TopologyProtection.test.ts[2m > [22mTopology Protection & Durable Safety[2m > [22mCircular Dependency Guard[2m > [22mshould reject a multi-step cycle (A -> B -> C -> A)[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Precision.test.ts[2m > [22mPrecision and Units Integration[2m > [22mshould maintain Scalar type and support precision after multiplying two units (m * m)[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Precision.test.ts[2m > [22mPrecision and Units Integration[2m > [22mshould maintain Scalar type after unit conversion including precision[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CoordinateNormalization.test.ts[2m > [22mCoordinate Normalization[2m > [22mshould store child positions as relative to their parent[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CoordinateNormalization.test.ts[2m > [22mCoordinate Normalization[2m > [22mshould calculate correct absolute position for nested nodes[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/CoordinateNormalization.test.ts[2m > [22mCoordinate Normalization[2m > [22mshould handle multi-level absolute position calculation[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/SaveLogic.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/SaveLogic.test.ts[2m > [22mSerializer / Save Logic (v4.0)[2m > [22mshould prune redundant UI metadata and global settings[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/SaveLogic.test.ts[2m > [22mSerializer / Save Logic (v4.0)[2m > [22mshould perform a successful serialization round-trip[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/SaveLogic.test.ts[2m > [22mSerializer / Save Logic (v4.0)[2m > [22mshould maintain data integrity for complex nested data[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/SaveLogic.test.ts[2m > [22mSerializer / Save Logic (v4.0)[2m > [22mshould handle missing or malformed data gracefully[32m 0[2mms[22m[39m
+[90mstdout[2m | tests/unit/utils/DisplayUtils.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould format dehydrated BigNumber correctly[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould format dehydrated Fraction correctly[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould format dehydrated Complex correctly[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould format dehydrated Unit correctly[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould format dehydrated Array correctly[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould handle nested dehydrated objects in Arrays[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould handle NodePayload with DataType.Scalar containing dehydrated BigNumber[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould handle DataType.Object payloads by formatting keys and values[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/DisplayUtils.test.ts[2m > [22mDisplayUtils.formatValue[2m > [22mshould handle deprecated DataType.Matrix payloads[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/ColorNode.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/ColorNode.test.ts[2m > [22mColor Node (IN-03) & ColorUtils[2m > [22mColorUtils.standardize - HEX string[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ColorNode.test.ts[2m > [22mColor Node (IN-03) & ColorUtils[2m > [22mColorUtils.standardize - RGB Array (8bit)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ColorNode.test.ts[2m > [22mColor Node (IN-03) & ColorUtils[2m > [22mColorUtils.standardize - Vec3 Array[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ColorNode.test.ts[2m > [22mColor Node (IN-03) & ColorUtils[2m > [22mIN-03 Evaluator - Standard Source Behavior[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/ColorNode.test.ts[2m > [22mColor Node (IN-03) & ColorUtils[2m > [22mColorUtils - Handles raw array input (UI Sync Pattern)[32m 0[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/InputStability.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/InputStability.test.ts[2m > [22mInput Node Stability[2m > [22mIN-01 (Constant) should prioritize data.value over cached node.value[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/InputStability.test.ts[2m > [22mInput Node Stability[2m > [22mIN-04 (String) should handle data.value or data.val[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/InputStability.test.ts[2m > [22mInput Node Stability[2m > [22mIN-03 (Color) should persist hex from data.value[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/InputStability.test.ts[2m > [22mInput Node Stability[2m > [22mOT-01 (Result) should handle precision without crashing[32m 2[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/LogicSwitchSplit.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/LogicSwitchSplit.test.ts[2m > [22mLogic Switch & Split (LG-02/03)[2m > [22mLG-02 Switch[2m > [22mshould switch based on scalar boolean[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LogicSwitchSplit.test.ts[2m > [22mLogic Switch & Split (LG-02/03)[2m > [22mLG-02 Switch[2m > [22mshould handle Unit truthiness correctly (0m is false, 5m is true)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LogicSwitchSplit.test.ts[2m > [22mLogic Switch & Split (LG-02/03)[2m > [22mLG-03 Logic Split[2m > [22mshould split based on scalar boolean[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/LogicSwitchSplit.test.ts[2m > [22mLogic Switch & Split (LG-02/03)[2m > [22mLG-03 Logic Split[2m > [22mshould handle Unit truthiness correctly[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/EnvironmentSafety.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/EnvironmentSafety.test.ts[2m > [22mEnvironment Safety: Global Scope Access[2m > [22mNerdamerService should initialize safely without window (Worker environment)[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/EnvironmentSafety.test.ts[2m > [22mEnvironment Safety: Global Scope Access[2m > [22mNerdamerService should handle cases where nerdamer.default is used (ESM)[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/unit/utils/labelUtils.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/utils/labelUtils.test.ts[2m > [22mlabelUtils[2m > [22mshould format unique labels with the new hyphen-only suffix[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/labelUtils.test.ts[2m > [22mlabelUtils[2m > [22mshould increment existing hyphen suffixes correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/labelUtils.test.ts[2m > [22mlabelUtils[2m > [22mshould correctly handle transition from old format to new format[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/labelUtils.test.ts[2m > [22mlabelUtils[2m > [22mshould handle multi-digit increments[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/labelUtils.test.ts[2m > [22mlabelUtils[2m > [22mshould be case-insensitive when checking uniqueness[32m 0[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/Concatenate.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/Concatenate.test.ts[2m > [22mUT-03 Concatenate Node[2m > [22mshould join multiple strings with an empty delimiter by default[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Concatenate.test.ts[2m > [22mUT-03 Concatenate Node[2m > [22mshould use a custom delimiter[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Concatenate.test.ts[2m > [22mUT-03 Concatenate Node[2m > [22mshould automatically stringify non-string inputs[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Concatenate.test.ts[2m > [22mUT-03 Concatenate Node[2m > [22mshould handle empty inputs gracefully[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/Concatenate.test.ts[2m > [22mUT-03 Concatenate Node[2m > [22mshould handle null/undefined unwrapped values as empty strings[32m 0[2mms[22m[39m
+[90mstdout[2m | tests/unit/utils/GeometryRedDot.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/utils/GeometryRedDot.test.ts[2m > [22mRed-Dot Geometry Sovereignty[2m > [22mshould verify global defaults are locked to Top-Left [0, 0][32m 3[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/GeometryRedDot.test.ts[2m > [22mRed-Dot Geometry Sovereignty[2m > [22mshould ensure Physical Center calculation is transparent in Red-Dot mode[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/GeometryRedDot.test.ts[2m > [22mRed-Dot Geometry Sovereignty[2m > [22mshould maintain absolute coordinate stability during node growth (Scaling)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/GeometryRedDot.test.ts[2m > [22mRed-Dot Geometry Sovereignty[2m > [22mshould handle unmeasured nodes (width/height undefined) gracefully[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/utils/GeometryRedDot.test.ts[2m > [22mRed-Dot Geometry Sovereignty[2m > [22mshould correctly handle legacy or explicit offsets if provided[32m 0[2mms[22m[39m
+[90mstdout[2m | tests/unit/engine/StringNode.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/StringNode.test.ts[2m > [22mString Node (IN-04)[2m > [22mshould handle raw string in data.value with type: string[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/StringNode.test.ts[2m > [22mString Node (IN-04)[2m > [22mshould handle payload object in data.value (legacy compatibility)[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m tests/unit/engine/StringNode.test.ts[2m > [22mString Node (IN-04)[2m > [22mshould fallback to node.value if data is missing[32m 0[2mms[22m[39m
+ [2m[90mÔåô[39m[22m tests/unit/engine/IntegrityBenchmark.test.ts[2m > [22mNode Integrity Benchmarks[2m > [22mBenchmarks directory not found (skipping)
+[90mstdout[2m | tests/unit/engine/RegistryStability.test.ts
+[22m[39m[Vitest Setup] Initializing NodeRegistry...
+[InputOutputEngine] Constructor starting... [V2-FIXED]
+[InputOutputEngine] Creating local math instance with bundled all/create...
+[InputOutputEngine] Math instance ready. bignumber check: function
+[InputOutputEngine] Registered 14 math aliases.
+
+ [32mÔ£ô[39m tests/unit/engine/RegistryStability.test.ts[2m > [22mNodeRegistry Stability Architect[2m > [22mshould have an evaluator registered for every Node mapping in nodeTypes[32m 2[2mms[22m[39m
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 5 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  tests/unit/engine/Divisibility.test.ts > MA-07 ISPRIME: Filtering behavior
+AssertionError: expected { mathjs: 'Matrix', ÔÇª(2) } to deeply equal [ 2, 3, 5, 7 ]
+
+- Expected:
+[
+  2,
+  3,
+  5,
+  7,
+]
+
++ Received:
+{
+  "data": [
+    2,
+    3,
+    5,
+    7,
+  ],
+  "mathjs": "Matrix",
+  "type": "DenseMatrix",
+}
+
+ ÔØ» tests/unit/engine/Divisibility.test.ts:77:26
+     75|     // 1. Filtering array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] -> [2, 3, 5,ÔÇª
+     76|     const resArr = await evalDiv('ISPRIME', { in_a: PayloadUtils.creatÔÇª
+     77|     expect(resArr.value).toEqual([2, 3, 5, 7]);
+       |                          ^
+     78|
+     79|     // 2. Single prime -> [7]
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/5]ÔÄ»
+
+ FAIL  tests/unit/engine/IN01.test.ts > IN-01 Initial Value Standard > should maintain 0 in symbol even if label is provided but value is empty
+AssertionError: expected 'Literal' to be 'Identifier' // Object.is equality
+
+Expected: "Identifier"
+Received: "Literal"
+
+ ÔØ» tests/unit/engine/IN01.test.ts:55:37
+     53|
+     54|         expect(PayloadUtils.unwrap(result)).toBe(0);
+     55|         expect(result.symbol?.type).toBe('Identifier');
+       |                                     ^
+     56|         expect(result.symbol?.name).toBe('MyVar');
+     57|         expect(result.symbol?.value).toBe(0);
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/5]ÔÄ»
+
+ FAIL  tests/unit/engine/ResultNodePrecision.test.ts > Result Node Precision > should apply precision to the output of a Result node (Array)
+AssertionError: expected 'scalar' to be 'array' // Object.is equality
+
+Expected: "array"
+Received: "scalar"
+
+ ÔØ» tests/unit/engine/ResultNodePrecision.test.ts:112:30
+    110|         // If precision works, [1.2345, 6.7891] with precision 2 shoulÔÇª
+    111|         expect(output).toBeDefined();
+    112|         expect(output?.type).toBe(DataType.Array);
+       |                              ^
+    113|         expect(output?.value).toEqual([1.23, 6.79]);
+    114|     });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[3/5]ÔÄ»
+
+ FAIL  tests/unit/iogl/UnitSerialization.test.ts > IOGL Unit Node Serialization > should encode TR-01 REMOVE correctly
+AssertionError: expected '[un] TR-01 {mode: "REMOVE"} @10,10\n\n' to contain 'TR-01 { mode: "REMOVE" }'
+
+- Expected
++ Received
+
+- TR-01 { mode: "REMOVE" }
++ [un] TR-01 {mode: "REMOVE"} @10,10
++
++
+
+ ÔØ» tests/unit/iogl/UnitSerialization.test.ts:48:25
+     46|         };
+     47|         const encoded = Encoder.encode(graph as any);
+     48|         expect(encoded).toContain('TR-01 { mode: "REMOVE" }');
+       |                         ^
+     49|     });
+     50|
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[4/5]ÔÄ»
+
+ FAIL  tests/unit/iogl/UnitSerialization.test.ts > IOGL Unit Node Serialization > should encode TR-01 CUSTOM "myunit" correctly
+AssertionError: expected '[un] TR-01 "myunit" {mode: "CUSTOM"} ÔÇª' to contain 'TR-01 "myunit" { mode: "CUSTOM" }'
+
+- Expected
++ Received
+
+- TR-01 "myunit" { mode: "CUSTOM" }
++ [un] TR-01 "myunit" {mode: "CUSTOM"} @10,10
++
++
+
+ ÔØ» tests/unit/iogl/UnitSerialization.test.ts:62:25
+     60|         };
+     61|         const encoded = Encoder.encode(graph as any);
+     62|         expect(encoded).toContain('TR-01 "myunit" { mode: "CUSTOM" }');
+       |                         ^
+     63|     });
+     64| });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[5/5]ÔÄ»
+
+
+[2m Test Files [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m50 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (55)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m329 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (335)[39m
+[2m   Start at [22m 14:14:53
+[2m   Duration [22m 26.57s[2m (transform 9.86s, setup 312.44s, import 5.17s, tests 8.55s, environment 5.72s)[22m
+

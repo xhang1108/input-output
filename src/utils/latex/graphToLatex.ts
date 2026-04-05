@@ -46,14 +46,13 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
         case 'IN-04': // String
             return { type: 'Literal', value: String(data.value || '') };
 
-        case 'IN-07': // Matrix Input
-            return data.label ? { type: 'Identifier', name: data.label } : { type: 'Identifier', name: 'Matrix' };
+        case 'IN-07': // Array Input
+            return { type: 'Identifier', name: 'Array' };
 
-        case 'IN-03': { // Color
+        case 'IN-03': // Color Input
             let colorVal = data.value;
             if (colorVal && typeof colorVal === 'object' && colorVal.hex) colorVal = colorVal.hex;
             return { type: 'Literal', value: String(colorVal || '#ffffff') };
-        }
 
         case 'MA-03': // Constant
             return { type: 'Identifier', name: String(data.val || 'pi') };
@@ -122,7 +121,7 @@ function buildASTFromGraph(nodeId: string, nodes: Node[], edges: Edge[], visited
 
         // --- Output/Pass-through Family ---
         case 'OT-01': // Result
-        case 'TR-07': // Color Result
+        case 'OT-03': // Plot
         case 'TR-01': // Unit Assigner
         case 'UT-02': // Reroute
         case 'UI-03': {

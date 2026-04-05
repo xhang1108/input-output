@@ -48,7 +48,7 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         const funcMap: any = { INV: 'inv', DET: 'det', TRANSPOSE: 'transpose', TRACE: 'trace', EIGEN: 'eigs', LUP: 'lup', QR: 'qr' };
         return PayloadUtils.createSymbol('FunctionCall', {
             name: funcMap[op] || 'inv',
-            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'Matrix' })]
+            args: [inputs['in'] || PayloadUtils.createSymbol('Literal', { value: 'Array' })]
         });
     },
 
@@ -118,7 +118,7 @@ export const AdvancedSymbolizers: Record<string, NodeSymbolizer> = {
         const data = (node.data || {}) as any, mode = data.mode || 'gradient';
         const inSym = inputs['in_f'] || PayloadUtils.createSymbol('Literal', { value: 'f' });
         if (mode === 'gradient') return PayloadUtils.createSymbol('FunctionCall', { name: '', args: [PayloadUtils.createSymbol('Identifier', { name: '\\nabla' }), inSym] });
-        return PayloadUtils.createSymbol('FunctionCall', { name: 'VectorField', args: [inSym] });
+        return PayloadUtils.createSymbol('FunctionCall', { name: 'ArrayField', args: [inSym] });
     },
 
 

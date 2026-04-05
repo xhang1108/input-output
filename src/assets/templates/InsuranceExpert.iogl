@@ -4,228 +4,228 @@
 [Current Age] IN-01 28 @340,1281
 [Age Insurance Started] IN-01 18 @340,1389
 [Expected Age of Death] IN-01 70 @340,1497
-[Current - Past] MA-01 { mode: "SUB" } @657,1310
-[Basic Math - 02] MA-01 { mode: "MUL" } @1538,1081
+[Current-Past] MA-01 { mode: "SUB" } @657,1310
+[Basic Math-02] MA-01 { mode: "MUL" } @1538,1081
 [Total Paid to Date] OT-01 { mode: "auto" } @2560,676
 [Death - Current] MA-01 { mode: "SUB" } @653,1443
 [Monthly Payment] IN-02 250, 0, 500, 1 @340,901
 [Annual Compound Interest %] IN-02 6, 0, 10, 0.1 @340,1666
-[Basic Math - 40] MA-01 { mode: "DIV" } @1161,1334
-[Basic Math - 41] MA-01 { mode: "DIV" } @971,1334
+[Basic Math-40] MA-01 { mode: "DIV" } @1161,1334
+[Basic Math-41] MA-01 { mode: "DIV" } @971,1334
 [Number] IN-01 100 @967,1451
-[Basic Math - 01] MA-01 { mode: "ADD" } @1329,1334
-[Number - 01] IN-01 1 @1328,1453
+[Basic Math-01] MA-01 { mode: "ADD" } @1329,1334
+[Number-01] IN-01 1 @1328,1453
 [Advanced Math] MA-02 { mode: "POW" } @1492,1334
-[Basic Math - 03] MA-01 { mode: "SUB" } @1647,1334
-[Basic Math - 05] MA-01 { mode: "DIV" } @1807,1334
-[Basic Math - 06] MA-01 { mode: "MUL" } @1968,1334
+[Basic Math-03] MA-01 { mode: "SUB" } @1647,1334
+[Basic Math-05] MA-01 { mode: "DIV" } @1807,1334
+[Basic Math-06] MA-01 { mode: "MUL" } @1968,1334
 [Annual Compound Interest] OT-01 "2" { mode: "auto" } @2555,1434
 [Agent Commission %] IN-02 23, 0, 30, 0.1 @343,2077
-[Basic Math - 15] MA-01 { mode: "MUL" } @1370,3002
-[Agent 一年賺你] OT-01 { mode: "auto" } @2543,2946
-[Basic Math - 16] MA-01 { mode: "DIV" } @1159,3002
-[Number - 02] IN-01 100 @1155,3126
-[Sticky Note] UT-01 "The S&P 500 has an average annual return of 6%." { width: 375, height: 92 } @-64,1667
-[Sticky Note - 01] UT-01 "General inflation is approximately 2%." { width: 200, height: 150 } @74,1906
+[Basic Math-15] MA-01 { mode: "MUL" } @1370,3002
+[Agent earned] OT-01 { mode: "auto" } @2543,2946
+[Basic Math-16] MA-01 { mode: "DIV" } @1159,3002
+[Number-02] IN-01 100 @1155,3126
+[Sticky Note] UT-01 "The S&P 500 has an average annual return of 6%." {375, 92} @-64,1667
+[Sticky Note-01] UT-01 "General inflation is approximately 2%." {200, 150} @74,1906
 [General Inflation] IN-02 2.5, 0, 5, 0.1 @343,1903
-[Basic Math - 18] MA-01 { mode: "ADD" } @1388,2731
-[Number - 04] IN-01 1 @1388,2850
-[Basic Math - 21] MA-01 { mode: "DIV" } @2555,1678
+[Basic Math-18] MA-01 { mode: "ADD" } @1388,2731
+[Number-04] IN-01 1 @1388,2850
+[Basic Math-21] MA-01 { mode: "DIV" } @2555,1678
 [Annual Compound Interest Minus Inflation] OT-01 "2" { mode: "auto" } @2712,1680
-[Advanced Math - 05] MA-02 { mode: "POW" } @2382,1683
+[Advanced Math-05] MA-02 { mode: "POW" } @2382,1683
 [Sum Assured] IN-01 1000000 @340,470
 [Annual Insure Item Inflation %] IN-02 15, 0, 50, 1 @340,575
-[Basic Math - 22] MA-01 { mode: "DIV" } @1248,377
-[Number - 05] IN-01 100 @1246,499
-[Basic Math - 23] MA-01 { mode: "ADD" } @1409,377
-[Number - 06] IN-01 1 @1469,499
-[Advanced Math - 06] MA-02 { mode: "POW" } @1572,377
+[Basic Math-22] MA-01 { mode: "DIV" } @1248,377
+[Number-05] IN-01 100 @1246,499
+[Basic Math-23] MA-01 { mode: "ADD" } @1409,377
+[Number-06] IN-01 1 @1469,499
+[Advanced Math-06] MA-02 { mode: "POW" } @1572,377
 [Years Until Evaluation] IN-02 10, 0, 50, 1 @2361,90
 [Future Value of Sum Assured] OT-01 "2" { mode: "auto" } @2558,90
-[Basic Math - 24] MA-01 { mode: "DIV" } @1744,377
+[Basic Math-24] MA-01 { mode: "DIV" } @1744,377
 [Real Value of Sum Assured to Date] OT-01 "2" { mode: "auto" } @2560,923
-[Basic Math - 27] MA-01 { mode: "DIV" } @2395,922
-[Advanced Math - 09] MA-02 { mode: "POW" } @2224,924
-[Basic Math - 25] MA-01 { mode: "DIV" } @1016,715
-[Number - 07] IN-01 100 @1015,837
-[Basic Math - 26] MA-01 { mode: "ADD" } @1175,715
-[Number - 08] IN-01 1 @1504,833
-[Advanced Math - 07] MA-02 { mode: "POW" } @1333,715
-[Basic Math - 28] MA-01 { mode: "SUB" } @1504,715
-[Basic Math - 29] MA-01 { mode: "MUL" } @1813,715
+[Basic Math-27] MA-01 { mode: "DIV" } @2395,922
+[Advanced Math-09] MA-02 { mode: "POW" } @2224,924
+[Basic Math-25] MA-01 { mode: "DIV" } @1016,715
+[Number-07] IN-01 100 @1015,837
+[Basic Math-26] MA-01 { mode: "ADD" } @1175,715
+[Number-08] IN-01 1 @1504,833
+[Advanced Math-07] MA-02 { mode: "POW" } @1333,715
+[Basic Math-28] MA-01 { mode: "SUB" } @1504,715
+[Basic Math-29] MA-01 { mode: "MUL" } @1813,715
 [Future Liabilities Including Premium Hikes] OT-01 "2" { mode: "auto" } @2564,1180
 [Annual Price Increase %] IN-02 1.9, 0, 5, 0.1 @340,1050
-[Basic Math - 30] MA-01 { mode: "DIV" } @1659,715
-[Basic Math - 17] MA-01 { mode: "DIV" } @1154,2731
-[Number - 03] IN-01 100 @1154,2851
-[Sticky Note - 02] UT-01 "Agent commissions decline annually, with an average rate of 23%." { width: 375, height: 92 } @-100,2099
-[Sticky Note - 03] UT-01 "Medical costs increase by approximately 15% per year.\n" { width: 248, height: 114 } @68,578
-[Sticky Note - 04] UT-01 "Annual premiums increase by about 5%; set to far left 0% if no price hikes are to be calculated." { width: 341, height: 133 } @-16,1050
-[Basic Math - 31] MA-01 { mode: "ADD" } @809,719
-[Number - 09] IN-01 1e-7 @788,835
-[Sticky Note - 05] UT-01 "Adjust the slider to see the shrinking value of your coverage as medical costs rise" { width: 356, height: 131 } @2844,93
-[Sticky Note - 06] UT-01 "Base annual cost" { width: 229, height: 102 } @2872,430
-[Sticky Note - 07] UT-01 "Total sunk cost to date\n- No price increase calculation" { width: 356, height: 131 } @2872,725
-[Sticky Note - 08] UT-01 "Current Real Value of Benefits (Insurance purchasing power today)" { width: 356, height: 131 } @2872,935
-[Sticky Note - 09] UT-01 "Future Liabilities (Including Hikes)" { width: 356, height: 131 } @2872,1214
-[Sticky Note - 10] UT-01 "Annual Investment\n- Monthly Compounded" { width: 356, height: 131 } @2872,1441
-[Sticky Note - 11] UT-01 "Annual Investment\n- Monthly Compounded\n- Including Inflation" { width: 357, height: 154 } @3042,1682
-[Sticky Note - 12] UT-01 "Investment if Never Insured (Start to Date)\n- Monthly Compounded" { width: 356, height: 131 } @2872,1956
-[Sticky Note - 13] UT-01 "Investment if Never Insured (Start to Date)\n- Monthly Compounded\n- Including Inflation" { width: 356, height: 154 } @3003,2180
-[Sticky Note - 14] UT-01 "Investment from Now to Death\n- Monthly Compounded" { width: 356, height: 131 } @2872,2457
-[Sticky Note - 15] UT-01 "Investment from Now to Death\n- Monthly Compounded\n- Including Inflation" { width: 354, height: 154 } @3003,2679
-[Sticky Note - 16] UT-01 "Average Annual Agent Commission" { width: 356, height: 131 } @2872,2951
-[Number - 10] IN-01 1 @993,2218
+[Basic Math-30] MA-01 { mode: "DIV" } @1659,715
+[Basic Math-17] MA-01 { mode: "DIV" } @1154,2731
+[Number-03] IN-01 100 @1154,2851
+[Sticky Note-02] UT-01 "Agent commissions decline annually, with an average rate of 23%." {375, 92} @-100,2099
+[Sticky Note-03] UT-01 "Medical costs increase by approximately 15% per year.\n" {248, 114} @68,578
+[Sticky Note-04] UT-01 "Annual premiums increase by about 5%; set to far left 0% if no price hikes are to be calculated." {341, 133} @-16,1050
+[Basic Math-31] MA-01 { mode: "ADD" } @809,719
+[Number-09] IN-01 1e-7 @788,835
+[Sticky Note-05] UT-01 "Adjust the slider to see the shrinking value of your coverage as medical costs rise" {356, 131} @2844,93
+[Sticky Note-06] UT-01 "Base annual cost" {229, 102} @2872,430
+[Sticky Note-07] UT-01 "Total sunk cost to date\n- No price increase calculation" {356, 131} @2872,725
+[Sticky Note-08] UT-01 "Current Real Value of Benefits (Insurance purchasing power today)" {356, 131} @2872,935
+[Sticky Note-09] UT-01 "Future Liabilities (Including Hikes)" {356, 131} @2872,1214
+[Sticky Note-10] UT-01 "Annual Investment\n- Monthly Compounded" {356, 131} @2872,1441
+[Sticky Note-11] UT-01 "Annual Investment\n- Monthly Compounded\n- Including Inflation" {357, 154} @3042,1682
+[Sticky Note-12] UT-01 "Investment if Never Insured (Start to Date)\n- Monthly Compounded" {356, 131} @2872,1956
+[Sticky Note-13] UT-01 "Investment if Never Insured (Start to Date)\n- Monthly Compounded\n- Including Inflation" {356, 154} @3003,2180
+[Sticky Note-14] UT-01 "Investment from Now to Death\n- Monthly Compounded" {356, 131} @2872,2457
+[Sticky Note-15] UT-01 "Investment from Now to Death\n- Monthly Compounded\n- Including Inflation" {354, 154} @3003,2679
+[Sticky Note-16] UT-01 "Average Annual Agent Commission" {356, 131} @2872,2951
+[Number-10] IN-01 1 @993,2218
 [P] MA-01 { mode: "MUL" } @1904,2453
 [Future Compounding] OT-01 "2" { mode: "auto" } @2559,2422
 [1+r] MA-01 { mode: "ADD" } @1224,2197
-[Advanced Math - 08] MA-02 { mode: "POW" } @1388,2197
-[Advanced Math - 10] MA-02 { mode: "POW" } @1388,2323
-[Number - 11] IN-01 0.08333333333 @1154,2340
+[Advanced Math-08] MA-02 { mode: "POW" } @1388,2197
+[Advanced Math-10] MA-02 { mode: "POW" } @1388,2323
+[Number-11] IN-01 0.08333333333 @1154,2340
 [1+g] MA-01 { mode: "ADD" } @1224,2453
-[Advanced Math - 11] MA-02 { mode: "POW" } @1388,2453
-[Advanced Math - 12] MA-02 { mode: "POW" } @1388,2580
-[Basic Math - 33] MA-01 { mode: "DIV" } @1749,2453
-[Basic Math - 04] MA-01 { mode: "SUB" } @1582,2323
-[Basic Math - 32] MA-01 { mode: "SUB" } @1582,2453
-[Number - 12] IN-01 1 @974,1700
+[Advanced Math-11] MA-02 { mode: "POW" } @1388,2453
+[Advanced Math-12] MA-02 { mode: "POW" } @1388,2580
+[Basic Math-33] MA-01 { mode: "DIV" } @1749,2453
+[Basic Math-04] MA-01 { mode: "SUB" } @1582,2323
+[Basic Math-32] MA-01 { mode: "SUB" } @1582,2453
+[Number-12] IN-01 1 @974,1700
 [P - 01] MA-01 { mode: "MUL" } @1884,1935
 [Start to Date Compounding] OT-01 "2" { mode: "auto" } @2557,1927
 [1+r - 01] MA-01 { mode: "ADD" } @1204,1679
-[Advanced Math - 13] MA-02 { mode: "POW" } @1368,1679
-[Advanced Math - 14] MA-02 { mode: "POW" } @1368,1805
-[Number - 13] IN-01 0.08333333333 @1134,1821
+[Advanced Math-13] MA-02 { mode: "POW" } @1368,1679
+[Advanced Math-14] MA-02 { mode: "POW" } @1368,1805
+[Number-13] IN-01 0.08333333333 @1134,1821
 [1+g - 01] MA-01 { mode: "ADD" } @1204,1935
-[Advanced Math - 15] MA-02 { mode: "POW" } @1368,1935
-[Advanced Math - 16] MA-02 { mode: "POW" } @1368,2061
-[Basic Math - 34] MA-01 { mode: "DIV" } @1729,1935
-[Basic Math - 35] MA-01 { mode: "SUB" } @1563,1805
-[Basic Math - 36] MA-01 { mode: "SUB" } @1563,1935
-[Advanced Math - 17] MA-02 { mode: "POW" } @2384,2680
-[Basic Math - 37] MA-01 { mode: "DIV" } @2557,2677
+[Advanced Math-15] MA-02 { mode: "POW" } @1368,1935
+[Advanced Math-16] MA-02 { mode: "POW" } @1368,2061
+[Basic Math-34] MA-01 { mode: "DIV" } @1729,1935
+[Basic Math-35] MA-01 { mode: "SUB" } @1563,1805
+[Basic Math-36] MA-01 { mode: "SUB" } @1563,1935
+[Advanced Math-17] MA-02 { mode: "POW" } @2384,2680
+[Basic Math-37] MA-01 { mode: "DIV" } @2557,2677
 [Future Compounding Minus Inflation] OT-01 "2" { mode: "auto" } @2714,2679
-[Advanced Math - 18] MA-02 { mode: "POW" } @2382,2180
-[Basic Math - 38] MA-01 { mode: "DIV" } @2555,2177
+[Advanced Math-18] MA-02 { mode: "POW" } @2382,2180
+[Basic Math-38] MA-01 { mode: "DIV" } @2555,2177
 [Start to Date Compounding Minus Inflation] OT-01 "2" { mode: "auto" } @2712,2178
-[Sticky Note - 03-01] UT-01 "# Insurance vs. Investment Calculator\nCompare insurance premiums against potential investment returns, adjusted for inflation and rising costs." { width: 451, height: 163 } @1301,-224
+[Sticky Note-20] UT-01 "# Insurance vs. Investment Calculator\nCompare insurance premiums against potential investment returns, adjusted for inflation and rising costs." {451, 163} @1301,-224
 
 [12 Months].a -> [Basic Math].b
 [Basic Math].a -> [Annual Premium].a
-[Current Age].a -> [Current - Past].a
-[Age Insurance Started].a -> [Current - Past].b
-[Current - Past].a -> [Basic Math - 02].a
-[Basic Math].a -> [Basic Math - 02].b
-[Basic Math - 02].a -> [Total Paid to Date].a
+[Current Age].a -> [Current-Past].a
+[Age Insurance Started].a -> [Current-Past].b
+[Current-Past].a -> [Basic Math-02].a
+[Basic Math].a -> [Basic Math-02].b
+[Basic Math-02].a -> [Total Paid to Date].a
 [Expected Age of Death].a -> [Death - Current].a
 [Current Age].a -> [Death - Current].b
 [Monthly Payment].a -> [Basic Math].a
-[12 Months].a -> [Basic Math - 40].b
-[Annual Compound Interest %].a -> [Basic Math - 41].a
-[Basic Math - 41].a -> [Basic Math - 40].a
-[Number].a -> [Basic Math - 41].b
-[Basic Math - 40].a -> [Basic Math - 01].a
-[Number - 01].a -> [Basic Math - 01].b
-[Basic Math - 01].a -> [Advanced Math].a
+[12 Months].a -> [Basic Math-40].b
+[Annual Compound Interest %].a -> [Basic Math-41].a
+[Basic Math-41].a -> [Basic Math-40].a
+[Number].a -> [Basic Math-41].b
+[Basic Math-40].a -> [Basic Math-01].a
+[Number-01].a -> [Basic Math-01].b
+[Basic Math-01].a -> [Advanced Math].a
 [12 Months].a -> [Advanced Math].b
-[Advanced Math].a -> [Basic Math - 03].a
-[Number - 01].a -> [Basic Math - 03].b
-[Basic Math - 03].a -> [Basic Math - 05].a
-[Basic Math - 40].a -> [Basic Math - 05].b
-[Basic Math - 05].a -> [Basic Math - 06].a
-[Monthly Payment].a -> [Basic Math - 06].b
-[Basic Math - 06].a -> [Annual Compound Interest].a
-[Basic Math].a -> [Basic Math - 15].a
-[Basic Math - 15].a -> [Agent 一年賺你].a
-[Agent Commission %].a -> [Basic Math - 16].a
-[Basic Math - 16].a -> [Basic Math - 15].b
-[Number - 02].a -> [Basic Math - 16].b
-[Number - 04].a -> [Basic Math - 18].b
-[Advanced Math - 05].a -> [Basic Math - 21].b
-[Basic Math - 21].a -> [Annual Compound Interest Minus Inflation].a
-[Basic Math - 18].a -> [Advanced Math - 05].a
-[Basic Math - 06].a -> [Basic Math - 21].a
-[Number - 01].a -> [Advanced Math - 05].b
-[Annual Insure Item Inflation %].a -> [Basic Math - 22].a
-[Number - 05].a -> [Basic Math - 22].b
-[Basic Math - 22].a -> [Basic Math - 23].a
-[Number - 06].a -> [Basic Math - 23].b
-[Basic Math - 23].a -> [Advanced Math - 06].a
-[Years Until Evaluation].a -> [Advanced Math - 06].b
-[Advanced Math - 06].a -> [Basic Math - 24].b
-[Basic Math - 24].a -> [Future Value of Sum Assured].a
-[Sum Assured].a -> [Basic Math - 24].a
-[Basic Math - 27].a -> [Real Value of Sum Assured to Date].a
-[Sum Assured].a -> [Basic Math - 27].a
-[Basic Math - 23].a -> [Advanced Math - 09].a
-[Current - Past].a -> [Advanced Math - 09].b
-[Number - 07].a -> [Basic Math - 25].b
-[Basic Math - 25].a -> [Basic Math - 26].a
-[Number - 08].a -> [Basic Math - 26].b
-[Advanced Math - 09].a -> [Basic Math - 27].b
-[Basic Math - 26].a -> [Advanced Math - 07].a
-[Death - Current].a -> [Advanced Math - 07].b
-[Number - 08].a -> [Basic Math - 28].b
-[Advanced Math - 07].a -> [Basic Math - 28].a
-[Basic Math].a -> [Basic Math - 29].b
-[Basic Math - 29].a -> [Future Liabilities Including Premium Hikes].a
-[Basic Math - 28].a -> [Basic Math - 30].a
-[Basic Math - 25].a -> [Basic Math - 30].b
-[Basic Math - 30].a -> [Basic Math - 29].a
-[General Inflation].a -> [Basic Math - 17].a
-[Number - 03].a -> [Basic Math - 17].b
-[Basic Math - 17].a -> [Basic Math - 18].a
-[Number - 09].a -> [Basic Math - 31].b
-[Basic Math - 31].a -> [Basic Math - 25].a
-[Annual Price Increase %].a -> [Basic Math - 31].a
+[Advanced Math].a -> [Basic Math-03].a
+[Number-01].a -> [Basic Math-03].b
+[Basic Math-03].a -> [Basic Math-05].a
+[Basic Math-40].a -> [Basic Math-05].b
+[Basic Math-05].a -> [Basic Math-06].a
+[Monthly Payment].a -> [Basic Math-06].b
+[Basic Math-06].a -> [Annual Compound Interest].a
+[Basic Math].a -> [Basic Math-15].a
+[Basic Math-15].a -> [Agent earned].a
+[Agent Commission %].a -> [Basic Math-16].a
+[Basic Math-16].a -> [Basic Math-15].b
+[Number-02].a -> [Basic Math-16].b
+[Number-04].a -> [Basic Math-18].b
+[Advanced Math-05].a -> [Basic Math-21].b
+[Basic Math-21].a -> [Annual Compound Interest Minus Inflation].a
+[Basic Math-18].a -> [Advanced Math-05].a
+[Basic Math-06].a -> [Basic Math-21].a
+[Number-01].a -> [Advanced Math-05].b
+[Annual Insure Item Inflation %].a -> [Basic Math-22].a
+[Number-05].a -> [Basic Math-22].b
+[Basic Math-22].a -> [Basic Math-23].a
+[Number-06].a -> [Basic Math-23].b
+[Basic Math-23].a -> [Advanced Math-06].a
+[Years Until Evaluation].a -> [Advanced Math-06].b
+[Advanced Math-06].a -> [Basic Math-24].b
+[Basic Math-24].a -> [Future Value of Sum Assured].a
+[Sum Assured].a -> [Basic Math-24].a
+[Basic Math-27].a -> [Real Value of Sum Assured to Date].a
+[Sum Assured].a -> [Basic Math-27].a
+[Basic Math-23].a -> [Advanced Math-09].a
+[Current-Past].a -> [Advanced Math-09].b
+[Number-07].a -> [Basic Math-25].b
+[Basic Math-25].a -> [Basic Math-26].a
+[Number-08].a -> [Basic Math-26].b
+[Advanced Math-09].a -> [Basic Math-27].b
+[Basic Math-26].a -> [Advanced Math-07].a
+[Death - Current].a -> [Advanced Math-07].b
+[Number-08].a -> [Basic Math-28].b
+[Advanced Math-07].a -> [Basic Math-28].a
+[Basic Math].a -> [Basic Math-29].b
+[Basic Math-29].a -> [Future Liabilities Including Premium Hikes].a
+[Basic Math-28].a -> [Basic Math-30].a
+[Basic Math-25].a -> [Basic Math-30].b
+[Basic Math-30].a -> [Basic Math-29].a
+[General Inflation].a -> [Basic Math-17].a
+[Number-03].a -> [Basic Math-17].b
+[Basic Math-17].a -> [Basic Math-18].a
+[Number-09].a -> [Basic Math-31].b
+[Basic Math-31].a -> [Basic Math-25].a
+[Annual Price Increase %].a -> [Basic Math-31].a
 [P].a -> [Future Compounding].a
 [Monthly Payment].a -> [P].b
-[Number - 10].a -> [1+r].b
-[Basic Math - 41].a -> [1+r].a
-[1+r].a -> [Advanced Math - 08].a
-[Death - Current].a -> [Advanced Math - 08].b
-[1+r].a -> [Advanced Math - 10].a
-[Number - 11].a -> [Advanced Math - 10].b
-[Number - 10].a -> [1+g].b
-[Basic Math - 25].a -> [1+g].a
-[1+g].a -> [Advanced Math - 11].a
-[1+g].a -> [Advanced Math - 12].a
-[Death - Current].a -> [Advanced Math - 11].b
-[Number - 11].a -> [Advanced Math - 12].b
-[Basic Math - 33].a -> [P].a
-[Advanced Math - 08].a -> [Basic Math - 04].a
-[Advanced Math - 11].a -> [Basic Math - 04].b
-[Advanced Math - 10].a -> [Basic Math - 32].a
-[Advanced Math - 12].a -> [Basic Math - 32].b
-[Basic Math - 04].a -> [Basic Math - 33].a
-[Basic Math - 32].a -> [Basic Math - 33].b
+[Number-10].a -> [1+r].b
+[Basic Math-41].a -> [1+r].a
+[1+r].a -> [Advanced Math-08].a
+[Death - Current].a -> [Advanced Math-08].b
+[1+r].a -> [Advanced Math-10].a
+[Number-11].a -> [Advanced Math-10].b
+[Number-10].a -> [1+g].b
+[Basic Math-25].a -> [1+g].a
+[1+g].a -> [Advanced Math-11].a
+[1+g].a -> [Advanced Math-12].a
+[Death - Current].a -> [Advanced Math-11].b
+[Number-11].a -> [Advanced Math-12].b
+[Basic Math-33].a -> [P].a
+[Advanced Math-08].a -> [Basic Math-04].a
+[Advanced Math-11].a -> [Basic Math-04].b
+[Advanced Math-10].a -> [Basic Math-32].a
+[Advanced Math-12].a -> [Basic Math-32].b
+[Basic Math-04].a -> [Basic Math-33].a
+[Basic Math-32].a -> [Basic Math-33].b
 [P - 01].a -> [Start to Date Compounding].a
-[Number - 12].a -> [1+r - 01].b
-[1+r - 01].a -> [Advanced Math - 13].a
-[1+r - 01].a -> [Advanced Math - 14].a
-[Number - 13].a -> [Advanced Math - 14].b
-[Number - 12].a -> [1+g - 01].b
-[1+g - 01].a -> [Advanced Math - 15].a
-[1+g - 01].a -> [Advanced Math - 16].a
-[Number - 13].a -> [Advanced Math - 16].b
-[Basic Math - 34].a -> [P - 01].a
-[Advanced Math - 13].a -> [Basic Math - 35].a
-[Advanced Math - 15].a -> [Basic Math - 35].b
-[Advanced Math - 14].a -> [Basic Math - 36].a
-[Advanced Math - 16].a -> [Basic Math - 36].b
-[Basic Math - 35].a -> [Basic Math - 34].a
-[Basic Math - 36].a -> [Basic Math - 34].b
-[Basic Math - 25].a -> [1+g - 01].a
-[Basic Math - 41].a -> [1+r - 01].a
-[Current - Past].a -> [Advanced Math - 13].b
-[Current - Past].a -> [Advanced Math - 15].b
+[Number-12].a -> [1+r - 01].b
+[1+r - 01].a -> [Advanced Math-13].a
+[1+r - 01].a -> [Advanced Math-14].a
+[Number-13].a -> [Advanced Math-14].b
+[Number-12].a -> [1+g - 01].b
+[1+g - 01].a -> [Advanced Math-15].a
+[1+g - 01].a -> [Advanced Math-16].a
+[Number-13].a -> [Advanced Math-16].b
+[Basic Math-34].a -> [P - 01].a
+[Advanced Math-13].a -> [Basic Math-35].a
+[Advanced Math-15].a -> [Basic Math-35].b
+[Advanced Math-14].a -> [Basic Math-36].a
+[Advanced Math-16].a -> [Basic Math-36].b
+[Basic Math-35].a -> [Basic Math-34].a
+[Basic Math-36].a -> [Basic Math-34].b
+[Basic Math-25].a -> [1+g - 01].a
+[Basic Math-41].a -> [1+r - 01].a
+[Current-Past].a -> [Advanced Math-13].b
+[Current-Past].a -> [Advanced Math-15].b
 [Monthly Payment].a -> [P - 01].b
-[Advanced Math - 17].a -> [Basic Math - 37].b
-[Basic Math - 37].a -> [Future Compounding Minus Inflation].a
-[Death - Current].a -> [Advanced Math - 17].b
-[Basic Math - 18].a -> [Advanced Math - 17].a
-[P].a -> [Basic Math - 37].a
-[Advanced Math - 18].a -> [Basic Math - 38].b
-[Basic Math - 38].a -> [Start to Date Compounding Minus Inflation].a
-[P - 01].a -> [Basic Math - 38].a
-[Basic Math - 18].a -> [Advanced Math - 18].a
-[Current - Past].a -> [Advanced Math - 18].b
+[Advanced Math-17].a -> [Basic Math-37].b
+[Basic Math-37].a -> [Future Compounding Minus Inflation].a
+[Death - Current].a -> [Advanced Math-17].b
+[Basic Math-18].a -> [Advanced Math-17].a
+[P].a -> [Basic Math-37].a
+[Advanced Math-18].a -> [Basic Math-38].b
+[Basic Math-38].a -> [Start to Date Compounding Minus Inflation].a
+[P - 01].a -> [Basic Math-38].a
+[Basic Math-18].a -> [Advanced Math-18].a
+[Current-Past].a -> [Advanced Math-18].b

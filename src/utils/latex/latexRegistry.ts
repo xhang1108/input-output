@@ -61,9 +61,9 @@ export const LATEX_REGISTRY: LatexNodeConfig[] = [
     { type: 'TR-04', op: 'CURL', label: 'Curl', latex: ['curl'], category: 'Transform', handleMapping: { 0: 'in_a' }, initialData: { mode: 'direct' } },
     { type: 'TR-06', op: 'Mean', label: 'Mean', latex: ['\\mean', 'mean', 'avg'], category: 'Statistics' },
 
-    // --- Matrix & Vectors (DT-*) ---
-    { type: 'DT-06', op: 'INV', label: 'Inverse', latex: ['inv', 'inverse'], category: 'Linear Algebra' },
-    { type: 'DT-06', op: 'DET', label: 'Determinant', latex: ['det', 'determinant'], category: 'Linear Algebra' },
+    // --- Array & Vectors (DT-*) ---
+    { type: 'DT-06', op: 'INV', label: 'Inverse', latex: ['inv', 'inverse'], category: 'Array Calculus' },
+    { type: 'DT-06', op: 'DET', label: 'Determinant', latex: ['det', 'determinant'], category: 'Array Calculus' },
     { type: 'DT-05', op: 'DOT', label: 'Dot Product', latex: ['\\cdot', 'dot'], category: 'Geometry' },
     { type: 'DT-05', op: 'CROSS', label: 'Cross Product', latex: ['\\times', 'cross'], category: 'Geometry' },
     { type: 'DT-05', op: 'NORM', label: 'Norm', latex: ['\\Vert', 'norm'], category: 'Geometry' },

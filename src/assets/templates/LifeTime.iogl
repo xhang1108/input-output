@@ -26,16 +26,16 @@
 [Basic Math-19] MA-01 { mode: "SUB" } @1301,1298
 [Basic Math-20] MA-01 { mode: "ADD" } @2016,1860
 [Result-10] OT-01 4 { mode: "auto" } @2927,2220
-[Sticky Note] UT-01 "Time spent working days" { width: 202, height: 318 } @200,920
-[Sticky Note-01] UT-01 "Your personal time per week" { width: 265, height: 98 } @3224,1165
-[Sticky Note-03] UT-01 "Time \"stolen\" from you per week" { width: 263, height: 109 } @3224,1410
-[Sticky Note-02] UT-01 "Your personal time per month" { width: 265, height: 98 } @3224,1691
-[Sticky Note-04] UT-01 "Time \"stolen\" from you per month" { width: 263, height: 109 } @3224,1936
-[Sticky Note-05] UT-01 "Your personal time per year" { width: 265, height: 98 } @3224,2220
-[Sticky Note-06] UT-01 "Time \"stolen\" from you per year" { width: 263, height: 109 } @3224,2467
-[Sticky Note-07] UT-01 "How much total time you have left." { width: 265, height: 98 } @3214,-114
-[Sticky Note-08] UT-01 "How much of your own time is left?" { width: 263, height: 109 } @3291,138
-[Sticky Note-09] UT-01 "How much of your remaining time is no longer yours?" { width: 263, height: 109 } @3291,393
+[Sticky Note] UT-01 "Time spent working days" {202, 318} @200,920
+[Sticky Note-01] UT-01 "Your personal time per week" {265, 98} @3224,1165
+[Sticky Note-03] UT-01 "Time \"stolen\" from you per week" {263, 109} @3224,1410
+[Sticky Note-02] UT-01 "Your personal time per month" {265, 98} @3224,1691
+[Sticky Note-04] UT-01 "Time \"stolen\" from you per month" {263, 109} @3224,1936
+[Sticky Note-05] UT-01 "Your personal time per year" {265, 98} @3224,2220
+[Sticky Note-06] UT-01 "Time \"stolen\" from you per year" {263, 109} @3224,2467
+[Sticky Note-07] UT-01 "How much total time you have left." {265, 98} @3214,-114
+[Sticky Note-08] UT-01 "How much of your own time is left?" {263, 109} @3291,138
+[Sticky Note-09] UT-01 "How much of your remaining time is no longer yours?" {263, 109} @3291,393
 [Basic Math-12] MA-01 { mode: "MUL" } @1163,1755
 [Number-05] IN-01 24 @919,1680
 [Basic Math-13] MA-01 { mode: "SUB" } @1959,1454
@@ -52,14 +52,14 @@
 [Number-09] IN-01 52.1428 @2205,1171
 [Basic Math-24] MA-01 { mode: "MUL" } @1719,550
 [Number-10] IN-01 24 @1717,672
-[Result-16] OT-01 -1 { mode: "auto" } @2927,-114
+[Result-16] OT-01 4 { mode: "auto" } @2927,-114
 [Result-17] OT-01 4 { mode: "auto" } @3003,138
 [Result-18] OT-01 4 { mode: "auto" } @3003,393
 [Basic Math-25] MA-01 { mode: "MUL" } @2344,143
 [Basic Math-26] MA-01 { mode: "MUL" } @2674,391
 [Result-01] OT-01 -1 { mode: "auto" } @2927,888
-[Sticky Note-12] UT-01 "Your free time on workdays" { width: 265, height: 98 } @3224,642
-[Sticky Note-13] UT-01 "Your free time on days off" { width: 263, height: 109 } @3224,888
+[Sticky Note-12] UT-01 "Your free time on workdays" {265, 98} @3224,642
+[Sticky Note-13] UT-01 "Your free time on days off" {263, 109} @3224,888
 [Holidays per year] IN-01 20 @427,1918
 [Basic Math-07] MA-01 { mode: "ADD" } @1678,1884
 [Basic Math-08] MA-01 { mode: "SUB" } @1664,1752
@@ -72,8 +72,8 @@
 [Basic Math-30] MA-01 { mode: "SUB" } @942,724
 [Result-02] OT-01 -1 { mode: "auto" } @2927,-371
 [Basic Math-31] MA-01 { mode: "MUL" } @1169,711
-[Sticky Note-10] UT-01 "How many days you’ve already used up." { width: 265, height: 98 } @3214,-626
-[Sticky Note-11] UT-01 "How many days you have left." { width: 265, height: 98 } @3214,-371
+[Sticky Note-10] UT-01 "How many days you’ve already used up." {265, 98} @3214,-626
+[Sticky Note-11] UT-01 "How many days you have left." {265, 98} @3214,-371
 [Unit] TR-01 "Day" { mode: "CUSTOM" } @2755,-625
 [Unit-01] TR-01 "Day" { mode: "CUSTOM" } @2755,-371
 [Unit-02] TR-01 { mode: "h" } @2755,-114
@@ -87,14 +87,14 @@
 [Unit-10] TR-01 { mode: "h" } @2739,1936
 [Unit-11] TR-01 { mode: "h" } @2739,2220
 [Unit-12] TR-01 { mode: "h" } @2739,2467
-[Sticky Note-19] UT-01 "Daily routine (whether you're working or not)" { width: 202, height: 318 } @203,1248
+[Sticky Note-19] UT-01 "Daily routine (whether you're working or not)" {202, 318} @203,1248
 [Basic Math-32] MA-01 { mode: "SUB" } @2573,2234
 [Timer] IN-11 0, 0, 0.000278, 1000, true @1735,2012
 [Basic Math-34] MA-01 { mode: "SUB" } @2575,1689
 [Basic Math-35] MA-01 { mode: "SUB" } @2584,1163
 [Basic Math-37] MA-01 { mode: "SUB" } @2672,143
 [Basic Math-38] MA-01 { mode: "SUB" } @2595,-119
-[Sticky Note-14] UT-01 "This is a calculator for your time. It shows how much time is under your control, and how much is not. \n\nBecause I only calculated by years, the results are just for reference. \nIf I have time, I'll calculate it down to the days. Hope to update it later." { width: 576, height: 175 } @1441,-620
+[Sticky Note-14] UT-01 "This is a calculator for your time. It shows how much time is under your control, and how much is not. \n\nBecause I only calculated by years, the results are just for reference. \nIf I have time, I'll calculate it down to the days. Hope to update it later." {576, 175} @1441,-620
 
 [Your current age].a -> [Basic Math].a
 [Your current age].a -> [Basic Math-01].b

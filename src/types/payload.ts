@@ -3,7 +3,7 @@
  * 
  * Defines the structure of data passed between nodes in the graph.
  * Transitions from simple `number` to a rich object capable of carrying
- * Matrices, Units, Symbols (LaTeX), and Errors.
+ * Arrays, Units, Symbols (LaTeX), and Errors.
  */
 
 // Placeholder for Future Phases
@@ -38,9 +38,6 @@ export enum DataType {
     Object = 'object',     // Structured data (Color results, metadata bundles)
     Error = 'error',       // Error states
     Any = 'any',           // Universal/Undetermined slot
-
-    /** @deprecated Use Array with Rank 2 */
-    Matrix = 'matrix',
 }
 
 // Strict union type for value (removing 'any' progressively)
@@ -79,5 +76,4 @@ export interface NodePayload {
     /** Metadata: Dimensions, Units, etc. */
     meta: PayloadMetadata;
 }
-
 

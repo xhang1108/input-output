@@ -551,7 +551,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
         // Final Whitelist: Allow ONLY if Scalar OR explicit Base Unit
         const isScalar = inputPayload.type === DataType.Scalar;
         const hasBaseUnit = !!baseMap[metaUnit || ''];
-        const isArray = inputPayload.type === DataType.Array || inputPayload.type === DataType.Matrix;
+        const isArray = inputPayload.type === DataType.Array;
 
         if (isArray || (!isScalar && !hasBaseUnit)) {
             return PayloadUtils.createError("Base Conversion only supports scalar or base-prefixed strings.");
@@ -620,16 +620,16 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 return dataPayload;
             }
 
-            // CASE 2: Array/Matrix smoothing (Unified 2D Blur)
-            const matrix = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && (raw as any).isMatrix ? (raw as any).toArray() : [raw]);
+            // CASE 2: Array smoothing (Unified 2D Blur)
+            const arrayData = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && (raw as any).isMatrix ? (raw as any).toArray() : [raw]);
 
-            if (!Array.isArray(matrix)) return dataPayload;
+            if (!Array.isArray(arrayData)) return dataPayload;
 
-            const is2D = Array.isArray(matrix[0]);
-            const rows = matrix.length;
-            const cols = is2D ? matrix[0].length : 1;
+            const is2D = Array.isArray(arrayData[0]);
+            const rows = arrayData.length;
+            const cols = is2D ? arrayData[0].length : 1;
 
-            const result = matrix.map((rowArr: any, r: number) => {
+            const result = arrayData.map((rowArr: any, r: number) => {
                 const row = is2D ? rowArr : [rowArr];
                 return row.map((_: any, c: number) => {
                     let sum = 0, count = 0;
@@ -638,7 +638,7 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                             const nr = r + dr;
                             const nc = c + dc;
                             if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-                                const val = is2D ? matrix[nr][nc] : (cols === 1 ? matrix[nr] : matrix[nr][nc]);
+                                const val = is2D ? arrayData[nr][nc] : (cols === 1 ? arrayData[nr] : arrayData[nr][nc]);
                                 sum += Number(val);
                                 count++;
                             }

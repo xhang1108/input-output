@@ -36,7 +36,7 @@ describe('PlottingUtils Phase 1', () => {
             expect(result).toEqual([{ x: 0, y: 42 }]);
         });
 
-        it('should parse Matrix Nx1 arrays', () => {
+        it('should parse Array Nx1 formats', () => {
             const result = PlottingUtils.mapDataPayload([10, 20, 30]);
             expect(result).toEqual([
                 { x: 0, y: 10 },
@@ -45,7 +45,7 @@ describe('PlottingUtils Phase 1', () => {
             ]);
         });
 
-        it('should parse Matrix Nx2 arrays', () => {
+        it('should parse Array Nx2 formats', () => {
             // 2D arrays mapping direct to X/Y
             const result = PlottingUtils.mapDataPayload([
                 [0, 5],
@@ -57,7 +57,7 @@ describe('PlottingUtils Phase 1', () => {
             ]);
         });
 
-        it('should parse Matrix Nx3 arrays and correctly extract size', () => {
+        it('should parse Array Nx3 formats (Bubble size)', () => {
             // Bubble mapping: X, Y, Size
             const result = PlottingUtils.mapDataPayload([
                 [0, 5, 100],
@@ -69,14 +69,14 @@ describe('PlottingUtils Phase 1', () => {
             ]);
         });
 
-        it('should support mathjs Matrix pseudo-interface format', () => {
-            const mockMatrix = {
+        it('should support mathjs Array pseudo-interface format', () => {
+            const mockArray = {
                 toArray: () => [
                     [1, 2],
-                    [3, Infinity] // test asymptote mapping inside matrix
+                    [3, Infinity] // test asymptote mapping inside array
                 ]
             };
-            const result = PlottingUtils.mapDataPayload(mockMatrix);
+            const result = PlottingUtils.mapDataPayload(mockArray);
             expect(result).toEqual([
                 { x: 1, y: 2 },
                 { x: 3, y: null }

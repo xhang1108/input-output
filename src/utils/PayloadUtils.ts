@@ -70,12 +70,18 @@ export const PayloadUtils = {
         if (!value) return [];
         const h = value as any;
 
-        // Match MathJS matrix structure
+        // 1. Match MathJS matrix instance
         if (h.isMatrix || (h._data && h._size)) {
             if (typeof h.size === 'function') return h.size();
             if (Array.isArray(h._size)) return h._size;
         }
 
+        // 2. Match Dehydrated Matrix structure
+        if (h.mathjs === 'Matrix' && Array.isArray(h.data)) {
+            value = h.data; // Fall through to raw array logic
+        }
+
+        // 3. Match Raw Array structure
         if (!Array.isArray(value)) return [];
 
         const dims: number[] = [value.length];
@@ -96,15 +102,19 @@ export const PayloadUtils = {
             // 1. Standard Payload unwrap
             if ('value' in p && p.type) {
                 const inner = p.value;
-                // Recursive unwrap for dehydrated MathJS objects (BigNumber/Fraction)
-                if (inner && typeof inner === 'object' && 'mathjs' in inner && 'value' in inner) {
-                    return (inner as any).value;
+                // Recursive unwrap for dehydrated MathJS objects
+                if (inner && typeof inner === 'object' && 'mathjs' in inner) {
+                    if ('value' in inner) return (inner as any).value;
+                    if ('data' in inner) return (inner as any).data;
                 }
                 return inner;
             }
 
             // 2. Direct dehydrated MathJS object unwrap
-            if (p.mathjs && 'value' in p) return p.value;
+            if (p.mathjs) {
+                if ('value' in p) return p.value;
+                if ('data' in p) return p.data;
+            }
 
             // 3. MathJS Internal unwrap (if raw object leaked)
             if (p._data && p._size) return p._data;
@@ -140,15 +150,10 @@ export const PayloadUtils = {
      * Safe Scalar Creator
      */
     createScalar(value: PayloadValue | unknown, unit?: string): NodePayload {
-        if (value && typeof value === 'object' && 'type' in (value as any) && (value as any).type === DataType.Scalar) {
-            const p = value as NodePayload;
-            if (unit && p.meta) p.meta.unit = unit;
-            return p;
-        }
-
         const p = this.wrap(value);
         // Ensure Scalar type even if wrap fallback to something else (e.g. for raw number constants)
         p.type = DataType.Scalar;
+        p.symbol = null;
         if (unit) {
             p.meta = { ...p.meta, unit };
         }
@@ -175,9 +180,20 @@ export const PayloadUtils = {
             return value as NodePayload;
         }
         const dims = this.calculateDimensions(value);
+        let dehydratedValue = this.dehydrate(value);
+
+        // Force standard MathJS dehydration for raw arrays to ensure engine-wide consistency.
+        if (Array.isArray(dehydratedValue)) {
+            dehydratedValue = {
+                mathjs: 'Matrix',
+                data: dehydratedValue,
+                type: 'DenseMatrix'
+            };
+        }
+
         return {
             type: DataType.Array,
-            value: this.dehydrate(value),
+            value: dehydratedValue,
             symbol: null,
             meta: { unit, dimensions: dims, rank: dims.length }
         };
@@ -377,7 +393,7 @@ export const PayloadUtils = {
                     return m.complex(obj.re, obj.im);
                 case 'Unit':
                     return m.unit(obj.value, obj.unit);
-                case 'Matrix':
+                case 'Matrix': // [IMMUTABLE] mathjs internal key. DO NOT RENAME.
                     return m.matrix(obj.data);
             }
         }

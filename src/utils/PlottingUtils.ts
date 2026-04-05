@@ -171,7 +171,7 @@ export class PlottingUtils {
         const is2D = Array.isArray(firstElem);
 
         if (!is2D) {
-            // Matrix 1xN or index-based [1, 2, 3, ...]
+            // Array 1xN or index-based [1, 2, 3, ...]
             return arr.map((val, idx) => {
                 const v = toNum(val);
                 return { x: idx, y: v };
