@@ -23,7 +23,7 @@ describe('DisplayUtils.formatValue', () => {
         expect(DisplayUtils.formatValue(val)).toBe('10 m');
     });
 
-    it('should format dehydrated Matrix correctly', () => {
+    it('should format dehydrated Array correctly', () => {
         const val = { mathjs: 'Matrix', data: [1, 2, 3] };
         expect(DisplayUtils.formatValue(val)).toBe('[1, 2, 3]');
     });

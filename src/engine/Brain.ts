@@ -725,9 +725,9 @@ export class Brain {
 
         const res = this.transactionManager.applyTransaction(tx, this.state, {
             onNodeAdded: (node) => {
-                // Initial creation does not need to immediately trigger dirty chain 
-                // because it has no inputs. It evaluates on next heartbeat.
+                // Initial creation triggers dirty chain immediately for evaluation
                 this.syncTickerRegistry(node.id);
+                this.dirtyNodes.add(node.id);
             },
             onEdgeAdded: (edge) => {
                 this.updateAdjacency(edge, 'ADD');

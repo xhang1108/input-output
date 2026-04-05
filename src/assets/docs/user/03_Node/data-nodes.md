@@ -75,10 +75,10 @@ Vector operations: Dot Product, Cross Product, Norm, and Distance.
 }
 ```
 
-## 6. Linear Algebra (DT-06)
-Matrix operations: Inverse, Determinant, Transpose, and Trace.
+## 6. Array Calculus (DT-06)
+Array operations: Inverse, Determinant, Transpose, and Trace.
 
-- **Input**: The input matrix.
+- **Input**: The input array.
 - **Output**: The resulting Array or scalar.
 
 ```playground

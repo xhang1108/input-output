@@ -36,12 +36,13 @@ When a `graphChanged` event fires (via `applyTransaction`), the Brain triggers `
 All data flowing through edges is wrapped in a `NodePayload` object:
 ```typescript
 interface NodePayload {
-    type: 'scalar' | 'matrix' | 'string' | 'error' | ...;
+    type: 'scalar' | 'array' | 'string' | 'error' | ...;
     value: any;
-    // ... metadata
+    meta?: Record<string, any>;
 }
 ```
-If an Evaluator encounters a mathematical impossibility (e.g., dividing by zero, or matrix dimension mismatch), it catches the exception and returns a payload of `type: 'error'`. The UI components read this payload and render a red error boundary around the node.
+
+If an Evaluator encounters a mathematical impossibility (e.g., dividing by zero, or array dimension mismatch), it catches the exception and returns a payload of `type: 'error'`. The UI components read this payload and render a red error boundary around the node.
 
 > [!TIP]
 > Evaluators are strictly designed as **Pure Functions**. They do not mutate global state, making them highly testable.

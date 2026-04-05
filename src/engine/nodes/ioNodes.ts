@@ -7,7 +7,7 @@ export function registerIONodes() {
     NodeRegistry.register('IN-01', IOEvaluators['IN-01'], IOSymbolizers['IN-01']); // Number
     NodeRegistry.register('IN-02', IOEvaluators['IN-02'], IOSymbolizers['IN-02']); // Slider
     NodeRegistry.register('IN-04', IOEvaluators['IN-04'], IOSymbolizers['IN-04']); // String
-    NodeRegistry.register('IN-07', IOEvaluators['IN-07'], IOSymbolizers['IN-07']); // Matrix Input
+    NodeRegistry.register('IN-07', IOEvaluators['IN-07'], IOSymbolizers['IN-07']); // Array Input
     NodeRegistry.register('IN-03', IOEvaluators['IN-03'], IOSymbolizers['IN-03']); // Color
     NodeRegistry.register('IN-08', IOEvaluators['IN-08'], IOSymbolizers['IN-08']); // Abacus
     NodeRegistry.register('IN-11', IOEvaluators['IN-11']); // Timer
@@ -16,7 +16,6 @@ export function registerIONodes() {
     NodeRegistry.register('OT-01', IOEvaluators['OT-01'], IOSymbolizers['OT-01']); // Result
     NodeRegistry.register('OT-03', IOEvaluators['OT-03'], IOSymbolizers['OT-03'] || undefined); // Plot
     NodeRegistry.register('OT-02', IOEvaluators['OT-02'], IOSymbolizers['OT-02'] || undefined); // Status
-    NodeRegistry.register('TR-07', IOEvaluators['TR-07']); // Color Standardizer
     NodeRegistry.register('UT-03', IOEvaluators['UT-03']); // Concatenate
 }
 

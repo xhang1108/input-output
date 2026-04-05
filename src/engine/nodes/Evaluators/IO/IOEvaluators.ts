@@ -30,8 +30,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
 
         const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
 
-        const payload = PayloadUtils.wrap(val);
-        if (extractedUnit) payload.meta.unit = extractedUnit;
+        const payload = PayloadUtils.createScalar(val ?? 0, extractedUnit);
         
         return {
             ...payload,
@@ -60,7 +59,7 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
 
         const extractedUnit = (rawVal && typeof rawVal === 'object' && (rawVal as any).meta?.unit) || (data.unit as string) || (original.meta?.unit);
 
-        const payload = PayloadUtils.createScalar(val, extractedUnit);
+        const payload = PayloadUtils.createScalar(val ?? 0, extractedUnit);
         return {
             ...payload,
             meta: { ...payload.meta, ...original.meta, unit: extractedUnit }
@@ -130,9 +129,9 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
             return PayloadUtils.createArray(raw);
         }
 
-        // 3. Fallback to node.value (Stale cache)
+        // 3. Fallback to node.value (Stale cache or Stepwise state)
         if (node.value && typeof node.value === 'object' && ('type' in node.value)) {
-            return node.value as any;
+            return PayloadUtils.createArray(PayloadUtils.unwrap(node.value));
         }
 
         // 4. Ultimate Fallback: Default 3x3 Zero Matrix

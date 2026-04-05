@@ -33,10 +33,10 @@ interface NodeLogic {
 ```
 
 ### NodePayload
-To ensure cross-node compatibility, all data is wrapped in a `NodePayload`. This allows the engine to handle `BigNumber`, `Matrix`, and primitive types uniformly.
+To ensure cross-node compatibility, all data is wrapped in a `NodePayload`. This allows the engine to handle `BigNumber`, `Array`, and primitive types uniformly.
 ```typescript
 interface NodePayload {
-    type: 'number' | 'matrix' | 'string' | 'error' | 'boolean' | 'any';
+    type: 'scalar' | 'array' | 'string' | 'error' | 'boolean' | 'any';
     value: any;
     meta?: Record<string, any>;
 }

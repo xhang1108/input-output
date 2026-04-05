@@ -94,8 +94,10 @@ export function useBrainUpdates(
                         // DIRTY GUARD: If the node is currently in the dirty chain, the Brain's 
                         // cached value is stale (awaiting re-computation). We keep the UI's 
                         // existing value to prevent "flickering" or "reverting" during sync.
+                        // EXCEPTION: If the UI value is nullish, we trust the Brain's value 
+                        // to ensure new nodes/fresh imports show their initial symbols.
                         let unwrappedValue = logicNode.value;
-                        if (logicNode.isInDirtyChain && existingNode) {
+                        if (logicNode.isInDirtyChain && existingNode && existingNode.data.value != null) {
                             unwrappedValue = existingNode.data.value as any;
                         }
 

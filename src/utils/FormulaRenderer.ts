@@ -110,8 +110,8 @@ export class FormulaRenderer {
             return `\\int ${expr} \\, d${variable}`;
         }
 
-        // 2. Linear Algebra: Matrices & Determinants
-        if (lowerName === 'mat' || lowerName === 'matrix') {
+        // 2. Linear Algebra: Arrays & Determinants
+        if (lowerName === 'mat' || lowerName === 'matrix' || lowerName === 'array') {
             return this.renderArrayAsMatrix(args[0], 'pmatrix', options);
         }
         if (lowerName === 'det' || lowerName === 'determinant') {
