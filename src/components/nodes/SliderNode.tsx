@@ -10,25 +10,50 @@ export const SliderNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
 
+    const min = typeof data.min === 'number' ? data.min : 0;
+    const max = typeof data.max === 'number' ? data.max : 100;
+    const step = typeof data.step === 'number' ? data.step : 1;
+
+    /**
+     * Quantizes a value to the nearest step and fixes floating-point precision issues
+     * (e.g. 0.1 + 0.2 -> 0.3 instead of 0.30000000000000004).
+     */
+    const quantize = useCallback((val: number) => {
+        const steps = Math.round((val - min) / step);
+        const quantized = steps * step + min;
+        const stepStr = step.toString();
+        const precision = stepStr.includes('.') ? stepStr.split('.')[1].length : 0;
+        return parseFloat(quantized.toFixed(precision));
+    }, [min, max, step]);
+
+    // Pulse Fix: Quantize initial value immediately to handle existing precision errors in IOGL files
+    const sanitizedInitialValue = quantize(Number(PayloadUtils.unwrap(data.value)) || 0);
+
     // Internal state for immediate UI feedback (Snappy UX)
     // Synchronizes with Brain at 30fps during drag (Throttle Mode)
-    const initialValue = Number(PayloadUtils.unwrap(data.value)) || 0;
     const [localValue, setLocalValue] = useNodeUpdate<number>(
         id,
-        initialValue,
+        sanitizedInitialValue,
         (val: number) => ({ value: val }),
         33.3, // ~30fps
         { mode: 'throttle' }
     );
+
+    // [UI Fix] Local string state for partial input (e.g. typing "-" or ".")
+    const [inputString, setInputString] = useState<string>(sanitizedInitialValue.toString());
+    const isEditingInput = useRef(false);
 
     const [showSettings, setShowSettings] = useState(false);
     const isInteracting = useRef(false);
 
     const { updateNodeData } = useReactFlow();
 
-    const min = typeof data.min === 'number' ? data.min : 0;
-    const max = typeof data.max === 'number' ? data.max : 100;
-    const step = typeof data.step === 'number' ? data.step : 1;
+    // Sync input string with local value when it changes from outside (drag/keyboard/brain)
+    useEffect(() => {
+        if (!isEditingInput.current) {
+            setInputString(localValue.toString());
+        }
+    }, [localValue]);
 
     const selectedCount = useStore((s: ReactFlowState) => s.nodes.filter((n) => n.selected).length);
 
@@ -45,24 +70,39 @@ export const SliderNode = memo((props: NodeProps) => {
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
-                setLocalValue(prev => Math.max(min, prev - step));
+                setLocalValue(prev => quantize(prev - step));
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
-                setLocalValue(prev => Math.min(max, prev + step));
+                setLocalValue(prev => quantize(prev + step));
             }
         };
 
         window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
         return () => window.removeEventListener('keydown', handleGlobalKeyDown, { capture: true });
-    }, [props.selected, selectedCount, min, max, step, setLocalValue]);
+    }, [props.selected, selectedCount, min, max, step, setLocalValue, quantize]);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = parseFloat(e.target.value);
-        if (!isNaN(val)) {
-            setLocalValue(val);
+        const valStr = e.target.value;
+        setInputString(valStr);
+
+        // Allow partial strings like "-", ".", "-." etc. in the UI
+        // But only update the numeric state if it's a real number
+        const valNum = parseFloat(valStr);
+        if (!isNaN(valNum) && valStr !== '-' && valStr !== '+' && valStr !== '.') {
+            setLocalValue(quantize(valNum));
         }
-    }, [setLocalValue]);
+    }, [setLocalValue, quantize]);
+
+    const handleBlur = useCallback(() => {
+        isEditingInput.current = false;
+        // Snap back to a valid, quantized string
+        setInputString(localValue.toString());
+    }, [localValue]);
+
+    const handleFocus = useCallback(() => {
+        isEditingInput.current = true;
+    }, []);
 
     const handleSettingChange = (key: string, value: string) => {
         const numVal = parseFloat(value);
@@ -77,7 +117,7 @@ export const SliderNode = memo((props: NodeProps) => {
 
     return (
         <BaseNode {...props}>
-            <div className="flex flex-col gap-3 p-1 w-(--node-width-min)">
+            <div className="flex flex-col gap-3 p-1 w-full">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-1.5">
                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Slider</label>
@@ -89,16 +129,16 @@ export const SliderNode = memo((props: NodeProps) => {
                         </button>
                     </div>
                     <input
-                        type="number"
-                        value={localValue}
+                        type="text"
+                        inputMode="decimal"
+                        value={inputString}
                         onChange={handleChange}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
                         onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={(e) => e.stopPropagation()}
-                        className="nodrag text-lg font-mono font-bold bg-transparent border-none outline-none text-right w-20 focus:text-cyan-400 transition-colors"
+                        className="nodrag text-lg font-mono font-bold bg-transparent border-none outline-none text-right w-14 focus:text-cyan-400 transition-colors"
                         style={{ color: 'var(--color-scalar)' }}
-                        min={min}
-                        max={max}
-                        step={step}
                     />
                 </div>
 

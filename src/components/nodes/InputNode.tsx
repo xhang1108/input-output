@@ -115,7 +115,8 @@ export const InputNode = memo((props: NodeProps) => {
                     />
                 ) : (
                     <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-focus outline-none"
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="0.0"
