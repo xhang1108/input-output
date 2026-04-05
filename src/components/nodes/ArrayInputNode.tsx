@@ -10,11 +10,11 @@ import { useNodeDebounce } from './hooks/useNodeDebounce';
 import { Brain } from '../../engine/Brain';
 
 /**
- * MatrixInputNode (IO-08)
+ * ArrayInputNode (IO-08)
  * Standard matrix entry node with dynamic resizing.
  * Snaps to grid steps (44px horizontal, 36px vertical).
  */
-export const MatrixInputNode = memo((props: NodeProps) => {
+export const ArrayInputNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const { updateNodeData } = useReactFlow();
     const pushHistory = useHistoryStore(s => s.push);
@@ -65,7 +65,7 @@ export const MatrixInputNode = memo((props: NodeProps) => {
             if (extractedFromData) return extractedFromData;
 
         } catch (e) {
-            console.error("[MatrixInputNode] Extraction Critical Failure", e);
+            console.error("[ArrayInputNode] Extraction Critical Failure", e);
         }
         // Strict fallback to 3x3 to match nodeDefinitions default
         return [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
@@ -203,25 +203,29 @@ export const MatrixInputNode = memo((props: NodeProps) => {
                 <div className="flex flex-col gap-1 w-fit relative">
                     {grid.map((row, r) => (
                         <div key={r} className="flex gap-1">
-                            {row.map((val, c) => (
-                                <div
-                                    key={c}
-                                    className={`w-10 h-8 bg-zinc-900/50 border rounded flex items-center justify-center transition-colors ${isNaN(parseFloat(String(val))) && String(val) !== ''
-                                        ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]'
-                                        : 'border-zinc-800'
-                                        }`}
-                                >
-                                    <input
-                                        type="text"
-                                        value={val}
-                                        onFocus={handleFocus}
-                                        onBlur={handleBlur}
-                                        onKeyDown={handleKeyDown}
-                                        onChange={(e) => updateCell(r, c, e.target.value)}
-                                        className="w-full h-full bg-transparent text-center text-[10px] text-zinc-300 outline-none font-mono"
-                                    />
-                                </div>
-                            ))}
+                                {row.map((val, c) => {
+                                    const strVal = String(val);
+                                    const isShort = strVal.length <= 5;
+                                    return (
+                                        <div
+                                            key={c}
+                                            className={`w-10 h-8 bg-zinc-900/50 border rounded flex items-center ${isShort ? 'justify-center' : 'justify-start'} px-1 transition-colors ${isNaN(parseFloat(strVal)) && strVal !== ''
+                                                ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]'
+                                                : 'border-zinc-800'
+                                                }`}
+                                        >
+                                            <input
+                                                type="text"
+                                                value={val}
+                                                onFocus={handleFocus}
+                                                onBlur={handleBlur}
+                                                onKeyDown={handleKeyDown}
+                                                onChange={(e) => updateCell(r, c, e.target.value)}
+                                                className={`w-full h-full bg-transparent ${isShort ? 'text-center' : 'text-left'} text-[10px] text-zinc-300 outline-none font-mono`}
+                                            />
+                                        </div>
+                                    );
+                                })}
                         </div>
                     ))}
                 </div>
@@ -239,5 +243,5 @@ export const MatrixInputNode = memo((props: NodeProps) => {
     );
 });
 
-MatrixInputNode.displayName = 'MatrixInputNode';
+ArrayInputNode.displayName = 'ArrayInputNode';
 

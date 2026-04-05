@@ -74,15 +74,15 @@ test('MA-07 MOD: Two-Input and Edge Cases', async () => {
 test('MA-07 ISPRIME: Filtering behavior', async () => {
     // 1. Filtering array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] -> [2, 3, 5, 7]
     const resArr = await evalDiv('ISPRIME', { in_a: PayloadUtils.createArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) });
-    expect(resArr.value).toEqual([2, 3, 5, 7]);
+    expect(PayloadUtils.unwrap(resArr)).toEqual([2, 3, 5, 7]);
 
     // 2. Single prime -> [7]
     const resSingle = await evalDiv('ISPRIME', { in_a: PayloadUtils.createScalar(7) });
-    expect(resSingle.value).toEqual([7]);
+    expect(PayloadUtils.unwrap(resSingle)).toEqual([7]);
 
     // 3. Single non-prime -> []
     const resNone = await evalDiv('ISPRIME', { in_a: PayloadUtils.createScalar(10) });
-    expect(resNone.value).toEqual([]);
+    expect(PayloadUtils.unwrap(resNone)).toEqual([]);
 });
 
 

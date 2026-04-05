@@ -47,7 +47,7 @@ export const ResultNode = memo((props: NodeProps) => {
 
     if (viewMode === 'auto') {
         if (payload?.type === DataType.Color || payload?.meta?.role === 'color' || (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) && 'hex' in (rawValue as object))) effectiveMode = 'color';
-        else if (payload?.type === DataType.Array || payload?.type === DataType.Matrix) effectiveMode = 'grid';
+        else if (payload?.type === DataType.Array) effectiveMode = 'grid';
         else if (payload?.type === DataType.Symbolic) effectiveMode = 'formula';
         else effectiveMode = 'text';
     } else {
@@ -85,8 +85,7 @@ export const ResultNode = memo((props: NodeProps) => {
     switch (payload?.type) {
         case DataType.Scalar: dataTypeColor = 'text-(--color-scalar)'; break;
         case DataType.String: dataTypeColor = 'text-(--color-string)'; break;
-        case DataType.Array:
-        case DataType.Matrix: dataTypeColor = 'text-(--color-matrix)'; break;
+        case DataType.Array: dataTypeColor = 'text-(--color-matrix)'; break;
         case DataType.Boolean: dataTypeColor = 'text-(--color-boolean)'; break;
         case DataType.Symbolic: dataTypeColor = 'text-(--color-symbolic)'; break;
     }
@@ -131,7 +130,10 @@ export const ResultNode = memo((props: NodeProps) => {
                         )}
                         <button
                             onClick={copyToClipboard}
-                            className={`nodrag p-1 rounded-md hover:bg-zinc-800/50 transition-colors ${copied ? 'text-green-500' : 'text-zinc-500'}`}
+                            className={cn(
+                                "nodrag p-1 rounded-md transition-colors",
+                                copied ? 'text-green-500' : 'text-zinc-500 hover:bg-zinc-800/50'
+                            )}
                             title="Copy Value"
                         >
                             {copied ? <Check size={12} /> : <Copy size={12} />}

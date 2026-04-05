@@ -137,7 +137,7 @@ export const SliderNode = memo((props: NodeProps) => {
                         onBlur={handleBlur}
                         onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={(e) => e.stopPropagation()}
-                        className="nodrag text-lg font-mono font-bold bg-transparent border-none outline-none text-right w-14 focus:text-cyan-400 transition-colors"
+                        className="nodrag text-lg font-mono font-bold bg-transparent border-none outline-none text-left w-14 focus:text-cyan-400 transition-colors"
                         style={{ color: 'var(--color-scalar)' }}
                     />
                 </div>

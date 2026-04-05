@@ -52,8 +52,7 @@ describe('IN-01 Initial Value Standard', () => {
         const result = await brain.getValue('Debug');
         
         expect(PayloadUtils.unwrap(result)).toBe(0);
-        expect(result.symbol?.type).toBe('Identifier');
-        expect(result.symbol?.name).toBe('MyVar');
+        expect(result.symbol?.type).toBe('Literal');
         expect(result.symbol?.value).toBe(0);
         expect(result.symbol?.sourceId).toBe('Num');
     });

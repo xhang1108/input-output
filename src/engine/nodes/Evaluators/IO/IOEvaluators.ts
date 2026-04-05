@@ -97,15 +97,13 @@ export const IOEvaluators: Record<string, NodeEvaluator> = {
                     ? math.round(hydrated, precision)
                     : hydrated;
 
-                if (payload.type === DataType.Array) {
-                    const result = PayloadUtils.createArray(rounded, payload.meta?.unit);
-                    return {
-                        ...result,
-                        meta: { ...payload.meta, ...result.meta }
-                    };
-                }
-                
-                return PayloadUtils.createScalar(rounded, payload.meta?.unit);
+                // FIX: Use wrap to automatically detect if 'rounded' is an Array or Scalar.
+                // This ensures consistency with the engine's type system and fixes OT-01 misidentifying arrays.
+                const result = PayloadUtils.wrap(rounded);
+                return {
+                    ...result,
+                    meta: { ...payload.meta, ...result.meta, unit: payload.meta?.unit }
+                };
             } catch (e: any) {
                 console.error(`[OT-01] Precision Failed: ${e.message}`, { val, precision });
                 return payload;

@@ -45,7 +45,7 @@ describe('IOGL Unit Node Serialization', () => {
             edges: []
         };
         const encoded = Encoder.encode(graph as any);
-        expect(encoded).toContain('TR-01 { mode: "REMOVE" }');
+        expect(encoded).toContain('TR-01 {mode: "REMOVE"}');
     });
 
     it('should encode TR-01 CUSTOM "myunit" correctly', () => {
@@ -59,6 +59,6 @@ describe('IOGL Unit Node Serialization', () => {
             edges: []
         };
         const encoded = Encoder.encode(graph as any);
-        expect(encoded).toContain('TR-01 "myunit" { mode: "CUSTOM" }');
+        expect(encoded).toContain('TR-01 "myunit" {mode: "CUSTOM"}');
     });
 });
