@@ -293,16 +293,16 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             style={{
                 minHeight: `${minHeight}px`,
                 background: 'var(--node-bg)',
-                opacity: visualState?.muted ? 0.4 : 1,
-                filter: visualState?.muted ? 'grayscale(0.4)' : 'none',
+                opacity: data.muted ? 0.4 : 1,
+                filter: data.muted ? 'grayscale(0.4)' : 'none',
                 transformOrigin: '0 0',
                 ...style
             }}
             onDoubleClick={onDoubleClick}
         >
 
-            {/* Muted Bypass Visual */}
-            {!!visualState?.muted && (
+            {/* Muted Bypass Visual - Only show if node has both inputs and outputs */}
+            {!!data.muted && leftHandles.length > 0 && rightHandles.length > 0 && (
                 <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-xl">
                     <svg className="w-full h-full">
                         <line
@@ -316,6 +316,15 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                             className="animate-visual-tick-flow opacity-60"
                         />
                     </svg>
+                </div>
+            )}
+
+            {/* Central Muted Overlay */}
+            {!!data.muted && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none select-none animate-in fade-in zoom-in-95 duration-200">
+                    <span className="text-[14px] font-black tracking-[0.3em] uppercase text-red-500/80 drop-shadow-[0_0_8px_rgba(239, 68, 68, 0.4)]">
+                        MUTED
+                    </span>
                 </div>
             )}
 
@@ -348,9 +357,6 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                         />
                     ) : (
                         <span className="text-xs font-bold text-zinc-300 select-none truncate">{title}</span>
-                    )}
-                    {!!visualState?.muted && (
-                        <span className="text-[8px] bg-zinc-800 text-zinc-500 px-1 rounded uppercase tracking-tighter font-black border border-zinc-700/50 leading-tight">Muted</span>
                     )}
                 </div>
 
