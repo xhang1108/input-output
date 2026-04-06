@@ -18,6 +18,7 @@ import { useAppStore } from '../../store/useStore';
 export type { HandleConfig } from '../../types/nodeDefinitions';
 import { SingleHandle } from './SingleHandle';
 import { CapsuleHandle } from './CapsuleHandle';
+import { StringInput } from '../common/StringInput';
 
 const DynamicNodeHandle = memo(({ h, id, isConnectable, data }: { h: HandleConfig, id: string, isConnectable: boolean, data: any }) => {
     if (h.variant === 'capsule') {
@@ -326,15 +327,22 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             >
                 <div className="flex items-center gap-2 overflow-hidden flex-1">
                     {isRenaming ? (
-                        <input
+                        <StringInput
                             ref={inputRef}
                             value={title}
-                            onFocus={(e) => e.target.select()}
-                            onChange={onChange}
+                            autoSelect={true}
+                            onChange={(val) => {
+                                setTitle(val);
+                                const trimmed = val.trim();
+                                const invalid = trimmed === '' || labelSetRef.current.has(trimmed.toLowerCase());
+                                setIsError(invalid);
+                            }}
                             onBlur={handleBlur}
                             onKeyDown={handleKeyDown}
-                            className={cn(
-                                "bg-transparent text-xs font-bold outline-none w-full border-b transition-colors duration-200",
+                            variant="ghost"
+                            monospace={false}
+                            inputClassName={cn(
+                                "text-xs font-bold w-full border-b transition-colors duration-200 rounded-none px-0 py-0",
                                 isError ? "text-red-400 border-red-500/50" : "text-zinc-200 border-transparent focus:border-zinc-500/50"
                             )}
                         />

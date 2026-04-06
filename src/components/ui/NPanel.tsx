@@ -3,10 +3,11 @@
 import { useStore, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { X, Cpu } from 'lucide-react';
+
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { NodeParameter } from '../../types/nodeDefinitions';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { StringInput } from '../common/StringInput';
 
 // ─── Atomic Field Components ──────────────────────────────────────────────────
 
@@ -20,8 +21,8 @@ function FieldWrapper({ label, hint, children }: { label: string; hint?: string;
     );
 }
 
-const inputCls = "w-full bg-surface-base border border-border-dim/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors font-mono";
-const selectCls = "w-full bg-surface-base border border-border-dim/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors cursor-pointer";
+const inputCls = "w-full bg-surface-base border border-border-dim/80 rounded-md px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors font-mono";
+const selectCls = "w-full bg-surface-base border border-border-dim/80 rounded-md px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors cursor-pointer";
 
 type FieldProps = { param: NodeParameter; value: unknown; nodeId: string; onChange: (id: string, v: unknown) => void };
 
@@ -87,20 +88,16 @@ function StringField({ param, value, nodeId, onChange }: FieldProps) {
 
     return (
         <FieldWrapper label={param.label} hint={param.hint}>
-            <input
-                type="text"
+            <StringInput
                 value={local}
-                onFocus={(e) => {
-                    isFocused.current = true;
-                    e.target.select();
-                }}
-                onChange={e => {
-                    setLocal(e.target.value);
-                    onChange(param.id, e.target.value);
+                onChange={val => {
+                    setLocal(val);
+                    onChange(param.id, val);
                 }}
                 onBlur={() => { isFocused.current = false; }}
-                onMouseDown={e => e.stopPropagation()}
-                className={inputCls}
+                variant="standard"
+                monospace={true} // Internal data is usually better in mono
+                inputClassName="w-full py-1.5"
             />
         </FieldWrapper>
     );
@@ -112,7 +109,7 @@ function BooleanField({ param, value, onChange }: FieldProps) {
         <FieldWrapper label={param.label} hint={param.hint}>
             <button
                 onClick={() => onChange(param.id, !bool)}
-                className={`w-full py-1.5 rounded text-xs font-medium transition-colors border ${bool
+                className={`w-full py-1.5 rounded-md text-xs font-medium transition-colors border ${bool
                     ? 'bg-cloud/20 border-cloud/50 text-cloud'
                     : 'bg-surface-base border-border-dim text-zinc-500'
                     }`}
@@ -172,7 +169,7 @@ function ColorField({ param, value, nodeId, onChange }: FieldProps) {
                     }}
                     onBlur={() => { isFocused.current = false; }}
                     onMouseDown={e => e.stopPropagation()}
-                    className="w-8 h-7 rounded border border-border-dim cursor-pointer bg-surface-base p-0.5"
+                    className="w-8 h-7 rounded-md border border-border-dim cursor-pointer bg-surface-base p-0.5"
                 />
                 <span className="text-xs font-mono text-zinc-400 uppercase">{local}</span>
             </div>
@@ -193,20 +190,18 @@ function TextareaField({ param, value, nodeId, onChange }: FieldProps) {
 
     return (
         <FieldWrapper label={param.label} hint={param.hint}>
-            <textarea
+            <StringInput
+                multiline={true}
                 value={local}
                 rows={8}
-                onFocus={(e) => {
-                    isFocused.current = true;
-                    e.target.select();
-                }}
-                onChange={e => {
-                    setLocal(e.target.value);
-                    onChange(param.id, e.target.value);
+                onChange={val => {
+                    setLocal(val);
+                    onChange(param.id, val);
                 }}
                 onBlur={() => { isFocused.current = false; }}
-                onMouseDown={e => e.stopPropagation()}
-                className={`${inputCls} resize-y font-mono leading-relaxed`}
+                variant="standard"
+                monospace={true}
+                inputClassName="w-full py-1.5 resize-y leading-relaxed"
             />
         </FieldWrapper>
     );
@@ -226,7 +221,7 @@ function SettingsSection({
     onDataChange: (key: string, value: unknown) => void;
 }) {
     return (
-        <div className="space-y-3 p-3 bg-cloud/5 border border-cloud/20 rounded-lg">
+        <div className="space-y-3 p-3 bg-cloud/5 border border-cloud/20 rounded-md">
             <h3 className="text-[10px] font-bold text-text-cloud uppercase tracking-widest">Node Settings</h3>
             <div className="space-y-3">
                 {params.map(param => {
@@ -314,15 +309,14 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         <div className="absolute top-0 right-0 h-full w-80 bg-surface-dim border-l border-surface-light z-40 animate-in slide-in-from-right duration-200">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-surface-light bg-surface-base/50">
-                <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm">
-                    <Cpu className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm tracking-tight">
                     N PANEL
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-1 hover:bg-surface-light rounded-sm text-zinc-400 hover:text-white transition-colors"
+                    className="px-2 py-1 hover:bg-surface-light rounded-md text-zinc-400 hover:text-white transition-colors text-[10px] font-bold tracking-widest"
                 >
-                    <X className="w-4 h-4" />
+                    CLOSE
                 </button>
             </div>
 
@@ -339,26 +333,22 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Identity</h3>
 
                             <FieldWrapper label="Label">
-                                <input
-                                    type="text"
-                                    defaultValue={labelVal}
+                                <StringInput
+                                    value={labelVal}
                                     key={`label-${selectedNode.id}-${labelVal}`}
-                                    onFocus={(e) => e.target.select()}
-                                    onBlur={e => handleDataChange('label', e.target.value)}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') handleDataChange('label', (e.target as HTMLInputElement).value);
-                                    }}
-                                    onMouseDown={e => e.stopPropagation()}
-                                    className={inputCls}
+                                    onChange={val => handleDataChange('label', val)}
+                                    // Use standard Enter/Escape blur behavior of StringInput
+                                    variant="standard"
+                                    inputClassName="w-full py-1.5"
                                 />
                             </FieldWrapper>
 
                             <FieldWrapper label="Type / ID">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-zinc-800 text-zinc-400 border border-zinc-700 shrink-0">
+                                    <span className="px-1.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide bg-zinc-800 text-zinc-400 border border-zinc-700 shrink-0">
                                         {selectedNode.type}
                                     </span>
-                                    <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded px-2 py-1.5 text-[10px] text-zinc-500 font-mono truncate select-all">
+                                    <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-zinc-500 font-mono truncate select-all">
                                         {selectedNode.id}
                                     </div>
                                 </div>
@@ -414,9 +404,9 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                         <div className="space-y-2">
                             <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest flex items-center justify-between">
                                 Raw Data
-                                <span className="text-[9px] bg-zinc-800 px-1 py-0.5 rounded text-zinc-500">READ ONLY</span>
+                                <span className="text-xs bg-zinc-800 px-1 py-0.5 rounded-md text-zinc-500">READ ONLY</span>
                             </h3>
-                            <div className="w-full bg-zinc-950 border border-zinc-800/50 rounded p-2 text-[10px] text-zinc-500 font-mono overflow-auto max-h-32">
+                            <div className="w-full bg-zinc-950 border border-zinc-800/50 rounded-md p-2 text-[10px] text-zinc-500 font-mono overflow-auto max-h-32">
                                 <pre>{JSON.stringify(nodeData, null, 2)}</pre>
                             </div>
                         </div>

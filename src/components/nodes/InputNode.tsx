@@ -6,6 +6,7 @@ import { Transaction } from '../../engine/types/engineTypes';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { NumericInput } from '../common/NumericInput';
+import { StringInput } from '../common/StringInput';
 
 export const InputNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
@@ -35,19 +36,18 @@ export const InputNode = memo((props: NodeProps) => {
         }
     }, [unwrappedValue, isFocused]);
 
-    const handleStringChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
+    const handleStringChange = useCallback((val: string) => {
         setLocalValue(val);
         brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: val } } });
     }, [id, brain]);
 
-    const handleDataFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    const handleDataFocus = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         originalValue.current = unwrappedValue;
         setIsFocused(true);
         e.currentTarget.select();
     }, [unwrappedValue]);
 
-    const handleDataBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    const handleDataBlur = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setIsFocused(false);
         const currentVal = e.target.value;
         const initialVal = originalValue.current;
@@ -67,7 +67,7 @@ export const InputNode = memo((props: NodeProps) => {
         originalValue.current = null;
     }, [id, push, isRestoring, data.type]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         if (e.key === 'Escape') {
             const initial = originalValue.current;
             if (initial !== null) {
@@ -91,17 +91,17 @@ export const InputNode = memo((props: NodeProps) => {
                 onPointerDown={(e) => e.stopPropagation()}
             >
                 {data.type === 'string' ? (
-                    <input
-                        type="text"
-                        className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-focus outline-none text-left"
-                        style={{ background: 'var(--node-bg)' }}
-                        placeholder="Text..."
+                    <StringInput
                         value={localValue}
+                        onChange={handleStringChange}
                         onFocus={handleDataFocus}
                         onBlur={handleDataBlur}
-                        onChange={handleStringChange}
-                        onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={handleKeyDown}
+                        placeholder="Text..."
+                        className="w-full"
+                        inputClassName="w-full h-8 text-sm text-left"
+                        monospace={true} // Match IN-01's font-mono
+                        autoSelect={false} // InputNode handles selection in onFocus
                     />
                 ) : (
                     <NumericInput
