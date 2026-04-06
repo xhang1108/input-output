@@ -3,6 +3,7 @@ import { BaseNode } from './BaseNode';
 import { NodeProps } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { Play, Pause, RotateCcw } from 'lucide-react';
+import { NumericInput } from '../common/NumericInput';
 
 /**
  * TimerNode (IN-11)
@@ -25,9 +26,9 @@ export const TimerNode = memo((props: NodeProps) => {
     const data = props.data as TimerData;
     const brain = useBrain();
     
-    // Internal state for UI fallback
     const [displayValue, setDisplayValue] = useState(data.currentValue ?? 0);
     const valueRef = useRef<HTMLSpanElement>(null);
+    const focusedInput = useRef<string | null>(null);
 
     // Optimized Local Subscription: 
     // This allows the component to react to its own 'currentValue' changes 
@@ -110,41 +111,25 @@ export const TimerNode = memo((props: NodeProps) => {
 
                 {/* Settings Grid - Fine-tuned inputs */}
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2 px-1">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest pl-0.5">Start</label>
-                        <input 
-                            type="number"
-                            className="bg-black/40 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-zinc-600 focus:bg-black/60 transition-all outline-none"
-                            value={data.initialValue ?? 0}
-                            onChange={(e) => updateParam('initialValue', Number(e.target.value))}
-                            onPointerDown={e => e.stopPropagation()}
+                    <NumericInput 
+                        label="Start"
+                        value={data.initialValue ?? 0}
+                        onChange={(val) => updateParam('initialValue', val)}
+                    />
+                    <NumericInput 
+                        label="Step"
+                        value={data.step ?? 1}
+                        onChange={(val) => updateParam('step', val)}
+                    />
+                    <div className="col-span-2">
+                        <NumericInput 
+                            label="Interval (ms)"
+                            value={data.interval ?? 1000}
+                            onChange={(val) => updateParam('interval', Math.max(1, val))}
+                            inputClassName="pr-8"
                         />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest pl-0.5">Step</label>
-                        <input 
-                            type="number"
-                            className="bg-black/40 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-zinc-600 focus:bg-black/60 transition-all outline-none"
-                            value={data.step ?? 1}
-                            onChange={(e) => updateParam('step', Number(e.target.value))}
-                            onPointerDown={e => e.stopPropagation()}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1 col-span-2">
-                        <label className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest pl-0.5">Interval (ms)</label>
-                        <div className="relative group">
-                            <input 
-                                type="number"
-                                min={1}
-                                step={1}
-                                className="w-full bg-black/40 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:border-zinc-600 focus:bg-black/60 transition-all outline-none pr-8"
-                                value={data.interval ?? 1000}
-                                onChange={(e) => updateParam('interval', Number(e.target.value))}
-                                onBlur={(e) => updateParam('interval', Math.max(1, Number(e.target.value)))}
-                                onPointerDown={e => e.stopPropagation()}
-                            />
-                            <span className="absolute right-2 top-1.5 text-[9px] text-zinc-600 font-bold">ms</span>
-                        </div>
+                        {/* Note: Relative offset was previously in a container, 
+                            but we can simplify using local props or keeping the container */}
                     </div>
                 </div>
             </div>

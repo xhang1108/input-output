@@ -4,6 +4,7 @@ import { BaseNode } from './BaseNode';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { NodeOpSelect } from './NodeOpSelect';
+import { NumericInput } from '../common/NumericInput';
 
 export const RandomNode = memo((props: NodeProps) => {
     const { id, data, type } = props;
@@ -20,12 +21,6 @@ export const RandomNode = memo((props: NodeProps) => {
     const isExponential = distribution === 'Exponential' || distribution === 'Exp';
     const isPoisson = distribution === 'Poisson';
 
-    // Helper to safely extract numbers from data
-    const getVal = (val: any, def: number) => {
-        if (typeof val === 'number') return val;
-        if (typeof val === 'string') return parseFloat(val) || def;
-        return def;
-    };
 
     const handleChange = useCallback((key: string, value: unknown) => {
         updateNodeData(id, { [key]: value });
@@ -57,32 +52,18 @@ export const RandomNode = memo((props: NodeProps) => {
 
                 {/* Dimensions Grid */}
                 <div className="grid grid-cols-2 gap-2 bg-zinc-900/30 p-2 rounded-md border border-zinc-800/30">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-zinc-500 uppercase font-black">Rows</label>
-                        <input
-                            type="number"
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors"
-                            value={getVal(data.rows, 1)}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => handleChange('rows', parseInt(e.target.value))}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            min={1}
-                            step="1"
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-zinc-500 uppercase font-black">Cols</label>
-                        <input
-                            type="number"
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors"
-                            value={getVal(data.cols, 1)}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => handleChange('cols', parseInt(e.target.value))}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            min={1}
-                            step="1"
-                        />
-                    </div>
+                    <NumericInput 
+                        label="Rows"
+                        value={typeof data.rows === 'number' ? data.rows : 1}
+                        onChange={(val) => handleChange('rows', Math.max(1, Math.floor(val)))}
+                        inputClassName="h-7"
+                    />
+                    <NumericInput 
+                        label="Cols"
+                        value={typeof data.cols === 'number' ? data.cols : 1}
+                        onChange={(val) => handleChange('cols', Math.max(1, Math.floor(val)))}
+                        inputClassName="h-7"
+                    />
                 </div>
 
                 {/* Distribution Parameters */}
@@ -90,46 +71,25 @@ export const RandomNode = memo((props: NodeProps) => {
                     <div className="flex flex-col gap-2 bg-zinc-900/50 p-2 rounded-md border border-zinc-700/50 h-full">
                         {(isUniform || isNormal) && (
                             <div className="grid grid-cols-2 gap-2 animate-in fade-in zoom-in-95 duration-200">
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[9px] text-zinc-500 uppercase font-black">{isUniform ? 'Min' : 'Mean (μ)'}</label>
-                                    <input
-                                        type="number"
-                                        className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors w-full"
-                                        value={isUniform ? getVal(data.min, 0) : getVal(data.mean, 0)}
-                                        onFocus={(e) => e.target.select()}
-                                        onChange={(e) => handleChange(isUniform ? 'min' : 'mean', parseFloat(e.target.value))}
-                                        onPointerDown={(e) => e.stopPropagation()}
-                                        step="1"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[9px] text-zinc-500 uppercase font-black">{isUniform ? 'Max' : 'StdDev (σ)'}</label>
-                                    <input
-                                        type="number"
-                                        className="bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors w-full"
-                                        value={isUniform ? getVal(data.max, 1) : getVal(data.stdDev, 1)}
-                                        onFocus={(e) => e.target.select()}
-                                        onChange={(e) => handleChange(isUniform ? 'max' : 'stdDev', parseFloat(e.target.value))}
-                                        onPointerDown={(e) => e.stopPropagation()}
-                                        min={isNormal ? 0 : undefined}
-                                        step="1"
-                                    />
-                                </div>
+                                <NumericInput 
+                                    label={isUniform ? 'Min' : 'Mean (μ)'}
+                                    value={isUniform ? (typeof data.min === 'number' ? data.min : 0) : (typeof data.mean === 'number' ? data.mean : 0)}
+                                    onChange={(val) => handleChange(isUniform ? 'min' : 'mean', val)}
+                                />
+                                <NumericInput 
+                                    label={isUniform ? 'Max' : 'StdDev (σ)'}
+                                    value={isUniform ? (typeof data.max === 'number' ? data.max : 1) : (typeof data.stdDev === 'number' ? data.stdDev : 1)}
+                                    onChange={(val) => handleChange(isUniform ? 'max' : 'stdDev', isNormal ? Math.max(0, val) : val)}
+                                />
                             </div>
                         )}
 
                         {(isPoisson || isExponential) && (
                             <div className="flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
-                                <label className="text-[9px] text-zinc-500 uppercase font-black">Lambda (λ)</label>
-                                <input
-                                    type="number"
-                                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors"
-                                    value={getVal(data.lambda, 1)}
-                                    onFocus={(e) => e.target.select()}
-                                    onChange={(e) => handleChange('lambda', parseFloat(e.target.value))}
-                                    onPointerDown={(e) => e.stopPropagation()}
-                                    min="0"
-                                    step="1"
+                                <NumericInput 
+                                    label="Lambda (λ)"
+                                    value={typeof data.lambda === 'number' ? data.lambda : 1}
+                                    onChange={(val) => handleChange('lambda', Math.max(0, val))}
                                 />
                             </div>
                         )}

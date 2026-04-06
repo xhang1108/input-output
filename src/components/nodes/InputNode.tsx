@@ -5,6 +5,7 @@ import { useHistoryStore } from '../../store/useHistoryStore';
 import { Transaction } from '../../engine/types/engineTypes';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { NumericInput } from '../common/NumericInput';
 
 export const InputNode = memo((props: NodeProps) => {
     const { id, data, selected } = props;
@@ -88,6 +89,23 @@ export const InputNode = memo((props: NodeProps) => {
             return;
         }
 
+        if (data.type !== 'string' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault();
+            const currentVal = parseFloat(localValue) || 0;
+            const step = e.shiftKey ? 10 : (e.altKey ? 0.1 : 1);
+            const direction = e.key === 'ArrowUp' ? 1 : -1;
+            const nextVal = currentVal + (direction * step);
+            
+            // Precision Guard: Use toFixed to avoid IEEE 754 ghost decimals
+            // If using Alt (0.1 step), we use 1 decimal place. Otherwise 0 or existing precision.
+            const precision = e.altKey ? 1 : 0;
+            const roundedVal = parseFloat(nextVal.toFixed(10)); // Use high precision then parseFloat to trim
+            
+            setLocalValue(String(roundedVal));
+            brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: roundedVal } } });
+            return;
+        }
+
         e.stopPropagation();
         if (e.key === 'Enter') {
             e.currentTarget.blur();
@@ -107,25 +125,19 @@ export const InputNode = memo((props: NodeProps) => {
                         style={{ background: 'var(--node-bg)' }}
                         placeholder="Text..."
                         value={localValue}
-                        onChange={handleStringChange}
                         onFocus={handleDataFocus}
                         onBlur={handleDataBlur}
+                        onChange={handleStringChange}
                         onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={handleKeyDown}
                     />
                 ) : (
-                    <input
-                        type="text"
-                        inputMode="decimal"
-                        className="nodrag w-full border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:border-focus outline-none text-left"
-                        style={{ background: 'var(--node-bg)' }}
-                        placeholder="0.0"
-                        value={localValue}
-                        onChange={handleNumberChange}
-                        onFocus={handleDataFocus}
-                        onBlur={handleDataBlur}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onKeyDown={handleKeyDown}
+                    <NumericInput
+                        value={Number(unwrappedValue) || 0}
+                        onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: val } } })}
+                        className="w-full"
+                        inputClassName="w-full h-8 text-sm"
+                        hideLabel={true}
                     />
                 )}
             </div>
