@@ -33,6 +33,8 @@ interface NodeOpSelectProps {
     showCategories?: boolean;
     /** Optional dynamic options to override static ones from definitions. */
     overrideOptions?: CategorizedMenuItem[];
+    /** Optional compact layout for tight spaces (on-canvas nodes) */
+    compact?: boolean;
 }
 
 export const NodeOpSelect = memo(({
@@ -42,12 +44,13 @@ export const NodeOpSelect = memo(({
     data,
     label,
     placeholder,
-    width = '48',
+    width = 'full',
     extraData,
     onSelect,
     showSearch = false,
     showCategories = false,
     overrideOptions,
+    compact = true,
 }: NodeOpSelectProps) => {
     const brain = useBrain();
     const pushHistory = useHistoryStore(s => s.push);
@@ -91,20 +94,21 @@ export const NodeOpSelect = memo(({
     }, [nodeId, paramId, brain, closeMenu, onSelect, currentValue, pushHistory]);
 
     return (
-        <div className="flex flex-col gap-1.5 p-1 min-w-[120px]">
+        <div className={`flex flex-col gap-1 w-full ${compact ? '' : 'p-1'}`}>
             {label && (
-                <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">
+                <label className={`text-[8px] text-zinc-500 uppercase font-black tracking-widest text-center w-full`}>
                     {label}
                 </label>
             )}
             <button
-                className="nodrag w-full bg-zinc-900 border border-zinc-700/50 rounded-[10px] px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:border-zinc-50 transition-all flex items-center justify-between group active:scale-95"
+                className={`nodrag w-full bg-zinc-900 border border-zinc-700/50 rounded-md px-2 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex items-center justify-between group active:scale-95 ${compact ? 'h-6 text-[10px]' : 'py-1.5 text-xs'}`}
                 onClick={handleTrigger}
-                onPointerDown={(e) => e.stopPropagation()}
+                onContextMenu={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
             >
-                <span className="truncate font-medium group-hover:text-white">{currentLabel}</span>
-                <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="truncate group-hover:text-white">{currentLabel}</span>
+                <svg className="w-2.5 h-2.5 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>

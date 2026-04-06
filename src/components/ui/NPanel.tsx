@@ -3,10 +3,14 @@
 import { useStore, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { X, Cpu } from 'lucide-react';
+
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { NodeParameter } from '../../types/nodeDefinitions';
 import { PayloadUtils } from '../../utils/PayloadUtils';
+import { StringInput } from '../common/StringInput';
+import { NumericInput } from '../common/NumericInput';
+import { CategorizedMenu, CategorizedMenuItem } from './CategorizedMenu';
+import { useNodeMenu } from '../../hooks/useNodeMenu';
 
 // ─── Atomic Field Components ──────────────────────────────────────────────────
 
@@ -20,51 +24,22 @@ function FieldWrapper({ label, hint, children }: { label: string; hint?: string;
     );
 }
 
-const inputCls = "w-full bg-surface-base border border-border-dim/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors font-mono";
-const selectCls = "w-full bg-surface-base border border-border-dim/80 rounded px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors cursor-pointer";
+const inputCls = "w-full bg-surface-base border border-border-dim/80 rounded-md px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors font-mono";
+const selectCls = "w-full bg-surface-base border border-border-dim/80 rounded-md px-2 py-1.5 text-xs text-zinc-200 focus:border-focus/80 outline-none transition-colors cursor-pointer";
 
 type FieldProps = { param: NodeParameter; value: unknown; nodeId: string; onChange: (id: string, v: unknown) => void };
 
-function NumberField({ param, value, nodeId, onChange }: FieldProps) {
-    const toNum = (v: unknown) => {
-        const unwrapped = PayloadUtils.unwrap(v);
-        return typeof unwrapped === 'number' ? unwrapped : (parseFloat(String(unwrapped)) || 0);
-    };
-    const [local, setLocal] = useState(() => String(toNum(value)));
-    const isFocused = useRef(false);
-
-    // Sync when node switches (always) or external value changes (only if not focused)
-    useEffect(() => {
-        if (!isFocused.current) {
-            setLocal(String(toNum(value)));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nodeId, value]);
+function NumberField({ param, value, onChange }: FieldProps) {
+    const val = PayloadUtils.unwrap(value);
+    const num = typeof val === 'number' ? val : (parseFloat(String(val)) || 0);
 
     return (
         <FieldWrapper label={param.label} hint={param.hint}>
-            <input
-                type="number"
-                min={param.min}
-                max={param.max}
-                step={param.step ?? 'any'}
-                value={local}
-                onFocus={(e) => {
-                    isFocused.current = true;
-                    e.target.select();
-                }}
-                onChange={e => {
-                    setLocal(e.target.value);
-                    const v = parseFloat(e.target.value);
-                    if (!isNaN(v)) onChange(param.id, v);
-                }}
-                onBlur={() => {
-                    isFocused.current = false;
-                    // Re-sync to stored value on blur to correct any invalid input
-                    setLocal(String(toNum(value)));
-                }}
-                onMouseDown={e => e.stopPropagation()}
-                className={inputCls}
+            <NumericInput
+                value={num}
+                onChange={(v) => onChange(param.id, v)}
+                hideLabel={true}
+                inputClassName="w-full py-1.5"
             />
         </FieldWrapper>
     );
@@ -87,20 +62,16 @@ function StringField({ param, value, nodeId, onChange }: FieldProps) {
 
     return (
         <FieldWrapper label={param.label} hint={param.hint}>
-            <input
-                type="text"
+            <StringInput
                 value={local}
-                onFocus={(e) => {
-                    isFocused.current = true;
-                    e.target.select();
-                }}
-                onChange={e => {
-                    setLocal(e.target.value);
-                    onChange(param.id, e.target.value);
+                onChange={val => {
+                    setLocal(val);
+                    onChange(param.id, val);
                 }}
                 onBlur={() => { isFocused.current = false; }}
-                onMouseDown={e => e.stopPropagation()}
-                className={inputCls}
+                variant="standard"
+                monospace={true} // Internal data is usually better in mono
+                inputClassName="w-full py-1.5"
             />
         </FieldWrapper>
     );
@@ -112,7 +83,7 @@ function BooleanField({ param, value, onChange }: FieldProps) {
         <FieldWrapper label={param.label} hint={param.hint}>
             <button
                 onClick={() => onChange(param.id, !bool)}
-                className={`w-full py-1.5 rounded text-xs font-medium transition-colors border ${bool
+                className={`w-full py-1.5 rounded-md text-xs font-medium transition-colors border ${bool
                     ? 'bg-cloud/20 border-cloud/50 text-cloud'
                     : 'bg-surface-base border-border-dim text-zinc-500'
                     }`}
@@ -124,21 +95,46 @@ function BooleanField({ param, value, onChange }: FieldProps) {
 }
 
 function SelectField({ param, value, onChange }: FieldProps) {
+    const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const strVal = String(PayloadUtils.unwrap(value) ?? '');
+    
+    const options = (param.options || []).map(opt => ({
+        id: String(opt.value),
+        label: opt.label,
+        category: param.label
+    }));
+
+    const activeLabel = options.find(o => o.id === strVal)?.label || strVal || 'Select...';
+
+    const handleSelect = (item: CategorizedMenuItem) => {
+        onChange(param.id, item.id);
+        closeMenu();
+    };
+
     return (
         <FieldWrapper label={param.label} hint={param.hint}>
-            <select
-                value={strVal}
-                onChange={e => onChange(param.id, e.target.value)}
+            <button
+                onClick={handleTrigger}
                 onMouseDown={e => e.stopPropagation()}
-                className={selectCls}
+                className={`${selectCls} flex items-center justify-between group h-[34px]`}
             >
-                {param.options?.map(opt => (
-                    <option key={String(opt.value)} value={String(opt.value)}>
-                        {opt.label}
-                    </option>
-                ))}
-            </select>
+                <span className="truncate group-hover:text-white transition-colors">{activeLabel}</span>
+                <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            <CategorizedMenu
+                isOpen={menuOpen}
+                items={options}
+                position={menuPos}
+                trigger={trigger}
+                onClose={closeMenu}
+                onSelect={handleSelect}
+                width="full"
+                showSearch={options.length > 8}
+                selectedId={strVal}
+            />
         </FieldWrapper>
     );
 }
@@ -172,7 +168,7 @@ function ColorField({ param, value, nodeId, onChange }: FieldProps) {
                     }}
                     onBlur={() => { isFocused.current = false; }}
                     onMouseDown={e => e.stopPropagation()}
-                    className="w-8 h-7 rounded border border-border-dim cursor-pointer bg-surface-base p-0.5"
+                    className="w-8 h-7 rounded-md border border-border-dim cursor-pointer bg-surface-base p-0.5"
                 />
                 <span className="text-xs font-mono text-zinc-400 uppercase">{local}</span>
             </div>
@@ -193,20 +189,18 @@ function TextareaField({ param, value, nodeId, onChange }: FieldProps) {
 
     return (
         <FieldWrapper label={param.label} hint={param.hint}>
-            <textarea
+            <StringInput
+                multiline={true}
                 value={local}
                 rows={8}
-                onFocus={(e) => {
-                    isFocused.current = true;
-                    e.target.select();
-                }}
-                onChange={e => {
-                    setLocal(e.target.value);
-                    onChange(param.id, e.target.value);
+                onChange={val => {
+                    setLocal(val);
+                    onChange(param.id, val);
                 }}
                 onBlur={() => { isFocused.current = false; }}
-                onMouseDown={e => e.stopPropagation()}
-                className={`${inputCls} resize-y font-mono leading-relaxed`}
+                variant="standard"
+                monospace={true}
+                inputClassName="w-full py-1.5 resize-y leading-relaxed"
             />
         </FieldWrapper>
     );
@@ -226,7 +220,7 @@ function SettingsSection({
     onDataChange: (key: string, value: unknown) => void;
 }) {
     return (
-        <div className="space-y-3 p-3 bg-cloud/5 border border-cloud/20 rounded-lg">
+        <div className="space-y-3 p-3 bg-cloud/5 border border-cloud/20 rounded-md">
             <h3 className="text-[10px] font-bold text-text-cloud uppercase tracking-widest">Node Settings</h3>
             <div className="space-y-3">
                 {params.map(param => {
@@ -314,15 +308,14 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         <div className="absolute top-0 right-0 h-full w-80 bg-surface-dim border-l border-surface-light z-40 animate-in slide-in-from-right duration-200">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-surface-light bg-surface-base/50">
-                <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm">
-                    <Cpu className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm tracking-tight">
                     N PANEL
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-1 hover:bg-surface-light rounded-sm text-zinc-400 hover:text-white transition-colors"
+                    className="px-2 py-1 hover:bg-surface-light rounded-md text-zinc-400 hover:text-white transition-colors text-[10px] font-bold tracking-widest"
                 >
-                    <X className="w-4 h-4" />
+                    CLOSE
                 </button>
             </div>
 
@@ -339,26 +332,22 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Identity</h3>
 
                             <FieldWrapper label="Label">
-                                <input
-                                    type="text"
-                                    defaultValue={labelVal}
+                                <StringInput
+                                    value={labelVal}
                                     key={`label-${selectedNode.id}-${labelVal}`}
-                                    onFocus={(e) => e.target.select()}
-                                    onBlur={e => handleDataChange('label', e.target.value)}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') handleDataChange('label', (e.target as HTMLInputElement).value);
-                                    }}
-                                    onMouseDown={e => e.stopPropagation()}
-                                    className={inputCls}
+                                    onChange={val => handleDataChange('label', val)}
+                                    // Use standard Enter/Escape blur behavior of StringInput
+                                    variant="standard"
+                                    inputClassName="w-full py-1.5"
                                 />
                             </FieldWrapper>
 
                             <FieldWrapper label="Type / ID">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-zinc-800 text-zinc-400 border border-zinc-700 shrink-0">
+                                    <span className="px-1.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide bg-zinc-800 text-zinc-400 border border-zinc-700 shrink-0">
                                         {selectedNode.type}
                                     </span>
-                                    <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded px-2 py-1.5 text-[10px] text-zinc-500 font-mono truncate select-all">
+                                    <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-zinc-500 font-mono truncate select-all">
                                         {selectedNode.id}
                                     </div>
                                 </div>
@@ -369,34 +358,18 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                         <div className="space-y-3">
                             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Transform</h3>
                             <div className="grid grid-cols-2 gap-3">
-                                <FieldWrapper label="X Position">
-                                    <input
-                                        type="number"
-                                        defaultValue={posX}
-                                        key={`pos-x-${selectedNode.id}-${posX}`}
-                                        onFocus={(e) => e.target.select()}
-                                        onBlur={e => handlePositionChange('x', e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') handlePositionChange('x', (e.target as HTMLInputElement).value);
-                                        }}
-                                        onMouseDown={e => e.stopPropagation()}
-                                        className={inputCls}
-                                    />
-                                </FieldWrapper>
-                                <FieldWrapper label="Y Position">
-                                    <input
-                                        type="number"
-                                        defaultValue={posY}
-                                        key={`pos-y-${selectedNode.id}-${posY}`}
-                                        onFocus={(e) => e.target.select()}
-                                        onBlur={e => handlePositionChange('y', e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') handlePositionChange('y', (e.target as HTMLInputElement).value);
-                                        }}
-                                        onMouseDown={e => e.stopPropagation()}
-                                        className={inputCls}
-                                    />
-                                </FieldWrapper>
+                                <NumericInput
+                                    label="X Position"
+                                    value={parseFloat(posX)}
+                                    onChange={(val) => handlePositionChange('x', String(val))}
+                                    inputClassName="h-8"
+                                />
+                                <NumericInput
+                                    label="Y Position"
+                                    value={parseFloat(posY)}
+                                    onChange={(val) => handlePositionChange('y', String(val))}
+                                    inputClassName="h-8"
+                                />
                             </div>
                         </div>
 
@@ -414,9 +387,9 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                         <div className="space-y-2">
                             <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest flex items-center justify-between">
                                 Raw Data
-                                <span className="text-[9px] bg-zinc-800 px-1 py-0.5 rounded text-zinc-500">READ ONLY</span>
+                                <span className="text-xs bg-zinc-800 px-1 py-0.5 rounded-md text-zinc-500">READ ONLY</span>
                             </h3>
-                            <div className="w-full bg-zinc-950 border border-zinc-800/50 rounded p-2 text-[10px] text-zinc-500 font-mono overflow-auto max-h-32">
+                            <div className="w-full bg-zinc-950 border border-zinc-800/50 rounded-md p-2 text-[10px] text-zinc-500 font-mono overflow-auto max-h-32">
                                 <pre>{JSON.stringify(nodeData, null, 2)}</pre>
                             </div>
                         </div>

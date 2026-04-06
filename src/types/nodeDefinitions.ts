@@ -1055,6 +1055,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             { id: 'in_a', type: 'target', variant: 'capsule', dataType: 'any' }
         ],
         defaultData: { minX: -10, maxX: 10, points: 100 },
+        minWidth: 320,
         aliases: ['plot', 'graph', 'chart', 'visualization'],
         params: [
             { id: 'minX', label: 'Min X', type: 'number' },

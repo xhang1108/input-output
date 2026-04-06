@@ -63,7 +63,7 @@ export const ArrayCalculusNode = memo((props: NodeProps) => {
                     paramId="mode"
                     data={data as Record<string, unknown>}
                     placeholder="Search Operation..."
-                    width="48"
+                    width="full"
                 />
             </div>
         </BaseNode>

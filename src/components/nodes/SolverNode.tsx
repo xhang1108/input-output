@@ -88,7 +88,7 @@ export const SolverNode = memo((props: NodeProps) => {
 
     return (
         <BaseNode {...props} data={nodeData}>
-            <div className="flex flex-col gap-2 p-2 relative items-center justify-center min-w-[130px]">
+            <div className="flex flex-col gap-2 p-2 relative items-stretch justify-center min-w-[130px] w-full">
                 <div className="text-[11px] font-bold text-zinc-300 tracking-widest uppercase mb-1">
                     Solver
                 </div>
@@ -102,7 +102,7 @@ export const SolverNode = memo((props: NodeProps) => {
                         label="Solve For"
                         placeholder="Auto"
                         overrideOptions={detectedOptions}
-                        width="36"
+                        width="full"
                     />
 
                 </div>

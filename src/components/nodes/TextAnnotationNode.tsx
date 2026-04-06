@@ -9,6 +9,7 @@ import { useHistoryStore } from '../../store/useHistoryStore';
 import { useBrain } from '../../context/BrainContext';
 import { Transaction } from '../../engine/types/engineTypes';
 import remarkGfm from 'remark-gfm';
+import { StringInput } from '../common/StringInput';
 
 /**
  * TextAnnotationNode (UI-01)
@@ -56,11 +57,8 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         return () => clearTimeout(timer);
     }, [data.markdown, isEditing, id, brain, prevMarkdown]);
 
-    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        updateNodeData(id, { markdown: e.target.value });
-    };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         if (e.key === 'Escape') {
             const initial = originalValue.current;
             if (initial !== null) {
@@ -70,7 +68,7 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
         }
     };
 
-    const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+    const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         const currentValue = e.target.value; // Stale State Defense: Direct DOM Access
         const initialValue = originalValue.current;
 
@@ -122,14 +120,19 @@ export const TextAnnotationNode = memo((props: NodeProps) => {
                 onPointerDown={(e) => e.stopPropagation()}
             >
                 {isEditing ? (
-                    <textarea
+                    <StringInput
                         ref={textareaRef}
+                        variant="ghost"
+                        multiline
+                        monospace
                         value={(data.markdown as string) || ''}
-                        onChange={handleTextChange}
+                        onChange={(val) => updateNodeData(id, { markdown: val })}
                         onKeyDown={handleKeyDown}
                         onBlur={handleBlur}
-                        className="flex-1 w-full h-full min-h-0 min-w-0 bg-transparent outline-none resize-none font-mono text-[10px] text-zinc-300 leading-relaxed overflow-hidden"
+                        className="flex-1 w-full h-full min-h-0 min-w-0"
+                        inputClassName="text-[10px] text-zinc-300 leading-relaxed overflow-hidden"
                         placeholder="Type markdown here..."
+                        autoSelect={false}
                     />
                 ) : (
                     <div className="flex-1 w-full h-full min-h-0 min-w-0 overflow-hidden">

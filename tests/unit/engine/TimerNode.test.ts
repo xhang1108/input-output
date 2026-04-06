@@ -200,4 +200,37 @@ describe('TimerNode Engine Logic (IN-11)', () => {
         expect(brain.activeTickers.has('timer_1')).toBe(false);
         expect(brain.tickerStates.has('timer_1')).toBe(false);
     });
+
+    it('should stop ticking when muted even if running is true', async () => {
+        brain.applyTransaction({
+            type: 'ADD_NODE',
+            payload: {
+                id: 'timer_muted',
+                type: 'IN-11',
+                data: { running: true, interval: 1000, currentValue: 0, muted: true }
+            }
+        });
+
+        // 1. Initially muted should NOT be in active tickers
+        expect(brain.activeTickers.has('timer_muted')).toBe(false);
+
+        // 2. Advance time 2000ms -> Value stays 0
+        brain.processTickers(3000);
+        expect(brain.getNodesMap().get('timer_muted').data.currentValue).toBe(0);
+
+        // 3. Unmute at T=3000
+        vi.setSystemTime(3000);
+        brain.applyTransaction({
+            type: 'UPDATE_NODE_DATA',
+            payload: { id: 'timer_muted', data: { muted: false } }
+        });
+
+        // 4. Should now be in activeTickers with lastTick = 3000
+        expect(brain.activeTickers.has('timer_muted')).toBe(true);
+        expect(brain.tickerStates.get('timer_muted').lastTick).toBe(3000);
+
+        // 5. Advance to 4001ms -> Tick!
+        brain.processTickers(4001);
+        expect(brain.getNodesMap().get('timer_muted').data.currentValue).toBe(1);
+    });
 });

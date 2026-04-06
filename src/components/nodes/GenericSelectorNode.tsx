@@ -25,14 +25,14 @@ export const GenericSelectorNode = memo((props: NodeProps) => {
 
     return (
         <BaseNode {...props}>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 w-full">
                 <NodeOpSelect
                     nodeId={props.id}
                     defId={props.type}
                     paramId={paramId}
                     data={props.data as Record<string, unknown>}
                     placeholder="Search Operation..."
-                    width="48"
+                    width="full"
                 />
             </div>
         </BaseNode>

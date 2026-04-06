@@ -48,10 +48,9 @@ export const ArrayExtractNode = memo((props: NodeProps) => {
                 data={data as Record<string, unknown>}
                 label="Index Mode"
                 placeholder="Select Mode..."
-                width="44"
+                width="full"
             />
         </BaseNode>
     );
 });
 ArrayExtractNode.displayName = 'ArrayExtractNode';
-

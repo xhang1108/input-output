@@ -1,9 +1,10 @@
-import { memo, useMemo, useRef, useCallback } from 'react';
+import { memo, useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import { NodeProps, Position } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import dynamic from 'next/dynamic';
+import { NumericInput } from '../common/NumericInput';
 
 // Next.js SSR guard: Prevent C++ native canvas addon from crashing OpenNext edge/worker bundles
 const VegaEmbed = dynamic(
@@ -403,6 +404,7 @@ export const PlotNode = memo((props: NodeProps) => {
     }, [viewMode, hasSize, data.dualAxis, plotData.table, data.minX, data.maxX, data.minY, data.maxY]);
 
     const lastSyncedRange = useRef<[number, number] | null>(null);
+    const focusedInput = useRef<string | null>(null);
 
     const handleGridSignal = useCallback((name: string, value: any) => {
         if (value && value.x) {
@@ -524,50 +526,33 @@ export const PlotNode = memo((props: NodeProps) => {
                 </div>
 
                 {/* Sampling Controls */}
-                <div className="flex gap-1 p-1.5 bg-zinc-900/50 border-t border-zinc-800/50 items-center text-[9px]">
-                    <div className="flex items-center gap-1 bg-zinc-950/50 px-1.5 py-0.5 rounded border border-zinc-800/50 flex-1">
-                        <span className="text-zinc-500 font-bold uppercase">Min X</span>
-                        <input
-                            type="number"
-                            value={(data.minX ?? -10) as string | number}
-                            className="bg-transparent outline-none text-zinc-300 w-full text-center"
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => {
-                                brain.applyTransaction({
-                                    type: 'UPDATE_NODE_DATA',
-                                    payload: { id, data: { minX: Number(e.target.value) } }
-                                });
-                            }}
-                        />
+                <div className="flex flex-col gap-1 p-2 bg-zinc-900/50 border-t border-zinc-800/50">
+                    <div className="grid grid-cols-3 gap-1.5 px-1 text-[8px] text-zinc-500 uppercase font-black tracking-widest leading-none">
+                        <span className="text-center">Min X</span>
+                        <span className="text-center">Max X</span>
+                        <span className="text-center">Points</span>
                     </div>
-                    <div className="flex items-center gap-1 bg-zinc-950/50 px-1.5 py-0.5 rounded border border-zinc-800/50 flex-1">
-                        <span className="text-zinc-500 font-bold uppercase">Max X</span>
-                        <input
-                            type="number"
-                            value={(data.maxX ?? 10) as string | number}
-                            className="bg-transparent outline-none text-zinc-300 w-full text-center"
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => {
-                                brain.applyTransaction({
-                                    type: 'UPDATE_NODE_DATA',
-                                    payload: { id, data: { maxX: Number(e.target.value) } }
-                                });
-                            }}
+                    <div className="grid grid-cols-3 gap-1.5 items-center">
+                        <NumericInput 
+                            value={typeof data.minX === 'number' ? data.minX : -10}
+                            onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { minX: val } } })}
+                            hideLabel={true}
+                            className="w-full"
+                            inputClassName="h-6 text-[10px] px-1 text-center"
                         />
-                    </div>
-                    <div className="flex items-center gap-1 bg-zinc-950/50 px-1.5 py-0.5 rounded border border-zinc-800/50 flex-1">
-                        <span className="text-zinc-500 font-bold uppercase">Pts</span>
-                        <input
-                            type="number"
-                            value={(data.points ?? 100) as string | number}
-                            className="bg-transparent outline-none text-zinc-300 w-full text-center"
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => {
-                                brain.applyTransaction({
-                                    type: 'UPDATE_NODE_DATA',
-                                    payload: { id, data: { points: Number(e.target.value) } }
-                                });
-                            }}
+                        <NumericInput 
+                            value={typeof data.maxX === 'number' ? data.maxX : 10}
+                            onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { maxX: val } } })}
+                            hideLabel={true}
+                            className="w-full"
+                            inputClassName="h-6 text-[10px] px-1 text-center"
+                        />
+                        <NumericInput 
+                            value={typeof data.points === 'number' ? data.points : 100}
+                            onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { points: val } } })}
+                            hideLabel={true}
+                            className="w-full"
+                            inputClassName="h-6 text-[10px] px-1 text-center"
                         />
                     </div>
                 </div>

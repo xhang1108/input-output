@@ -2,6 +2,8 @@ import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
+import { NumericInput } from '../common/NumericInput';
+import { StringInput } from '../common/StringInput';
 
 export const VectorFieldNode = memo((props: NodeProps) => {
     const { id, data } = props;
@@ -40,62 +42,56 @@ export const VectorFieldNode = memo((props: NodeProps) => {
                     </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1 mt-1">
-                    <div className="flex flex-col">
-                        <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Var 1</label>
-                        <input
-                            type="text"
-                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mt-1">
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[8px] text-zinc-500 uppercase font-black tracking-widest text-center">Var 1</span>
+                        <StringInput
                             value={var1}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => updateData({ var1: e.target.value })}
+                            onChange={(val) => updateData({ var1: val })}
+                            variant="standard"
+                            monospace={true}
+                            hideLabel={true}
+                            inputClassName="w-full h-6 text-[10px] px-1 text-center"
                         />
                     </div>
-                    <div className="flex flex-col">
-                        <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Var 2</label>
-                        <input
-                            type="text"
-                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[8px] text-zinc-500 uppercase font-black tracking-widest text-center">Var 2</span>
+                        <StringInput
                             value={var2}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => updateData({ var2: e.target.value })}
+                            onChange={(val) => updateData({ var2: val })}
+                            variant="standard"
+                            monospace={true}
+                            hideLabel={true}
+                            inputClassName="w-full h-6 text-[10px] px-1 text-center"
                         />
                     </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-1 mt-1">
-                    <div className="flex flex-col">
-                        <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Min</label>
-                        <input
-                            type="number"
-                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[8px] text-zinc-500 uppercase font-black tracking-widest text-center">Min</span>
+                        <NumericInput
                             value={min}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => updateData({ min: Number(e.target.value) })}
+                            onChange={(val) => updateData({ min: val })}
+                            hideLabel={true}
+                            inputClassName="w-full h-6 text-[10px] px-1 text-center"
                         />
                     </div>
-                    <div className="flex flex-col">
-                        <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1">Max</label>
-                        <input
-                            type="number"
-                            className="bg-black/20 border border-zinc-700/50 rounded-sm px-1.5 py-1 text-xs text-zinc-300 focus:border-focus/50 outline-none w-full"
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[8px] text-zinc-500 uppercase font-black tracking-widest text-center">Max</span>
+                        <NumericInput
                             value={max}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => updateData({ max: Number(e.target.value) })}
+                            onChange={(val) => updateData({ max: val })}
+                            hideLabel={true}
+                            inputClassName="w-full h-6 text-[10px] px-1 text-center"
                         />
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between border border-zinc-700/50 rounded-sm p-1 bg-black/10 mt-1">
-                    <label className="text-[9px] text-zinc-500 uppercase font-bold pl-1 w-full flex-1">Density</label>
-                    <input
-                        type="number"
-                        className="w-12 bg-transparent text-right text-xs text-zinc-300 outline-none"
+                <div className="flex flex-col gap-1 mt-1">
+                    <span className="text-[8px] text-zinc-500 uppercase font-black tracking-widest text-center">Density</span>
+                    <NumericInput
                         value={density}
-                        min={2}
-                        max={50}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => updateData({ density: Number(e.target.value) })}
+                        onChange={(val) => updateData({ density: val })}
+                        hideLabel={true}
+                        inputClassName="w-full h-6 text-[10px] px-1 text-center"
                     />
                 </div>
             </div>

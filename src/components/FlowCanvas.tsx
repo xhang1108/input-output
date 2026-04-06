@@ -614,23 +614,6 @@ export function FlowCanvas({
                         e.stopPropagation();
                     }
                 }}
-                onContextMenu={(e) => {
-                    e.preventDefault();
-                    if (Date.now() - lastCancelTimestamp.current < 100) return;
-
-                    if (mode !== 'IDLE') {
-                        cancelGrab(true);
-                        return;
-                    }
-                    if (isReadOnly) return;
-                    setContextMenu({
-                        isOpen: true,
-                        x: e.clientX,
-                        y: e.clientY,
-                        type: 'CANVAS'
-                    });
-                    clearHighlightedPath();
-                }}
             >
                 {!isLoaded && (
                     <div className="absolute inset-0 z-9999 bg-zinc-800 flex items-center justify-center">
@@ -747,7 +730,6 @@ export function FlowCanvas({
                                     detachSelected,
                                     deleteSelected,
                                     viewSpecs: () => { },
-                                    alignSelectedNodes,
                                     traceUpstream: () => {
                                         const selected = getNodes().find(n => n.selected);
                                         if (selected) {
@@ -756,6 +738,7 @@ export function FlowCanvas({
                                             logAction(`Trace Upstream: ${selected.id}`);
                                         }
                                     },
+                                    toggleMute: () => { },
                                     logAction,
                                 }, contextMenu.x, contextMenu.y)
                                 : (() => {
@@ -784,7 +767,6 @@ export function FlowCanvas({
                                         copyToClipboard,
                                         detachSelected,
                                         deleteSelected,
-                                        alignSelectedNodes,
                                         traceUpstream: () => {
                                             const targetId = contextMenu.nodeId || getNodes().find(n => n.selected)?.id;
                                             if (targetId) {
@@ -793,8 +775,20 @@ export function FlowCanvas({
                                                 logAction(`Trace Upstream: ${targetId}`);
                                             }
                                         },
+                                        toggleMute: () => {
+                                            if (isReadOnly) return;
+                                            const selected = getNodes().filter(n => n.selected);
+                                            selected.forEach(node => {
+                                                const isMuted = !!node.data?.muted;
+                                                brain.applyTransaction({
+                                                    type: 'UPDATE_NODE_DATA',
+                                                    payload: { id: node.id, data: { muted: !isMuted } }
+                                                });
+                                            });
+                                            if (selected.length > 0) logAction(`Toggle Mute [${selected.length}] (Ctx)`);
+                                        },
                                         logAction,
-                                    }, hasSpecs);
+                                    }, hasSpecs, !!node?.data?.muted);
                                 })()
                             }
                         />

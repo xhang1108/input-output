@@ -18,6 +18,7 @@ import { useAppStore } from '../../store/useStore';
 export type { HandleConfig } from '../../types/nodeDefinitions';
 import { SingleHandle } from './SingleHandle';
 import { CapsuleHandle } from './CapsuleHandle';
+import { StringInput } from '../common/StringInput';
 
 const DynamicNodeHandle = memo(({ h, id, isConnectable, data }: { h: HandleConfig, id: string, isConnectable: boolean, data: any }) => {
     if (h.variant === 'capsule') {
@@ -292,16 +293,16 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             style={{
                 minHeight: `${minHeight}px`,
                 background: 'var(--node-bg)',
-                opacity: visualState?.muted ? 0.4 : 1,
-                filter: visualState?.muted ? 'grayscale(0.4)' : 'none',
+                opacity: data.muted ? 0.4 : 1,
+                filter: data.muted ? 'grayscale(0.4)' : 'none',
                 transformOrigin: '0 0',
                 ...style
             }}
             onDoubleClick={onDoubleClick}
         >
 
-            {/* Muted Bypass Visual */}
-            {!!visualState?.muted && (
+            {/* Muted Bypass Visual - Only show if node has both inputs and outputs */}
+            {!!data.muted && leftHandles.length > 0 && rightHandles.length > 0 && (
                 <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-xl">
                     <svg className="w-full h-full">
                         <line
@@ -318,6 +319,15 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
                 </div>
             )}
 
+            {/* Central Muted Overlay */}
+            {!!data.muted && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none select-none animate-in fade-in zoom-in-95 duration-200">
+                    <span className="text-[14px] font-black tracking-[0.3em] uppercase text-red-500/80 drop-shadow-[0_0_8px_rgba(239, 68, 68, 0.4)]">
+                        MUTED
+                    </span>
+                </div>
+            )}
+
             {/* Header */}
             <div
                 className="px-3 py-2 border-b border-zinc-800/60 flex items-center justify-between shrink-0 rounded-t-xl"
@@ -326,23 +336,27 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             >
                 <div className="flex items-center gap-2 overflow-hidden flex-1">
                     {isRenaming ? (
-                        <input
+                        <StringInput
                             ref={inputRef}
                             value={title}
-                            onFocus={(e) => e.target.select()}
-                            onChange={onChange}
+                            autoSelect={true}
+                            onChange={(val) => {
+                                setTitle(val);
+                                const trimmed = val.trim();
+                                const invalid = trimmed === '' || labelSetRef.current.has(trimmed.toLowerCase());
+                                setIsError(invalid);
+                            }}
                             onBlur={handleBlur}
                             onKeyDown={handleKeyDown}
-                            className={cn(
-                                "bg-transparent text-xs font-bold outline-none w-full border-b transition-colors duration-200",
+                            variant="ghost"
+                            monospace={false}
+                            inputClassName={cn(
+                                "text-xs font-bold w-full border-b transition-colors duration-200 rounded-none px-0 py-0",
                                 isError ? "text-red-400 border-red-500/50" : "text-zinc-200 border-transparent focus:border-zinc-500/50"
                             )}
                         />
                     ) : (
                         <span className="text-xs font-bold text-zinc-300 select-none truncate">{title}</span>
-                    )}
-                    {!!visualState?.muted && (
-                        <span className="text-[8px] bg-zinc-800 text-zinc-500 px-1 rounded uppercase tracking-tighter font-black border border-zinc-700/50 leading-tight">Muted</span>
                     )}
                 </div>
 
@@ -353,7 +367,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             </div>
 
             {/* Content Body — overflow-hidden here clips Sticky Note text without affecting Handles */}
-            <div className="p-2 flex-1 flex flex-col items-start justify-start min-h-0 min-w-0 overflow-hidden rounded-b-xl">
+            <div className="p-2 flex-1 flex flex-col items-stretch justify-start min-h-0 min-w-0 overflow-hidden rounded-b-xl">
                {children ? children : (
                     <div className="text-[10px] text-zinc-500 font-mono">ID: {id}</div>
                 )}

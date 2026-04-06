@@ -9,6 +9,7 @@ import { useBrain } from '../../context/BrainContext';
 import { InputOutputEngine } from '../../engine/InputOutputEngine';
 import { NodeOpSelect } from './NodeOpSelect';
 import { CategorizedMenuItem } from '../ui/CategorizedMenu';
+import { StringInput } from '../common/StringInput';
 
 const PREDEFINED_UNIT_IDS = [
     'REMOVE',
@@ -117,7 +118,7 @@ export const UnitNode = memo((props: NodeProps) => {
                             data={data}
                             label=""
                             onSelect={handleMenuSelect}
-                            width="48"
+                            width="full"
                         />
                     )}
 
@@ -134,15 +135,19 @@ export const UnitNode = memo((props: NodeProps) => {
                                     <path d="M10 18H5V13M19 13V18H14M5 11V6H10M14 6V11H19" />
                                 </svg>
                             </button>
-                            <input
+                            <StringInput
                                 autoFocus
-                                className="nodrag bg-transparent text-zinc-100 text-[11px] px-1 py-0.5 outline-none w-20 text-center font-mono placeholder:text-zinc-600"
                                 value={localUnit}
-                                onFocus={(e) => e.target.select()}
-                                onChange={handleInputChange}
+                                onChange={(val) => {
+                                    setLocalUnit(val);
+                                    validateAndApply(val, true, 'custom');
+                                }}
                                 onKeyDown={handleKeyDown}
                                 placeholder="e.g. m/s"
-                                onMouseDown={(e) => e.stopPropagation()}
+                                variant="ghost"
+                                monospace={true}
+                                autoSelect={true}
+                                inputClassName="text-center text-[11px] px-1 py-0.5 w-20"
                             />
                         </div>
                     )}

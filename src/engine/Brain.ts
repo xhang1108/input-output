@@ -1369,7 +1369,7 @@ export class Brain {
             return;
         }
 
-        const isRunning = !!node.data?.running;
+        const isRunning = !!node.data?.running && !node.data?.muted;
         // RESET GUARD: If current value matches initial, or just toggled run, sync the tick.
         const isReset = node.data?.currentValue === node.data?.initialValue;
 
@@ -1390,7 +1390,7 @@ export class Brain {
         for (const id of this.activeTickers) {
             const node = this.state.nodes.get(id);
             const state = this.tickerStates.get(id);
-            if (!node || !state) continue;
+            if (!node || !state || node.data?.muted) continue;
 
             const rawInterval = Number(node.data?.interval ?? 1000);
             const step = Number(node.data?.step ?? 1);

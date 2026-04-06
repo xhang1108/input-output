@@ -1,14 +1,16 @@
 import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps, useReactFlow, useStore, ReactFlowState } from '@xyflow/react';
+import { NodeProps, useReactFlow } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { Settings2 } from 'lucide-react';
 import { useNodeUpdate } from './hooks/useNodeDebounce';
+import { NumericInput } from '../common/NumericInput';
 
 export const SliderNode = memo((props: NodeProps) => {
     const { id, data } = props;
     const brain = useBrain();
+    const { updateNodeData } = useReactFlow();
 
     const min = typeof data.min === 'number' ? data.min : 0;
     const max = typeof data.max === 'number' ? data.max : 100;
@@ -24,7 +26,7 @@ export const SliderNode = memo((props: NodeProps) => {
         const stepStr = step.toString();
         const precision = stepStr.includes('.') ? stepStr.split('.')[1].length : 0;
         return parseFloat(quantized.toFixed(precision));
-    }, [min, max, step]);
+    }, [min, step]);
 
     // Pulse Fix: Quantize initial value immediately to handle existing precision errors in IOGL files
     const sanitizedInitialValue = quantize(Number(PayloadUtils.unwrap(data.value)) || 0);
@@ -39,85 +41,20 @@ export const SliderNode = memo((props: NodeProps) => {
         { mode: 'throttle' }
     );
 
-    // [UI Fix] Local string state for partial input (e.g. typing "-" or ".")
-    const [inputString, setInputString] = useState<string>(sanitizedInitialValue.toString());
-    const isEditingInput = useRef(false);
-
     const [showSettings, setShowSettings] = useState(false);
     const isInteracting = useRef(false);
 
-    const { updateNodeData } = useReactFlow();
-
-    // Sync input string with local value when it changes from outside (drag/keyboard/brain)
-    useEffect(() => {
-        if (!isEditingInput.current) {
-            setInputString(localValue.toString());
-        }
-    }, [localValue]);
-
-    const selectedCount = useStore((s: ReactFlowState) => s.nodes.filter((n) => n.selected).length);
-
-    // Node-level keyboard control: Adjust value when node is selected
-    useEffect(() => {
-        if (!props.selected || selectedCount > 1) return;
-
-        const handleGlobalKeyDown = (e: KeyboardEvent) => {
-            // Ignore if user is typing in an input or textarea
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-                return;
-            }
-
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                setLocalValue(prev => quantize(prev - step));
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                setLocalValue(prev => quantize(prev + step));
-            }
-        };
-
-        window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
-        return () => window.removeEventListener('keydown', handleGlobalKeyDown, { capture: true });
-    }, [props.selected, selectedCount, min, max, step, setLocalValue, quantize]);
-
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const valStr = e.target.value;
-        setInputString(valStr);
-
-        // Allow partial strings like "-", ".", "-." etc. in the UI
-        // But only update the numeric state if it's a real number
-        const valNum = parseFloat(valStr);
-        if (!isNaN(valNum) && valStr !== '-' && valStr !== '+' && valStr !== '.') {
-            setLocalValue(quantize(valNum));
-        }
+        setLocalValue(quantize(Number(e.target.value)));
     }, [setLocalValue, quantize]);
 
-    const handleBlur = useCallback(() => {
-        isEditingInput.current = false;
-        // Snap back to a valid, quantized string
-        setInputString(localValue.toString());
-    }, [localValue]);
-
-    const handleFocus = useCallback(() => {
-        isEditingInput.current = true;
-    }, []);
-
-    const handleSettingChange = (key: string, value: string) => {
-        const numVal = parseFloat(value);
-        if (!isNaN(numVal)) {
-            updateNodeData(id, { [key]: numVal });
-            brain.applyTransaction({
-                type: 'UPDATE_NODE_DATA',
-                payload: { id, data: { [key]: numVal } }
-            });
-        }
-    };
+    const handleInputChange = useCallback((val: number) => {
+        setLocalValue(quantize(val));
+    }, [setLocalValue, quantize]);
 
     return (
-        <BaseNode {...props}>
-            <div className="flex flex-col gap-3 p-1 w-full">
+        <BaseNode {...props} style={{ width: 140 }}>
+            <div className="flex flex-col gap-3 p-1 w-full text-zinc-100">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-1.5">
                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Slider</label>
@@ -128,58 +65,43 @@ export const SliderNode = memo((props: NodeProps) => {
                             <Settings2 size={12} />
                         </button>
                     </div>
-                    <input
-                        type="text"
-                        inputMode="decimal"
-                        value={inputString}
-                        onChange={handleChange}
-                        onFocus={handleFocus}
-                        onBlur={handleBlur}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        className="nodrag text-lg font-mono font-bold bg-transparent border-none outline-none text-left w-14 focus:text-cyan-400 transition-colors"
-                        style={{ color: 'var(--color-scalar)' }}
-                    />
+                    <div className="flex-1 min-w-0">
+                        <NumericInput
+                            value={localValue}
+                            onChange={handleInputChange}
+                            hideLabel={true}
+                            className="w-10 mx-auto"
+                            inputClassName="h-8 text-[11px] text-center"
+                        />
+                    </div>
                 </div>
 
                 {showSettings && (
                     <div className="flex flex-col gap-2 p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 animate-in fade-in slide-in-from-top-1 duration-200">
                         <div className="grid grid-cols-3 gap-2">
-                            <div className="flex flex-col gap-1">
-                                <span className="text-[8px] text-zinc-500 uppercase font-bold">Min</span>
-                                <input
-                                    type="number"
-                                    value={min}
-                                    onFocus={(e) => e.target.select()}
-                                    onChange={(e) => handleSettingChange('min', e.target.value)}
-                                    className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-[8px] text-zinc-500 uppercase font-bold">Max</span>
-                                <input
-                                    type="number"
-                                    value={max}
-                                    onFocus={(e) => e.target.select()}
-                                    onChange={(e) => handleSettingChange('max', e.target.value)}
-                                    className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-[8px] text-zinc-500 uppercase font-bold">Step</span>
-                                <input
-                                    type="number"
-                                    value={step}
-                                    onFocus={(e) => e.target.select()}
-                                    onChange={(e) => handleSettingChange('step', e.target.value)}
-                                    className="bg-zinc-950 border border-zinc-800 rounded-sm px-1 py-0.5 text-[10px] text-zinc-300 outline-none focus:border-cyan-500/50"
-                                />
-                            </div>
+                            <NumericInput
+                                label="Min"
+                                value={min}
+                                onChange={(val) => updateNodeData(id, { min: val })}
+                                inputClassName="h-7"
+                            />
+                            <NumericInput
+                                label="Max"
+                                value={max}
+                                onChange={(val) => updateNodeData(id, { max: val })}
+                                inputClassName="h-7"
+                            />
+                            <NumericInput
+                                label="Step"
+                                value={step}
+                                onChange={(val) => updateNodeData(id, { step: val })}
+                                inputClassName="h-7"
+                            />
                         </div>
                     </div>
                 )}
 
-                <div 
+                <div
                     className="relative group"
                     onPointerDown={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}

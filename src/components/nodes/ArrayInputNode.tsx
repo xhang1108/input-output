@@ -7,6 +7,7 @@ import { BaseNode } from './BaseNode';
 import { ResizeHandle } from './ResizeHandle';
 import { useNodeDimensions } from './hooks/useNodeDimensions';
 import { useNodeDebounce } from './hooks/useNodeDebounce';
+import { NumericInput } from '../common/NumericInput';
 import { Brain } from '../../engine/Brain';
 
 /**
@@ -148,15 +149,6 @@ export const ArrayInputNode = memo((props: NodeProps) => {
         initialGridRef.current = null;
     }, [id, grid, rows, cols, pushHistory, isRestoring]);
 
-    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Escape') {
-            const initial = initialGridRef.current;
-            if (initial) {
-                setGrid(initial);
-            }
-            e.currentTarget.blur();
-        }
-    }, [setGrid]);
 
     const updateCell = useCallback((r: number, c: number, val: string) => {
         if (val === '') {
@@ -206,22 +198,22 @@ export const ArrayInputNode = memo((props: NodeProps) => {
                                 {row.map((val, c) => {
                                     const strVal = String(val);
                                     const isShort = strVal.length <= 5;
+                                    const valParsed = parseFloat(strVal);
+                                    const isLeadingToken = strVal === '-' || strVal === '.' || strVal === '-.' || strVal === '+';
+                                    const isValid = !isNaN(valParsed) || strVal === '' || isLeadingToken;
+
                                     return (
                                         <div
                                             key={c}
-                                            className={`w-10 h-8 bg-zinc-900/50 border rounded flex items-center ${isShort ? 'justify-center' : 'justify-start'} px-1 transition-colors ${isNaN(parseFloat(strVal)) && strVal !== ''
-                                                ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]'
-                                                : 'border-zinc-800'
-                                                }`}
+                                            className="w-10 h-8 bg-zinc-900/50 border border-zinc-800 rounded flex items-center justify-center transition-colors"
                                         >
-                                            <input
-                                                type="text"
-                                                value={val}
+                                            <NumericInput
+                                                value={typeof val === 'number' ? val : parseFloat(String(val)) || 0}
+                                                onChange={(newVal) => updateCell(r, r, String(newVal))}
                                                 onFocus={handleFocus}
                                                 onBlur={handleBlur}
-                                                onKeyDown={handleKeyDown}
-                                                onChange={(e) => updateCell(r, c, e.target.value)}
-                                                className={`w-full h-full bg-transparent ${isShort ? 'text-center' : 'text-left'} text-[10px] text-zinc-300 outline-none font-mono`}
+                                                hideLabel={true}
+                                                inputClassName={`w-full h-full text-[10px] bg-transparent border-none text-zinc-300 text-center`}
                                             />
                                         </div>
                                     );
