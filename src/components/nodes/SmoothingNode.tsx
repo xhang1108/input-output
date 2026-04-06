@@ -1,8 +1,8 @@
 import { memo, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { NodeProps, Position } from '@xyflow/react';
-import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
+import { NumericInput } from '../common/NumericInput';
 
 export const SmoothingNode = memo((props: NodeProps) => {
     const { id, data } = props;
@@ -19,16 +19,13 @@ export const SmoothingNode = memo((props: NodeProps) => {
     return (
         <BaseNode {...props}>
             <div className="flex flex-col gap-2 p-1 min-w-[120px]">
-                <div className="flex items-center justify-between border border-zinc-700/50 rounded p-1 bg-black/10">
-                    <label className="text-[9px] text-zinc-500 uppercase font-bold text-right pr-2">Window</label>
-                    <input
-                        type="number"
-                        className="nodrag w-16 border border-zinc-700/50 rounded px-1 text-xs text-zinc-300 focus:border-focus/50 outline-none transition-colors"
-                        style={{ background: 'var(--node-bg-header)' }}
+                <div className="flex flex-col gap-1 px-1">
+                    <span className="text-[8px] text-zinc-500 uppercase font-black tracking-widest text-center">Window Size</span>
+                    <NumericInput
                         value={windowMode}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => updateData({ windowMode: Number(e.target.value) })}
-                        onMouseDown={(e) => e.stopPropagation()}
+                        onChange={(val) => updateData({ windowMode: val })}
+                        hideLabel={true}
+                        inputClassName="w-full h-6 text-[10px] px-1 text-center"
                     />
                 </div>
             </div>

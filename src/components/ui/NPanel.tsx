@@ -8,6 +8,7 @@ import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { NodeParameter } from '../../types/nodeDefinitions';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { StringInput } from '../common/StringInput';
+import { NumericInput } from '../common/NumericInput';
 
 // ─── Atomic Field Components ──────────────────────────────────────────────────
 
@@ -26,46 +27,17 @@ const selectCls = "w-full bg-surface-base border border-border-dim/80 rounded-md
 
 type FieldProps = { param: NodeParameter; value: unknown; nodeId: string; onChange: (id: string, v: unknown) => void };
 
-function NumberField({ param, value, nodeId, onChange }: FieldProps) {
-    const toNum = (v: unknown) => {
-        const unwrapped = PayloadUtils.unwrap(v);
-        return typeof unwrapped === 'number' ? unwrapped : (parseFloat(String(unwrapped)) || 0);
-    };
-    const [local, setLocal] = useState(() => String(toNum(value)));
-    const isFocused = useRef(false);
-
-    // Sync when node switches (always) or external value changes (only if not focused)
-    useEffect(() => {
-        if (!isFocused.current) {
-            setLocal(String(toNum(value)));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nodeId, value]);
+function NumberField({ param, value, onChange }: FieldProps) {
+    const val = PayloadUtils.unwrap(value);
+    const num = typeof val === 'number' ? val : (parseFloat(String(val)) || 0);
 
     return (
         <FieldWrapper label={param.label} hint={param.hint}>
-            <input
-                type="number"
-                min={param.min}
-                max={param.max}
-                step={param.step ?? 'any'}
-                value={local}
-                onFocus={(e) => {
-                    isFocused.current = true;
-                    e.target.select();
-                }}
-                onChange={e => {
-                    setLocal(e.target.value);
-                    const v = parseFloat(e.target.value);
-                    if (!isNaN(v)) onChange(param.id, v);
-                }}
-                onBlur={() => {
-                    isFocused.current = false;
-                    // Re-sync to stored value on blur to correct any invalid input
-                    setLocal(String(toNum(value)));
-                }}
-                onMouseDown={e => e.stopPropagation()}
-                className={inputCls}
+            <NumericInput
+                value={num}
+                onChange={(v) => onChange(param.id, v)}
+                hideLabel={true}
+                inputClassName="w-full py-1.5"
             />
         </FieldWrapper>
     );
@@ -359,34 +331,18 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                         <div className="space-y-3">
                             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Transform</h3>
                             <div className="grid grid-cols-2 gap-3">
-                                <FieldWrapper label="X Position">
-                                    <input
-                                        type="number"
-                                        defaultValue={posX}
-                                        key={`pos-x-${selectedNode.id}-${posX}`}
-                                        onFocus={(e) => e.target.select()}
-                                        onBlur={e => handlePositionChange('x', e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') handlePositionChange('x', (e.target as HTMLInputElement).value);
-                                        }}
-                                        onMouseDown={e => e.stopPropagation()}
-                                        className={inputCls}
-                                    />
-                                </FieldWrapper>
-                                <FieldWrapper label="Y Position">
-                                    <input
-                                        type="number"
-                                        defaultValue={posY}
-                                        key={`pos-y-${selectedNode.id}-${posY}`}
-                                        onFocus={(e) => e.target.select()}
-                                        onBlur={e => handlePositionChange('y', e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') handlePositionChange('y', (e.target as HTMLInputElement).value);
-                                        }}
-                                        onMouseDown={e => e.stopPropagation()}
-                                        className={inputCls}
-                                    />
-                                </FieldWrapper>
+                                <NumericInput
+                                    label="X Position"
+                                    value={parseFloat(posX)}
+                                    onChange={(val) => handlePositionChange('x', String(val))}
+                                    inputClassName="h-8"
+                                />
+                                <NumericInput
+                                    label="Y Position"
+                                    value={parseFloat(posY)}
+                                    onChange={(val) => handlePositionChange('y', String(val))}
+                                    inputClassName="h-8"
+                                />
                             </div>
                         </div>
 
