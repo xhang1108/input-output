@@ -35,17 +35,6 @@ export const InputNode = memo((props: NodeProps) => {
         }
     }, [unwrappedValue, isFocused]);
 
-    const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const valStr = e.target.value;
-        setLocalValue(valStr);
-
-        // Allow entering leading minus sign or empty string without immediate Brain sync
-        if (valStr === '' || valStr === '-') return;
-
-        const val = parseFloat(valStr);
-        if (!isNaN(val)) brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: val } } });
-    }, [id, brain]);
-
     const handleStringChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setLocalValue(val);
@@ -86,23 +75,6 @@ export const InputNode = memo((props: NodeProps) => {
                 brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: initial } } });
             }
             e.currentTarget.blur();
-            return;
-        }
-
-        if (data.type !== 'string' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-            e.preventDefault();
-            const currentVal = parseFloat(localValue) || 0;
-            const step = e.shiftKey ? 10 : (e.altKey ? 0.1 : 1);
-            const direction = e.key === 'ArrowUp' ? 1 : -1;
-            const nextVal = currentVal + (direction * step);
-            
-            // Precision Guard: Use toFixed to avoid IEEE 754 ghost decimals
-            // If using Alt (0.1 step), we use 1 decimal place. Otherwise 0 or existing precision.
-            const precision = e.altKey ? 1 : 0;
-            const roundedVal = parseFloat(nextVal.toFixed(10)); // Use high precision then parseFloat to trim
-            
-            setLocalValue(String(roundedVal));
-            brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: roundedVal } } });
             return;
         }
 

@@ -53,8 +53,8 @@ export const SliderNode = memo((props: NodeProps) => {
     }, [setLocalValue, quantize]);
 
     return (
-        <BaseNode {...props}>
-            <div className="flex flex-col gap-3 p-1 w-full">
+        <BaseNode {...props} style={{ width: 140 }}>
+            <div className="flex flex-col gap-3 p-1 w-full text-zinc-100">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-1.5">
                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Slider</label>
@@ -70,7 +70,8 @@ export const SliderNode = memo((props: NodeProps) => {
                             value={localValue}
                             onChange={handleInputChange}
                             hideLabel={true}
-                            inputClassName="text-sm font-bold text-zinc-100 h-8"
+                            className="w-10 mx-auto"
+                            inputClassName="h-8 text-[11px] text-center"
                         />
                     </div>
                 </div>
@@ -78,19 +79,19 @@ export const SliderNode = memo((props: NodeProps) => {
                 {showSettings && (
                     <div className="flex flex-col gap-2 p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 animate-in fade-in slide-in-from-top-1 duration-200">
                         <div className="grid grid-cols-3 gap-2">
-                            <NumericInput 
+                            <NumericInput
                                 label="Min"
                                 value={min}
                                 onChange={(val) => updateNodeData(id, { min: val })}
                                 inputClassName="h-7"
                             />
-                            <NumericInput 
+                            <NumericInput
                                 label="Max"
                                 value={max}
                                 onChange={(val) => updateNodeData(id, { max: val })}
                                 inputClassName="h-7"
                             />
-                            <NumericInput 
+                            <NumericInput
                                 label="Step"
                                 value={step}
                                 onChange={(val) => updateNodeData(id, { step: val })}
@@ -100,7 +101,7 @@ export const SliderNode = memo((props: NodeProps) => {
                     </div>
                 )}
 
-                <div 
+                <div
                     className="relative group"
                     onPointerDown={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}

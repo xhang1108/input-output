@@ -526,31 +526,35 @@ export const PlotNode = memo((props: NodeProps) => {
                 </div>
 
                 {/* Sampling Controls */}
-                <div className="flex gap-1 p-1.5 bg-zinc-900/50 border-t border-zinc-800/50 items-center text-[9px]">
-                    <NumericInput 
-                        label="Min X"
-                        hideLabel={false}
-                        value={typeof data.minX === 'number' ? data.minX : -10}
-                        onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { minX: val } } })}
-                        className="flex-1"
-                        inputClassName="h-6"
-                    />
-                    <NumericInput 
-                        label="Max X"
-                        hideLabel={false}
-                        value={typeof data.maxX === 'number' ? data.maxX : 10}
-                        onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { maxX: val } } })}
-                        className="flex-1"
-                        inputClassName="h-6"
-                    />
-                    <NumericInput 
-                        label="Pts"
-                        hideLabel={false}
-                        value={typeof data.points === 'number' ? data.points : 100}
-                        onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { points: val } } })}
-                        className="flex-1"
-                        inputClassName="h-6"
-                    />
+                <div className="flex flex-col gap-1 p-2 bg-zinc-900/50 border-t border-zinc-800/50">
+                    <div className="grid grid-cols-3 gap-1.5 px-1 text-[8px] text-zinc-500 uppercase font-black tracking-widest leading-none">
+                        <span className="text-center">Min X</span>
+                        <span className="text-center">Max X</span>
+                        <span className="text-center">Points</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5 items-center">
+                        <NumericInput 
+                            value={typeof data.minX === 'number' ? data.minX : -10}
+                            onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { minX: val } } })}
+                            hideLabel={true}
+                            className="w-full"
+                            inputClassName="h-6 text-[10px] px-1 text-center"
+                        />
+                        <NumericInput 
+                            value={typeof data.maxX === 'number' ? data.maxX : 10}
+                            onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { maxX: val } } })}
+                            hideLabel={true}
+                            className="w-full"
+                            inputClassName="h-6 text-[10px] px-1 text-center"
+                        />
+                        <NumericInput 
+                            value={typeof data.points === 'number' ? data.points : 100}
+                            onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { points: val } } })}
+                            hideLabel={true}
+                            className="w-full"
+                            inputClassName="h-6 text-[10px] px-1 text-center"
+                        />
+                    </div>
                 </div>
             </div>
         </BaseNode>

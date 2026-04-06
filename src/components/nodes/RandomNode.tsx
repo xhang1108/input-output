@@ -51,7 +51,7 @@ export const RandomNode = memo((props: NodeProps) => {
                 />
 
                 {/* Dimensions Grid */}
-                <div className="grid grid-cols-2 gap-2 bg-zinc-900/30 p-2 rounded-md border border-zinc-800/30">
+                <div className="grid grid-cols-2 gap-2 bg-zinc-900/30 p-2 rounded-xl border border-zinc-800/30">
                     <NumericInput 
                         label="Rows"
                         value={typeof data.rows === 'number' ? data.rows : 1}
@@ -68,7 +68,7 @@ export const RandomNode = memo((props: NodeProps) => {
 
                 {/* Distribution Parameters */}
                 <div className="h-[105px]">
-                    <div className="flex flex-col gap-2 bg-zinc-900/50 p-2 rounded-md border border-zinc-700/50 h-full">
+                    <div className="flex flex-col gap-2 bg-zinc-900/50 p-2 rounded-xl border border-zinc-700/50 h-full">
                         {(isUniform || isNormal) && (
                             <div className="grid grid-cols-2 gap-2 animate-in fade-in zoom-in-95 duration-200">
                                 <NumericInput 

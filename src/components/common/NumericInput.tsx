@@ -21,6 +21,8 @@ interface NumericInputProps {
     precision?: number;
     /** Whether to hide the label */
     hideLabel?: boolean;
+    /** Optional layout for label and input */
+    layout?: 'vertical' | 'horizontal';
     /** Optional focus callback */
     onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
     /** Optional blur callback */
@@ -37,6 +39,7 @@ export const NumericInput = ({
     inputMode = "decimal",
     precision = 10,
     hideLabel = false,
+    layout = "vertical",
     onFocus,
     onBlur
 }: NumericInputProps) => {
@@ -52,7 +55,7 @@ export const NumericInput = ({
 
     const handleChange = (val: string) => {
         setLocalStr(val);
-        
+
         const isLeadingToken = val === '-' || val === '.' || val === '-.' || val === '+';
         if (isLeadingToken || val === '') return;
 
@@ -69,7 +72,7 @@ export const NumericInput = ({
             const direction = e.key === 'ArrowUp' ? 1 : -1;
             const stepMultiplier = e.shiftKey ? 10 : (e.altKey ? 0.1 : 1);
             const nextVal = parseFloat((currentVal + direction * stepMultiplier).toFixed(precision));
-            
+
             setLocalStr(String(nextVal));
             onChange(nextVal);
         } else {
@@ -90,17 +93,20 @@ export const NumericInput = ({
         onBlur?.(e);
     };
 
+    const isHorizontal = layout === 'horizontal' && !hideLabel;
+
     return (
-        <div className={`flex flex-col gap-1 ${className}`}>
+        <div className={`flex ${isHorizontal ? 'flex-row items-center gap-2' : 'flex-col gap-1'} ${className}`}>
             {!hideLabel && label && (
-                <label className="text-[9px] text-zinc-500 uppercase font-black tracking-widest pl-0.5">
+                <label className={`text-[9px] text-zinc-500 uppercase font-black tracking-widest text-center w-full ${isHorizontal ? 'whitespace-nowrap shrink-0' : 'text-center w-full'}`}>
                     {label}
                 </label>
             )}
             <input
                 type="text"
                 inputMode={inputMode}
-                className={`bg-black/40 border border-zinc-800 rounded px-1.5 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors font-mono ${inputClassName}`}
+                className={`border border-zinc-700 rounded-md px-2 py-1 text-xs text-zinc-100 nodrag outline-none focus:border-focus/50 transition-colors font-mono ${inputClassName}`}
+                style={{ background: 'var(--node-bg)' }}
                 value={localStr}
                 placeholder={placeholder}
                 onFocus={handleFocus}
