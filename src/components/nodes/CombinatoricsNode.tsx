@@ -30,11 +30,10 @@ export const CombinatoricsNode = memo((props: NodeProps) => {
                     paramId="mode"
                     data={data}
                     label="Operation"
-                    width="48"
+                    width="full"
                 />
             </div>
         </BaseNode>
     );
 });
-CombinatoricsNode.displayName = 'CombinatoricsNode';
 

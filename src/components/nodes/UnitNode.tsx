@@ -118,7 +118,7 @@ export const UnitNode = memo((props: NodeProps) => {
                             data={data}
                             label=""
                             onSelect={handleMenuSelect}
-                            width="48"
+                            width="full"
                         />
                     )}
 

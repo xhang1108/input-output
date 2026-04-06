@@ -33,7 +33,7 @@ export const RoundingNode = memo((props: NodeProps) => {
                         paramId="mode" 
                         data={data} 
                         label="Rounding Mode"
-                        width="44"
+                        width="full"
                     />
                 </div>
 

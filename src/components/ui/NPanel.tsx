@@ -9,6 +9,8 @@ import { NodeParameter } from '../../types/nodeDefinitions';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { StringInput } from '../common/StringInput';
 import { NumericInput } from '../common/NumericInput';
+import { CategorizedMenu, CategorizedMenuItem } from './CategorizedMenu';
+import { useNodeMenu } from '../../hooks/useNodeMenu';
 
 // ─── Atomic Field Components ──────────────────────────────────────────────────
 
@@ -93,21 +95,46 @@ function BooleanField({ param, value, onChange }: FieldProps) {
 }
 
 function SelectField({ param, value, onChange }: FieldProps) {
+    const { menuOpen, menuPos, trigger, handleTrigger, closeMenu } = useNodeMenu();
     const strVal = String(PayloadUtils.unwrap(value) ?? '');
+    
+    const options = (param.options || []).map(opt => ({
+        id: String(opt.value),
+        label: opt.label,
+        category: param.label
+    }));
+
+    const activeLabel = options.find(o => o.id === strVal)?.label || strVal || 'Select...';
+
+    const handleSelect = (item: CategorizedMenuItem) => {
+        onChange(param.id, item.id);
+        closeMenu();
+    };
+
     return (
         <FieldWrapper label={param.label} hint={param.hint}>
-            <select
-                value={strVal}
-                onChange={e => onChange(param.id, e.target.value)}
+            <button
+                onClick={handleTrigger}
                 onMouseDown={e => e.stopPropagation()}
-                className={selectCls}
+                className={`${selectCls} flex items-center justify-between group h-[34px]`}
             >
-                {param.options?.map(opt => (
-                    <option key={String(opt.value)} value={String(opt.value)}>
-                        {opt.label}
-                    </option>
-                ))}
-            </select>
+                <span className="truncate group-hover:text-white transition-colors">{activeLabel}</span>
+                <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            <CategorizedMenu
+                isOpen={menuOpen}
+                items={options}
+                position={menuPos}
+                trigger={trigger}
+                onClose={closeMenu}
+                onSelect={handleSelect}
+                width="full"
+                showSearch={options.length > 8}
+                selectedId={strVal}
+            />
         </FieldWrapper>
     );
 }

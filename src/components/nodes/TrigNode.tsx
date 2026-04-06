@@ -26,7 +26,7 @@ export const TrigNode = memo((props: NodeProps) => {
 
     return (
         <BaseNode {...props}>
-            <div className="flex flex-col gap-1.5 p-1 min-w-[124px]">
+            <div className="flex flex-col gap-1.5 p-1 min-w-[124px] w-full">
                 {/* Mode Toggle as Header Sub-bar */}
                 <div className="flex justify-end px-1 mb-1">
                     <button

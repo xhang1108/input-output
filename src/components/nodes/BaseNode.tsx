@@ -361,7 +361,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             </div>
 
             {/* Content Body — overflow-hidden here clips Sticky Note text without affecting Handles */}
-            <div className="p-2 flex-1 flex flex-col items-start justify-start min-h-0 min-w-0 overflow-hidden rounded-b-xl">
+            <div className="p-2 flex-1 flex flex-col items-stretch justify-start min-h-0 min-w-0 overflow-hidden rounded-b-xl">
                {children ? children : (
                     <div className="text-[10px] text-zinc-500 font-mono">ID: {id}</div>
                 )}

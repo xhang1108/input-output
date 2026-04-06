@@ -39,7 +39,7 @@ export const VectorUtilsNode = memo((props: NodeProps) => {
                 data={data as Record<string, unknown>}
                 label="Vector Op"
                 placeholder="Search Operation..."
-                width="48"
+                width="full"
             />
         </BaseNode>
     );

@@ -316,10 +316,15 @@ export function CategorizedMenu({
             const menuRawWidth = menuEl.offsetWidth;
             const scaledWidth = menuRawWidth * currentZoom;
             const shouldFlipX = x + scaledWidth > viewportWidth - 20;
-            
-            const finalX = shouldFlipX 
-                ? Math.max(10, x + (trigger ? trigger.offsetWidth : 0) - menuRawWidth) 
+
+            const finalX = shouldFlipX
+                ? Math.max(10, x + (trigger ? trigger.offsetWidth : 0) - menuRawWidth)
                 : x;
+
+            if (width === 'full' && trigger) {
+                const triggerWidth = trigger.offsetWidth;
+                menuEl.style.width = `${triggerWidth}px`;
+            }
 
             // 3. Dynamic Max Height Calculation (Zoom Aware)
             // CSS maxHeight applies to the unscaled element, so we must divide physical space by zoom
@@ -431,7 +436,7 @@ export function CategorizedMenu({
                 style={{
                     maxHeight: dynamicMaxHeight,
                     maxWidth: '95vw',
-                    width: menuLayout === 'horizontal' ? 'auto' : (width.startsWith('w-') ? undefined : `${parseInt(width) * 4}px`),
+                    width: menuLayout === 'horizontal' ? 'auto' : (width === 'full' ? undefined : (width.startsWith('w-') ? undefined : `${parseInt(width) * 4}px`)),
                 }}
                 onClick={e => e.stopPropagation()}
                 onContextMenu={e => e.preventDefault()}
@@ -571,7 +576,7 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
         <button
             key={`${item.category}-${item.id}-${item.label}`}
             data-selected={isSelected}
-            className={`min-w-[120px] text-left px-3 py-1.5 text-[11px] font-medium flex items-center justify-between group transition-all relative rounded-[10px] ${isSelected
+            className={`min-w-0 text-left px-3 py-1.5 text-[11px] font-medium flex items-center justify-between group transition-all relative rounded-[10px] ${isSelected
                 ? 'bg-primary text-white shadow-none'
                 : 'text-zinc-400 hover:bg-surface-light hover:text-zinc-200'
                 }`}
