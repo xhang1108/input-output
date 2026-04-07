@@ -29,7 +29,7 @@ export class Brain {
     private readonly HEARTBEAT_MS = 16.67;
     private pendingPatch: IncrementalPatch = { dirtyChainNodeIds: [] };
     private dirtyNodes: Set<string> = new Set();
-    
+
     // Ticker Registry for O(K) performance (IN-11/Timer Nodes)
     private activeTickers: Set<string> = new Set();
     private tickerStates: Map<string, { lastTick: number }> = new Map();
@@ -215,7 +215,7 @@ export class Brain {
 
             // 2. Pulse Guard: Decide if we need to broadcast UI updates
             const isVisualDirty = this.dirtyNodes.size > 0 || this.isRecalculating || this.isInteracting;
-            
+
             if (isVisualDirty) {
                 // UI Throttle: Broadcast at ~30fps for visual metadata to save CPU, 
                 // while engine still runs at 60fps for logic precision.
@@ -372,7 +372,7 @@ export class Brain {
 
         this.worker.dispose();
         this.listeners.clear();
-        
+
         // Reset State
         this.state = { nodes: new Map(), edges: [] };
         this.topology.clear();
@@ -1153,7 +1153,7 @@ export class Brain {
             if (definition) {
                 // Node Data Reconciliation: Sync with current code base definition
 
-                // 1.1 Handles Sync: Prioritize definition's handles to ensure new IO ports appear
+                // 1.0 Handles Sync: Prioritize definition's handles to ensure new IO ports appear
                 if (definition.handles) {
                     nodeData = { ...nodeData, handles: definition.handles };
                 }
@@ -1394,14 +1394,14 @@ export class Brain {
 
             const rawInterval = Number(node.data?.interval ?? 1000);
             const step = Number(node.data?.step ?? 1);
-            
+
             // SANITIZATION: 防禦極端輸入 (Allow overclocking down to 1ms)
             const safeInterval = Math.max(1, rawInterval);
 
             const elapsed = now - state.lastTick;
             if (elapsed >= safeInterval) {
                 const ticks = Math.floor(elapsed / safeInterval);
-                
+
                 // Update numerical value
                 const currentVal = Number(node.data?.currentValue ?? 0);
                 node.data = {

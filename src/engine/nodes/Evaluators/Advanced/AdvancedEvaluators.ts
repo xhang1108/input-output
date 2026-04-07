@@ -767,6 +767,7 @@ export const AdvancedEvaluators: Record<string, NodeEvaluator> = {
             const results: number[][] = [[t0, y0]];
             let t = t0, y = y0, steps = 0, maxSteps = 10000;
             while (t < tEnd && steps < maxSteps) {
+                RuntimeGuard.checkTimeLimit();
                 const h = Math.min(stepSize, tEnd - t);
                 const k1 = Number(compiled({ t, y }));
                 const k2 = Number(compiled({ t: t + h / 2, y: y + h * k1 / 2 }));

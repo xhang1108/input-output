@@ -64,7 +64,7 @@ export class Encoder {
           }
         }
 
-        // Auxiliary props (with [V1.1] Dimension Shorthand {W, H} support)
+        // Auxiliary props (with [V1.0] Dimension Shorthand {W, H} support)
         if (manifest.auxiliary) {
           const hasWidth = data.width !== undefined;
           const hasHeight = data.height !== undefined;
@@ -97,7 +97,7 @@ export class Encoder {
       const x = Math.round(node.position.x);
       const y = Math.round(node.position.y);
 
-      // IOGL 1.1 Law: All nodes MUST have bracketed labels in output
+      // IOGL 1.0 Law: All nodes MUST have bracketed labels in output
       const labelStr = `${this.formatLabel(label)} `;
 
       result += `${labelStr}${node.type}${positionalStr}${propStr} @${x},${y}\n`;
