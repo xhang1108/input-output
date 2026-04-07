@@ -52,6 +52,29 @@ export const SliderNode = memo((props: NodeProps) => {
         setLocalValue(quantize(val));
     }, [setLocalValue, quantize]);
 
+    // Keyboard Navigation: Control slider with Arrow keys when node is selected
+    useEffect(() => {
+        if (!props.selected) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Priority: Don't interfere if an input/textarea has focus
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setLocalValue(prev => quantize(Math.max(min, prev - step)));
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setLocalValue(prev => quantize(Math.min(max, prev + step)));
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [props.selected, min, max, step, quantize, setLocalValue]);
+
     return (
         <BaseNode {...props} style={{ width: 140 }}>
             <div className="flex flex-col gap-3 p-1 w-full text-zinc-100">
