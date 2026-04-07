@@ -6,11 +6,15 @@ order: 1
 # Update Log
 
 > [!LOG]
-> ## 2026-04-01
-> ### V1.0 - Production Baseline
-> - **Production State**: This is the best I can do for now, and it is time for public testing. Since this is a web project, some high-performance libraries cannot be used, but I want to explore the limits of the browser.
-> - **Blender Shortcuts**: I really like Blender 3D and its great shortcut logic, so I added many shortcuts to this project. I hope Blender users can start using this software with zero learning curve.
-> - **IOGL Language**: I created the IOGL language to help with debugging. I use it for AI to generate problems and find issues, and I hope it becomes a mature language in the future.
+> ## 2026-04-10
+> ### V1.0 - Production Release
+> - **System Overview**: The I/O System is a visual computing platform designed to bridge the gap between human logic and machine execution.
+> - **Core Engine**: Built for hybrid symbolic and numerical computation, supporting complex calculus and array geometry.
+> - **LaTeX Integration**: Native **LaTeX Import** and high-fidelity **Formula Export** (LaTeX & Symbolic formats).
+> - **Visual Synthesis**: Real-time **Graph Plotting** and interactive signal visualization.
+> - **Node Ecosystem**: A robust library of 47 atomic nodes spanning 8 functional categories, enabling infinite system combinations.
+> - **IOGL Language**: A first-of-its-kind graph language for scriptable nodes.
+
 
 > [!LOG]
 > ## 2026-01-02

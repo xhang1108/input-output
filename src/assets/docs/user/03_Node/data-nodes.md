@@ -8,15 +8,15 @@ order: 4
 Organization and manipulation of multi-dimensional tensors.
 
 ## 1. Array Builder (DT-01)
-Node that accepts multiple inputs to build or concatenate arrays.
+Accepts multiple inputs to build or concatenate arrays. You can choose to stack inputs along rows or columns.
 
-- **Input**: One or more data values to stack.
+- **Input**: One or more data values (Scalars or Arrays) to stack into a capsule handle.
 - **Output**: The generated Array.
 
 ```playground
 {
   "nodeType": "DT-01",
-  "initialData": { "op": "BUILD" }
+  "initialData": { "axis": 0 }
 }
 ```
 
@@ -71,19 +71,27 @@ Vector operations: Dot Product, Cross Product, Norm, and Distance.
 ```playground
 {
   "nodeType": "DT-05",
-  "initialData": { "op": "DOT" }
+  "initialData": { "mode": "DOT" }
 }
 ```
 
 ## 6. Array Calculus (DT-06)
-Array operations: Inverse, Determinant, Transpose, and Trace.
+Advanced linear algebra operations for square and non-square matrices.
 
 - **Input**: The input array.
 - **Output**: The resulting Array or scalar.
 
+**Supported Operations**:
+*   **Inverse (A⁻¹)**: Standard matrix inversion.
+*   **Determinant (det A)**: Scalar value representing multiplication factor.
+*   **Transpose (Aᵀ)**: Reflects a matrix over its main diagonal.
+*   **Trace (tr A)**: Sum of elements on the main diagonal.
+*   **Eigenvalues**: Spectral decomposition for symmetric matrices.
+*   **QR / LU Decomposition**: Matrix factorization for solving linear systems.
+
 ```playground
 {
   "nodeType": "DT-06",
-  "initialData": { "op": "INV" }
+  "initialData": { "mode": "INV" }
 }
 ```
