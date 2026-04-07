@@ -19,7 +19,7 @@ The primary operator for binary logic and value comparisons. It supports **13 mo
 ```playground
 {
   "nodeType": "LG-01",
-  "initialData": { "op": "AND" }
+  "initialData": { "mode": "AND" }
 }
 ```
 

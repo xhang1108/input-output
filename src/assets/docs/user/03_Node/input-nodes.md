@@ -15,7 +15,7 @@ The simplest input node. Type a number or use the keyboard to increment/decremen
 ```playground
 {
   "nodeType": "IN-01",
-  "initialData": { "value": 42, "unit": "rad" }
+  "initialData": { "value": 42 }
 }
 ```
 
@@ -138,6 +138,24 @@ A stochastic generator that consolidates noise and distribution logic. It suppor
 {
   "nodeType": "IN-10",
   "initialData": { "mode": "scalar", "distribution": "Uniform" }
+}
+```
+
+## 11. Timer (IN-11)
+A high-performance clock node that increments or decrements a value at a specified interval. Perfect for creating animations, time-series simulations, or recurring logic triggers.
+
+- **Output**: The current value of the counter.
+
+- **Parameters**: 
+  - **Initial Value**: The starting point of the timer.
+  - **Step**: The amount to add (or subtract) per interval.
+  - **Interval (ms)**: Time between updates (supports sub-16ms high-speed ticking).
+  - **Running**: Start or stop the timer.
+
+```playground
+{
+  "nodeType": "IN-11",
+  "initialData": { "interval": 1000, "step": 1, "running": true }
 }
 ```
 

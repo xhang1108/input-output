@@ -41,4 +41,20 @@ A tiny, zero-cost wireless relay point.
 - **Passthrough**: Data flows through instantly with zero modification or type coercion.
 
 > [!NOTE]
-> Unlike standard nodes, the Reroute node does not have a background chassis. It appears only as a single connection dot, keeping the visual layout exceptionally clean.
+> Under standard nodes, the Reroute node does not have a background chassis. It appears only as a single connection dot, keeping the visual layout exceptionally clean.
+
+## 3. Concatenate (UT-03)
+A string builder node that joins multiple data sources into a single text string. This is useful for creating dynamic labels, complex messages, or formatting outputs for export.
+
+- **Input**: A capsule-style input handle that accepts any number of connections.
+- **Output**: A single string containing all input values joined together.
+
+- **Parameters**: 
+  - **Delimiter**: A string (e.g., a space, comma, or newline) inserted between each input value.
+
+```playground
+{
+  "nodeType": "UT-03",
+  "initialData": { "delimiter": ", " }
+}
+```

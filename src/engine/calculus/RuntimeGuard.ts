@@ -23,6 +23,44 @@ export interface SafeResult<T> {
 }
 
 export class RuntimeGuard {
+    /** 
+     * Security Limits
+     * Constants to prevent DoS via massive expressions or infinite loops.
+     */
+    public static readonly MAX_EXECUTION_TIME = 2000; // 2 seconds
+    public static readonly MAX_EXPRESSION_LENGTH = 1000; // 1k characters
+
+    private static _startTime: number = 0;
+
+    /**
+     * Start the execution timer.
+     * Should be called at the beginning of a Worker tick or solve operation.
+     */
+    public static startTimer() {
+        this._startTime = performance.now();
+    }
+
+    /**
+     * Checks if the current execution has exceeded the time limit.
+     * Throws an error to abort execution if exceeded.
+     */
+    public static checkTimeLimit() {
+        if (this._startTime === 0) return;
+        if (performance.now() - this._startTime > this.MAX_EXECUTION_TIME) {
+            throw new Error(`Execution Timeout: Operation exceeded ${this.MAX_EXECUTION_TIME}ms`);
+        }
+    }
+
+    /**
+     * Validate expression string length.
+     */
+    public static validateExpression(expr: string): string | null {
+        if (expr.length > this.MAX_EXPRESSION_LENGTH) {
+            return `Expression too long (Max ${this.MAX_EXPRESSION_LENGTH} chars)`;
+        }
+        return null;
+    }
+
     /**
      * Wraps any computation in safety checks.
      * Catches thrown exceptions + validates the result for NaN/Infinity.

@@ -332,10 +332,12 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
     'MA-04': (node, inputs) => {
         const math = InputOutputEngine.getInstance().getMathInstance() as any;
         const valPayload = inputs['in_a'] || PayloadUtils.createScalar(0);
+        const valBPayload = inputs['in_b'] || PayloadUtils.createScalar(0);
         const data = (node.data || {}) as any;
         const op = data.mode || data.op || 'SIN';
         const angleMode = data.angleMode || 'RAD';
         let val = PayloadUtils.hydrate(PayloadUtils.unwrap(valPayload), math);
+        let valB = PayloadUtils.hydrate(PayloadUtils.unwrap(valBPayload), math);
 
         if (angleMode === 'DEG' && ['SIN', 'COS', 'TAN'].includes(op)) {
             try { val = math.multiply(val, math.divide(math.pi, 180)); } catch (e) { }
@@ -350,10 +352,13 @@ export const MathEvaluators: Record<string, NodeEvaluator> = {
                 case 'ASIN': result = math.asin(val); break;
                 case 'ACOS': result = math.acos(val); break;
                 case 'ATAN': result = math.atan(val); break;
+                case 'ATAN2': result = math.atan2(val, valB); break;
+                case 'SINH': result = math.sinh(val); break;
+                case 'COSH': result = math.cosh(val); break;
                 default: result = math.sin(val);
             }
 
-            if (angleMode === 'DEG' && ['ASIN', 'ACOS', 'ATAN'].includes(op)) {
+            if (angleMode === 'DEG' && ['ASIN', 'ACOS', 'ATAN', 'ATAN2'].includes(op)) {
                 try { result = math.multiply(result, math.divide(180, math.pi)); } catch (e) { }
             }
 

@@ -21,6 +21,7 @@ import { MATH_CONFIG } from './mathConfig';
 import { NodeRegistry } from './NodeRegistry';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { NodePayload } from '../types/payload';
+import { RuntimeGuard } from './calculus/RuntimeGuard';
 import type { NodeLogic } from './types';
 import type {
     WorkerRequest,
@@ -297,6 +298,7 @@ async function computeDirtyChainNodes(): Promise<Record<string, SerializedPayloa
         if (dirtyChainNodeIds.length === 0) break;
 
         for (const id of dirtyChainNodeIds) {
+            RuntimeGuard.checkTimeLimit();
             const node = nodes.get(id);
             if (!node) continue;
 
@@ -373,6 +375,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
             case 'EVAL': {
                 try {
+                    RuntimeGuard.startTimer();
                     applyPatch(msg.patches);
                     const patches = await computeDirtyChainNodes();
                     respond({ type: 'RESULT', epoch: msg.epoch, patches });
@@ -385,6 +388,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
             case 'SYNC_AND_EVAL': {
                 try {
+                    RuntimeGuard.startTimer();
                     loadSnapshot(msg.snapshot);
                     for (const id of msg.dirtyChainNodeIds) {
                         const node = nodes.get(id);

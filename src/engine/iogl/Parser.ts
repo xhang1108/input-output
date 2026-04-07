@@ -62,8 +62,8 @@ export class Parser {
         message: `Expected ${type}, got ${this.current.type} ('${this.current.value}')`,
         source: 'IOGL-Parser',
         range: {
-            start: { line: this.current.line, character: this.current.col },
-            end: { line: this.current.line, character: this.current.col + (this.current.value?.length || 0) }
+          start: { line: this.current.line, character: this.current.col },
+          end: { line: this.current.line, character: this.current.col + (this.current.value?.length || 0) }
         }
       });
     }
@@ -92,13 +92,13 @@ export class Parser {
     let isEdge = false;
     let i = 0;
     while (true) {
-        const next = this.lexer.peek(i);
-        if (next.type === 'NEWLINE' || next.type === 'EOF') break;
-        if (next.type === 'ARROW') {
-            isEdge = true;
-            break;
-        }
-        i++;
+      const next = this.lexer.peek(i);
+      if (next.type === 'NEWLINE' || next.type === 'EOF') break;
+      if (next.type === 'ARROW') {
+        isEdge = true;
+        break;
+      }
+      i++;
     }
 
     if (isEdge) {
@@ -106,17 +106,17 @@ export class Parser {
     } else {
       this.parseNode();
     }
-    
+
     // Ensure we reach newline
     while (this.current.type !== 'NEWLINE' && this.current.type !== 'EOF') {
-        this.advance();
+      this.advance();
     }
   }
 
   private parseNode() {
     let label: string | undefined;
     let rawLabel: string | undefined;
-    
+
     if (this.current.type === 'BRACKETED_ID') {
       rawLabel = this.current.value;
       label = rawLabel.substring(1, rawLabel.length - 1);
@@ -135,20 +135,20 @@ export class Parser {
 
     // Parse interleaved property blocks and positional data
     while (
-      (this.current.type as TokenType) !== 'AT' && 
-      (this.current.type as TokenType) !== 'NEWLINE' && 
-      (this.current.type as TokenType) !== 'EOF' && 
+      (this.current.type as TokenType) !== 'AT' &&
+      (this.current.type as TokenType) !== 'NEWLINE' &&
+      (this.current.type as TokenType) !== 'EOF' &&
       (this.current.type as TokenType) !== 'ARROW'
     ) {
       if (this.current.type === 'LBRACE') {
         this.advance();
         while ((this.current.type as TokenType) !== 'RBRACE' && (this.current.type as TokenType) !== 'EOF') {
-          // [V1.1] Dimension Shorthand: {356, 131} -> { width: 356, height: 131 }
+          // [V1.0] Dimension Shorthand: {356, 131} -> { width: 356, height: 131 }
           if ((this.current.type as TokenType) === 'NUMBER') {
             const width = parseFloat(this.current.value);
             this.advance();
             props['width'] = width;
-            
+
             if ((this.current.type as TokenType) === 'COMMA') {
               this.advance();
               if ((this.current.type as TokenType) === 'NUMBER') {
@@ -169,10 +169,10 @@ export class Parser {
         this.advance();
         const val = this.parseValue();
         if (positionalIdx === 0 && manifest?.modeProperty && props.mode === undefined) {
-             props.mode = val;
+          props.mode = val;
         } else {
-             if (!props.data) props.data = [];
-             props.data.push(val);
+          if (!props.data) props.data = [];
+          props.data.push(val);
         }
         positionalIdx++;
         this.expect('RPAREN');
@@ -180,14 +180,14 @@ export class Parser {
         const t = this.current.type as TokenType;
         if (t === 'RAW_VALUE' || t === 'BRACKETED_ID' || t === 'ID' || t === 'EQUALS' || t === 'NUMBER') {
           const val = this.parseValue();
-          
+
           if (positionalIdx === 0 && t === 'ID' && manifest?.modeProperty && props.mode === undefined) {
-               props.mode = val;
+            props.mode = val;
           } else {
-               if (!props.data) props.data = [];
-               props.data.push(val);
+            if (!props.data) props.data = [];
+            props.data.push(val);
           }
-          
+
           positionalIdx++;
           if ((this.current.type as TokenType) === 'COMMA') this.advance();
         } else {
@@ -201,11 +201,11 @@ export class Parser {
       this.advance();
       this.hasExplicitPositions = true;
       const parseNum = () => {
-          let val = this.expect('NUMBER').value;
-          const num = parseFloat(val);
-          return isNaN(num) ? undefined : num;
+        let val = this.expect('NUMBER').value;
+        const num = parseFloat(val);
+        return isNaN(num) ? undefined : num;
       };
-      
+
       x = parseNum();
       if ((this.current.type as TokenType) === 'COMMA') {
         this.advance();
@@ -236,35 +236,35 @@ export class Parser {
         this.labelToId.set(rawLabel, internalTempId);
       }
     } else {
-        // Fallback: If no alias, allow referencing by TypeId (e.g. IN-01 -> OT-01)
-        if (!this.labelToId.has(typeId)) {
-            this.labelToId.set(typeId, internalTempId);
-        }
+      // Fallback: If no alias, allow referencing by TypeId (e.g. IN-01 -> OT-01)
+      if (!this.labelToId.has(typeId)) {
+        this.labelToId.set(typeId, internalTempId);
+      }
     }
   }
 
   private parseValue(): any {
     if (this.current.type === 'RAW_VALUE' || this.current.type === 'NUMBER') {
-        const val = this.current.value;
-        this.advance();
-        return IOGLUtils.parseLiteral(val);
+      const val = this.current.value;
+      this.advance();
+      return IOGLUtils.parseLiteral(val);
     }
-    
-    if (this.current.type === 'BRACKETED_ID') {
-        const valStr = this.current.value;
-        this.advance();
 
-        try {
-            // Attempt cleaning and parsing (supporting non-quoted IDs inside matrices)
-            const cleaned = valStr.replace(/([a-zA-Z0-9_\-\.]+)/g, (m) => {
-                if (m === 'true' || m === 'false' || m === 'null' || !isNaN(Number(m))) return m;
-                return `"${m}"`;
-            });
-            return JSON.parse(cleaned);
-        } catch (e) {
-            // Fallback to literal parsing or raw string
-            return IOGLUtils.parseLiteral(valStr);
-        }
+    if (this.current.type === 'BRACKETED_ID') {
+      const valStr = this.current.value;
+      this.advance();
+
+      try {
+        // Attempt cleaning and parsing (supporting non-quoted IDs inside matrices)
+        const cleaned = valStr.replace(/([a-zA-Z0-9_\-\.]+)/g, (m) => {
+          if (m === 'true' || m === 'false' || m === 'null' || !isNaN(Number(m))) return m;
+          return `"${m}"`;
+        });
+        return JSON.parse(cleaned);
+      } catch (e) {
+        // Fallback to literal parsing or raw string
+        return IOGLUtils.parseLiteral(valStr);
+      }
     }
 
     const val = this.current.value;
@@ -289,8 +289,8 @@ export class Parser {
   private parseRef(): { id: string; handle?: string } {
     let rawId: string;
     let handle: string | undefined;
-    
-    // Strict IOGL 1.1: Node aliases MUST be bracketed
+
+    // Strict IOGL 1.0: Node aliases MUST be bracketed
     if (this.current.type === 'BRACKETED_ID') {
       rawId = this.current.value; // Store the full '[Label]' for lookup
       this.advance();
@@ -308,7 +308,7 @@ export class Parser {
       rawId = this.current.value;
       this.advance();
     }
-    
+
     // Handle Accessor: Strictly '.' notation
     if (this.current.type === 'ID' && this.current.value.startsWith('.')) {
       handle = this.current.value.substring(1);
@@ -327,26 +327,26 @@ export class Parser {
       });
       this.advance();
       if ((this.current.type as TokenType) === 'ID') {
-          handle = this.current.value;
-          this.advance();
+        handle = this.current.value;
+        this.advance();
       }
     }
 
     // Resolve the internal ID from the Label or Alias
     // Strip brackets for internal label lookup if needed
-    const lookupKey = rawId.startsWith('[') && rawId.endsWith(']') 
-        ? rawId.substring(1, rawId.length - 1) 
-        : rawId;
+    const lookupKey = rawId.startsWith('[') && rawId.endsWith(']')
+      ? rawId.substring(1, rawId.length - 1)
+      : rawId;
     const id = this.labelToId.get(lookupKey) || rawId;
 
     return { id, handle };
   }
 
   private buildGraph(): InjectableGraph {
-    const graph: InjectableGraph = { 
-        nodes: [], 
-        edges: [],
-        hasExplicitPositions: this.hasExplicitPositions
+    const graph: InjectableGraph = {
+      nodes: [],
+      edges: [],
+      hasExplicitPositions: this.hasExplicitPositions
     };
     const tempToFinal = new Map<string, string>();
 
@@ -355,9 +355,9 @@ export class Parser {
     this.nodes.forEach((raw, tempId) => {
       let def = NODE_DEFINITIONS.find((d: any) => d.id === raw.id);
       if (!def) {
-          def = NODE_DEFINITIONS.find((d: any) => d.aliases?.includes(raw.id.toLowerCase()));
+        def = NODE_DEFINITIONS.find((d: any) => d.aliases?.includes(raw.id.toLowerCase()));
       }
-      
+
       if (!def) {
         this.diagnostics.push({
           severity: 'Error',
@@ -376,93 +376,93 @@ export class Parser {
 
       const data = { ...def.defaultData, label: raw.label || def.label } as Record<string, any>;
       const manifest = IOGL_MANIFEST[def.id] || IOGL_MANIFEST[def.id.toUpperCase()];
-      
+
       if (manifest) {
         if (raw.props.mode !== undefined) {
           const modeVal = String(raw.props.mode);
           const modeProp = manifest.modeProperty || 'mode';
           let matchedMode: any = modeVal;
-          
+
           const lowerMode = modeVal.toLowerCase();
           const possibleDicts = [manifest.modeMapping, manifest.data, manifest.inputs, manifest.outputs];
           for (const dict of possibleDicts) {
-              if (dict && !Array.isArray(dict) && typeof dict === 'object') {
-                  const match = Object.keys(dict).find(k => String(k).toLowerCase() === lowerMode);
-                  if (match) {
-                      matchedMode = match;
-                      break;
-                  }
+            if (dict && !Array.isArray(dict) && typeof dict === 'object') {
+              const match = Object.keys(dict).find(k => String(k).toLowerCase() === lowerMode);
+              if (match) {
+                matchedMode = match;
+                break;
               }
+            }
           }
 
           if (manifest.modeMapping && manifest.modeMapping[matchedMode] !== undefined) {
-              matchedMode = manifest.modeMapping[matchedMode];
+            matchedMode = manifest.modeMapping[matchedMode];
           }
 
           data[modeProp] = matchedMode;
         }
-        
+
         if (raw.props.data !== undefined) {
           const positionalData = Array.isArray(raw.props.data) ? raw.props.data : [raw.props.data];
           const schema = manifest.data;
           if (schema) {
             let keys: string[] = [];
             if (Array.isArray(schema)) {
-                keys = schema;
+              keys = schema;
             } else {
-                const currentMode = String(data[manifest.modeProperty || 'mode'] || '');
-                keys = (schema as any)[currentMode] || [];
+              const currentMode = String(data[manifest.modeProperty || 'mode'] || '');
+              keys = (schema as any)[currentMode] || [];
             }
             keys.forEach((key, i) => {
               if (positionalData[i] !== undefined) {
-                  data[key] = positionalData[i];
+                data[key] = positionalData[i];
               }
             });
           }
         }
 
         if (manifest.wrapPayload) {
-            const propName = typeof manifest.wrapPayload === 'string' ? manifest.wrapPayload : 'value';
-            const wrapped = IOGLUtils.wrapPayload(data, propName, manifest);
-            
-            if (wrapped === null) {
-                this.diagnostics.push({
-                  severity: 'Error',
-                  message: `Matrix [${raw.label || raw.id}] contains invalid non-numeric values (e.g. symbols). Injection blocked.`,
-                  source: 'IOGL-Parser',
-                  range: {
-                    start: { line: 0, character: 0 },
-                    end: { line: 0, character: 0 }
-                  }
-                });
-                const defaultRaw = def?.defaultData?.[propName];
-                const defaultParsed = typeof defaultRaw === 'string' ? JSON.parse(defaultRaw) : defaultRaw;
-                data[propName] = PayloadUtils.createArray(defaultParsed);
-            } else {
-                data[propName] = wrapped;
-            }
+          const propName = typeof manifest.wrapPayload === 'string' ? manifest.wrapPayload : 'value';
+          const wrapped = IOGLUtils.wrapPayload(data, propName, manifest);
+
+          if (wrapped === null) {
+            this.diagnostics.push({
+              severity: 'Error',
+              message: `Matrix [${raw.label || raw.id}] contains invalid non-numeric values (e.g. symbols). Injection blocked.`,
+              source: 'IOGL-Parser',
+              range: {
+                start: { line: 0, character: 0 },
+                end: { line: 0, character: 0 }
+              }
+            });
+            const defaultRaw = def?.defaultData?.[propName];
+            const defaultParsed = typeof defaultRaw === 'string' ? JSON.parse(defaultRaw) : defaultRaw;
+            data[propName] = PayloadUtils.createArray(defaultParsed);
+          } else {
+            data[propName] = wrapped;
+          }
         }
 
         if (manifest.fixedData) {
-            Object.assign(data, manifest.fixedData);
+          Object.assign(data, manifest.fixedData);
         }
 
         if (manifest.auxiliary) {
           manifest.auxiliary.forEach(key => {
             if (raw.props[key] !== undefined) {
-                let val = raw.props[key];
-                if ((key === 'width' || key === 'height') && typeof val === 'number') {
-                    val = Math.round(val);
-                }
-                data[key] = val;
+              let val = raw.props[key];
+              if ((key === 'width' || key === 'height') && typeof val === 'number') {
+                val = Math.round(val);
+              }
+              data[key] = val;
             }
           });
         }
-        
+
         Object.keys(raw.props).forEach(key => {
-            if (key !== 'mode' && key !== 'data' && data[key] === undefined) {
-                data[key] = raw.props[key];
-            }
+          if (key !== 'mode' && key !== 'data' && data[key] === undefined) {
+            data[key] = raw.props[key];
+          }
         });
       }
 
@@ -470,14 +470,14 @@ export class Parser {
       const defaultY = 20 + (nodeIndex * 50) % 600;
       nodeIndex++;
 
-      graph.nodes.push({ 
-        id: finalId, 
-        type: def.id, 
-        position: { 
-            x: raw.x !== undefined ? raw.x : defaultX, 
-            y: raw.y !== undefined ? raw.y : defaultY 
-        }, 
-        data 
+      graph.nodes.push({
+        id: finalId,
+        type: def.id,
+        position: {
+          x: raw.x !== undefined ? raw.x : defaultX,
+          y: raw.y !== undefined ? raw.y : defaultY
+        },
+        data
       });
     });
 

@@ -63,20 +63,25 @@ Calculates core Euclidean metrics for standard planar shapes from a single input
 ```
 
 ## 4. Vector Field (TR-04)
-Evaluates a multi-variable function (e.g., f(x, y)) to generate either a gradient tensor or a direct vector field tensor for Plotting or advanced geometry operations.
+Evaluates a multi-variable scalar or vector function to generate advanced field representations.
 
-- **Input**: The target function (e.g., x^2 + y^2).
+- **Inputs**: 
+  - **f**: Scalar function (for Gradient mode).
+  - **P, Q**: Vector components (for Direct, Divergence, or Curl modes).
 - **Outputs**: 
-  - **Arrows**: Vector field data (ready for 3D/Plotter use).
-  - **Grad**: Calculated gradient field.
+  - **Arrows**: Vector field data (formatted for Plotting).
+  - **Result**: Symbolic expression of the resulting field (e.g., the Divergence scalar).
 
-- **Mode**: Gradient mapping or Direct Vector Mapping.
-- **Range X / Y**: Box bounding conditions.
-- **Density**: Lattice resolution. 
+**Supported Modes**:
+*   **Gradient**: Calculates the vector gradient (∇f) of a scalar field.
+*   **Direct Field**: Maps user-defined P and Q components directly to a vector grid.
+*   **Divergence (div F)**: Measures the magnitude of a field's source or sink (∇·F).
+*   **Curl (2D)**: Measures the rotation of a 2D field at a point (∇×F).
 
 ```playground
 {
-  "nodeType": "TR-04"
+  "nodeType": "TR-04",
+  "initialData": { "mode": "gradient", "var1": "x", "var2": "y" }
 }
 ```
 
@@ -110,6 +115,6 @@ Reduces a one-dimensional Array or multi-dimensional Array dataset down to its s
 ```playground
 {
   "nodeType": "TR-06",
-  "initialData": { "op": "Mean" }
+  "initialData": { "mode": "Mean" }
 }
 ```

@@ -8,11 +8,7 @@ order: 6
 Advanced continuous analysis and physical simulations.
 
 ## 1. Derivative (CL-01)
-Calculates the rate of change of a symbolic expression.
-
-- **Input**: The symbolic expression to differentiate.
-- **Output**: The derivative of the expression.
-Calculates the rate of change of a symbolic expression.
+Calculates the rate of change of a symbolic expression using automatic differentiation.
 
 - **Input**: The symbolic expression to differentiate.
 - **Output**: The derivative of the expression.
@@ -64,7 +60,7 @@ Input a symbolic equation to find its roots.
 ```
 
 ## 5. ODE Solver (CL-05)
-Numerical differential equation solver (RK4/Euler).
+Numerical differential equation solver using the RK4 (Runge-Kutta) method.
 
 - **Input**: The differential equation in terms of t and y.
 - **Output**: An Array of (t, y) coordinates representing the solution.
@@ -72,6 +68,6 @@ Numerical differential equation solver (RK4/Euler).
 ```playground
 {
   "nodeType": "CL-05",
-  "initialData": { "method": "RK4", "tEnd": 10 }
+  "initialData": { "tEnd": 10, "stepSize": 0.1 }
 }
 ```

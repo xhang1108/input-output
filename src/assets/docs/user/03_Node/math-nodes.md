@@ -16,22 +16,29 @@ Multi-purpose arithmetic operator for addition, subtraction, multiplication, and
 ```playground
 {
   "nodeType": "MA-01",
-  "initialData": { "op": "ADD" }
+  "initialData": { "mode": "ADD" }
 }
 ```
 
 ## 2. Advanced Math (MA-02)
-Specialized for exponential growth and extraction. Supports operations like **Power** (x^n) and **Square Root** (sqrt(x)).
+Specialized for exponential growth, extraction, and basic value manipulation. 
 
 - **Inputs**: 
-  - **A**: The base value.
-  - **B**: The exponent (Power) or root index (Root).
-- **Output**: The calculated value.
+  - **A**: The primary value.
+  - **B**: The exponent (Power) or root index (Root). Inherently hidden in *Absolute*, *Negate*, or *Sign* modes.
+- **Output**: The calculated result.
+
+**Supported Operations**:
+*   **Power (xⁿ)**: Raise A to the power of B.
+*   **Square Root (√x)**: The square root of A.
+*   **Absolute Value (|x|)**: The magnitude of A regardless of sign.
+*   **Negate (−x)**: Flip the sign of A (A × -1).
+*   **Sign**: Returns 1 if A > 0, -1 if A < 0, and 0 if A = 0.
 
 ```playground
 {
   "nodeType": "MA-02",
-  "initialData": { "op": "POW" }
+  "initialData": { "mode": "POW" }
 }
 ```
 
@@ -46,20 +53,25 @@ Calculates Natural Log (ln), log10, log2, or Log base n.
 ```playground
 {
   "nodeType": "MA-03",
-  "initialData": { "op": "LN" }
+  "initialData": { "mode": "LN" }
 }
 ```
 
 ## 4. Trigonometry (MA-04)
-Calculates circular and hyperbolic functions like Sine, Cosine, and Tangent.
+Calculates circular, inverse, and hyperbolic functions.
 
-- **Input**: The numeric value to calculate.
+- **Input**: The numeric angle or value (Radians by default).
 - **Output**: The calculated trigonometric result.
+
+**Supported Modes**:
+*   **Circular**: Sine, Cosine, Tangent.
+*   **Inverse**: Arcsine, Arccosine, Arctangent, and Atan2(y, x).
+*   **Hyperbolic**: Sinh, Cosh.
 
 ```playground
 {
   "nodeType": "MA-04",
-  "initialData": { "op": "SIN" }
+  "initialData": { "mode": "SIN" }
 }
 ```
 
@@ -72,7 +84,7 @@ Standard math rounding tools: `Round`, `Floor`, `Ceiling`, and `Truncate`.
 ```playground
 {
   "nodeType": "MA-05",
-  "initialData": { "op": "ROUND" }
+  "initialData": { "mode": "ROUND" }
 }
 ```
 
@@ -104,7 +116,7 @@ Includes `GCD`, `LCM`, `Modulo`, and a primality test.
 ```playground
 {
   "nodeType": "MA-07",
-  "initialData": { "op": "GCD" }
+  "initialData": { "mode": "GCD" }
 }
 ```
 
@@ -119,6 +131,6 @@ Calculates Combinations C(n, r), Permutations P(n, r), and Factorials n!.
 ```playground
 {
   "nodeType": "MA-08",
-  "initialData": { "op": "NCR" }
+  "initialData": { "mode": "nCr" }
 }
 ```

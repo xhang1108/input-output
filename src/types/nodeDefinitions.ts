@@ -408,7 +408,8 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         label: 'Trigonometry',
         category: 'Math',
         handles: [
-            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Angle' },
+            { id: 'in_a', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'Angle / y' },
+            { id: 'in_b', type: 'target', position: Position.Left, variant: 'single', dataType: 'scalar', label: 'B / x' },
             { id: 'out_a', type: 'source', position: Position.Right, variant: 'single', dataType: 'scalar' }
         ],
         defaultData: { mode: 'SIN' },
