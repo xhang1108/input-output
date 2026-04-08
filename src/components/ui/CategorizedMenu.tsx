@@ -323,7 +323,8 @@ export function CategorizedMenu({
 
             if (width === 'full' && trigger) {
                 const triggerWidth = trigger.offsetWidth;
-                menuEl.style.width = `${triggerWidth}px`;
+                menuEl.style.minWidth = `${triggerWidth}px`;
+                menuEl.style.width = 'auto'; // allow expansion based on content
             }
 
             // 3. Dynamic Max Height Calculation (Zoom Aware)
@@ -576,7 +577,7 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
         <button
             key={`${item.category}-${item.id}-${item.label}`}
             data-selected={isSelected}
-            className={`min-w-0 text-left px-3 py-1.5 text-[11px] font-medium flex items-center justify-between group transition-all relative rounded-[10px] ${isSelected
+            className={`min-w-max text-left px-3 py-1.5 text-[11px] font-medium flex items-center justify-between group transition-all relative rounded-[10px] ${isSelected
                 ? 'bg-primary text-white shadow-none'
                 : 'text-zinc-400 hover:bg-surface-light hover:text-zinc-200'
                 }`}
@@ -594,10 +595,10 @@ function MenuItem({ item, isSelected, globalIndex, onSelect, onClose, setSelecte
             onMouseDown={(e) => e.stopPropagation()}
             onMouseEnter={() => setSelectedIndex(globalIndex)}
         >
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-max">
                 {item.icon && <span className={isSelected ? 'opacity-100' : 'opacity-40'}>{item.icon}</span>}
-                <div className="flex items-baseline justify-between flex-1 min-w-0 gap-2">
-                    <span className="truncate">{renderHighlighted(item.label, search)}</span>
+                <div className="flex items-baseline justify-between flex-1 min-w-max gap-2">
+                    <span className="truncate whitespace-nowrap">{renderHighlighted(item.label, search)}</span>
                     <span className={`text-[9px] font-mono opacity-40 shrink-0 ${isSelected ? 'text-white' : 'text-zinc-500'}`}>
                         {renderHighlighted(item.id.includes(':') ? item.id.split(':')[0] : item.id, search)}
                     </span>
