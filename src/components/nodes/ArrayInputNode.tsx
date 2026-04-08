@@ -209,7 +209,7 @@ export const ArrayInputNode = memo((props: NodeProps) => {
                                         >
                                             <NumericInput
                                                 value={typeof val === 'number' ? val : parseFloat(String(val)) || 0}
-                                                onChange={(newVal) => updateCell(r, r, String(newVal))}
+                                                onChange={(newVal) => updateCell(r, c, String(newVal))}
                                                 onFocus={handleFocus}
                                                 onBlur={handleBlur}
                                                 hideLabel={true}

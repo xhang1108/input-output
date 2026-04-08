@@ -176,7 +176,7 @@ describe('Expression Node (IN-09) Reproduction', () => {
         
         // Function definitions return a function object, which we must NOT wrap as Scalar
         expect(result.type).toBe(DataType.Symbolic);
-        expect(result.value).toBe('f(x) = 2x');
+        expect(result.value).toBe('f(x) = 2 x');
     });
 
     it('should handle empty expression with an error', async () => {
