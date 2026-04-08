@@ -143,10 +143,19 @@ export class NerdamerService {
         try {
             const normExpr = PayloadUtils.normalizeMathExpression(expr, math);
             const nExpr = this.nerdamer(normExpr);
-            const textExpr = nExpr.text();
+            let textExpr = nExpr.text();
+
+            // FIX: De-mangle Nerdamer's non-standard multi-argument function output.
+            // Nerdamer outputs 'pow(a, b)' as '(a, b, pow)', 'nthRoot(a, b)' as '(a, b, nthRoot)', etc.
+            // We convert these back to standard function calls for MathJS compatibility.
+            const mangledFunctions = ['pow', 'nthRoot', 'root', 'hypot', 'atan2', 'mod'];
+            for (const fn of mangledFunctions) {
+                // Regex matches (args..., funcname) pattern
+                const regex = new RegExp(`\\(([^()]+),\\s*${fn}\\)`, 'g');
+                textExpr = textExpr.replace(regex, `${fn}($1)`);
+            }
 
             // Use MathJS for robust evaluation (handles ^ and math functions natively)
-            // Using 'number' mode for performance and compatibility with plotting.
             const compiled = math.compile(textExpr);
             const fn = (scope: any) => {
                 try {

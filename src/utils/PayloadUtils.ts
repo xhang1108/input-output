@@ -685,7 +685,41 @@ export const PayloadUtils = {
         // Only if followed by simple identifier or number (avoid double wrapping)
         let finalExpr = normalized.replace(new RegExp(`\\b(${fnList})\\s+([a-zA-Z0-9x.]+)(\\b|$)`, 'gi'), '$1($2)');
 
-        // 4. Implicit Multiplication (Surgery)
+        // 4. Transform multi-argument functions to standard operators/forms using mathjs for robustness.
+        // Fix for Nerdamer mangling these into (args..., func) format and TRUNCATING the rest of the expression.
+        try {
+            if (math && math.parse) {
+                const node = math.parse(finalExpr);
+                
+                // Manual recursive transformation because mathjs node.transform is non-recursive for new returned nodes
+                const transformFn = (n: any): any => {
+                    // Try to clone or create new node with transformed args if args exist
+                    if (n.args && n.args.length > 0) {
+                        n.args = n.args.map((arg: any) => transformFn(arg));
+                    }
+                    
+                    if (n.type === 'FunctionNode') {
+                        if (n.name === 'pow' && n.args.length === 2) {
+                            return new math.OperatorNode('^', 'pow', n.args);
+                        }
+                        if ((n.name === 'nthRoot' || n.name === 'root') && n.args.length === 2) {
+                            // Convert nthRoot(a, b) to a^(1/b)
+                            const one = new math.ConstantNode(1);
+                            const exponent = new math.OperatorNode('/', 'divide', [one, n.args[1]]);
+                            return new math.OperatorNode('^', 'pow', [n.args[0], exponent]);
+                        }
+                    }
+                    return n;
+                };
+
+                finalExpr = transformFn(node).toString();
+            }
+        } catch (e) {
+            // Fallback to simple regex if mathjs parsing fails (e.g. incomplete expressions)
+            finalExpr = finalExpr.replace(/\bpow\s*\(([^,]+),\s*([^)]+)\)/gi, '(($1)^($2))');
+        }
+
+        // 5. Implicit Multiplication (Surgery)
         // ) ( -> ) * ( , ) fn -> ) * fn
         finalExpr = finalExpr.replace(/(\))(\s*)(\()/g, '$1 * $3');
         finalExpr = finalExpr.replace(new RegExp(`(\\))(\s*)(${fnList}|[a-zA-Z0-9])\\b`, 'gi'), '$1 * $3');
