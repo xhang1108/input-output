@@ -10,6 +10,8 @@
 ### [www.input-output.cc](https://www.input-output.cc)
 Some scummy domain registrars snatched the domain I wanted. I urge everyone to stop searching on those dirt-cheap domain sites.
 
+![Example Nodes](./public/assets/example_nodes.png)
+
 ## Core Capabilities
 
 - **Unified Engine**: Single interface for `mathjs`, `nerdamer`, `vega-lite`, and `elkjs`.
