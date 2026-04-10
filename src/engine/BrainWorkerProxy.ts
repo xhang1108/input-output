@@ -82,7 +82,7 @@ export class BrainWorkerProxy {
         try {
             this.worker = new Worker(
                 new URL('./brain.worker.ts', import.meta.url),
-                { type: 'module' }
+                { type: 'classic' }
             );
 
             this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {

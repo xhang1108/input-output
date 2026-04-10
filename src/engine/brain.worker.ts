@@ -15,7 +15,23 @@
  *   HEALTH_CHECK → Report node/edge counts + value hashes for validation
  */
 
+// ─── External CDN Dependencies ─────────────────────────────────────
+// We load heavy libraries via CDN to bypass build size limits and timeouts.
+// This matches the externalized loading strategy in layout.tsx.
+try {
+    if (typeof importScripts === 'function') {
+        importScripts('https://unpkg.com/mathjs@14.2.1/lib/browser/math.js');
+        importScripts('https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js');
+        importScripts('https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/all.min.js');
+    }
+} catch (e) {
+    console.error('[Worker] Failed to load external CDN scripts:', e);
+}
+
+// Fallback for types and local development (Webpack will still handle these
+// if they are not explicitly externalized in the worker build)
 import { create, all } from 'mathjs';
+
 
 import { MATH_CONFIG } from './mathConfig';
 import { NodeRegistry } from './NodeRegistry';
@@ -353,7 +369,14 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             case 'INIT': {
                 try {
                     NodeRegistry.initializeNodes();
-                    math = create(all, msg.config);
+                    // Use global math instance if available from CDN, otherwise fallback to bundled
+                    const mathFactory = (self as any).math || { create, all };
+                    math = (self as any).math ? (self as any).math : mathFactory.create(mathFactory.all, msg.config);
+                    
+                    if ((self as any).math) {
+                        console.log('[Worker] Using global mathjs from CDN');
+                    }
+
                     respond({ type: 'READY' });
                 } catch (e: any) {
                     respond({ type: 'ERROR', epoch: 0, error: 'INIT Error: ' + (e.stack || e.message || String(e)) });
@@ -362,8 +385,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             }
 
             case 'UPDATE_CONFIG': {
-                math = create(all, msg.config);
+                const mathFactory = (self as any).math || { create, all };
+                math = (self as any).math ? (self as any).math : mathFactory.create(mathFactory.all, msg.config);
                 respond({ type: 'READY' });
+
                 break;
             }
 
