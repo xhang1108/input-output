@@ -3,7 +3,7 @@
 - **日期**：2026-11-13
 - **來源**：`guide/frame`（React Flow 官方 dynamic parent-child 範例，`@xyflow/react ^12.12.0`、React 19.2.5）
 - **目標**：`input-output`（`@xyflow/react 12.10.2`、React 19.2.4）
-- **性質**：設計評估，不含實作。行號以此 worktree 當下內容為準。
+- **性質**：設計評估 + 實作紀錄；程式行號以 branch `copy-paste` 當下內容為準（2026-11-14 更新）。
 
 ---
 
@@ -13,9 +13,39 @@
 2. **官方的拖曳實作不能照抄**：我們 `nodesDraggable={false}`（`FlowCanvas.tsx:721`），拖曳由 `useHand` 自製（snap、axis lock、autopan、SCALE/ROTATE）。`onNodeDrag` / `onNodeDragStop` 永遠不會 fire。能移植的是「drop 時找 frame + 轉相對座標」的計算。
 3. **接入前先做座標治根（P0）**：根因不是單一 offset，而是幾何有三個權威（RF internals / Brain 自算 / hooks 手算），且測試把 center 制鎖住。治根方案見 §4 P0：一個 `coordinates.ts`、五個可獨立 review 的 PR。
 4. **第一版建議（已依後續決策調整）**：單層 frame、不可巢狀、手動尺寸 + live expand-only 自動擴張、不用 `extent`。拖出框不 clamp；detach 走 context menu / F。
-5. **存檔 schema 不變，但目前「存得下、載不回」**：`parentId` / `width` / `height` 有寫入（`Serializer.ts:39-59`、`useProjectSave.ts:149-157`），但 `Brain.injectNodes` 沒把 `width/height` 放進 `ADD_NODE`（`Brain.ts:1193-1203`）。`AddNodePayload` 與 reducer 其實已支援，修法約 4 行。不需要新 dependency（Vercel/CSP 不變）。
+5. **存檔 schema 不變**：`parentId` / `width` / `height` 原本就有寫入，但 `injectNodes` 曾漏掉尺寸（「存得下、載不回」）。P0.5 已補上，`tests/unit/lifecycle/FramePersistence.test.ts` 覆蓋 serialize → deserialize → `injectNodes`。
 6. **實作順序**：P0（座標治根，5 PR）→ P0.5（nullable parentId / deleteKeyCode / width-height 載入）→ P1（frame 核心）→ P2（下游整合）。P0 不改 schema、不碰 frame UI，可以先單獨合併。粗估 P0 1.5–2 天、P0.5 0.5 天、P1 2–3 天、P2 2–3 天。
 7. **已拍板**：live expand-only、刪 frame 轉 independent、手動 resize（最小 = 內容外緣）、單層、context-menu Detach；IOGL 建議支援，方案見 §4 P2.1。
+
+---
+
+## 0.1 實作進度（2026-11-14，branch `copy-paste`）
+
+**主線已完成**：P0 座標治根、P0.5 資料/鍵盤、P1 frame 核心、P2 下游整合、P2.1 IOGL。`npx tsc --noEmit` 只剩 4 個既有 `brain.worker.ts` 的 `importScripts`；`npm run test:run` 為 `78 files / 513 tests passed`。
+
+| 階段 | 內容 | commit |
+|---|---|---|
+| P0-1/2/3 | `coordinates.ts`、Brain top-left、`useHand` roots-only + scale/rotate 回寫 local | `87e8a42`、`0d0c613`、`1945cf7` |
+| P0-4 | knife / auto-insert / align / NPanel 改 absolute；IOGL docs 改 top-left | `da4e5a5` |
+| P0.5 | `parentId` nullable、`deleteKeyCode={null}`、`injectNodes` 載入 `width/height` | `2bf64ae`、`071eb26`（尺寸載入在 `c027a81` 已在主線） |
+| P1 | FrameNode、`F` group/ungroup、attach、edge-only 選取、context-menu Detach、manual resize、RO 迴圈修正 | `2bf64ae`…`9dcdf91` |
+| P2 | layout（frame 當 block + 框內 local pass）、clipboard 連帶 descendants、NPanel history 合併 | `0ac3fe8`、`f10252f`、`f45b112` |
+| P2.1 | IOGL `FRAME` + `{parent:"label"}`、parser diagnostics、docs | `b3aedd9` |
+| 測試 | 存檔/載入 round-trip、layout policy、clipboard、IOGL round-trip | `79ba8a0` 等 |
+
+**已手動驗證**（使用者確認）：
+
+- 框內空白不選 frame；邊框/label 可選；框內可起圈選。
+- 拖 child 出框會即時擴張；右下 resize（含 zoom）正常，無 `ResizeObserver` 錯誤。
+- 右鍵 `Detach from Frame`、Undo 可掛回。
+- auto-layout：全域 frame 當 block 一起移動；選 frame 排框內；只選 children 排框內。
+
+**還沒做（明天從這裡開始）**：
+
+1. §6.2 尚未自動化的回歸：`useHand` frame 內 SCALE/ROTATE、attach 的 absolute→relative/clamp/最小面積、`Backspace` 不雙重刪除、depth sort、read-only 守衛。
+2. `validateHierarchy` 目前只有 helper + 單元測試，**尚未接進 attach / 載入路徑**；實務上由 `useHand.ts:616`（排除 frame 與已有 parent 的節點）擋住，屬補強而非修 bug。
+3. `globals.css` 的 `.frame-resize-line` / `.frame-resize-handle` 仍是 dead CSS。
+4. 明確不做：巢狀 frame、`Fit to contents` 按鈕、拖出框自動 detach。
 
 ---
 
@@ -63,6 +93,8 @@ position: {
 ---
 
 ## 2. 現況：我們其實已有「半套 frame」
+
+> 本章是 **接入前的現況快照**（2026-11-13），用來解釋後面的決策；標「缺少/壞掉」的項目多數已在 §0.1 完成，現況請以 §0.1 為準。
 
 ### 2.1 已存在
 
@@ -303,28 +335,28 @@ P0-1 先建立 **flat baseline**（只有 root 的專案，位置不得變），
 
 **風險 / 回滾**：P0 不改 schema；逐 PR revert 即可。`bbox` metadata 會變（目前無消費者）；`useHand` 行為改變最大，需手動 regression。
 
-### P0.5 — Frame 前置：資料與刪除（P0 之後、P1 之前）
+### P0.5 — Frame 前置：資料與刪除（P0 之後、P1 之前）— **已完成**
 
 | 檔案 | 改動 | 風險 |
 |---|---|---|
 | `src/engine/types/engineTypes.ts:68` + `TransactionManager.ts:140-144` + `useHistoryExecutor.ts:46-55` | `parentId?: string \| null`；用 `'parentId' in p` 判斷（detach 前置） | 高：沒改就沒有 detach |
-| `src/components/FlowCanvas.tsx:660-741` | `deleteKeyCode={null}`（既有 Backspace 雙重觸發 bug，見 §3-D6） | 中：現行 UI/Brain 可能已 desync |
+| `src/components/FlowCanvas.tsx:660-741` | `deleteKeyCode={null}`（既有 Backspace 雙重觸發 bug，見 §3-D6）— 已設在 `FlowCanvas.tsx:731` | 中：現行 UI/Brain 可能已 desync |
 | `src/engine/Brain.ts:1193-1203` | `injectNodes` 轉交 `width/height`；orphan/cycle sanitize | 低：型別與 reducer 已支援 |
 
-### P1 — Frame 核心
+### P1 — Frame 核心 — **已完成**
 
 | 檔案 | 改動 |
 |---|---|
-| `src/components/nodes/FrameNode.tsx`（新） | label、選取樣式、`ResizeHandle`（動態 min）、`NodeToolbar`（Fit/Detach/Delete）、`nodrag` |
+| `src/components/nodes/FrameNode.tsx`（新） | label、選取樣式、`ResizeHandle`（動態 min = 內容外緣）、手動 resize；**無** `NodeToolbar`，Detach 在 node context menu |
 | `src/constants/nodeTypeMap.ts:55-124` | `'frame': FrameNode` |
-| `src/types/nodeDefinitions.ts` | frame definition（min size / category / defaultData） |
-| `src/app/globals.css:338-344` | 移除 `pointer-events:none !important`；補 toolbar / label CSS |
-| `src/hooks/useFrameActions.ts`（新） | `groupSelected`（建立時 auto-fit）/ `ungroupSelected` / `detachNodes` / `attachNodes` / `fitFrameToContents`；改寫官方 `useDetachNodes` + `getNodePositionInsideParent`，寫入走 Brain |
-| `src/hooks/nerves/useHand.ts:430-535` | `confirmGrab` 加 attach/clamp；**只允許 root frame**；exclude ancestors；smallest-area 選擇 |
+| `src/types/nodeDefinitions.ts` | frame definition（min size / category / defaultData / aliases） |
+| `src/app/globals.css:338-344` | `.react-flow__node-frame { pointer-events:none !important }` **保留**；只有邊框/label/resize grip 用 `pointer-events:auto` |
+| `src/hooks/useFrameActions.ts`（新） | `groupSelected`（建立時 auto-fit）/ `ungroupSelected` / `detachNode`；寫入走 Brain |
+| `src/hooks/nerves/useHand.ts:430-535` | `confirmGrab` attach（root-only、完整落在框內）；frame 擴張；resize snapshot |
 | `src/hooks/useSelection.ts:22-62` | frame 刪除 **unwrap**：children 轉 absolute + 清 `parentId`；forward/inverse 一致；dedupe |
-| `src/constants/shortcuts.ts:76-82` + `FlowCanvas.tsx:407-584` | 接上 `nodes:bundle` → group/ungroup；ContextMenu 加 Group/Ungroup/Detach。注意 shortcut label 是 `Frame Selected`、StatusBar 是 `F: Group`，先統一文案 |
+| `src/constants/shortcuts.ts:76-82` + `FlowCanvas.tsx` | `F` group/ungroup 已接上；context menu 加 `Detach from Frame` |
 | `src/hooks/useBrainUpdates.ts:139-151,239-244` | depth-aware 排序；zIndex 規則保留 |
-| `src/hooks/useHistoryExecutor.ts:35-82,124-141` | 保留 index splice；index 缺失時才 depth sort；`RESIZE_NODE` 還原 frame 尺寸；unwrap 的 inverse 還原 `parentId` + local |
+| `src/hooks/useHistoryExecutor.ts:35-82,124-141` | 保留 index splice；`RESIZE_NODE` 還原 frame 尺寸；unwrap 的 inverse 還原 `parentId` + local |
 
 ### P2 — 下游整合
 
@@ -399,12 +431,12 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 
 | # | 犧牲 | 影響 | 嚴重度 | 替代 |
 |---|---|---|---|---|
-| 1 | 拖出框自動 detach | 拖到邊界會 clamp；要按 Detach / F | 中 | toolbar + `F` ungroup |
-| 2 | live auto-fit（每幀重算） | 只有建立時 + on-demand `Fit to contents`；拖 child 時 frame 不會自動長大 | 低 | toolbar 按鈕；避免上次 jitter |
+| 1 | 拖出框自動 detach | 拖出框不 clamp：frame 會即時擴張；要 detach 得用 context menu / `F` | 中 | context menu + `F` ungroup |
+| 2 | 自動縮小 / `Fit to contents` | 不做；frame 只會在需要時變大，手動 resize 可縮到內容外緣 | 低 | 已拍板不做獨立 Fit 按鈕 |
 | 3 | frame 巢狀 | 已決定單層；frame-in-frame 直接拒絕 | 中 | 未來 depth-aware 全鏈路再開 |
 | 4 | RF 原生拖曳 / `extent` / `expandParent` | 不能直接用官方 `onNodeDrag*`；containment 自己算 | 中 | 保留 `useHand` 的 snap / axis lock / autopan |
 | 5 | 扁平 layout 假設 | 世界 pass 把 frame 當 block；選 children 時走 frame 內 local pass | 中 | 若還要巢狀 frame，再上 ELK hierarchy |
-| 6 | IOGL 1.0 沒有 frame 語法 | 不改格式就會遺失群組，且 local 座標被當 absolute | 中 | `FRAME` + `parent`（§4 P2.1）；未實作前 encoder 要 guard |
+| 6 | IOGL 1.0 沒有 frame 語法 | 已用 `FRAME` + `{parent:"label"}` 補上（P2.1）；舊格式沒有 parent 欄位 | 低 | 已完成 round-trip 測試 |
 | 7 | nested 選取的 SCALE/ROTATE | frame + child 同時選取時直接縮放語意複雜 | 中 | 第一版對含 frame 的選取禁用 S/R，或只作用 roots |
 | 8 | Frame 不是 Macro | 沒有 ports、沒有邏輯封裝，線仍可跨框 | 低 | 維持 UI-02 定位；Macro 另案 |
 | 9 | 舊 center-era frame 專案 | 可能偏半個 parent 尺寸 | 中 | release note；必要時 heuristic migration |
@@ -431,9 +463,9 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 10. Read-only：不能 group/ungroup/detach/delete。
 11. frame + child 一起選取拖曳：child 只位移 1×，放手後 Brain 只更新 frame。
 12. frame 內 child 做 SCALE/ROTATE：視覺位置不跳，absolute 不變。
-13. `Fit to contents`：frame 貼合 children，children absolute 不變。
-14. 把 frame 拖進另一個 frame：被拒絕，log 明確。
-15. IOGL 匯出 → 匯入：frame、children、相對位置全部保留（P2.1 後）。
+13. `Fit to contents`：**不做**（已拍板）；手動 resize 的最小尺寸已等於內容外緣。
+14. 把 frame 拖進另一個 frame：**已實作拒絕**（attach 只接受 root、非 frame 節點；`useHand.ts:616`）。
+15. IOGL 匯出 → 匯入：frame、children、相對位置全部保留（`b3aedd9`；自動測試覆蓋）。
 
 ### 6.2 單元 / 整合測試
 
@@ -493,7 +525,7 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 | 拖曳 | RF native | `useHand` |
 | attach 時機 | `onNodeDragStop` | `confirmGrab` |
 | 邊界 | `extent: 'parent'` | 自訂 clamp |
-| detach | NodeToolbar | NodeToolbar + `F` |
+| detach | NodeToolbar | node context menu + `F`/ungroup |
 | 選取 | RF default | `useSelection` + `onNodesChangeSafe` |
 | 儲存 | 範例不存 | Brain + Serializer（`parentId` 已支援） |
 | 刪除 | `deleteElements`（cascade） | `deleteSelected` + frame unwrap（children 轉 independent） |
