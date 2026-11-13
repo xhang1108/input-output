@@ -11,6 +11,9 @@ import { StringInput } from '../common/StringInput';
 import { NumericInput } from '../common/NumericInput';
 import { CategorizedMenu, CategorizedMenuItem } from './CategorizedMenu';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
+import { Transaction } from '../../engine/types/engineTypes';
+import { useHistoryStore } from '../../store/useHistoryStore';
+import { indexNodes, toAbsolute } from '../../utils/coordinates';
 
 // ─── Atomic Field Components ──────────────────────────────────────────────────
 
@@ -250,12 +253,16 @@ function SettingsSection({
 export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const { setNodes, updateNodeData } = useReactFlow();
     const brain = useBrain();
+    const pushHistory = useHistoryStore(s => s.push);
 
     // Single selected node (reactive to React Flow store)
     const selectedNode = useStore(s => {
         const selected = s.nodes.filter(n => n.selected);
         return selected.length === 1 ? selected[0] : null;
     });
+
+    // Ancestor lookup for the derived absolute position of nested nodes.
+    const allNodes = useStore(s => s.nodes);
 
     // Look up the node definition to get params schema
     const nodeDef = selectedNode
@@ -285,23 +292,47 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
     }, [selectedNode, updateNodeData]);
 
     // Position / Label updates (use setNodes for position which isn't part of data)
+    // `node.position` is parent-local (world for roots). The panel always writes
+    // that local value back through MOVE_NODE, never an absolute position.
     const handlePositionChange = useCallback((axis: 'x' | 'y', rawValue: string) => {
         if (!selectedNode) return;
         const num = parseFloat(rawValue);
         if (isNaN(num)) return;
 
+        const previous = { ...selectedNode.position };
+        if (Math.abs(num - previous[axis]) < 0.001) return;
+
+        const position = { ...previous, [axis]: num };
+        const forward: Transaction = { type: 'MOVE_NODE', payload: { id: selectedNode.id, position } };
+        const inverse: Transaction = { type: 'MOVE_NODE', payload: { id: selectedNode.id, position: previous } };
+
+        const res = brain.applyTransaction(forward);
+        if (!res.success) return;
+
+        pushHistory({
+            id: `npanel_move_${selectedNode.id}_${Date.now()}`,
+            description: `Move ${selectedNode.id}`,
+            forward: [forward],
+            inverse: [inverse]
+        });
+
+        // Immediate UI feedback; the Brain sync lands on the same local value.
         setNodes(nds => nds.map(n =>
             n.id === selectedNode.id
-                ? { ...n, position: { ...n.position, [axis]: num } }
+                ? { ...n, position }
                 : n
         ));
-    }, [selectedNode, setNodes]);
+    }, [selectedNode, brain, pushHistory, setNodes]);
 
     if (!isOpen) return null;
 
     const nodeData = (selectedNode?.data ?? {}) as Record<string, unknown>;
     const posX = selectedNode ? selectedNode.position.x.toFixed(1) : '0';
     const posY = selectedNode ? selectedNode.position.y.toFixed(1) : '0';
+    // Derived only: nested nodes also show their world position for reference.
+    const absolutePosition = selectedNode?.parentId
+        ? toAbsolute(indexNodes(allNodes), selectedNode.id)
+        : null;
     const labelVal = typeof nodeData.label === 'string' ? nodeData.label : '';
 
     return (
@@ -357,6 +388,9 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                         {/* ── Transform ── */}
                         <div className="space-y-3">
                             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Transform</h3>
+                            {selectedNode.parentId && (
+                                <p className="text-[9px] text-zinc-600 italic">X / Y are parent-local.</p>
+                            )}
                             <div className="grid grid-cols-2 gap-3">
                                 <NumericInput
                                     label="X Position"
@@ -371,6 +405,14 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                                     inputClassName="h-8"
                                 />
                             </div>
+                            {absolutePosition && (
+                                <div className="flex items-center justify-between gap-2 bg-surface-base border border-border-dim/80 rounded-md px-2 py-1.5">
+                                    <span className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Absolute</span>
+                                    <span className="text-[10px] font-mono text-zinc-400">
+                                        {absolutePosition.x.toFixed(1)}, {absolutePosition.y.toFixed(1)}
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         {/* ── Schema-Driven Node Settings ── */}

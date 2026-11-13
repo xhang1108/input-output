@@ -8,6 +8,7 @@ import { Brain } from '../engine/Brain';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
 import { useAppStore } from '../store/useStore';
+import { indexNodes, toAbsolute } from '../utils/coordinates';
 
 interface UseAutoInsertProps {
     mode: string;
@@ -90,10 +91,14 @@ export function useAutoInsert({
             }
 
             // 1. Get Sensing Center via Red-Dot Offset (Flow Space)
+            // Edge paths are drawn in flow (world) space, so a nested node's
+            // parent-local position must be resolved before comparing.
             const SENSING_OFFSET_X = 60; 
             const SENSING_OFFSET_Y = 40;
-            const cx = node.position.x + SENSING_OFFSET_X;
-            const cy = node.position.y + SENSING_OFFSET_Y;
+            const nodeById = indexNodes(nodes);
+            const nodeAbsolute = toAbsolute(nodeById, node.id);
+            const cx = nodeAbsolute.x + SENSING_OFFSET_X;
+            const cy = nodeAbsolute.y + SENSING_OFFSET_Y;
 
             const currentPadding = highlightedEdgeId ? 110 : 100;
             const detRadius = 15;
@@ -106,20 +111,21 @@ export function useAutoInsert({
             let bestEdge: string | null = null;
             let minCenterDist = Infinity;
 
-            const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
             // 2. Optimized Loop
             for (const edge of edges) {
                 if (edge.source === node.id || edge.target === node.id) continue;
 
-                const sourceNode = nodeMap.get(edge.source);
-                const targetNode = nodeMap.get(edge.target);
+                const sourceNode = nodeById.get(edge.source);
+                const targetNode = nodeById.get(edge.target);
                 if (!sourceNode || !targetNode) continue;
 
-                const edgeMinX = Math.min(sourceNode.position.x, targetNode.position.x) - currentPadding;
-                const edgeMaxX = Math.max(sourceNode.position.x, targetNode.position.x) + currentPadding;
-                const edgeMinY = Math.min(sourceNode.position.y, targetNode.position.y) - currentPadding;
-                const edgeMaxY = Math.max(sourceNode.position.y, targetNode.position.y) + currentPadding;
+                const sourceAbsolute = toAbsolute(nodeById, sourceNode.id);
+                const targetAbsolute = toAbsolute(nodeById, targetNode.id);
+
+                const edgeMinX = Math.min(sourceAbsolute.x, targetAbsolute.x) - currentPadding;
+                const edgeMaxX = Math.max(sourceAbsolute.x, targetAbsolute.x) + currentPadding;
+                const edgeMinY = Math.min(sourceAbsolute.y, targetAbsolute.y) - currentPadding;
+                const edgeMaxY = Math.max(sourceAbsolute.y, targetAbsolute.y) + currentPadding;
 
                 if (cx < edgeMinX || cx > edgeMaxX || cy < edgeMinY || cy > edgeMaxY) continue;
 

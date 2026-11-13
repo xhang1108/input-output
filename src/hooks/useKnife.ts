@@ -4,6 +4,7 @@ import { useCanvasProjection } from './useCanvasProjection';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
 import { FALLBACK_SIZE } from '../utils/GeometryUtils';
+import { indexNodes, toAbsolute } from '../utils/coordinates';
 
 /**
  * useKnife
@@ -40,14 +41,15 @@ export function useKnife() {
             // Fix: Use getEdges() to avoid Stale Closures (The Closure Trap)
             const allEdges = getEdges();
             const allNodes = getNodes();
+            const nodeById = indexNodes(allNodes);
             const edgesToRemoveObjects: Edge[] = [];
             const restoredEdgeIndices: Record<string, number> = {};
 
             const projectedPath = path.map((p: XYPosition) => project({ x: p.x, y: p.y }));
 
             allEdges.forEach((edge, index) => {
-                const sourceNode = allNodes.find(n => n.id === edge.source);
-                const targetNode = allNodes.find(n => n.id === edge.target);
+                const sourceNode = nodeById.get(edge.source);
+                const targetNode = nodeById.get(edge.target);
                 if (!sourceNode || !targetNode) return;
 
                 const sw = sourceNode.measured?.width ?? sourceNode.width ?? FALLBACK_SIZE.width;
@@ -55,15 +57,20 @@ export function useKnife() {
                 const tw = targetNode.measured?.width ?? targetNode.width ?? FALLBACK_SIZE.width;
                 const th = targetNode.measured?.height ?? targetNode.height ?? FALLBACK_SIZE.width;
 
-                const sx = sourceNode.position.x + sw;
-                const tx = targetNode.position.x;
+                // Cut detection runs in flow (world) space, so nested nodes must
+                // be resolved through the coordinate contract.
+                const sourceAbs = toAbsolute(nodeById, sourceNode.id);
+                const targetAbs = toAbsolute(nodeById, targetNode.id);
+
+                const sx = sourceAbs.x + sw;
+                const tx = targetAbs.x;
                 const HEADER_H = 52;
                 const PADDING = 12;
                 const SOCKET_SIZE = 12;
                 
                 // Visual wire start/end Y coordinates (aligned with first handles)
-                const sy = sourceNode.position.y + HEADER_H + PADDING + (SOCKET_SIZE / 2);
-                const ty = targetNode.position.y + HEADER_H + PADDING + (SOCKET_SIZE / 2);
+                const sy = sourceAbs.y + HEADER_H + PADDING + (SOCKET_SIZE / 2);
+                const ty = targetAbs.y + HEADER_H + PADDING + (SOCKET_SIZE / 2);
 
                 for (let i = 0; i < projectedPath.length - 1; i++) {
                     const p1 = projectedPath[i];

@@ -7,7 +7,7 @@ import { Transaction } from '../engine/types/engineTypes';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { HandleConfig } from '../types/nodeDefinitions';
-import { indexNodes, toAbsolute } from '../utils/coordinates';
+import { indexNodes, toAbsolute, toParentLocal } from '../utils/coordinates';
 
 /**
  * useSelection
@@ -247,21 +247,31 @@ export function useSelection() {
         const selected = nodes.filter(n => n.selected);
         if (selected.length < 2) return;
 
-        // 1. Find the Absolute Minimum (The Anchor)
-        const positions = selected.map(n => n.position);
-        const minVal = Math.min(...positions.map(p => axis === 'X' ? p.x : p.y));
+        const nodeById = indexNodes(nodes);
+
+        // 1. Find the world-space minimum (the anchor). Raw `position` values are
+        // only comparable when every node shares the same parent.
+        const absoluteById = new Map(selected.map(node => [node.id, toAbsolute(nodeById, node.id)]));
+        const minVal = Math.min(...selected.map(node => {
+            const abs = absoluteById.get(node.id)!;
+            return axis === 'X' ? abs.x : abs.y;
+        }));
 
         const forward: Transaction[] = [];
         const inverse: Transaction[] = [];
 
         // 2. Build Transitions (Strictly Red-Dot to Anchor)
         selected.forEach(node => {
-            const newPos = {
-                x: axis === 'X' ? minVal : node.position.x,
-                y: axis === 'Y' ? minVal : node.position.y
+            const abs = absoluteById.get(node.id)!;
+            const targetAbsolute = {
+                x: axis === 'X' ? minVal : abs.x,
+                y: axis === 'Y' ? minVal : abs.y,
             };
+            // Nodes may live under different parents, so the world-space target
+            // must be converted back to the node's own parent-local position.
+            const newPos = toParentLocal(nodeById, node.id, targetAbsolute);
 
-            // Precision check
+            // Precision check against the stored parent-local position
             if (Math.abs(newPos.x - node.position.x) > 0.1 || Math.abs(newPos.y - node.position.y) > 0.1) {
                 forward.push({ type: 'MOVE_NODE', payload: { id: node.id, position: newPos } });
                 inverse.push({ type: 'MOVE_NODE', payload: { id: node.id, position: { ...node.position } } });
