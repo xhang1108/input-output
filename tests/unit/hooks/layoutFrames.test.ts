@@ -4,6 +4,7 @@ import {
     buildElkGraph,
     isFrameNode,
     mergeLayoutPositions,
+    planPartialLayout,
     selectLayoutEdges,
     selectLayoutNodes,
 } from '@/hooks/layoutEngine';
@@ -11,11 +12,11 @@ import {
 /**
  * P2 "下游整合" — layout policy (docs/frame-integration.md §3-D8 / §4-P2).
  *
- * Rule under test (option A):
- * - ELK only receives ROOT, NON-FRAME nodes.
- * - A frame is never moved, so its user-chosen placement survives re-layout.
- * - Children are never handed to ELK because their `position` is parent-local
- *   (`src/utils/coordinates.ts`); ELK writes world coordinates.
+ * Rules under test:
+ * - World pass: roots only, frames included as one sized block (the group
+ *   moves together; children keep parent-local positions).
+ * - Inside-frame pass: selected children are laid out in their frame's local
+ *   space, and the frame grows to fit them.
  * - Merging happens by id and only touches `position`.
  */
 
@@ -70,25 +71,25 @@ describe('layoutEngine frame policy', () => {
         expect(isFrameNode(makeNode('n', 0, 0))).toBe(false);
     });
 
-    it('excludes the frame and every parented child from the layout pass', () => {
+    it('includes frames as world blocks and excludes their children', () => {
         const { nodes } = frameGraph();
 
         const layoutNodes = selectLayoutNodes(nodes);
 
-        expect(layoutNodes.map(n => n.id)).toEqual(['rootX', 'rootY']);
+        expect(layoutNodes.map(n => n.id)).toEqual(['frame', 'rootX', 'rootY']);
     });
 
-    it('restricts a partial (selection-scoped) pass and still drops frame children', () => {
+    it('restricts a partial (selection-scoped) pass to the selected roots', () => {
         const { nodes } = frameGraph();
 
         const layoutNodes = selectLayoutNodes(nodes, {
-            candidateIds: new Set(['childA', 'rootY']),
+            candidateIds: new Set(['childA', 'rootY', 'frame']),
         });
 
-        expect(layoutNodes.map(n => n.id)).toEqual(['rootY']);
+        expect(layoutNodes.map(n => n.id)).toEqual(['frame', 'rootY']);
     });
 
-    it('drops edges that reference frames or frame children (ELK would reject them)', () => {
+    it('drops edges that reference frame children (ELK would reject them)', () => {
         const { nodes, edges } = frameGraph();
         const layoutNodes = selectLayoutNodes(nodes);
 
@@ -97,14 +98,22 @@ describe('layoutEngine frame policy', () => {
         expect(layoutEdges.map(e => e.id)).toEqual(['e-boundary']);
     });
 
-    it('builds an ELK graph without frame nodes or frame-internal edges', () => {
+    it('builds an ELK graph from the given participants', () => {
         const { nodes, edges } = frameGraph();
+        const participants = selectLayoutNodes(nodes);
 
-        const { graph, layoutNodes } = buildElkGraph(nodes, edges, { algorithm: 'layered' });
+        const { graph, layoutNodes } = buildElkGraph(participants, edges, { algorithm: 'layered' });
 
-        expect(graph.children.map((c: { id: string }) => c.id)).toEqual(['rootX', 'rootY']);
+        expect(graph.children.map((c: { id: string }) => c.id)).toEqual(['frame', 'rootX', 'rootY']);
         expect(graph.edges.map((e: { id: string }) => e.id)).toEqual(['e-boundary']);
-        expect(layoutNodes.map(n => n.id)).toEqual(['rootX', 'rootY']);
+        expect(layoutNodes.map(n => n.id)).toEqual(['frame', 'rootX', 'rootY']);
+    });
+
+    it('sizes a frame block from its width/height when it has no measured size', () => {
+        const nodes = [makeNode('frame', 100, 100, { type: 'frame', width: 400, height: 300 })];
+        const { graph } = buildElkGraph(nodes, []);
+
+        expect(graph.children[0]).toMatchObject({ id: 'frame', width: 400, height: 300 });
     });
 
     it('keeps a flat graph input identical (all roots and all edges)', () => {
@@ -115,6 +124,66 @@ describe('layoutEngine frame policy', () => {
 
         expect(graph.children.map((c: { id: string }) => c.id)).toEqual(['a', 'b']);
         expect(graph.edges.map((e: { id: string }) => e.id)).toEqual(['e1']);
+    });
+});
+
+describe('planPartialLayout', () => {
+    it('lays out the contents of a selected frame and keeps the frame in place', () => {
+        const { nodes } = frameGraph();
+
+        const plan = planPartialLayout(nodes, new Set(['frame']));
+
+        expect(plan.worldNodes).toEqual([]);
+        expect(plan.childGroups).toHaveLength(1);
+        expect(plan.childGroups[0].frameId).toBe('frame');
+        expect(plan.childGroups[0].nodes.map(n => n.id).sort()).toEqual(['childA', 'childB']);
+    });
+
+    it('does not duplicate children when the frame and a child are both selected', () => {
+        const { nodes } = frameGraph();
+
+        const plan = planPartialLayout(nodes, new Set(['frame', 'childA']));
+
+        expect(plan.childGroups[0].nodes.map(n => n.id).sort()).toEqual(['childA', 'childB']);
+    });
+
+    it('lays out selected children inside their frame', () => {
+        const { nodes } = frameGraph();
+
+        const plan = planPartialLayout(nodes, new Set(['childA']));
+
+        expect(plan.worldNodes).toEqual([]);
+        expect(plan.childGroups).toHaveLength(1);
+        expect(plan.childGroups[0].frameId).toBe('frame');
+        expect(plan.childGroups[0].nodes.map(n => n.id)).toEqual(['childA']);
+    });
+
+    it('splits a mixed selection into world roots and per-frame child groups', () => {
+        const { nodes } = frameGraph();
+        nodes.push(makeNode('frame2', 0, 800, { type: 'frame', width: 300, height: 200 }));
+        nodes.push(makeNode('childC', 20, 20, { parentId: 'frame2' }));
+
+        const plan = planPartialLayout(nodes, new Set(['rootX', 'childA', 'childC']));
+
+        expect(plan.worldNodes.map(n => n.id)).toEqual(['rootX']);
+        expect(plan.childGroups.map(g => g.frameId).sort()).toEqual(['frame', 'frame2']);
+    });
+
+    it('keeps a selected frame fixed while other selected roots are laid out', () => {
+        const { nodes } = frameGraph();
+
+        const plan = planPartialLayout(nodes, new Set(['frame', 'rootX']));
+
+        expect(plan.worldNodes.map(n => n.id)).toEqual(['rootX']);
+        expect(plan.childGroups.map(g => g.frameId)).toEqual(['frame']);
+    });
+
+    it('ignores selected nodes whose parent no longer exists', () => {
+        const { nodes } = frameGraph();
+
+        const plan = planPartialLayout(nodes, new Set(['ghost', 'orphan']));
+
+        expect(plan).toEqual({ worldNodes: [], childGroups: [] });
     });
 });
 
@@ -147,13 +216,19 @@ describe('mergeLayoutPositions', () => {
         expect(merged.find(n => n.id === 'rootY')!.position).toEqual({ x: 350, y: 60 });
     });
 
-    it('never moves a frame even if a layout result contains one', () => {
+    it('moves a frame block but keeps its size, style and children parented', () => {
         const { nodes } = frameGraph();
         const strayFrame = { ...nodes[0], position: { x: 0, y: 0 } };
 
         const merged = mergeLayoutPositions(nodes, [strayFrame]);
 
-        expect(merged.find(n => n.id === 'frame')!.position).toEqual({ x: 1000, y: 500 });
+        const frame = merged.find(n => n.id === 'frame')!;
+        expect(frame.position).toEqual({ x: 0, y: 0 });
+        expect(frame.width).toBe(400);
+        expect(frame.height).toBe(300);
+        expect((frame.style as Record<string, unknown>).zIndex).toBe(0);
+        expect(merged.find(n => n.id === 'childA')!.parentId).toBe('frame');
+        expect(merged.find(n => n.id === 'childA')!.position).toEqual({ x: 20, y: 30 });
     });
 
     it('ignores layout results for unknown ids (no nodes invented or dropped)', () => {

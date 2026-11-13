@@ -231,10 +231,10 @@ position: {
 
 - **Clipboard**：`useClipboard` 選取時展開 descendants；`clipboardMath` 的 relative/DEC-6 B 已可重用。duplicate 的節點順序要 parent 先。
 - **Layout**：
-  - 方案 A（建議第一版）：只 layout roots，frame 與其 children 不參與；layout 後不改 parentId。
-  - 方案 B：ELK hierarchy（`children` + `elk.hierarchyHandling: INCLUDE_CHILDREN`），工時多 1–2 天。
-  - 必修：`useAutoLayout.ts:45-47` 已經有「parent 也在 layout set 內就剔除 child」的 guard；只缺「frame 本身不參與 layout」的 `type === 'frame'` 過濾。
-  - 必修：`RE-LAYOUT` 重建 Node（`:189-195`）不帶 `parentId/width/height/origin/style`，MOVE_NODE（`:203-206`）也不帶 `parentId`，最後 `:210 setNodes([...layouted.nodes])` 整批覆蓋。改成 merge-by-id，只更新 position。
+  - 世界 pass：roots（含 frame，frame 當一個有尺寸的 block）交給 ELK；frame 當 child 的節點不動它在 frame 內的 local 位置，整組隨 frame 移動。
+  - frame 內 pass：只選 children 時，把這些 children 用 parent-local 座標交給 ELK，frame 不動；排版後 frame 只會變大，不會縮。
+  - 不做 ELK hierarchy（`INCLUDE_CHILDREN`）；兩層 pass 已能覆蓋單層 frame。
+  - `RE-LAYOUT`：merge-by-id、只更新 position（frame 也會移動）；`parentId/width/height/origin/style` 由原節點保留，edges 用完整清單。
 - **Knife / Auto-insert / Align / NPanel**：全部改用 absolute helper；`NPanel.tsx:293-297` 的 `handlePositionChange` 目前只 `setNodes`、完全不發 `MOVE_NODE`（會被 Brain sync 蓋回），要先改成 transaction，再談 relative/absolute 顯示。
 - **IOGL**：已決定支援（P2.1）。在 P2.1 上線前，encoder 遇到任何 `parentId` 必須 **block + 明確錯誤**，不能把 local 座標當 absolute 寫出；這是資料損壞，不只是失去群組。
 - **IOGL 座標文件**：`src/assets/docs/user/05_IOGL/00_iogl-concept.md` 仍寫 `(0,0) is Center`，與 UI top-left 衝突；P0-4 要一併改成 top-left（含 AI system prompt 段）。
@@ -328,11 +328,11 @@ P0-1 先建立 **flat baseline**（只有 root 的專案，位置不得變），
 
 ### P2 — 下游整合
 
-**狀態**：layout / clipboard 已完成 `0ac3fe8`（只 layout root 非 frame 節點、merge by id 保留 `parentId`；複製 frame 連帶 descendants）；knife / auto-insert / align / NPanel 屬 P0-4，已完成 `da4e5a5`；IOGL 見 P2.1。
+**狀態**：layout / clipboard 已完成 `0ac3fe8`，layout 政策後續調整為「frame 當 block 參與世界 pass + 選 children 時在 frame 內 local pass」；knife / auto-insert / align / NPanel 屬 P0-4，已完成 `da4e5a5`；IOGL 見 P2.1。
 
 | 檔案 | 改動 |
 |---|---|
-| `src/hooks/layoutEngine.ts:56-81` + `useAutoLayout.ts:45-47,189-210` | 方案 A：layout 排除 frame/children；RE-LAYOUT 改 merge-by-id、保留 parentId |
+| `src/hooks/layoutEngine.ts` + `useAutoLayout.ts` | 世界 pass 收 roots（frame 為 block）；`planPartialLayout` 把選取的 children 分組在 frame 內 local layout；RE-LAYOUT merge-by-id、保留 `parentId` |
 | `src/hooks/useClipboard.ts:36,75` | 選 frame 連帶 descendants |
 | `src/hooks/useKnife.ts:58-66` | absolute helper |
 | `src/hooks/useAutoInsert.ts:93-124` | absolute helper |
@@ -403,7 +403,7 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 | 2 | live auto-fit（每幀重算） | 只有建立時 + on-demand `Fit to contents`；拖 child 時 frame 不會自動長大 | 低 | toolbar 按鈕；避免上次 jitter |
 | 3 | frame 巢狀 | 已決定單層；frame-in-frame 直接拒絕 | 中 | 未來 depth-aware 全鏈路再開 |
 | 4 | RF 原生拖曳 / `extent` / `expandParent` | 不能直接用官方 `onNodeDrag*`；containment 自己算 | 中 | 保留 `useHand` 的 snap / axis lock / autopan |
-| 5 | 扁平 layout 假設 | 自動 layout 要跳過 frame，或另寫 hierarchy | 中 | 方案 A 先上，方案 B 後補 |
+| 5 | 扁平 layout 假設 | 世界 pass 把 frame 當 block；選 children 時走 frame 內 local pass | 中 | 若還要巢狀 frame，再上 ELK hierarchy |
 | 6 | IOGL 1.0 沒有 frame 語法 | 不改格式就會遺失群組，且 local 座標被當 absolute | 中 | `FRAME` + `parent`（§4 P2.1）；未實作前 encoder 要 guard |
 | 7 | nested 選取的 SCALE/ROTATE | frame + child 同時選取時直接縮放語意複雜 | 中 | 第一版對含 frame 的選取禁用 S/R，或只作用 roots |
 | 8 | Frame 不是 Macro | 沒有 ports、沒有邏輯封裝，線仍可跨框 | 低 | 維持 UI-02 定位；Macro 另案 |
@@ -426,7 +426,7 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 5. 刪 frame：children 留在原位、`parentId` 清空；undo 還原 frame、尺寸與親子關係。
 6. 存檔 → reload：frame 尺寸、label、children 相對位置一致。
 7. Copy frame → paste：children 一起來；貼在游標中心。
-8. 自動 layout：frame 與 children 不被拆散。
+8. 自動 layout：frame 當 block 一起移動，children 不脫框；選取 frame 或只選 children 再按 layout 也要有反應。
 9. 舊專案（無 frame）load：位置與現在一致。
 10. Read-only：不能 group/ungroup/detach/delete。
 11. frame + child 一起選取拖曳：child 只位移 1×，放手後 Brain 只更新 frame。

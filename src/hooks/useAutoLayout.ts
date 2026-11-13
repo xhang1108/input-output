@@ -5,12 +5,14 @@ import { useBrain } from '../context/BrainContext';
 import {
     getLayoutedElements,
     mergeLayoutPositions,
+    planPartialLayout,
     selectLayoutEdges,
     selectLayoutNodes,
     LayoutAlgorithm,
     LayoutDirection
 } from './layoutEngine';
 import { sortParentFirst } from '../utils/coordinates';
+import { FRAME_PADDING, getNodeSize } from '../utils/frameGeometry';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
 import { useHistoryExecutor } from './useHistoryExecutor';
@@ -42,118 +44,140 @@ export function useAutoLayout(
         const selectedNodes = nodes.filter(n => n.selected);
         const isPartial = selectedNodes.length > 0;
 
-        // Frame policy (docs/frame-integration.md §4-P2, option A):
-        // only ROOT, NON-FRAME nodes take part. Frames and everything parented
-        // to them (local coordinates) are left exactly where they are, so a
-        // layout pass can never split a frame group or write world coordinates
-        // into a child's parent-local `position`.
-        const nodesToLayout = selectLayoutNodes(nodes, {
-            candidateIds: isPartial ? new Set(selectedNodes.map(n => n.id)) : undefined,
-        });
+        // Layout policy (docs/frame-integration.md §4-P2):
+        // - Global: every root, frames included as one sized block, so a frame
+        //   group moves as a whole.
+        // - Selection with a frame: that frame stays put and its children are
+        //   re-arranged inside it (the frame grows if needed).
+        // - Selection with children only: those children are laid out in their
+        //   own frame's local space.
+        // Children are never handed world coordinates.
+        const plan = isPartial
+            ? planPartialLayout(nodes, new Set(selectedNodes.map(n => n.id)))
+            : { worldNodes: selectLayoutNodes(nodes), childGroups: [] };
 
-        if (nodesToLayout.length === 0) return;
+        if (plan.worldNodes.length === 0 && plan.childGroups.length === 0) return;
 
-        // Edges are restricted to laid-out endpoints; ELK rejects edges that
-        // reference nodes outside its graph (typical for frame children).
-        const edgesToLayout = selectLayoutEdges(edges, nodesToLayout);
-
-        // Capture BEFORE Positions
-        const oldPositions = new Map<string, { x: number, y: number }>(
-            nodesToLayout.map(n => [n.id, { ...n.position }])
-        );
-
-        // Calculate Top-Left anchor for partial layout to preserve location (Bounding Box of Red Dots)
-        let originalTopLeft = { x: 0, y: 0 };
-        if (isPartial) {
-            let minX = Infinity, minY = Infinity;
-            nodesToLayout.forEach(n => {
-                minX = Math.min(minX, n.position.x);
-                minY = Math.min(minY, n.position.y);
-            });
-            originalTopLeft = { x: minX, y: minY };
-        }
-
-        const layouted = await getLayoutedElements(nodesToLayout, edgesToLayout, {
-            algorithm: layoutAlgorithm,
-            direction: 'RIGHT'
-        });
-
-        // Restore Top-Left for partial layout
-        let finalNodes = layouted.nodes;
-        if (isPartial) {
-            let minX = Infinity, minY = Infinity;
-            layouted.nodes.forEach(n => {
-                minX = Math.min(minX, n.position.x);
-                minY = Math.min(minY, n.position.y);
-            });
-            const currentTopLeft = { x: minX, y: minY };
-
-            const offsetX = originalTopLeft.x - currentTopLeft.x;
-            const offsetY = originalTopLeft.y - currentTopLeft.y;
-
-            finalNodes = layouted.nodes.map(n => ({
-                ...n,
-                position: { x: n.position.x + offsetX, y: n.position.y + offsetY }
-            }));
-        }
-
-        // --- History Generation (Zero-Delta Filter) ---
         const forward: Transaction[] = [];
         const inverse: Transaction[] = [];
+        const movedTo = new Map<string, { x: number; y: number }>();
 
-        finalNodes.forEach(newNode => {
-            const oldPos = oldPositions.get(newNode.id);
-            if (oldPos) {
-                // Only push if the displacement is significant (> 0.5 flow units)
-                const dx = newNode.position.x - oldPos.x;
-                const dy = newNode.position.y - oldPos.y;
-                if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-                    forward.push({ 
-                        type: 'MOVE_NODE', 
-                        payload: { id: newNode.id, position: { ...newNode.position } } 
-                    });
-                    inverse.push({ 
-                        type: 'MOVE_NODE', 
-                        payload: { id: newNode.id, position: { ...oldPos } } 
-                    });
-                }
+        const recordMove = (id: string, from: { x: number; y: number }, to: { x: number; y: number }) => {
+            movedTo.set(id, to);
+            if (Math.abs(to.x - from.x) > 0.5 || Math.abs(to.y - from.y) > 0.5) {
+                forward.push({ type: 'MOVE_NODE', payload: { id, position: { ...to } } });
+                inverse.push({ type: 'MOVE_NODE', payload: { id, position: { ...from } } });
             }
-        });
+        };
 
-        // Trigger UI updates & Push history if changes actually happened
-        if (forward.length > 0) {
-            pushHistory({
-                id: `layout_${Date.now()}`,
-                description: isPartial ? 'AutoLayout Selection' : 'AutoLayout Global',
-                forward,
-                inverse
+        // Preserves a group's top-left so a selection-scoped layout refines the
+        // arrangement instead of jumping to the origin.
+        const restoreTopLeft = (before: Node[], after: Node[]): Node[] => {
+            const minOf = (list: Node[]) => list.reduce(
+                (acc, n) => ({ x: Math.min(acc.x, n.position.x), y: Math.min(acc.y, n.position.y) }),
+                { x: Infinity, y: Infinity }
+            );
+            const oldMin = minOf(before);
+            const newMin = minOf(after);
+            if (!Number.isFinite(oldMin.x) || !Number.isFinite(newMin.x)) return after;
+            const dx = oldMin.x - newMin.x;
+            const dy = oldMin.y - newMin.y;
+            return after.map(n => ({ ...n, position: { x: n.position.x + dx, y: n.position.y + dy } }));
+        };
+
+        // --- Pass 1: world layout (roots; frames are blocks) ---
+        if (plan.worldNodes.length > 0) {
+            const worldEdges = selectLayoutEdges(edges, plan.worldNodes);
+            const layouted = await getLayoutedElements(plan.worldNodes, worldEdges, {
+                algorithm: layoutAlgorithm,
+                direction: 'RIGHT'
             });
 
-            // Merge by id: only positions change. Frames, children, `parentId`,
-            // sizes, `style`, `origin` and `data` are carried over untouched, so
-            // no node can be dropped by a global pass.
-            if (isPartial) {
-                // Functional update: keep anything added while ELK was running.
-                setNodes((nds) => mergeLayoutPositions(nds, finalNodes));
+            const finalNodes = isPartial
+                ? restoreTopLeft(plan.worldNodes, layouted.nodes)
+                : layouted.nodes;
 
-                // --- Brain Persistence for Partial Layout ---
-                brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+            const byId = new Map(plan.worldNodes.map(n => [n.id, n]));
+            finalNodes.forEach(n => {
+                const before = byId.get(n.id);
+                if (before) recordMove(n.id, before.position, n.position);
+            });
+        }
 
-                logAction('Layout Selected (L)');
-            } else {
-                setNodes(mergeLayoutPositions(nodes, finalNodes));
-                // Full edge list: layout only ever sees root-to-root edges, but the
-                // UI must keep frame-internal edges.
-                setEdges([...edges]);
-                
-                // --- Brain Persistence (V5 Final) ---
-                // We apply the transaction directly to Brain so it's committed 
-                // BEFORE any subsequent user interaction/sync.
-                brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+        // --- Pass 2: layout inside each selected frame ---
+        const frameResizes = new Map<string, { w: number; h: number }>();
+        for (const group of plan.childGroups) {
+            const groupEdges = selectLayoutEdges(edges, group.nodes);
+            const layouted = await getLayoutedElements(group.nodes, groupEdges, {
+                algorithm: layoutAlgorithm,
+                direction: 'RIGHT'
+            });
+            const finalChildren = restoreTopLeft(group.nodes, layouted.nodes);
 
-                setTimeout(() => fitView({ duration: 800 }), 50); // Global focus
-                logAction('Layout Global (L)');
+            const beforeById = new Map(group.nodes.map(n => [n.id, n]));
+            finalChildren.forEach(n => {
+                const before = beforeById.get(n.id);
+                if (before) recordMove(n.id, before.position, n.position);
+            });
+
+            // Grow the frame if the new arrangement no longer fits. Expand only:
+            // a layout pass never shrinks user-set whitespace.
+            const frame = nodes.find(n => n.id === group.frameId);
+            if (!frame) continue;
+            const frameSize = getNodeSize(frame);
+            let maxRight = -Infinity;
+            let maxBottom = -Infinity;
+            for (const child of nodes.filter(n => n.parentId === group.frameId)) {
+                const pos = movedTo.get(child.id) ?? child.position;
+                const size = getNodeSize(child);
+                maxRight = Math.max(maxRight, pos.x + size.w);
+                maxBottom = Math.max(maxBottom, pos.y + size.h);
             }
+
+            const nextW = Math.max(frameSize.w, Math.ceil(maxRight + FRAME_PADDING));
+            const nextH = Math.max(frameSize.h, Math.ceil(maxBottom + FRAME_PADDING));
+            if (nextW > frameSize.w + 0.5 || nextH > frameSize.h + 0.5) {
+                frameResizes.set(frame.id, { w: nextW, h: nextH });
+                forward.push({ type: 'RESIZE_NODE', payload: { id: frame.id, width: nextW, height: nextH } });
+                inverse.push({ type: 'RESIZE_NODE', payload: { id: frame.id, width: frameSize.w, height: frameSize.h } });
+            }
+        }
+
+        if (forward.length === 0) return;
+
+        pushHistory({
+            id: `layout_${Date.now()}`,
+            description: isPartial ? 'AutoLayout Selection' : 'AutoLayout Global',
+            forward,
+            inverse
+        });
+
+        const applyChanges = (list: Node[]) => list.map(n => {
+            const position = movedTo.get(n.id);
+            const resize = frameResizes.get(n.id);
+            if (!position && !resize) return n;
+            return {
+                ...n,
+                ...(position ? { position: { ...position } } : {}),
+                ...(resize
+                    ? { width: resize.w, height: resize.h, data: { ...n.data, width: resize.w, height: resize.h } }
+                    : {}),
+            };
+        });
+
+        if (isPartial) {
+            // Functional update: keep anything added while ELK was running.
+            setNodes(nds => applyChanges(nds));
+            brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+            logAction('Layout Selected (L)');
+        } else {
+            setNodes(applyChanges(nodes));
+            // Full edge list: layout only sees root-to-root edges, but the UI
+            // must keep frame-internal edges.
+            setEdges([...edges]);
+            brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+            setTimeout(() => fitView({ duration: 800 }), 50);
+            logAction('Layout Global (L)');
         }
     }, [brain, setNodes, setEdges, layoutAlgorithm, logAction, fitView, interactionMode, isRestoring, pushHistory, getNodes, getEdges]);
 
@@ -231,9 +255,9 @@ export function useAutoLayout(
                 } as Node;
             });
 
-            // Frame policy: frames and their children are never part of the ELK
-            // pass. They keep their own position/size; only root non-frame nodes
-            // are re-flowed.
+            // Frame policy: roots only, frames included as sized blocks so a
+            // frame group moves as a whole. Frame children keep parent-local
+            // positions and are never handed world coordinates.
             const nodesToLayout = selectLayoutNodes(baseNodes);
             const edgesToLayout = selectLayoutEdges(brainEdges, nodesToLayout);
 
@@ -255,8 +279,9 @@ export function useAutoLayout(
                 brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
             }
 
-            // Merge by id instead of replacing the array: every frame node,
-            // `parentId`, width/height and child local position is preserved.
+            // Merge by id instead of replacing the array: positions may move
+            // (frames included), but `parentId`, width/height and child local
+            // positions are preserved.
             const mergedNodes = sortParentFirst(mergeLayoutPositions(baseNodes, layouted.nodes));
 
             if (mergedNodes.length > 0) {
