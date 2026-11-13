@@ -1,5 +1,5 @@
 import { memo, useState, useRef, useEffect, useMemo, forwardRef } from 'react';
-import { NodeProps, Position, useReactFlow, useUpdateNodeInternals, useNodeConnections, useEdges, useStore, ReactFlowState, Edge, NodeToolbar } from '@xyflow/react';
+import { NodeProps, Position, useReactFlow, useUpdateNodeInternals, useNodeConnections, useEdges, useStore, ReactFlowState, Edge } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
 import { Pencil } from 'lucide-react';
@@ -13,7 +13,6 @@ import { calculateCapsuleHeight } from '../../utils/handleUtils';
 import { useHistoryStore } from '../../store/useHistoryStore';
 import { getUniqueLabel } from '../../utils/labelUtils';
 import { useAppStore } from '../../store/useStore';
-import { useFrameActions } from '../../hooks/useFrameActions';
 
 // Re-export HandleConfig for backward compatibility
 export type { HandleConfig } from '../../types/nodeDefinitions';
@@ -42,8 +41,6 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     const connections = [...targetConnections, ...sourceConnections];
     const preview = useCapsulePreview();
     const pushHistory = useHistoryStore(s => s.push);
-    const { detachNode } = useFrameActions();
-    const parentId = useStore(s => s.nodeLookup.get(id)?.parentId);
 
     const definition = NODE_DEFINITIONS.find((d) => d.id === type);
 
@@ -310,21 +307,6 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
             }}
             onDoubleClick={onDoubleClick}
         >
-            {parentId && (
-                <NodeToolbar className="nodrag" position={Position.Top} offset={8}>
-                    <button
-                        type="button"
-                        className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-[10px] font-medium text-zinc-200 hover:border-zinc-400 hover:text-white"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            detachNode(id);
-                        }}
-                    >
-                        Detach
-                    </button>
-                </NodeToolbar>
-            )}
-
             {/* Muted Bypass Visual - Only show if node has both inputs and outputs */}
             {!!data.muted && leftHandles.length > 0 && rightHandles.length > 0 && (
                 <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-xl">

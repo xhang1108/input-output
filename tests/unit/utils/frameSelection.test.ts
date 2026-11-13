@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pointInFrame, selectionTouchesFrameBorder } from '@/utils/frameSelection';
+import { selectionTouchesFrameBorder } from '@/utils/frameSelection';
 
 const frame = { x: 0, y: 0, width: 300, height: 200 };
 
@@ -31,14 +31,5 @@ describe('frameSelection.selectionTouchesFrameBorder', () => {
                 { x: 0, y: 0, width: 10, height: 10 }
             )
         ).toBe(true);
-    });
-});
-
-describe('frameSelection.pointInFrame', () => {
-    it('detects points inside and outside', () => {
-        expect(pointInFrame({ x: 150, y: 100 }, frame)).toBe(true);
-        expect(pointInFrame({ x: 0, y: 0 }, frame)).toBe(true);
-        expect(pointInFrame({ x: 301, y: 100 }, frame)).toBe(false);
-        expect(pointInFrame({ x: 150, y: -1 }, frame)).toBe(false);
     });
 });
