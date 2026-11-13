@@ -165,7 +165,7 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
                     type: e.type
                     // Omitted e.data for V4.0 Lean Sync to ensure network efficiency
                 })),
-                version: '1.0.0'
+                version: Serializer.VERSION
                 // [V4.0] Omitted 'settings' and 'viewport' as per user request to reduce payload bloat.
             };
             encoded = Serializer.serializeData(currentData);

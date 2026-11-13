@@ -276,7 +276,7 @@ export class SaveManager {
                 createdAt: meta?.createdAt || Date.now(),
                 nodeCount: meta?.nodeCount || 0,
                 edgeCount: meta?.edgeCount || 0,
-                version: meta?.version || "2.0",
+                version: meta?.version ?? Serializer.VERSION,
                 visibility: meta?.visibility
             });
         }

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SaveManager, SaveSlotMeta } from '../../services/SaveManager';
+import { SCHEMA_VERSION } from '../../engine/schema';
 import { SharePopover } from './SharePopover';
 
 // ─── Helper ───────────────────────────────────────────
@@ -394,7 +395,7 @@ export function ProjectLoadScreen({ onOpen, onNewProject }: ProjectLoadScreenPro
                     updatedAt: new Date(g.updatedAt).getTime(),
                     nodeCount: g.nodeCount || 0,
                     edgeCount: g.edgeCount || 0,
-                    version: "2.0",
+                    version: SCHEMA_VERSION,
                     visibility: g.visibility || 'private'
                 };
             });

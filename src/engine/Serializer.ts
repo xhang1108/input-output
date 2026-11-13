@@ -1,5 +1,6 @@
 import LZString from 'lz-string';
 import { ProjectData } from './types';
+import { SCHEMA_VERSION } from './schema';
 
 /**
  * ️ [V1.0] Master Serializer & Deserializer
@@ -9,11 +10,10 @@ import { ProjectData } from './types';
  */
 export class Serializer {
     /**
-     * Save-file schema version. Intentionally independent of the app version
-     * (`package.json` / `APP_VERSION`): the schema only changes when the
-     * serialized format changes.
+     * Save-file schema version. Sourced from `./schema` so there is exactly one
+     * copy; independent of the app version (`package.json` / `APP_VERSION`).
      */
-    public static readonly VERSION = '1.0.0';
+    public static readonly VERSION = SCHEMA_VERSION;
 
     /**
      * ️ [V1.0] Serializes the project data into a compressed URL-safe string.

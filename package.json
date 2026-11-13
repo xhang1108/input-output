@@ -5,11 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/verify-version.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "verify:version": "node scripts/verify-version.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

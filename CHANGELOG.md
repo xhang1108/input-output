@@ -12,6 +12,7 @@ React Flow integration-layer audit + fixes (audit v5.0). Save format unchanged.
 - 4 inline tracked `<ReactFlow>` props hoisted to module constants (`StoreUpdater setState` 4 → 0)
 - Lint runnable: `eslint@9.39.5` + `typescript-eslint@8.72.2` (new baseline: 1201 problems, all pre-existing)
 - Removed demo `as any`, `hideAttribution`, component-level CSS imports; dev-only handle-id assert; ownership/divergence-whitelist comments
+- Single source of truth for versions: app version reads `package.json` via `APP_VERSION` (`src/lib/version.ts`), save schema reads `SCHEMA_VERSION` (`src/engine/schema.ts`); status bar no longer hardcodes `V1.0`; removed stray `2.0` slot fallbacks; `npm run verify:version` (runs on `prebuild`) checks package/lock/tag agreement
 
 ### Verified
 

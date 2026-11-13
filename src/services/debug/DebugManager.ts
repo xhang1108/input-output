@@ -1,5 +1,6 @@
 import { GraphCodec } from '@/engine/GraphCodec';
 import { useAppStore } from '@/store/useStore';
+import { APP_VERSION } from '@/lib/version';
 
 interface DebugLog {
     timestamp: number;
@@ -99,7 +100,7 @@ class DebugManager {
         if (typeof window === 'undefined') return JSON.stringify({ error: 'Cannot generate bundle on server' });
 
         const bundle = {
-            version: (window as any).APP_VERSION || 'unknown',
+            version: APP_VERSION,
             timestamp: new Date().toISOString(),
             userAgent: navigator.userAgent,
             logs: this.logs,
