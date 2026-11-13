@@ -14,6 +14,12 @@ export const FrameNode = memo(({ data, selected }: NodeProps) => {
     return (
         <div className="frame-node" data-selected={selected ? 'true' : 'false'}>
             <div className="frame-node__label">{label}</div>
+            {/* Border hit areas: the interior stays transparent to the pane so a
+                marquee can start inside the frame to select its children. */}
+            <div className="frame-node__hit frame-node__hit--top" />
+            <div className="frame-node__hit frame-node__hit--right" />
+            <div className="frame-node__hit frame-node__hit--bottom" />
+            <div className="frame-node__hit frame-node__hit--left" />
         </div>
     );
 });

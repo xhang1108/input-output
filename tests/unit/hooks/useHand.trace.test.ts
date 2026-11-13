@@ -399,6 +399,62 @@ describe('B3 hand trace: nested transforms', () => {
         expect(c.position).toEqual({ x: 10, y: 10 });
     });
 
+    it('drags a selected child without moving its selected frame', () => {
+        nodes = makeNodes([
+            { id: 'f1', type: 'frame', position: { x: 0, y: 0 }, width: 200, height: 100 },
+            { id: 'c1', position: { x: 10, y: 10 }, parentId: 'f1', width: 50, height: 50 },
+        ]);
+        const { result } = renderHook(({ snap }) => useHand({ snap }), { initialProps: { snap: false } });
+        act(() => {
+            useAppStore.getState().setMode('GRABBING');
+            result.current.startGrab({ x: 10, y: 10 }, false, undefined, true, 'c1');
+        });
+        rafQueue.length = 0;
+        act(() => {
+            result.current.handleMouseMove({ clientX: 30, clientY: 30, ctrlKey: false } as unknown as MouseEvent);
+        });
+        act(() => flushDragRaf());
+
+        const f = nodes.find((n) => n.id === 'f1')!;
+        const c = nodes.find((n) => n.id === 'c1')!;
+        expect(f.position).toEqual({ x: 0, y: 0 });
+        expect(c.position).toEqual({ x: 30, y: 30 });
+    });
+
+    it('persists an expanded frame even if the child returns to its original local position', () => {
+        nodes = makeNodes([
+            { id: 'f1', type: 'frame', position: { x: 0, y: 0 }, selected: false, width: 200, height: 100 },
+            { id: 'c1', position: { x: 10, y: 10 }, parentId: 'f1', width: 50, height: 50 },
+        ]);
+        const { result } = renderHook(({ snap }) => useHand({ snap }), { initialProps: { snap: false } });
+        act(() => {
+            useAppStore.getState().setMode('GRABBING');
+            result.current.startGrab({ x: 10, y: 10 }, false, undefined, true);
+        });
+        rafQueue.length = 0;
+        act(() => {
+            result.current.handleMouseMove({ clientX: 210, clientY: 210, ctrlKey: false } as unknown as MouseEvent);
+        });
+        act(() => flushDragRaf());
+        rafQueue.length = 0;
+        act(() => {
+            result.current.handleMouseMove({ clientX: 10, clientY: 10, ctrlKey: false } as unknown as MouseEvent);
+        });
+        act(() => flushDragRaf());
+
+        const f = nodes.find((n) => n.id === 'f1')!;
+        const c = nodes.find((n) => n.id === 'c1')!;
+        expect(f.width).toBe(292);
+        expect(c.position).toEqual({ x: 10, y: 10 });
+
+        act(() => result.current.confirmGrab());
+        const entry = globalThis.__historyPush.mock.calls[0]?.[0] as {
+            forward: Array<{ type: string; payload: any }>;
+        };
+        const resize = entry.forward.find(t => t.type === 'RESIZE_NODE' && t.payload.id === 'f1')!;
+        expect(resize.payload).toEqual({ id: 'f1', width: 292, height: 292 });
+    });
+
     it('expands a frame when a child is dragged outside and persists it on confirm', () => {
         nodes = makeNodes([
             { id: 'f1', type: 'frame', position: { x: 0, y: 0 }, selected: false, width: 200, height: 100 },

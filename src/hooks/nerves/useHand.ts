@@ -386,7 +386,7 @@ export function useHand(opts?: { snap?: boolean }) {
 
 
     // --- Interaction Triggers ---
-    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[], isExplicit: boolean = false) => {
+    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[], isExplicit: boolean = false, targetId?: string) => {
         const nodes = getNodes();
         let selected: Node[] = [];
 
@@ -407,10 +407,17 @@ export function useHand(opts?: { snap?: boolean }) {
             detachSelected();
         }
 
+        // If the user grabbed a child while its frame is also selected, the
+        // child is the transform target; the frame must not move with it.
+        const clicked = targetId ? nodes.find(n => n.id === targetId) : undefined;
+        const transformSelected = clicked?.parentId
+            ? selected.filter(n => n.id !== clicked.parentId)
+            : selected;
+
         // Only move the roots of the selection. A selected child whose parent is
         // also selected follows the parent's transform; writing both would move
         // it twice (and corrupt local coordinates).
-        const roots = getEffectiveRoots(nodes, new Set(selected.map(n => n.id)));
+        const roots = getEffectiveRoots(nodes, new Set(transformSelected.map(n => n.id)));
         if (roots.length === 0) return;
 
         captureFrameSnapshots(roots, nodes);
@@ -461,8 +468,8 @@ export function useHand(opts?: { snap?: boolean }) {
         initialDimensions.current = new Map(roots.map((n) => [
             n.id,
             {
-                w: n.measured?.width ?? n.width ?? 150,
-                h: n.measured?.height ?? n.height ?? 50
+                w: n.width ?? n.measured?.width ?? 150,
+                h: n.height ?? n.measured?.height ?? 50
             }
         ]));
 
@@ -503,8 +510,8 @@ export function useHand(opts?: { snap?: boolean }) {
         initialDimensions.current = new Map(roots.map((n) => [
             n.id,
             {
-                w: n.measured?.width ?? n.width ?? 150,
-                h: n.measured?.height ?? n.height ?? 50
+                w: n.width ?? n.measured?.width ?? 150,
+                h: n.height ?? n.measured?.height ?? 50
             }
         ]));
 
@@ -556,7 +563,30 @@ export function useHand(opts?: { snap?: boolean }) {
             }
         });
 
-        if (movedNodeIds.size === 0) {
+        const frameSnapshotChanged = (() => {
+            for (const [frameId, before] of frameSnapshots.current) {
+                const frame = nodeMap.get(frameId);
+                if (!frame) continue;
+                const size = getSize(frame);
+                if (
+                    Math.abs(frame.position.x - before.position.x) > 0.1 ||
+                    Math.abs(frame.position.y - before.position.y) > 0.1 ||
+                    Math.abs(size.w - before.width) > 0.1 ||
+                    Math.abs(size.h - before.height) > 0.1
+                ) return true;
+            }
+            for (const [childId, before] of childSnapshots.current) {
+                const child = nodeMap.get(childId);
+                if (!child) continue;
+                if (
+                    Math.abs(child.position.x - before.position.x) > 0.1 ||
+                    Math.abs(child.position.y - before.position.y) > 0.1
+                ) return true;
+            }
+            return false;
+        })();
+
+        if (movedNodeIds.size === 0 && !frameSnapshotChanged) {
             console.log(`[Hand] confirmGrab: No nodes moved significantly.`);
             setMode('IDLE');
             initialPositions.current.clear();
@@ -639,7 +669,7 @@ export function useHand(opts?: { snap?: boolean }) {
             });
         }
 
-        if (txs.length > 0) {
+        if (txs.length > 0 || frameChanged) {
             const forward = frameChanged
                 ? [
                     ...frameForward,
@@ -676,10 +706,10 @@ export function useHand(opts?: { snap?: boolean }) {
             });
 
             const inverse = frameChanged ? [...frameInverse, ...invTxs] : invTxs;
-            console.log(`[Hand] Pushing history: Transform ${movedNodeIds.size} items`, { forward, inverse });
+            console.log(`[Hand] Pushing history: Transform ${forward.length} items`, { forward, inverse });
             pushHistory({
                 id: `transform_${Date.now()}`,
-                description: `Transform ${movedNodeIds.size} items`,
+                description: `Transform ${forward.length} items`,
                 forward,
                 inverse
             });
@@ -711,8 +741,8 @@ export function useHand(opts?: { snap?: boolean }) {
         }
 
         const positionsToRestore = new Map(initialPositions.current);
-        const frameSnapshotsToRestore = frameSnapshots.current;
-        const childSnapshotsToRestore = childSnapshots.current;
+        const frameSnapshotsToRestore = new Map(frameSnapshots.current);
+        const childSnapshotsToRestore = new Map(childSnapshots.current);
 
         if (
             positionsToRestore.size === 0 &&
@@ -902,7 +932,7 @@ export function useHand(opts?: { snap?: boolean }) {
                     }
                 }
 
-                startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey, overrideNodes, false);
+                startGrab(pendingGrabStart.current, pendingGrabStart.current.altKey, overrideNodes, false, pendingGrabStart.current.nodeId);
                 pendingGrabStart.current = null;
                 return;
             }

@@ -141,6 +141,7 @@ export function useBrainUpdates(
                         if (height != null) style.height = height;
                         if (logicNode.type === 'frame') style.zIndex = 0;
                         else if (logicNode.parentId) style.zIndex = 100;
+                        else style.zIndex = undefined;
 
                         let uiOrigin = existingNode?.origin || DEFAULT_UI_ORIGIN;
                         const def = NODE_DEFINITIONS.find(def => def.id === logicNode.type);

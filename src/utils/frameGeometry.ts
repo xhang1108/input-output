@@ -1,5 +1,5 @@
 import type { Node } from '@xyflow/react';
-import { toAbsolute, indexNodes } from './coordinates';
+import { toAbsolute, toParentLocal, indexNodes } from './coordinates';
 
 export const FRAME_PADDING = 32;
 export const FRAME_TOP_PADDING = 40;
@@ -35,8 +35,9 @@ export function expandFrameToFitChildren(
 
     const nodeById = indexNodes(nodes);
     const frameSize = getNodeSize(frame);
-    const frameX = frame.position.x;
-    const frameY = frame.position.y;
+    const frameAbs = toAbsolute(nodeById, frameId);
+    const frameX = frameAbs.x;
+    const frameY = frameAbs.y;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const child of children) {
@@ -60,11 +61,12 @@ export function expandFrameToFitChildren(
     if (!frameMoved && !frameResized) return { nodes, changed: false };
 
     const nextFramePos = { x: nextX, y: nextY };
+    const nextFrameLocal = toParentLocal(nodeById, frameId, nextFramePos);
     const nextNodes = nodes.map(node => {
         if (node.id === frameId) {
             return {
                 ...node,
-                position: nextFramePos,
+                position: nextFrameLocal,
                 width: nextW,
                 height: nextH,
                 data: { ...node.data, width: nextW, height: nextH },

@@ -193,13 +193,14 @@ export function FlowCanvas({
             width: Math.abs(a.x - b.x),
             height: Math.abs(a.y - b.y),
         };
-        if (rect.width < 2 || rect.height < 2) return;
+        const zoom = getViewport().zoom || 1;
+        if (rect.width < 2 / zoom || rect.height < 2 / zoom) return;
 
         const selectedFrames = getNodes().filter(n => n.selected && n.type === 'frame');
         if (selectedFrames.length === 0) return;
 
         const toDeselect = selectedFrames.filter(
-            frame => !selectionTouchesFrameBorder(rect, getFrameRect(frame))
+            frame => !selectionTouchesFrameBorder(rect, getFrameRect(frame), 10 / zoom)
         );
         if (toDeselect.length === 0) return;
 
@@ -212,7 +213,7 @@ export function FlowCanvas({
                 payload: { id: frame.id, data: { selected: false } },
             })),
         }, true);
-    }, [screenToFlowPosition, getNodes, setNodes, brain]);
+    }, [screenToFlowPosition, getViewport, getNodes, setNodes, brain]);
 
     // ── P2-10: Brain vs React Flow ownership ──────────────────────────
     // Brain owns: nodes Map, edges, selection truth, all mutations (BATCH txs).

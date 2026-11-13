@@ -13,8 +13,8 @@ const FRAME_TOP_PADDING = 40;
 
 function getSize(node: Node): { w: number; h: number } {
     return {
-        w: node.measured?.width ?? node.width ?? (node.data?.width as number) ?? 150,
-        h: node.measured?.height ?? node.height ?? (node.data?.height as number) ?? 50,
+        w: node.width ?? node.measured?.width ?? (node.data?.width as number) ?? 150,
+        h: node.height ?? node.measured?.height ?? (node.data?.height as number) ?? 50,
     };
 }
 

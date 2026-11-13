@@ -346,6 +346,7 @@ input[type="range"]::-moz-range-thumb:hover {
   background: hsla(240, 6%, 12%, 0.35);
   border: 2px dashed hsl(240, 4%, 28%);
   border-radius: var(--radius-xl);
+  pointer-events: none;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -370,7 +371,9 @@ input[type="range"]::-moz-range-thumb:hover {
   color: hsl(0, 0%, 45%);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: grab;
+  z-index: 2;
   user-select: none;
   transition: color 0.2s ease;
 }
@@ -378,6 +381,41 @@ input[type="range"]::-moz-range-thumb:hover {
 .frame-node:hover .frame-node__label,
 .frame-node[data-selected="true"] .frame-node__label {
   color: hsl(0, 0%, 70%);
+}
+
+.frame-node__hit {
+  position: absolute;
+  pointer-events: auto;
+  cursor: grab;
+  z-index: 1;
+}
+
+.frame-node__hit--top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+}
+
+.frame-node__hit--right {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+}
+
+.frame-node__hit--bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+}
+
+.frame-node__hit--left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 20px;
 }
 
 /* Frame resize controls */
