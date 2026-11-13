@@ -14,7 +14,7 @@ import { getDocInfo } from '@/constants/docRegistry';
 import { useRouter } from 'next/navigation';
 import { Footer } from '@/components/ui/Footer';
 import { BrainProvider } from '@/context/BrainContext';
-import pkg from '../../../package.json';
+import { APP_VERSION } from '@/lib/version';
 
 
 type WikiMode = 'user' | 'developer';
@@ -80,7 +80,7 @@ const WikiSidebar = React.memo(({
                     <span className="text-[8px] font-mono text-white/20">SYS_OK</span>
                 </div>
                 <div className="text-3xl font-black text-white tracking-tighter mb-1">
-                    V{pkg.version}
+                    V{APP_VERSION}
                 </div>
                 <div className="text-[9px] text-white/40 font-medium uppercase tracking-[0.2em]">
                     Core System Engine
@@ -411,7 +411,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                         }
                     }}
                     title="I/O System Blueprint"
-                    subtitle={`ENGINE: V${pkg.version} // ${mode.toUpperCase()}_MODE_ACTIVE`}
+                    subtitle={`ENGINE: V${APP_VERSION} // ${mode.toUpperCase()}_MODE_ACTIVE`}
                 />
 
                 <div className="flex-1 flex max-w-7xl mx-auto px-8 w-full overflow-hidden">
@@ -434,7 +434,7 @@ export const WikiClientView: React.FC<WikiClientViewProps> = ({
                             >
                                 <header id={activeSection.id} className="mb-16">
                                     <div className={`inline-block px-3 py-1 border text-[10px] font-bold mb-6 tracking-[0.2em] uppercase border-primary/30 text-primary`}>
-                                        {mode === 'user' ? `User Manual V${pkg.version}` : `Developer Specs V${pkg.version}`}
+                                        {mode === 'user' ? `User Manual V${APP_VERSION}` : `Developer Specs V${APP_VERSION}`}
                                     </div>
                                     <h2 className="text-6xl font-black text-white tracking-tighter uppercase mb-8 leading-none">
                                         {activeSection.title}

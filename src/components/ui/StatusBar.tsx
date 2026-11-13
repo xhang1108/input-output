@@ -3,6 +3,7 @@
 import React from 'react';
 import { useStore, Panel } from '@xyflow/react';
 import { useAppStore } from '../../store/useStore';
+import { APP_VERSION } from '@/lib/version';
 
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
@@ -136,7 +137,7 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
 
                 <span>Nodes: {nodeCount}</span>
                 {selectionCount > 0 && <span className="text-zinc-200">Selected: {selectionCount}</span>}
-                <span>V1.0</span>
+                <span>V{APP_VERSION}</span>
             </div>
         </div>
     );

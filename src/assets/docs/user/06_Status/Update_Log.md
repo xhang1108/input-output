@@ -6,6 +6,15 @@ order: 1
 # Update Log
 
 > [!LOG]
+> ## 2026-11-13
+> ### V1.1.0 - Stability & Performance Release
+> - **Save Format**: Unchanged (schema 1.0.0); existing projects load as-is.
+> - **React Flow Integration**: Snapping now works in all three transform modes (grab 20px, scale 0.05, rotate 15°), and the manual snap toggle takes effect.
+> - **Edge Performance**: `MagneticEdge` memoized and edge slot lookup moved to an O(1) `WeakMap`; relink no longer re-renders on every edge change.
+> - **Hygiene**: Deleted demo `as any`, removed `hideAttribution`, and made the lint baseline runnable again.
+> - **Version Display**: Status bar, footer and manual header now read the app version from a single source.
+
+> [!LOG]
 > ## 2026-04-11
 > ### V1.0 - Official Production Release
 > - **System Overview**: The I/O System is a visual computing platform designed to bridge the gap between human logic and machine execution.

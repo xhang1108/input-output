@@ -8,6 +8,11 @@ import { ProjectData } from './types';
  * Legacy migration logic has been removed as per V1.0 stabilization.
  */
 export class Serializer {
+    /**
+     * Save-file schema version. Intentionally independent of the app version
+     * (`package.json` / `APP_VERSION`): the schema only changes when the
+     * serialized format changes.
+     */
     public static readonly VERSION = '1.0.0';
 
     /**

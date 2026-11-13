@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import pkg from '../../../package.json';
+import { APP_VERSION } from '@/lib/version';
 
 export const Footer: React.FC = () => {
     return (
@@ -19,7 +19,7 @@ export const Footer: React.FC = () => {
                 {/* MIDDLE: Version and Copyright */}
                 <div className="flex items-center gap-2">
                     <Link href="/wiki/user/system" className="group/version bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded text-[8px] font-bold hover:bg-primary/20 hover:text-primary transition-all duration-200 cursor-pointer">
-                        V{pkg.version}
+                        V{APP_VERSION}
                     </Link>
                     <span>2026 Input-Output All Rights Reserved</span>
                 </div>
