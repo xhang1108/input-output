@@ -50,7 +50,8 @@ export const ResizeHandle = memo(({
         onResize,
         onResizeStart,
         onResizeEnd,
-        zoom: getViewport().zoom
+        zoom: getViewport().zoom,
+        getZoom: () => getViewport().zoom
     });
 
     // Determine cursor and rotation based on position

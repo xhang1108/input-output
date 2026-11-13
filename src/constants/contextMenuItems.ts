@@ -54,7 +54,7 @@ export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean 
         { label: 'Duplicate', shortcut: 'Shift+D', action: () => actions.duplicateAndGrab() },
         { label: 'Cut', shortcut: 'Ctrl+X', action: () => actions.cutSelected() },
         { label: 'Copy', shortcut: 'Ctrl+C', action: () => actions.copyToClipboard() },
-        { label: 'Detach', shortcut: 'Alt+Drag', action: () => actions.detachSelected() },
+        { label: 'Disconnect Edges', shortcut: 'Alt+Drag', action: () => actions.detachSelected() },
         { label: 'Delete', shortcut: 'Del', danger: true, action: () => actions.deleteSelected() },
     );
 

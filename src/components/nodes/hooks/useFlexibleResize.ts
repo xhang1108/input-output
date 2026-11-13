@@ -13,6 +13,7 @@ interface ResizeState {
     originY: number;
     originW: number;
     originH: number;
+    originZoom: number;
 }
 
 interface UseFlexibleResizeProps {
@@ -24,8 +25,10 @@ interface UseFlexibleResizeProps {
     onResizeStart?: () => void;
     /** Optional callback on resize end */
     onResizeEnd?: (dims: ResizeDimensions) => void;
-    /** Current canvas zoom level for delta scaling */
+    /** Fallback canvas zoom when getZoom is not supplied */
     zoom?: number;
+    /** Read the live zoom at pointerdown; avoids a stale memoized prop. */
+    getZoom?: () => number;
 }
 
 export const useFlexibleResize = ({
@@ -33,14 +36,16 @@ export const useFlexibleResize = ({
     onResize,
     onResizeStart,
     onResizeEnd,
-    zoom = 1
+    zoom = 1,
+    getZoom
 }: UseFlexibleResizeProps) => {
     const [state, setState] = useState<ResizeState>({
         active: false,
         originX: 0,
         originY: 0,
         originW: 0,
-        originH: 0
+        originH: 0,
+        originZoom: 1
     });
 
     const handleResizeStart = (e: React.PointerEvent) => {
@@ -49,12 +54,14 @@ export const useFlexibleResize = ({
 
         if (targetRef.current) {
             const rect = targetRef.current.getBoundingClientRect();
+            const startZoom = getZoom ? getZoom() : zoom;
             setState({
                 active: true,
                 originX: e.clientX,
                 originY: e.clientY,
                 originW: rect.width,
-                originH: rect.height
+                originH: rect.height,
+                originZoom: startZoom || 1
             });
             onResizeStart?.();
         }
@@ -63,25 +70,27 @@ export const useFlexibleResize = ({
     useEffect(() => {
         if (!state.active) return;
 
+        const z = state.originZoom || 1;
+
         const handleMove = (e: PointerEvent) => {
-            const deltaX = (e.clientX - state.originX) / zoom;
-            const deltaY = (e.clientY - state.originY) / zoom;
+            const deltaX = (e.clientX - state.originX) / z;
+            const deltaY = (e.clientY - state.originY) / z;
 
             onResize({
-                screenW: state.originW / zoom + deltaX,
-                screenH: state.originH / zoom + deltaY,
+                screenW: state.originW / z + deltaX,
+                screenH: state.originH / z + deltaY,
                 deltaX,
                 deltaY
             });
         };
 
         const handleUp = (e: PointerEvent) => {
-            const deltaX = (e.clientX - state.originX) / zoom;
-            const deltaY = (e.clientY - state.originY) / zoom;
+            const deltaX = (e.clientX - state.originX) / z;
+            const deltaY = (e.clientY - state.originY) / z;
 
             onResizeEnd?.({
-                screenW: state.originW / zoom + deltaX,
-                screenH: state.originH / zoom + deltaY,
+                screenW: state.originW / z + deltaX,
+                screenH: state.originH / z + deltaY,
                 deltaX,
                 deltaY
             });

@@ -25,7 +25,6 @@ export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
     const rootRef = useRef<HTMLDivElement>(null);
     const startSize = useRef<{ w: number; h: number } | null>(null);
     const minSize = useRef<{ w: number; h: number }>({ w: MIN_FRAME_WIDTH, h: MIN_FRAME_HEIGHT });
-    const currentSize = useRef<{ w: number; h: number } | null>(null);
 
     const label = String(data?.label || 'Frame');
 
@@ -35,7 +34,6 @@ export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
     });
 
     const applySize = useCallback((w: number, h: number) => {
-        currentSize.current = { w, h };
         setNodes(nds => nds.map(n => (
             n.id === id
                 ? { ...n, width: w, height: h, data: { ...n.data, width: w, height: h } }
@@ -47,12 +45,13 @@ export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
         const nodes = getNodes();
         const frame = nodes.find(n => n.id === id);
         if (!frame) return;
+        brain.isResizing = true;
         startSize.current = {
             w: frame.width ?? frame.measured?.width ?? MIN_FRAME_WIDTH,
             h: frame.height ?? frame.measured?.height ?? MIN_FRAME_HEIGHT,
         };
         minSize.current = getFrameMinSize(nodes, id, MIN_FRAME_WIDTH, MIN_FRAME_HEIGHT);
-    }, [getNodes, id]);
+    }, [getNodes, id, brain]);
 
     const onResize = useCallback((dims: ResizeDimensions) => {
         const { w, h } = clamp(dims);
@@ -78,6 +77,7 @@ export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
 
         startSize.current = null;
         minSize.current = { w: MIN_FRAME_WIDTH, h: MIN_FRAME_HEIGHT };
+        setTimeout(() => { brain.isResizing = false; }, 50);
     }, [brain, id, pushHistory]);
 
     return (
@@ -94,7 +94,7 @@ export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
                 id={id}
                 targetRef={rootRef}
                 position="bottom-right"
-                className="pointer-events-auto nodrag"
+                className="pointer-events-auto nodrag z-[200] -bottom-2 -right-2"
                 onResize={onResize}
                 onResizeStart={onResizeStart}
                 onResizeEnd={onResizeEnd}
