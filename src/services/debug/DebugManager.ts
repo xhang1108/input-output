@@ -1,6 +1,7 @@
 import { GraphCodec } from '@/engine/GraphCodec';
 import { useAppStore } from '@/store/useStore';
 import { APP_VERSION } from '@/lib/version';
+import { isBenignBrowserError } from '@/utils/browserErrors';
 
 interface DebugLog {
     timestamp: number;
@@ -30,13 +31,29 @@ class DebugManager {
         if (typeof window === 'undefined') return;
 
         window.onerror = (message, source, lineno, colno, error) => {
-            const msg = `Global Error: ${String(message)} at ${String(source)}:${String(lineno)}:${String(colno)}`;
+            const text = String(message);
+
+            // Browsers report a ResizeObserver backlog as a window error even
+            // though the layout is correct. It happens while resizing nodes
+            // that React Flow measures, so it must not show the crash overlay.
+            if (isBenignBrowserError(text)) {
+                this.addLog('warn', `Ignored: ${text}`);
+                return;
+            }
+
+            const msg = `Global Error: ${text} at ${String(source)}:${String(lineno)}:${String(colno)}`;
             this.addLog('error', msg);
             this.showCrashOverlay(msg);
         };
 
         window.onunhandledrejection = (event) => {
-            const msg = `Unhandled Rejection: ${String(event.reason)}`;
+            const text = String(event.reason);
+            if (isBenignBrowserError(text)) {
+                this.addLog('warn', `Ignored: ${text}`);
+                return;
+            }
+
+            const msg = `Unhandled Rejection: ${text}`;
             this.addLog('error', msg);
             this.showCrashOverlay(msg);
         };

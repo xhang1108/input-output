@@ -33,6 +33,25 @@ export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
         h: Math.max(minSize.current.h, Math.round(dims.screenH)),
     });
 
+    // Resize the visual box directly instead of re-rendering the React Flow
+    // node wrapper on every pointer move. The wrapper is measured by a
+    // ResizeObserver; changing its size from React while that observer runs
+    // makes the browser report "ResizeObserver loop completed with undelivered
+    // notifications". The committed size is written once, on pointerup.
+    const applyLiveSize = useCallback((w: number, h: number) => {
+        const el = rootRef.current;
+        if (!el) return;
+        el.style.width = `${w}px`;
+        el.style.height = `${h}px`;
+    }, []);
+
+    const clearLiveSize = useCallback(() => {
+        const el = rootRef.current;
+        if (!el) return;
+        el.style.width = '';
+        el.style.height = '';
+    }, []);
+
     const applySize = useCallback((w: number, h: number) => {
         setNodes(nds => nds.map(n => (
             n.id === id
@@ -55,12 +74,17 @@ export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
 
     const onResize = useCallback((dims: ResizeDimensions) => {
         const { w, h } = clamp(dims);
-        applySize(w, h);
-    }, [applySize]);
+        applyLiveSize(w, h);
+    }, [applyLiveSize]);
 
     const onResizeEnd = useCallback((dims: ResizeDimensions) => {
         const { w, h } = clamp(dims);
         const before = startSize.current;
+
+        // Commit the size before dropping the inline override so the frame
+        // never flashes back to its previous size for a paint.
+        applySize(w, h);
+        requestAnimationFrame(clearLiveSize);
 
         if (before && (w !== before.w || h !== before.h)) {
             const forward = [{ type: 'RESIZE_NODE' as const, payload: { id, width: w, height: h } }];
@@ -78,7 +102,7 @@ export const FrameNode = memo(({ id, data, selected }: NodeProps) => {
         startSize.current = null;
         minSize.current = { w: MIN_FRAME_WIDTH, h: MIN_FRAME_HEIGHT };
         setTimeout(() => { brain.isResizing = false; }, 50);
-    }, [brain, id, pushHistory]);
+    }, [applySize, clearLiveSize, brain, id, pushHistory]);
 
     return (
         <div ref={rootRef} className="frame-node group" data-selected={selected ? 'true' : 'false'}>

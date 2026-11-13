@@ -12,10 +12,10 @@
 1. **官方的資料模型可用**：`parentId` + 子節點相對座標 + parent 先 render。我們的 UI 已經是 `nodeOrigin=[0,0]`（`FlowCanvas.tsx:62,738`），語意一致。
 2. **官方的拖曳實作不能照抄**：我們 `nodesDraggable={false}`（`FlowCanvas.tsx:721`），拖曳由 `useHand` 自製（snap、axis lock、autopan、SCALE/ROTATE）。`onNodeDrag` / `onNodeDragStop` 永遠不會 fire。能移植的是「drop 時找 frame + 轉相對座標」的計算。
 3. **接入前先做座標治根（P0）**：根因不是單一 offset，而是幾何有三個權威（RF internals / Brain 自算 / hooks 手算），且測試把 center 制鎖住。治根方案見 §4 P0：一個 `coordinates.ts`、五個可獨立 review 的 PR。
-4. **第一版建議**：單層 frame、不可巢狀、手動尺寸、不做自動貼合、不用 `extent`。子節點拖到邊界就 clamp；detach 只透過 toolbar / F。這組取捨可直接避開上次的 jitter、雙重移動、sticky 100px 問題。
+4. **第一版建議（已依後續決策調整）**：單層 frame、不可巢狀、手動尺寸 + live expand-only 自動擴張、不用 `extent`。拖出框不 clamp；detach 走 context menu / F。
 5. **存檔 schema 不變，但目前「存得下、載不回」**：`parentId` / `width` / `height` 有寫入（`Serializer.ts:39-59`、`useProjectSave.ts:149-157`），但 `Brain.injectNodes` 沒把 `width/height` 放進 `ADD_NODE`（`Brain.ts:1193-1203`）。`AddNodePayload` 與 reducer 其實已支援，修法約 4 行。不需要新 dependency（Vercel/CSP 不變）。
 6. **實作順序**：P0（座標治根，5 PR）→ P0.5（nullable parentId / deleteKeyCode / width-height 載入）→ P1（frame 核心）→ P2（下游整合）。P0 不改 schema、不碰 frame UI，可以先單獨合併。粗估 P0 1.5–2 天、P0.5 0.5 天、P1 2–3 天、P2 2–3 天。
-7. **已拍板**：clamp、刪 frame 轉 independent、手動 resize + on-demand auto-fit、單層；IOGL 建議支援，方案見 §4 P2.1。
+7. **已拍板**：live expand-only、刪 frame 轉 independent、手動 resize（最小 = 內容外緣）、單層、context-menu Detach；IOGL 建議支援，方案見 §4 P2.1。
 
 ---
 
@@ -177,15 +177,15 @@ position: {
 
 - 新檔 `src/components/nodes/FrameNode.tsx`：
   - 無 Handle；`width/height: 100%`；label；selected 樣式用 `data-selected`。
-  - resize 用**我們既有**的 `ResizeHandle` + `useFlexibleResize`（會走 `RESIZE_NODE`，有 undo），不要用官方 `NodeResizer`（只改 RF store）。注意 `.frame-resize-line` / `.frame-resize-handle`（`globals.css:388-407`）是 dead CSS，`ResizeHandle` 用的是 Tailwind class，不要期待現成樣式。
-  - 手動 resize 的動態最小值 = 內容 bbox + padding；沒有 children 時用 `minWidth: 200 / minHeight: 120`。這樣 children 不會被 resize 擠出框，也不需要「resize 時反推 children」。`useFlexibleResize` 沒有 min prop，min 要在 `FrameNode` 的 `onResize` / `onResizeEnd` clamp。
-  - **auto-fit 只做 on-demand**：建立 frame 時依選取 roots 的 bbox + padding 定尺寸；之後 toolbar / context menu 的 `Fit to contents` 重算一次。不要在每个 mousemove 重算，這是上次 jitter 的根因。
-  - `NodeToolbar className="nodrag"`：Fit / Detach / Delete；按鈕一律走 Brain command，不用 `deleteElements`。
+  - resize 用**我們既有**的 `ResizeHandle` + `useFlexibleResize`（會走 `RESIZE_NODE`，有 undo），不要用官方 `NodeResizer`（只改 RF store）。注意 `.frame-resize-line` / `.frame-resize-handle`（`globals.css:388-407`）是 dead CSS，`ResizeHandle` 用的是 Tailwind class，不要期待現成樣式。拖曳中只改 `.frame-node` 的 inline `width/height`，放手才 `setNodes` + `RESIZE_NODE`：RF 的 node wrapper 由 `ResizeObserver` 量測，若每一格 pointermove 都改 wrapper 尺寸，瀏覽器會報 `ResizeObserver loop completed with undelivered notifications`。
+  - 手動 resize 的動態最小值 = children 的右/下最外緣（相對 frame 原點，不加 padding）；沒有 children 時用 `minWidth: 200 / minHeight: 120`。這樣 children 不會被 resize 擠出框，也不需要「resize 時反推 children」。`useFlexibleResize` 沒有 min prop，min 要在 `FrameNode` 的 `onResize` / `onResizeEnd` clamp。
+  - **auto-fit 是 live、expand-only**：拖曳 child 出框時即時長大（含左上/右下），拖回不自動縮。**不提供** `Fit to contents` toolbar 按鈕。
+  - 沒有 `NodeToolbar`；`Detach from Frame` 在 node context menu（僅 `parentId` 存在時顯示）。
 - `nodeTypes` 加 `frame`（`constants/nodeTypeMap.ts:55-124`）。
 - `NODE_DEFINITIONS` 加 `frame`：`minWidth: 200`、`minHeight: 120`、category Utility、`defaultData.label`。
 - render order：`useBrainUpdates.ts:239-244` 改成 depth-aware（祖先 depth 小者在前面）；單層時行為不變。
 - **單層強制**：attach 只接受 `type === 'frame' && !parentId` 的 target；candidate 不能是 frame、不能已有 parent（從舊 frame reparent 例外）。`validateHierarchy` 的 `maxDepth = 1`（root depth 0），超過就拒絕並回 diagnostic。
-- CSS：移除 `.react-flow__node-frame { pointer-events:none !important }`；`.frame-node` 保留；`.frame-node__label` 已有 `pointer-events:none`（`:377`），只需補 toolbar / resize handle。
+- CSS：`.react-flow__node-frame { pointer-events:none !important }` **必須保留**，框內空白才會落到 pane（可點空白取消選取、可從框內起圈選）；只有 `.frame-node__hit`（20px 邊框）、`.frame-node__label`、resize grip 用 `pointer-events:auto`。
 - **代價**：第一版不支援 frame 巢狀；frame 是視覺分組，不是 Macro（沒有 ports / 封裝），符合程式內 UI-02 註解的定位（`utilityNodes.ts:27`、`globals.css:339`）。
 
 ### D5 — 建立 / 解除
@@ -196,7 +196,7 @@ position: {
   - `F` 對「全部是同一 frame 的 direct children」= ungroup。
   - Paste：可選，若游標落在 frame 內就把 roots 掛進去；第一版可先不做。
 - **Detach**：
-  - toolbar 按鈕。
+  - node context menu 的 `Detach from Frame`。
   - 前置：D2 的 `parentId: null`（`engineTypes.ts:68` + 兩個 reducer）。沒有這個，detach 只會改 UI，下一次 `useBrainUpdates.ts:224` 會把 parent 還原。
   - `F` 對「已群組」的選取 = ungroup（全部轉 absolute、刪 frame）。
   - 不要重用 `Alt`：`Alt` 目前是 disconnect edges（`useSelection.ts:106-138`），語意已佔用。`detachSelected` 只斷 edges，**不是** ungroup，不要拿來當 detach。
@@ -473,9 +473,9 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 
 已決定（2026-11-13）：
 
-1. **拖出框**：clamp 在框內；不做 drag-out detach。Detach 只走 toolbar / `F`。
+1. **拖出框**：不 clamp；frame 即時擴張（expand-only）。Detach 走 node context menu 或 `F`/ungroup。
 2. **刪 frame**：不 cascade。children 轉 independent（absolute + 清 `parentId`），frame 單獨移除；undo 需還原 frame 與親子關係。
-3. **frame 尺寸**：手動 resize + **on-demand** auto-fit。建立 frame 時自動貼合內容；之後用 toolbar / context menu 的 `Fit to contents`。**不做每幀 live auto-fit**（上次 jitter 的來源）。
+3. **frame 尺寸**：手動 resize（最小 = 內容外緣）+ **live、expand-only** auto-expand。拖回不自動縮；沒有 `Fit to contents` 按鈕。
 4. **巢狀**：只做單層（root frame + direct children）。frame-in-frame、child 當 parent 一律拒絕。
 5. **IOGL**：建議支援，但不改 block 語法；用 `FRAME` 宣告 + `{parent: "frame label"}` 屬性。詳見 §4 P2.1。**這一點待你確認語法**。
 

@@ -71,38 +71,60 @@ export const useFlexibleResize = ({
         if (!state.active) return;
 
         const z = state.originZoom || 1;
+        let frame = 0;
+        let pending: PointerEvent | null = null;
 
-        const handleMove = (e: PointerEvent) => {
+        const toDims = (e: PointerEvent): ResizeDimensions => {
             const deltaX = (e.clientX - state.originX) / z;
             const deltaY = (e.clientY - state.originY) / z;
-
-            onResize({
+            return {
                 screenW: state.originW / z + deltaX,
                 screenH: state.originH / z + deltaY,
                 deltaX,
                 deltaY
-            });
+            };
         };
 
-        const handleUp = (e: PointerEvent) => {
-            const deltaX = (e.clientX - state.originX) / z;
-            const deltaY = (e.clientY - state.originY) / z;
+        // Coalesce pointer moves to one update per frame. Browsers can emit
+        // several moves between paints; each update resizes a DOM node that
+        // React Flow measures with a ResizeObserver, so unfiltered bursts
+        // trigger that observer's "undelivered notifications" warning.
+        const flush = () => {
+            frame = 0;
+            if (pending) {
+                const e = pending;
+                pending = null;
+                onResize(toDims(e));
+            }
+        };
 
-            onResizeEnd?.({
-                screenW: state.originW / z + deltaX,
-                screenH: state.originH / z + deltaY,
-                deltaX,
-                deltaY
-            });
+        const handleMove = (e: PointerEvent) => {
+            pending = e;
+            if (!frame) frame = requestAnimationFrame(flush);
+        };
+
+        const finish = (e: PointerEvent) => {
+            if (frame) {
+                cancelAnimationFrame(frame);
+                frame = 0;
+            }
+            pending = null;
+            onResizeEnd?.(toDims(e));
             setState(prev => ({ ...prev, active: false }));
         };
 
+        // pointercancel must not leave the canvas stuck in resize mode.
+        const handleCancel = (e: PointerEvent) => finish(e);
+
         window.addEventListener('pointermove', handleMove);
-        window.addEventListener('pointerup', handleUp);
+        window.addEventListener('pointerup', finish);
+        window.addEventListener('pointercancel', handleCancel);
 
         return () => {
+            if (frame) cancelAnimationFrame(frame);
             window.removeEventListener('pointermove', handleMove);
-            window.removeEventListener('pointerup', handleUp);
+            window.removeEventListener('pointerup', finish);
+            window.removeEventListener('pointercancel', handleCancel);
         };
     }, [state, onResize, onResizeEnd]);
 
