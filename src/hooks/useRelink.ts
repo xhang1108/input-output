@@ -12,6 +12,7 @@ import {
     getHandleColorByConfig
 } from '../utils/handleUtils';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
+import { appendMissingEdges } from '@/utils/edgeUtils';
 import { MagneticSnapState } from './useHandleMagnet';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
@@ -64,10 +65,15 @@ export function useRelink({
         
         // RESOLVE: Ensure backup contains ALL actual edge objects being removed
         // (both already detached ones and newly replaced ones)
+        // Only edges that Brain actually owns can be restored by undo.
+        // UI-only ghosts (e.g. a stale edge left by a previous silent failure)
+        // must not enter the inverse, or Undo would fan them back onto a single handle.
+        const brainEdgeIdsBefore = new Set(brain.getEdges().map(e => e.id));
         const removedEdgesInStore = currentEdges.filter(e => removedIds.includes(e.id));
-        const removedEdgesFull = [...removedEdgesBackup.current];
+        const removedEdgesFull = [...removedEdgesBackup.current]
+            .filter(e => brainEdgeIdsBefore.has(e.id));
         for (const re of removedEdgesInStore) {
-            if (!removedEdgesFull.some(be => be.id === re.id)) {
+            if (brainEdgeIdsBefore.has(re.id) && !removedEdgesFull.some(be => be.id === re.id)) {
                 removedEdgesFull.push(re);
             }
         }
@@ -122,14 +128,21 @@ export function useRelink({
             { type: 'REORDER_EDGES' as const, payload: updated.map(e => e.id) }
         ];
 
+        const res = brain.applyTransaction({ type: 'BATCH', payload: forward });
+        if (!res.success) {
+            console.warn('[Relink] Partial batch:', res.reason);
+        }
+
+        // Build inverse from what Brain actually accepted. A rejected CONNECT
+        // must not leave a DISCONNECT in the history that removes nothing.
+        const brainEdgeIdsAfter = new Set(brain.getEdges().map(e => e.id));
+        const appliedNewEdges = newEdges.filter(e => brainEdgeIdsAfter.has(e.id));
         const inverse: Transaction[] = [
-            ...newEdges.map(e => ({ type: 'DISCONNECT' as const, payload: e.id })),
+            ...appliedNewEdges.map(e => ({ type: 'DISCONNECT' as const, payload: e.id })),
             ...removedEdgesFull.map(e => ({ type: 'CONNECT' as const, payload: e })),
             { type: 'REORDER_EDGES' as const, payload: beforeEdgeIds }
         ];
 
-        brain.applyTransaction({ type: 'BATCH', payload: forward });
-        
         pushHistory({
             id: `relink_${newEdges[0]?.id || Date.now()}`,
             description: newEdges.length > 1 ? `Relinked ${newEdges.length} connection(s)` : 'Modified connection',
@@ -138,7 +151,8 @@ export function useRelink({
         });
 
         // 3.0 PURGE: Centrally clear removal buffers after any submission
-    removedEdgesBackup.current = [];
+        removedEdgeIds.current = [];
+        removedEdgesBackup.current = [];
     }, [store, brain, pushHistory]);
 
     /** Helper to transform internal IDs like 'MA-01_hash:in_a' to '[Basic Math-01] A' */
@@ -427,17 +441,17 @@ export function useRelink({
 
             const targetHandle = params.targetHandle;
             const edges = store.getState().edges;
-            const existingEdge = edges.find(e =>
+            const matchesTargetHandle = (e: Edge) =>
                 e.target === params.target &&
-                e.targetHandle === targetHandle
-            );
+                (e.targetHandle ?? '') === (targetHandle ?? '');
+            const existingEdges = edges.filter(matchesTargetHandle);
 
             const targetNode = brain.getNode(params.target);
             const variant = getHandleVariant(targetNode, targetHandle || '');
 
             const isReplacementTarget = variant === 'single';
-            const edgesForValidation = (existingEdge && isReplacementTarget)
-                ? edges.filter(e => e.id !== existingEdge.id)
+            const edgesForValidation = (existingEdges.length > 0 && isReplacementTarget)
+                ? edges.filter(e => !matchesTargetHandle(e))
                 : edges;
 
             const validation = brain.validateConnection(
@@ -451,13 +465,15 @@ export function useRelink({
             if (!validation.isValid) {
                 logAction(`Blocked: ${validation.reason}`);
                 toast.error(formatIdentifier(validation.reason || 'Invalid connection'));
-                
-                // 5.0 EMERGENCY UI RESTORE: If replacement is blocked, restore the original edge to the UI immediately.
-                // This prevents 'Clean UI vs Dirty Brain' desynchronization.
-                if (existingEdge && isReplacementTarget) {
-                    setEdges(eds => [...eds, existingEdge]);
+
+                // 5.0 EMERGENCY UI RESTORE: If replacement is blocked, restore the original edge
+                // ONLY when it is actually missing from the UI. This branch is reachable only
+                // when no relink is active, so the edge is normally still in the store; a blind
+                // append used to create a second edge with the same id (React duplicate key).
+                if (existingEdges.length > 0 && isReplacementTarget) {
+                    setEdges(eds => appendMissingEdges(eds, existingEdges));
                 }
-                
+
                 brain.setInteracting(false);
                 return;
             }
@@ -478,9 +494,9 @@ export function useRelink({
                 data: { pathType: 'bezier' }
             };
 
-            if (isReplacementTarget && existingEdge) {
-                removedEdgeIds.current = [existingEdge.id];
-                removedEdgesBackup.current = [existingEdge];
+            if (isReplacementTarget && existingEdges.length > 0) {
+                removedEdgeIds.current = existingEdges.map(e => e.id);
+                removedEdgesBackup.current = existingEdges;
             } else {
                 removedEdgeIds.current = [];
                 // CRITICAL: Always clear backup if no relink is active to prevent ghost snap-backs

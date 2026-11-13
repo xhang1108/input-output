@@ -673,6 +673,7 @@ export function FlowCanvas({
                     connectionMode={ConnectionMode.Loose}
                     edgesReconnectable={false}
 
+                    deleteKeyCode={null}
                     selectionKeyCode={null}
                     multiSelectionKeyCode={['Shift']}
 

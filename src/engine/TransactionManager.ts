@@ -88,8 +88,16 @@ export class TransactionManager {
                             targetHandle: validation.normalized.targetHandle
                         };
                     }
-                    state.edges.push(newEdge);
-                    hooks.onEdgeAdded?.(newEdge);
+
+                    // Idempotency guard: retries / history restores can re-apply the same
+                    // edge id. Replace in place instead of pushing a duplicate.
+                    const existingIndex = state.edges.findIndex(e => e.id === newEdge.id);
+                    if (existingIndex >= 0) {
+                        state.edges[existingIndex] = newEdge;
+                    } else {
+                        state.edges.push(newEdge);
+                        hooks.onEdgeAdded?.(newEdge);
+                    }
                     return { success: true };
                 } else {
                     hooks.onLog?.(`Blocked: ${validation.reason}`);
@@ -214,13 +222,21 @@ export class TransactionManager {
             case 'REORDER_EDGES': {
                 const orderedIds = tx.payload as string[];
                 const edgeMap = new Map(state.edges.map(e => [e.id, e]));
+                const orderedIdSet = new Set(orderedIds);
+                const seen = new Set<string>();
                 const reordered: Edge[] = [];
+
                 for (const eid of orderedIds) {
+                    if (seen.has(eid)) continue;
+                    seen.add(eid);
                     const edge = edgeMap.get(eid);
                     if (edge) reordered.push(edge);
                 }
                 for (const e of state.edges) {
-                    if (!orderedIds.includes(e.id)) reordered.push(e);
+                    if (!orderedIdSet.has(e.id) && !seen.has(e.id)) {
+                        seen.add(e.id);
+                        reordered.push(e);
+                    }
                 }
                 state.edges = reordered;
                 return { success: true };

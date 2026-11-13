@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { useHistoryStore, HistoryEntry } from '../store/useHistoryStore';
 import { useBrain } from '../context/BrainContext';
 import { Transaction } from '../engine/types/engineTypes';
+import { reconcileEdgesWithBrain } from '../utils/edgeUtils';
 
 /**
  * Focus Defense: If user is typing in an input/textarea,
@@ -16,7 +17,7 @@ const isExecutionBlocked = () => {
     return activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeEl?.isContentEditable;
 };
 
-const computeNextState = (
+export const computeNextState = (
     transactions: Transaction[],
     currentNodes: Node[],
     currentEdges: Edge[],
@@ -93,15 +94,22 @@ const computeNextState = (
             case 'REORDER_EDGES': {
                 const orderedIds = tx.payload as string[];
                 const edgeMap = new Map(nextEdges.map(e => [e.id, e]));
+                const orderedIdSet = new Set(orderedIds);
+                const seen = new Set<string>();
                 // Immutable Sort Rule: generate a NEW array following the order
                 const reordered: any[] = [];
                 for (const eid of orderedIds) {
+                    if (seen.has(eid)) continue;
+                    seen.add(eid);
                     const edge = edgeMap.get(eid);
                     if (edge) reordered.push(edge);
                 }
                 // Append any edges not in the ordered list (to prevent accidental data loss)
                 for (const e of nextEdges) {
-                    if (!orderedIds.includes(e.id)) reordered.push(e);
+                    if (!orderedIdSet.has(e.id) && !seen.has(e.id)) {
+                        seen.add(e.id);
+                        reordered.push(e);
+                    }
                 }
                 nextEdges = reordered;
                 break;
@@ -141,11 +149,17 @@ const computeNextState = (
             }
         } else if (tx.type === 'CONNECT') {
             const edge = tx.payload as any;
-            const index = uiMetadata?.restoredEdgeIndices?.[edge.id];
-            if (index !== undefined && index <= nextEdges.length) {
-                nextEdges.splice(index, 0, { ...edge });
+            const existingIndex = nextEdges.findIndex(e => e.id === edge.id);
+            if (existingIndex >= 0) {
+                // Re-applying the same edge id must not append a duplicate.
+                nextEdges[existingIndex] = { ...edge };
             } else {
-                nextEdges.push({ ...edge });
+                const index = uiMetadata?.restoredEdgeIndices?.[edge.id];
+                if (index !== undefined && index <= nextEdges.length) {
+                    nextEdges.splice(index, 0, { ...edge });
+                } else {
+                    nextEdges.push({ ...edge });
+                }
             }
         }
     });
@@ -194,9 +208,15 @@ export function useHistoryExecutor() {
         console.log(`[History] Nodes updated: ${nodesBefore.length} -> ${nextNodes.length}`);
 
         // Step C: Dual Dispatch
+        // Apply to Brain first (source of truth), then project back to UI.
+        // Undo/redo is silent: a rejected CONNECT (e.g. occupied single input)
+        // would otherwise leave a UI-only ghost edge on the canvas.
+        const res = brain.applyTransaction({ type: 'BATCH', payload: txs }, true);
         setNodes(nextNodes);
-        setEdges(nextEdges);
-        brain.applyTransaction({ type: 'BATCH', payload: txs }, true);
+        setEdges(reconcileEdgesWithBrain(nextEdges, brain.getEdges()));
+        if (!res.success) {
+            console.warn('[History] Partial restore:', res.reason);
+        }
 
         if (isUndo) {
             pushFutureSilent(entry);

@@ -274,6 +274,12 @@ export function useBrainUpdates(
                         }
                     }
 
+                    // A length mismatch means the UI has stale/duplicate edges.
+                    // Mark changed so the Brain-owned array replaces it (self-heal).
+                    if (nextEdges.length !== currentEdges.length) {
+                        edgesChanged = true;
+                    }
+
                     // Check if any UI edges were removed
                     for (const uiEdge of currentEdges) {
                         if (!brainEdgeIds.has(uiEdge.id)) {
