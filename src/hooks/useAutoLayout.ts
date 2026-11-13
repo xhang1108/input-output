@@ -2,7 +2,15 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
 import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
-import { getLayoutedElements, LayoutAlgorithm, LayoutDirection } from './layoutEngine';
+import {
+    getLayoutedElements,
+    mergeLayoutPositions,
+    selectLayoutEdges,
+    selectLayoutNodes,
+    LayoutAlgorithm,
+    LayoutDirection
+} from './layoutEngine';
+import { sortParentFirst } from '../utils/coordinates';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
 import { useHistoryExecutor } from './useHistoryExecutor';
@@ -34,19 +42,20 @@ export function useAutoLayout(
         const selectedNodes = nodes.filter(n => n.selected);
         const isPartial = selectedNodes.length > 0;
 
-        let nodesToLayout = isPartial
-            ? selectedNodes
-            : nodes;
-
-        const edgesToLayout = isPartial
-            ? edges.filter(e => selectedNodes.some(n => n.id === e.source) && selectedNodes.some(n => n.id === e.target))
-            : edges;
-
-        // Hierarchy Protection
-        const layoutIdSet = new Set(nodesToLayout.map(n => n.id));
-        nodesToLayout = nodesToLayout.filter(n => !n.parentId || !layoutIdSet.has(n.parentId));
+        // Frame policy (docs/frame-integration.md §4-P2, option A):
+        // only ROOT, NON-FRAME nodes take part. Frames and everything parented
+        // to them (local coordinates) are left exactly where they are, so a
+        // layout pass can never split a frame group or write world coordinates
+        // into a child's parent-local `position`.
+        const nodesToLayout = selectLayoutNodes(nodes, {
+            candidateIds: isPartial ? new Set(selectedNodes.map(n => n.id)) : undefined,
+        });
 
         if (nodesToLayout.length === 0) return;
+
+        // Edges are restricted to laid-out endpoints; ELK rejects edges that
+        // reference nodes outside its graph (typical for frame children).
+        const edgesToLayout = selectLayoutEdges(edges, nodesToLayout);
 
         // Capture BEFORE Positions
         const oldPositions = new Map<string, { x: number, y: number }>(
@@ -120,19 +129,22 @@ export function useAutoLayout(
                 inverse
             });
 
+            // Merge by id: only positions change. Frames, children, `parentId`,
+            // sizes, `style`, `origin` and `data` are carried over untouched, so
+            // no node can be dropped by a global pass.
             if (isPartial) {
-                setNodes((nds) => nds.map(n => {
-                    const found = finalNodes.find(ln => ln.id === n.id);
-                    return found ? found : n;
-                }));
-                
+                // Functional update: keep anything added while ELK was running.
+                setNodes((nds) => mergeLayoutPositions(nds, finalNodes));
+
                 // --- Brain Persistence for Partial Layout ---
                 brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
 
                 logAction('Layout Selected (L)');
             } else {
-                setNodes([...finalNodes]);
-                setEdges([...layouted.edges]);
+                setNodes(mergeLayoutPositions(nodes, finalNodes));
+                // Full edge list: layout only ever sees root-to-root edges, but the
+                // UI must keep frame-internal edges.
+                setEdges([...edges]);
                 
                 // --- Brain Persistence (V5 Final) ---
                 // We apply the transaction directly to Brain so it's committed 
@@ -183,23 +195,57 @@ export function useAutoLayout(
             }
 
             const brainNodes = Array.from(brain.getNodesMap().values());
-            const brainEdges = brain.getEdges();
+            const brainEdges = brain.getEdges() as Edge[];
+            const uiById = new Map(getNodes().map(node => [node.id, node]));
 
-            // Transform logic nodes to React Flow nodes for layout
-            const nodesToLayout: Node[] = brainNodes.map(n => ({
-                id: n.id,
+            // Build the working set from Brain truth, merged BY ID with live UI
+            // nodes so UI-only props (origin, style, handles) survive.
+            const baseNodes: Node[] = brainNodes.map(brainNode => {
+                const uiNode = uiById.get(brainNode.id);
+                const brainData = (brainNode.data ?? {}) as Record<string, unknown>;
+                const data = { ...(uiNode?.data ?? {}), ...brainData, value: brainNode.value };
+                const width = brainNode.width ?? (brainData.width as number | undefined) ?? uiNode?.width;
+                const height = brainNode.height ?? (brainData.height as number | undefined) ?? uiNode?.height;
 
-                position: n.position || { x: 0, y: 0 },
-                data: { ...n.data, value: n.value },
-                type: n.type || 'mathNode'
-            }));
+                if (!uiNode) {
+                    return {
+                        id: brainNode.id,
+                        position: brainNode.position ? { ...brainNode.position } : { x: 0, y: 0 },
+                        data,
+                        type: brainNode.type || 'mathNode',
+                        parentId: brainNode.parentId,
+                        width,
+                        height,
+                        selected: brainNode.selected || false,
+                    } as Node;
+                }
 
-            const layouted = await getLayoutedElements(nodesToLayout, brainEdges as Edge[], {
-                algorithm: layoutAlgorithm,
-                direction: 'RIGHT'
+                return {
+                    ...uiNode,
+                    position: brainNode.position ? { ...brainNode.position } : uiNode.position,
+                    data,
+                    type: brainNode.type || uiNode.type || 'mathNode',
+                    parentId: brainNode.parentId,
+                    width,
+                    height,
+                } as Node;
             });
 
+            // Frame policy: frames and their children are never part of the ELK
+            // pass. They keep their own position/size; only root non-frame nodes
+            // are re-flowed.
+            const nodesToLayout = selectLayoutNodes(baseNodes);
+            const edgesToLayout = selectLayoutEdges(brainEdges, nodesToLayout);
+
+            const layouted = nodesToLayout.length > 0
+                ? await getLayoutedElements(nodesToLayout, edgesToLayout, {
+                    algorithm: layoutAlgorithm,
+                    direction: 'RIGHT'
+                })
+                : { nodes: nodesToLayout, edges: edgesToLayout };
+
             // --- Brain Persistence for Remote Triggers ---
+            // Only laid-out nodes move; frames/children are never written back.
             const forward: Transaction[] = layouted.nodes.map(n => ({
                 type: 'MOVE_NODE',
                 payload: { id: n.id, position: { ...n.position } }
@@ -207,8 +253,20 @@ export function useAutoLayout(
 
             if (forward.length > 0) {
                 brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
-                setNodes([...layouted.nodes]);
-                setEdges([...layouted.edges]);
+            }
+
+            // Merge by id instead of replacing the array: every frame node,
+            // `parentId`, width/height and child local position is preserved.
+            const mergedNodes = sortParentFirst(mergeLayoutPositions(baseNodes, layouted.nodes));
+
+            if (mergedNodes.length > 0) {
+                setNodes(mergedNodes);
+                // Full edge set (not the filtered layout subset) so frame-internal
+                // edges are not dropped from the UI.
+                setEdges([...brainEdges]);
+            }
+
+            if (forward.length > 0) {
                 setTimeout(() => fitView({ duration: 800 }), 50);
                 logAction('Layout Triggered via Brain (RE-LAYOUT)');
             }
@@ -217,9 +275,7 @@ export function useAutoLayout(
         return () => {
             cleanupLayout();
         };
-    }, [layoutAlgorithm, setNodes, setEdges, logAction, fitView]);
+    }, [layoutAlgorithm, setNodes, setEdges, logAction, fitView, getNodes]);
 
     return { handleAutoLayout };
 }
-
-

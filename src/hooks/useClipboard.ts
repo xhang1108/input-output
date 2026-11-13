@@ -9,6 +9,7 @@ import {
     ClipboardBuffer,
     buildInsertTransactions,
     deepCloneWithFallback,
+    expandSelectionWithDescendants,
     planPaste,
 } from '../utils/clipboardMath';
 
@@ -17,6 +18,12 @@ import {
  * Handles duplicate, copy, cut and paste operations on nodes and edges.
  *
  * Clipboard truth is in-memory (DEC-5): a ref, never localStorage.
+ *
+ * Frame rule (docs/frame-integration.md §3-D8): selecting a frame selects its
+ * whole group. Every read of the selection goes through
+ * `expandSelectionWithDescendants`, so the buffer always holds the frame and
+ * its children together, parent-first. Paste then allocates new ids, remaps
+ * `parentId` to the new frame id and keeps child positions parent-local.
  */
 export function useClipboard() {
     const { getNodes, getEdges } = useReactFlow();
@@ -26,6 +33,16 @@ export function useClipboard() {
     // DEC-5: in-memory clipboard. Survives re-renders, not reloads or tab boundaries.
     const clipboardRef = useRef<ClipboardBuffer | null>(null);
 
+    /**
+     * Selected nodes plus all of their descendants, parent-first.
+     * Returns an empty array when nothing is selected.
+     */
+    const getSelectionWithDescendants = useCallback((nodes: Node[]): Node[] => {
+        const selectedIds = new Set(nodes.filter(n => n.selected).map(n => n.id));
+        if (selectedIds.size === 0) return [];
+        return expandSelectionWithDescendants(nodes, selectedIds);
+    }, []);
+
     // --- Command: Duplicate (Immediate) ---
     // DEC-2: behavior unchanged — fixed {20,20} offset, group keeps relative
     // positions, returns the new nodes so FlowCanvas can startGrab().
@@ -33,7 +50,9 @@ export function useClipboard() {
     // the DEC-6 B rule instead of drifting inside their original frame.
     const duplicateSelected = useCallback((): { nodes: Node[], edges: Edge[] } | false => {
         const nodes = getNodes();
-        const selectedNodes = nodes.filter(n => n.selected);
+        // A selected frame brings its children, otherwise the duplicate would be
+        // an empty frame and the children would be detached by DEC-6 B.
+        const selectedNodes = getSelectionWithDescendants(nodes);
         if (selectedNodes.length === 0) return false;
 
         const edges = getEdges();
@@ -68,11 +87,13 @@ export function useClipboard() {
         });
 
         return { nodes: plan.nodes, edges: plan.edges };
-    }, [getNodes, getEdges, brain, pushHistory]);
+    }, [getNodes, getEdges, getSelectionWithDescendants, brain, pushHistory]);
 
     // --- Command: Copy to Clipboard ---
     const copyToClipboard = useCallback((): boolean => {
-        const selectedNodes = getNodes().filter(n => n.selected);
+        const nodes = getNodes();
+        // Frame-aware: a selected frame is copied together with its descendants.
+        const selectedNodes = getSelectionWithDescendants(nodes);
         if (selectedNodes.length === 0) return false;
 
         const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
@@ -89,7 +110,7 @@ export function useClipboard() {
         };
 
         return true;
-    }, [getNodes, getEdges]);
+    }, [getNodes, getEdges, getSelectionWithDescendants]);
 
     // --- Command: Cut ---
     // DEC-4: cutting disconnects boundary edges; paste never reconnects them.
@@ -97,7 +118,10 @@ export function useClipboard() {
     // its inverse ADD_NODE misses `initialValue`.
     const cutSelected = useCallback((): boolean => {
         const nodes = getNodes();
-        const selectedNodes = nodes.filter(n => n.selected);
+        // Frame-aware: cutting a frame cuts its descendants too. REMOVE_NODE
+        // never cascades, so leaving children behind would orphan their
+        // `parentId`; the buffer keeps the whole group for the paste.
+        const selectedNodes = getSelectionWithDescendants(nodes);
         if (selectedNodes.length === 0) return false;
 
         const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
@@ -114,7 +138,12 @@ export function useClipboard() {
             source: CLIPBOARD_SOURCE,
         };
 
-        const forwardTxs: Transaction[] = selectedNodes.map(n => ({
+        // Parent-first order in the buffer (for the ADD_NODE inverse) becomes
+        // children-first here, so a frame is deleted only after its children.
+        const hasHierarchy = selectedNodes.some(n => !!n.parentId && selectedNodeIds.has(n.parentId));
+        const removeOrder = hasHierarchy ? [...selectedNodes].reverse() : selectedNodes;
+
+        const forwardTxs: Transaction[] = removeOrder.map(n => ({
             type: 'REMOVE_NODE',
             payload: n.id
         } as Transaction));
@@ -141,7 +170,7 @@ export function useClipboard() {
         });
 
         return true;
-    }, [getNodes, getEdges, brain, pushHistory]);
+    }, [getNodes, getEdges, getSelectionWithDescendants, brain, pushHistory]);
 
     // --- Command: Paste from Clipboard ---
     // DEC-1: bbox center lands on the flow-space target position.

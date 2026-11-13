@@ -1,6 +1,7 @@
 import { Edge, Node, XYPosition } from '@xyflow/react';
 import { Transaction } from '../engine/types/engineTypes';
 import { generateEdgeId, generateNodeId } from './idGenerator';
+import { sortParentFirst } from './coordinates';
 
 /**
  * Pure geometry / ID / transaction helpers for the clipboard commands.
@@ -32,6 +33,42 @@ export interface ClipboardBuffer {
     edges: Edge[];
     schemaVersion: string;
     source: typeof CLIPBOARD_SOURCE;
+}
+
+/**
+ * Expands a node selection with every descendant of the selected nodes.
+ *
+ * Copy/cut/duplicate must carry a frame's children: a clipboard payload that
+ * contains the frame but not its children would paste an empty frame and leave
+ * the live children behind with a dangling `parentId` (DEC-6 B would then
+ * detach them on the next paste).
+ *
+ * The result is stable parent-first (`sortParentFirst`) so `ADD_NODE`
+ * transactions never insert a child before its parent.
+ */
+export function expandSelectionWithDescendants(
+    nodes: Node[],
+    selectedIds: ReadonlySet<string>
+): Node[] {
+    const childrenByParent = new Map<string, Node[]>();
+    nodes.forEach(node => {
+        if (!node.parentId) return;
+        const siblings = childrenByParent.get(node.parentId) ?? [];
+        siblings.push(node);
+        childrenByParent.set(node.parentId, siblings);
+    });
+
+    const included = new Set<string>();
+    const stack = Array.from(selectedIds);
+
+    while (stack.length > 0) {
+        const id = stack.pop()!;
+        if (included.has(id)) continue;
+        included.add(id);
+        childrenByParent.get(id)?.forEach(child => stack.push(child.id));
+    }
+
+    return sortParentFirst(nodes.filter(node => included.has(node.id)));
 }
 
 export interface ClipboardLayoutItem {
@@ -307,7 +344,9 @@ export function planPaste(args: {
         createEdgeId
     );
 
-    const nodes = buildClipboardNodes(layout, idMap, offset);
+    // Parent-first so ADD_NODE never references a parent that has not been
+    // inserted yet. This also normalizes legacy buffers captured in UI order.
+    const nodes = sortParentFirst(buildClipboardNodes(layout, idMap, offset));
     const edges = buildClipboardEdges(buffer.edges, idMap);
     if (nodes.length === 0) return null;
 
