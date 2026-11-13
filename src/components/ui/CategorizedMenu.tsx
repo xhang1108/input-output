@@ -271,9 +271,17 @@ export function CategorizedMenu({
         }
 
         let requestId: number;
+        let retries = 0;
 
         const updatePosition = () => {
-            if (!menuRef.current) return;
+            // The portal can still be absent on the first frames: this effect runs
+            // on mount, while `mounted` renders the menu one commit later. Bailing
+            // out here without rescheduling left the menu unpositioned at
+            // opacity-0 forever (Shift+A looked dead), so keep polling for the ref.
+            if (!menuRef.current) {
+                if (retries++ < 300) requestId = requestAnimationFrame(updatePosition);
+                return;
+            }
 
             let x = position?.x || 0;
             let y = position?.y || 0;
@@ -432,9 +440,13 @@ export function CategorizedMenu({
             <div
                 ref={menuRef}
                 className={`fixed z-10000 bg-surface-dim border border-surface-light rounded-[14px] flex flex-col p-1 transition-opacity duration-75 ${
-                    isPositioned ? 'animate-in fade-in duration-200 ease-out opacity-100' : 'opacity-0'
+                    isPositioned ? 'animate-in fade-in duration-200 ease-out opacity-100' : 'opacity-100'
                 }`}
                 style={{
+                    // Never rely on the rAF pass for visibility: place the menu at
+                    // the requested point on first paint, then let the effect refine
+                    // it against the viewport.
+                    ...(trigger ? {} : { left: position?.x ?? 0, top: position?.y ?? 0 }),
                     maxHeight: dynamicMaxHeight,
                     maxWidth: '95vw',
                     width: menuLayout === 'horizontal' ? 'auto' : (width === 'full' ? undefined : (width.startsWith('w-') ? undefined : `${parseInt(width) * 4}px`)),

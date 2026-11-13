@@ -6,6 +6,7 @@ React Flow integration-layer audit + fixes (audit v5.0). Save format unchanged.
 
 ### Fixed
 
+- `Shift+A` palette sometimes opened invisible (`opacity-0`, unpositioned, ~1 in 3 opens) because `CategorizedMenu` ran its positioning effect while `mounted` still returned `null`, then stopped retrying; the loop now re-schedules until the portal ref exists
 - Broken snap wiring: `manualSnap` toggle now takes effect; snapping in all three modes — GRABBING (20px), SCALING (0.05), ROTATING (15°); autopan keeps snap; Ctrl+right-click priority (cancel-only with `cutPath` cleared during transforms); `useCanvasProjection` pinned to `{ snapToGrid: false }`; persist key bumped to `v4` (one-time reset of legacy settings)
 - `MagneticEdge` wrapped in `memo`; edge slots moved to a `WeakMap` O(1) lookup (`src/utils/edgeSlots.ts`)
 - `useRelink` dropped its `s.edges` subscription, `RelinkLine` / `useHandleMagnet` dropped `nodeLookup` subscriptions (`s.edges` kept); `IOPlayground` height signature fixes staleness; `SolverNode` narrowed selection
