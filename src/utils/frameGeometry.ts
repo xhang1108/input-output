@@ -17,6 +17,37 @@ export interface FrameExpansionResult {
 }
 
 /**
+ * Smallest size a frame may be resized to while keeping every child inside.
+ * The frame top-left is fixed, so the bound is content-right/bottom relative
+ * to the frame origin.
+ */
+export function getFrameMinSize(
+    nodes: Node[],
+    frameId: string,
+    minWidth = 200,
+    minHeight = 120
+): { w: number; h: number } {
+    const nodeById = indexNodes(nodes);
+    const frameAbs = toAbsolute(nodeById, frameId);
+    const children = nodes.filter(n => n.parentId === frameId);
+    if (children.length === 0) return { w: minWidth, h: minHeight };
+
+    let maxRight = -Infinity;
+    let maxBottom = -Infinity;
+    for (const child of children) {
+        const abs = toAbsolute(nodeById, child.id);
+        const size = getNodeSize(child);
+        maxRight = Math.max(maxRight, abs.x + size.w);
+        maxBottom = Math.max(maxBottom, abs.y + size.h);
+    }
+
+    return {
+        w: Math.max(minWidth, Math.ceil(maxRight - frameAbs.x)),
+        h: Math.max(minHeight, Math.ceil(maxBottom - frameAbs.y)),
+    };
+}
+
+/**
  * Grows a frame so it contains all direct children, keeping every child's
  * world position fixed. Only expands (never shrinks), which keeps live dragging
  * stable. Children are shifted to the new parent-local origin.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@xyflow/react';
-import { expandFrameToFitChildren } from '@/utils/frameGeometry';
+import { expandFrameToFitChildren, getFrameMinSize } from '@/utils/frameGeometry';
 
 function frame(x: number, y: number, width: number, height: number): Node {
     return {
@@ -96,5 +96,31 @@ describe('frameGeometry.expandFrameToFitChildren', () => {
 
         expect(f.width).toBe(252); // 170 + 50 + 32
         expect(f.height).toBe(162); // 80 + 50 + 32
+    });
+});
+
+describe('frameGeometry.getFrameMinSize', () => {
+    it('returns the minimum frame size when empty', () => {
+        expect(getFrameMinSize([frame(0, 0, 300, 300)], 'f1')).toEqual({ w: 200, h: 120 });
+    });
+
+    it('uses the content outer edge relative to the frame origin', () => {
+        const nodes = [
+            frame(100, 100, 500, 500),
+            child('c1', 200, 150),
+        ];
+
+        // child world = 300,250; right = 350, bottom = 300.
+        // Relative to frame origin: 250, 200.
+        expect(getFrameMinSize(nodes, 'f1')).toEqual({ w: 250, h: 200 });
+    });
+
+    it('never goes below the frame minimum', () => {
+        const nodes = [
+            frame(0, 0, 300, 300),
+            child('c1', 10, 10),
+        ];
+
+        expect(getFrameMinSize(nodes, 'f1')).toEqual({ w: 200, h: 120 });
     });
 });
