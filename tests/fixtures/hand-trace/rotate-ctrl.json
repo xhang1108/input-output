@@ -1,0 +1,13 @@
+{
+    "name": "rotate-ctrl",
+    "physics": { "snapGridSize": 20 },
+    "mode": "ROTATING",
+    "snap": true,
+    "nodes": [
+        { "id": "n1", "position": { "x": 100, "y": 100 } },
+        { "id": "n2", "position": { "x": 200, "y": 100 } }
+    ],
+    "startMouse": { "x": 250, "y": 100 },
+    "events": [{ "mouse": { "x": 163.9, "y": 199.03 }, "ctrl": true }],
+    "expect": { "transformValue": "75.0°", "n1": { "x": 137.06, "y": 51.7 } }
+}

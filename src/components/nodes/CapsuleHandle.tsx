@@ -3,7 +3,7 @@ import { Position, useNodeConnections, useUpdateNodeInternals } from '@xyflow/re
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
 import { HandleConfig } from '../../types/nodeDefinitions';
-import { getHandleColorByConfig as getHandleColor, resolveHandlePosition } from '../../utils/handleUtils';
+import { getHandleColorByConfig as getHandleColor, resolveHandlePosition, assertUniqueHandleIds } from '../../utils/handleUtils';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
 
@@ -24,6 +24,12 @@ export const CapsuleHandle = memo(({ h, id, isConnectable, nodeData }: CapsuleHa
     const isAlreadyCommitted = isPreviewing && connections.length >= preview.totalSlots;
     const count = connections.length + (isPreviewing && !isAlreadyCommitted ? 1 : 0);
     const dynamicHeight = calculateCapsuleHeight(count);
+
+    // P2-11 (dev-only): fail fast on empty handle ids. Cross-handle duplicate
+    // detection lives in BaseNode, the only place with the full sibling list.
+    if (process.env.NODE_ENV !== 'production') {
+        assertUniqueHandleIds([{ id: h.id }], id);
+    }
 
     // CRITICAL: When the height of the capsule handle changes (due to new connections or preview),
     // we MUST notify React Flow to recalculate handle positions for edges.

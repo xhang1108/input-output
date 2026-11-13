@@ -1,0 +1,9 @@
+{
+    "name": "grab-no-ctrl",
+    "physics": { "snapGridSize": 20 },
+    "mode": "GRABBING",
+    "snap": false,
+    "startFlowPos": { "x": 100, "y": 100 },
+    "events": [{ "mouse": { "x": 137, "y": 87 }, "ctrl": false }],
+    "expect": { "transformValue": "37, -13", "nodeDelta": { "x": 37, "y": -13 } }
+}

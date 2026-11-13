@@ -113,7 +113,7 @@ export const useAppStore = create<AppState>()(
                 clearHighlightedPath: () => set({ highlightedNodeIds: [], highlightedEdgeIds: [] }),
             }),
             {
-                name: 'Input-Output-settings-v3',
+                name: 'Input-Output-settings-v4',
                 partialize: (state) => ({
                     manualSnap: state.manualSnap,
                     showGrid: state.showGrid,

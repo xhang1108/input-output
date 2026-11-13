@@ -137,3 +137,29 @@ export function getHandleColorByConfig(config: HandleConfig): string {
     return config.color || getHandleColor(config.dataType || 'scalar');
 }
 
+/**
+ * P2-11: dev-only guard — every handle rendered inside one node must carry a
+ * unique id, otherwise React Flow silently binds edges to the wrong handle.
+ * Called (dev only) by SingleHandle/CapsuleHandle so a typo fails fast.
+ * Production builds skip the loop via the call-site `NODE_ENV` check.
+ */
+export function assertUniqueHandleIds(
+    handles: ReadonlyArray<{ id: string }>,
+    nodeId: string
+): void {
+    const seen = new Set<string>();
+    for (const h of handles) {
+        if (!h.id || (typeof h.id === 'string' && h.id.trim() === '')) {
+            throw new Error(
+                `[HandleIdUnique] empty handle id on node "${nodeId}"`
+            );
+        }
+        if (seen.has(h.id)) {
+            throw new Error(
+                `[HandleIdUnique] duplicate handle id "${h.id}" on node "${nodeId}"`
+            );
+        }
+        seen.add(h.id);
+    }
+}
+

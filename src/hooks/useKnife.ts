@@ -26,6 +26,11 @@ export function useKnife() {
         setCutPath([...cutPathRef.current]);
     }, []);
 
+    const cancelCut = useCallback(() => {
+        cutPathRef.current = [];
+        setCutPath([]);
+    }, []);
+
     const endCut = useCallback(() => {
         const { isRestoring, push } = useHistoryStore.getState();
         if (isRestoring) return;
@@ -98,15 +103,15 @@ export function useKnife() {
             }
         }
 
-        cutPathRef.current = [];
-        setCutPath([]);
-    }, [getEdges, getNodes, setEdges, project]);
+        cancelCut();
+    }, [getEdges, getNodes, setEdges, project, cancelCut]);
 
     return {
         cutPath,
         startCut,
         updateCut,
         endCut,
+        cancelCut,
     };
 }
 

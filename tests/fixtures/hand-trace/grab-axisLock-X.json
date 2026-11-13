@@ -1,0 +1,10 @@
+{
+    "name": "grab-axisLock-X",
+    "physics": { "snapGridSize": 20 },
+    "mode": "GRABBING",
+    "snap": false,
+    "axisLock": "X",
+    "startFlowPos": { "x": 100, "y": 100 },
+    "events": [{ "mouse": { "x": 137, "y": 87 }, "ctrl": true }],
+    "expect": { "transformValue": "40", "nodeDelta": { "x": 40, "y": 0 } }
+}

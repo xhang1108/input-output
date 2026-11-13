@@ -14,7 +14,10 @@ export const RerouteNode = memo(({ selected }: NodeProps) => {
                 `}
             />
 
-            {/* Output Handle - Right half (50%) */}
+            {/* Output Handle - Right half (50%).
+                Raw <Handle> (bypasses BaseNode/SingleHandle): ids are static
+                ('out_a'/'in_a', unique by construction); P2-11 exempts this
+                node from the dev-only uniqueness assert by design. */}
             <Handle
                 type="source"
                 position={Position.Right}
@@ -33,7 +36,8 @@ export const RerouteNode = memo(({ selected }: NodeProps) => {
                 }}
             />
 
-            {/* Input Handle - Left half (50%) */}
+            {/* Input Handle - Left half (50%).
+                Raw <Handle> (bypasses BaseNode/SingleHandle): see note above. */}
             <Handle
                 type="target"
                 position={Position.Left}

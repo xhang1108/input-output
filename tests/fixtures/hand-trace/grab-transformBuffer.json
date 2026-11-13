@@ -1,0 +1,10 @@
+{
+    "name": "grab-transformBuffer",
+    "physics": { "snapGridSize": 20 },
+    "mode": "GRABBING",
+    "snap": false,
+    "transformBuffer": "12.34",
+    "startFlowPos": { "x": 100, "y": 100 },
+    "events": [{ "mouse": { "x": 137, "y": 87 }, "ctrl": true }],
+    "expect": { "transformValue": "", "nodeDelta": { "x": 0, "y": 0 }, "earlyReturn": true }
+}

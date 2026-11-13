@@ -1,10 +1,9 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { Edge, Connection, OnConnectStartParams, useStore } from '@xyflow/react';
+import { Edge, Connection, OnConnectStartParams, useStoreApi } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
 import { RelinkState } from '../components/edges/RelinkLine';
 import { capsulePreviewState } from '../components/edges/capsulePreviewState';
-import { Brain } from '../engine/Brain';
 import { useBrain } from '../context/BrainContext';
 import { BrainHelper } from '../engine/BrainHelper';
 import {
@@ -30,7 +29,7 @@ export function useRelink({
 }: UseRelinkProps) {
     const brain = useBrain();
     const pushHistory = useHistoryStore(s => s.push);
-    const edges = useStore((s) => s.edges);
+    const store = useStoreApi();
     const [relinkState, setRelinkState] = useState<RelinkState>({
         active: false,
         targetNodeId: null,
@@ -61,7 +60,7 @@ export function useRelink({
 
     const submitRelinkBatch = useCallback((newEdges: Edge[]) => {
         const removedIds = removedEdgeIds.current;
-        const currentEdges = edges;
+        const currentEdges = store.getState().edges;
         
         // RESOLVE: Ensure backup contains ALL actual edge objects being removed
         // (both already detached ones and newly replaced ones)
@@ -140,7 +139,7 @@ export function useRelink({
 
         // 3.0 PURGE: Centrally clear removal buffers after any submission
     removedEdgesBackup.current = [];
-    }, [edges, brain, pushHistory]);
+    }, [store, brain, pushHistory]);
 
     /** Helper to transform internal IDs like 'MA-01_hash:in_a' to '[Basic Math-01] A' */
     const formatIdentifier = useCallback((id: string) => {
@@ -152,7 +151,6 @@ export function useRelink({
             
             // Priority: 1. Custom Label from Brain | 2. Static Label | 3. Base ID
             const nodeLabel = nodeLogic?.data?.label as string || def?.label || typeId;
-            const shortIdx = typeId.includes('-') ? typeId.split('-')[1] : typeId;
             
             const handleId = handlePart ? handlePart.substring(1) : null; // Remove the ':'
             let handleLabel = '';
@@ -173,6 +171,7 @@ export function useRelink({
             return false;
         }
         const state = relinkStateRef.current;
+        const edges = store.getState().edges;
         const anchorNodeId = state.targetNodeId || (state.anchors && state.anchors[0]?.nodeId);
 
         if (!state.active || !anchorNodeId) return false;
@@ -267,7 +266,7 @@ export function useRelink({
             return false;
         }
 
-    }, [logAction, edges, submitRelinkBatch, brain]);
+    }, [logAction, store, submitRelinkBatch, brain]);
 
     const resetRelink = useCallback(() => {
         const emptyState: RelinkState = {
@@ -292,6 +291,7 @@ export function useRelink({
         if (relinkStateRef.current.active) return;
         const { nodeId, handleId, handleType } = params;
         if (!nodeId || !handleId) return;
+        const edges = store.getState().edges;
 
         const isCtrl = (event as MouseEvent).ctrlKey || (event as MouseEvent).metaKey;
 
@@ -351,7 +351,7 @@ export function useRelink({
                 logAction(`Unplugged wire from ${nodeId}:${handleId}`);
             }
         }
-    }, [edges, setEdges, logAction, brain]);
+    }, [store, setEdges, logAction, brain]);
 
     const isValidRelinkConnection = useCallback(
         (connection: Edge | Connection) => {
@@ -392,6 +392,7 @@ export function useRelink({
             const targetNode = brain.getNode(targetId);
             const variant = getHandleVariant(targetNode, targetHandle || '');
             const isReplacementTarget = variant === 'single';
+            const edges = store.getState().edges;
 
             const edgesForValidation = isReplacementTarget
                 ? edges.filter(e => !(e.target === targetId && e.targetHandle === targetHandle))
@@ -407,7 +408,7 @@ export function useRelink({
 
             return validation.isValid;
         },
-        [edges, brain]
+        [store, brain]
     );
 
     const onRelinkConnect = useCallback(
@@ -425,6 +426,7 @@ export function useRelink({
             if (state.active || processingRelinkRef.current) return;
 
             const targetHandle = params.targetHandle;
+            const edges = store.getState().edges;
             const existingEdge = edges.find(e =>
                 e.target === params.target &&
                 e.targetHandle === targetHandle
@@ -490,7 +492,7 @@ export function useRelink({
             const detail = `${params.source}:${params.sourceHandle} -> ${params.target}:${params.targetHandle}`;
             logAction(`Connected: ${detail}`);
         },
-        [edges, logAction, submitRelinkBatch, brain]
+        [store, logAction, submitRelinkBatch, brain]
     );
 
     const onRelinkEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
@@ -600,6 +602,7 @@ export function useRelink({
 
     const startEdgeDragDisconnect = useCallback((event: React.PointerEvent, edgeId: string) => {
         if (relinkStateRef.current.active) return;
+        const edges = store.getState().edges;
         const edge = edges.find(e => e.id === edgeId);
         if (!edge) return;
 
@@ -619,7 +622,7 @@ export function useRelink({
 
         setEdges(eds => eds.filter(e => e.id !== edge.id));
         logAction(`Unplugged wire via drag`);
-    }, [edges, setEdges, logAction, brain]);
+    }, [store, setEdges, logAction, brain]);
 
     return {
         relinkState,

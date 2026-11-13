@@ -1,4 +1,4 @@
-import { useStore, Position } from '@xyflow/react';
+import { useStoreApi, Position } from '@xyflow/react';
 import { getNearestHandle } from '../utils/geometry';
 import { getHandleVariant } from '../utils/handleUtils';
 
@@ -9,9 +9,12 @@ export const MagneticSnapState = {
 };
 
 export function useHandleMagnet(targetX: number, targetY: number) {
-    const nodeLookup = useStore((s) => s.nodeLookup);
-    const connectionHandleId = useStore((s) => (s as { connectionHandleId?: string | null }).connectionHandleId);
-    const connectionNodeId = useStore((s) => (s as { connectionNodeId?: string | null }).connectionNodeId);
+    const store = useStoreApi();
+    const { nodeLookup, connectionHandleId, connectionNodeId } = store.getState() as {
+        nodeLookup: ReturnType<typeof store.getState>['nodeLookup'];
+        connectionHandleId?: string | null;
+        connectionNodeId?: string | null;
+    };
 
     // Default: No snap
     let effectiveX = targetX;

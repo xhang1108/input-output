@@ -1,3 +1,4 @@
+import type { NodeTypes, EdgeTypes } from '@xyflow/react';
 import { BaseNode } from '../components/nodes/BaseNode';
 import { SolverNode } from '../components/nodes/SolverNode';
 
@@ -51,7 +52,7 @@ import { ODESolverNode } from '../components/nodes/ODESolverNode';
 import { SmoothingNode } from '../components/nodes/SmoothingNode';
 import { StatusNode } from '../components/nodes/StatusNode';
 
-export const nodeTypes = {
+export const nodeTypes: NodeTypes = {
     // ─── 1. Input ──────────────────────────────────────────
     'IN-01': InputNode,      // Number
     'IN-02': SliderNode,
@@ -122,7 +123,7 @@ export const nodeTypes = {
     'IN-03': ColorNode,     // New Color ID
 };
 
-export const edgeTypes = {
+export const edgeTypes: EdgeTypes = {
     magnetic: MagneticEdge,
 };
 

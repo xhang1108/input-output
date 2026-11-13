@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useMemo, useEffect, useState, useRef } from 'react';
-import { ReactFlow, ReactFlowProvider, Node, Edge, useNodesState, useEdgesState, useStore, ReactFlowState } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+import { ReactFlow, ReactFlowProvider, Node, Edge, useNodesState, useEdgesState, useStore } from '@xyflow/react';
+// P2-8: no per-component style.css import — src/app/globals.css:2 is the single source.
 import { nodeTypes, edgeTypes } from '@/constants/nodeTypeMap';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useBrain } from '@/context/BrainContext';
@@ -206,38 +206,31 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
     }, [nodes, namespace, brain]);
 
     // 5. DYNAMIC HEIGHT CALCULATION (DEBOUNCED)
-    const nodeLookup = useStore((s: ReactFlowState) => s.nodeLookup);
-    
+    // Position+height signature: node moves change the string, fixing nodeLookup stale ref
+    const heightSig = useStore((s) => {
+        let minY = Infinity, maxY = -Infinity;
+        for (const n of s.nodes) {
+            if (!n.id.startsWith(namespace)) continue;
+            const h = n.measured?.height ?? (n.height as number) ?? (n.data?.height as number) ?? 150;
+            minY = Math.min(minY, n.position.y || 0);
+            maxY = Math.max(maxY, (n.position.y || 0) + h);
+        }
+        return `${minY}:${maxY}`;
+    });
+
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (nodeLookup.size === 0) return;
-            let minY = Infinity;
-            let maxY = -Infinity;
-
-            Array.from(nodeLookup.values()).forEach((node: any) => {
-                if (!node.id.startsWith(namespace)) return;
-                
-                const nHeight = node.measured?.height
-                    || (node.height as number)
-                    || (node.data?.height as number)
-                    || 150;
-
-                const top = node.position.y || 0;
-                const bottom = top + nHeight;
-                if (top < minY) minY = top;
-                if (bottom > maxY) maxY = bottom;
-            });
-
-            if (maxY > minY) {
-                const newHeight = Math.ceil((maxY - minY) + (VERTICAL_PADDING * 2) + 100);
-                if (Math.abs(newHeight - canvasHeight) > 2) {
-                    setCanvasHeight(newHeight);
-                }
+            const [minStr, maxStr] = heightSig.split(':');
+            const minY = Number(minStr), maxY = Number(maxStr);
+            if (!Number.isFinite(minY) || !Number.isFinite(maxY) || maxY <= minY) return;
+            const newHeight = Math.ceil((maxY - minY) + (VERTICAL_PADDING * 2) + 100);
+            if (Math.abs(newHeight - canvasHeight) > 2) {
+                setCanvasHeight(newHeight);
             }
         }, 100); // 100ms debounce to break ResizeObserver loops
 
         return () => clearTimeout(timer);
-    }, [nodeLookup, namespace, canvasHeight]);
+    }, [heightSig, namespace, canvasHeight]);
 
     return (
         <WikiDemoCanvas height={canvasHeight}>
@@ -251,8 +244,8 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
-                    nodeTypes={nodeTypes as any}
-                    edgeTypes={edgeTypes as any}
+                    nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
                     minZoom={1}
                     maxZoom={1}
                     defaultViewport={{ x: 0, y: 0, zoom: 1 }}
@@ -266,7 +259,6 @@ const IOPlaygroundInner: React.FC<IOPlaygroundProps> = React.memo((props) => {
                     panOnScroll={false}
                     colorMode="dark"
                     noDragClassName="nodrag"
-                    proOptions={{ hideAttribution: true }}
                     style={{ background: 'transparent' }}
                 />
             </div>

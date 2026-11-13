@@ -1,0 +1,6 @@
+{
+    "name": "ctrl-rightclick-idle",
+    "mode": "IDLE",
+    "mouse": { "button": 2, "ctrlKey": true },
+    "expect": { "action": "CUT" }
+}

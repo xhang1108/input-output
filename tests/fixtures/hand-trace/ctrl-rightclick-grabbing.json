@@ -1,0 +1,6 @@
+{
+    "name": "ctrl-rightclick-grabbing",
+    "mode": "GRABBING",
+    "mouse": { "button": 2, "ctrlKey": true },
+    "expect": { "action": "CANCEL", "cutPathCleared": true }
+}

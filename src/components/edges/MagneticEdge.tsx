@@ -1,11 +1,12 @@
 import { BaseEdge, EdgeProps, getBezierPath, useStore } from '@xyflow/react';
-import React, { useContext, useRef } from 'react';
+import React, { memo, useContext, useRef } from 'react';
 import { useCapsulePreview } from './capsulePreviewState';
-import { HANDLE_SLOT_SPACING, calculateSlotOffsetY } from '../../utils/handleUtils';
+import { calculateSlotOffsetY } from '../../utils/handleUtils';
+import { getEdgeSlotIndex } from '../../utils/edgeSlots';
 import { RelinkContext } from './RelinkLine';
 import { useAppStore } from '../../store/useStore';
 
-export function MagneticEdge({
+export const MagneticEdge = memo(function MagneticEdge({
     id,
     source,
     target,
@@ -26,8 +27,8 @@ export function MagneticEdge({
     const { startEdgeDragDisconnect } = useContext(RelinkContext);
     const dragStartPos = useRef<{ x: number, y: number } | null>(null);
 
-    const siblingEdgesCount = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).length);
-    const myIndex = useStore((s) => s.edges.filter((e) => e.target === target && e.targetHandle === targetHandleId).findIndex((e) => e.id === id));
+    const myIndex = useStore((s) => getEdgeSlotIndex(s.edges).get(id)?.index ?? -1);
+    const siblingEdgesCount = useStore((s) => getEdgeSlotIndex(s.edges).get(id)?.total ?? 0);
     
     const highlightedEdgeId = useAppStore(s => s.highlightedEdgeId);
     const highlightedEdgeIds = useAppStore(s => s.highlightedEdgeIds);
@@ -128,5 +129,5 @@ export function MagneticEdge({
             )}
         </>
     );
-}
+});
 

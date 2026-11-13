@@ -1,0 +1,9 @@
+{
+    "name": "autopan-ctrl",
+    "physics": { "snapGridSize": 20 },
+    "mode": "GRABBING",
+    "snap": true,
+    "startFlowPos": { "x": 100, "y": 100 },
+    "events": [{ "mouse": { "x": 137, "y": 87 }, "ctrl": false }],
+    "expect": { "transformValue": "40, -20", "nodeDelta": { "x": 40, "y": -20 } }
+}

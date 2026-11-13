@@ -1,4 +1,4 @@
-import { ConnectionLineComponentProps, useStore, Position, getBezierPath } from '@xyflow/react';
+import { ConnectionLineComponentProps, useStore, useStoreApi, Position, getBezierPath } from '@xyflow/react';
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useHandleMagnet } from '../../hooks/useHandleMagnet';
 import { getNearestHandle } from '../../utils/geometry';
@@ -38,9 +38,9 @@ export const RelinkLine = ({
     connectionLineStyle,
 }: ConnectionLineComponentProps) => {
     const { active, targetNodeId, targetHandleId, type, anchors } = useContext(RelinkContext);
-    const nodeLookup = useStore((s) => s.nodeLookup);
-    const allEdges = useStore((s) => s.edges);
-    const transform = useStore((s) => s.transform); // [tx, ty, zoom]
+    const store = useStoreApi();
+    const { nodeLookup, transform } = store.getState(); // render read, no subscription (fresh each pointer-move render)
+    const allEdges = useStore((s) => s.edges); // kept: render body computes previewTotal
 
     // Track raw pointer position in flow coordinates (bypasses React Flow's pre-snapping)
     const rawMouseFlowY = useRef(toY);

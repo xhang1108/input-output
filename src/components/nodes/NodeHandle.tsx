@@ -1,8 +1,7 @@
 'use client';
 
-import { Handle, HandleProps, useUpdateNodeInternals } from '@xyflow/react';
+import { Handle, HandleProps } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
 import { isGenericColor } from '../../utils/handleUtils';
 
 interface CustomHandleProps extends HandleProps {
@@ -17,12 +16,9 @@ interface CustomHandleProps extends HandleProps {
  * Robust implementation for consistent color rendering.
  */
 export function NodeHandle({ className, color, id, nodeId, maxConnections, ...props }: CustomHandleProps) {
-    const updateNodeInternals = useUpdateNodeInternals();
-
-    useEffect(() => {
-        updateNodeInternals(nodeId);
-        return () => updateNodeInternals(nodeId);
-    }, [nodeId, updateNodeInternals]);
+    // P2-9: no mount-time updateNodeInternals here (was 1 call + 1 cleanup per
+    // handle). React Flow recalculates bounds on unmount itself; node-level
+    // (BaseNode) and capsule-height (CapsuleHandle) updates cover the rest.
 
     const isPending = id.endsWith('_pending');
     const normalizedColor = String(color || '').trim().toLowerCase();

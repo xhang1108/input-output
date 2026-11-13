@@ -6,7 +6,7 @@ import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
 import { HandleConfig } from '../../types/nodeDefinitions';
-import { resolveHandlePosition } from '../../utils/handleUtils';
+import { resolveHandlePosition, assertUniqueHandleIds } from '../../utils/handleUtils';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { useCapsulePreview } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
@@ -188,6 +188,13 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
         }
         return h;
     }).filter(h => !h.hidden || !h.hidden(data));
+
+    // P2-11 (dev-only): duplicate/empty handle ids fail fast here — BaseNode is
+    // the only place with the full sibling list (Single/Capsule see one `h`).
+    // RerouteNode bypasses BaseNode; its raw <Handle> ids are annotated there.
+    if (process.env.NODE_ENV !== 'production') {
+        assertUniqueHandleIds(allHandles, id);
+    }
 
     const leftHandles = allHandles.filter(h => resolveHandlePosition(h) === Position.Left);
     const rightHandles = allHandles.filter(h => resolveHandlePosition(h) === Position.Right);

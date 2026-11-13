@@ -14,7 +14,7 @@ export function useCanvasProjection() {
      * Converts raw screen coordinates (clientX/Y) to flow/canvas coordinates.
      */
     const project = useCallback((screenPos: XYPosition): XYPosition => {
-        return screenToFlowPosition(screenPos);
+        return screenToFlowPosition(screenPos, { snapToGrid: false });
     }, [screenToFlowPosition]);
 
     /**
@@ -28,7 +28,7 @@ export function useCanvasProjection() {
      * Extracts flow-space coordinates directly from a MouseEvent.
      */
     const getEventFlowPos = useCallback((e: MouseEvent | React.MouseEvent): XYPosition => {
-        return screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        return screenToFlowPosition({ x: e.clientX, y: e.clientY }, { snapToGrid: false });
     }, [screenToFlowPosition]);
 
     /**

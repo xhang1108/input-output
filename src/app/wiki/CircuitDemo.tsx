@@ -2,7 +2,7 @@
 
 import React, { useMemo, useEffect, useState } from 'react';
 import { ReactFlow, ReactFlowProvider, Node, Edge, useNodesState, useEdgesState } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+// P2-8: no per-component style.css import — src/app/globals.css:2 is the single source.
 import { nodeTypes, edgeTypes } from '@/constants/nodeTypeMap';
 import { useBrain, BrainProvider } from '@/context/BrainContext';
 import { WikiDemoCanvas } from './WikiDemoCanvas';
@@ -193,8 +193,8 @@ const CircuitDemoInner: React.FC<CircuitDemoProps> = React.memo(({ iogl, label, 
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
-                nodeTypes={nodeTypes as any}
-                edgeTypes={edgeTypes as any}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 minZoom={1}
                 maxZoom={1}
                 defaultViewport={{ x: 0, y: 0, zoom: 1 }}
@@ -207,7 +207,6 @@ const CircuitDemoInner: React.FC<CircuitDemoProps> = React.memo(({ iogl, label, 
                 autoPanOnConnect={false}
                 panOnScroll={false}
                 colorMode="dark"
-                proOptions={{ hideAttribution: true }}
                 style={{ background: 'transparent' }}
             >
             </ReactFlow>

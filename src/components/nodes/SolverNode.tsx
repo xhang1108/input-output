@@ -1,7 +1,8 @@
 
 import { memo, useMemo, useState, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
-import { NodeProps, useReactFlow, useNodes, useNodeConnections, Position } from '@xyflow/react';
+import { NodeProps, useReactFlow, useStore, useNodeConnections, Position } from '@xyflow/react';
+import { useShallow } from 'zustand/shallow';
 import { HandleConfig } from '../../types/nodeDefinitions';
 import { PayloadUtils } from '../../utils/PayloadUtils';
 import { NodeOpSelect } from './NodeOpSelect';
@@ -19,8 +20,10 @@ export const SolverNode = memo((props: NodeProps) => {
 
     const nodeData = { ...data, handles };
 
-    const nodes = useNodes();
     const incomingConnections = useNodeConnections({ handleType: 'target', handleId: 'in_a' });
+
+    const sourceIds = useMemo(() => incomingConnections.map((c) => c.source), [incomingConnections]);
+    const sourceValues = useStore(useShallow((s) => sourceIds.map((id) => s.nodeLookup.get(id)?.data?.value)));
 
     const variables = useMemo(() => {
         const vars = new Set<string>();
@@ -46,10 +49,9 @@ export const SolverNode = memo((props: NodeProps) => {
             });
         };
 
-        incomingConnections.forEach((conn: any) => {
-            const sourceNode = nodes.find(n => n.id === conn.source);
-            if (sourceNode && sourceNode.data && sourceNode.data.value !== undefined) {
-                const payload = sourceNode.data.value;
+        incomingConnections.forEach((_conn: any, i: number) => {
+            const payload = sourceValues[i];
+            if (payload !== undefined) {
                 const val = payload ? PayloadUtils.unwrap(payload) : null;
                 if (val) {
                     if (typeof val === 'string') {
@@ -67,7 +69,7 @@ export const SolverNode = memo((props: NodeProps) => {
         });
 
         return Array.from(vars).sort();
-    }, [nodes, incomingConnections]);
+    }, [sourceValues]);
 
     const variable = (data.variable as string) || '';
 

@@ -9,6 +9,7 @@ import { useClipboard } from '../useClipboard';
 import { useSelection } from '../useSelection';
 import { useKnife } from '../useKnife';
 import { useAppStore } from '../../store/useStore';
+import { resolveMouseDownAction, snapRotation, snapScale, snapTranslate } from '../../utils/transformSnap';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -17,7 +18,8 @@ type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
  * Manages grab/scale/rotate transforms, autopan, mouse events,
  * and composes useClipboard, useSelection, useKnife.
  */
-export function useHand() {
+export function useHand(opts?: { snap?: boolean }) {
+    const snap = opts?.snap ?? false;
     const { getNodes, setNodes, getViewport, setViewport } = useReactFlow();
     const brain = useBrain();
     const { project } = useCanvasProjection();
@@ -43,7 +45,7 @@ export function useHand() {
         alignSelectedNodes,
         clearSelection, selectNode,
     } = useSelection();
-    const { cutPath, startCut, updateCut, endCut } = useKnife();
+    const { cutPath, startCut, updateCut, endCut, cancelCut } = useKnife();
 
     // --- Transform State ---
     const initialPositions = useRef<Map<string, XYPosition>>(new Map());
@@ -206,10 +208,11 @@ export function useHand() {
             if (axisLock === 'Y') dx = 0;
             const config = brain.getPhysicsConfig();
 
-            if (ctrlKey) {
+            if (ctrlKey || snap) {
                 const GRID_SIZE = config.interaction.snapGridSize;
-                dx = Math.round(dx / GRID_SIZE) * GRID_SIZE;
-                dy = Math.round(dy / GRID_SIZE) * GRID_SIZE;
+                const snapped = snapTranslate(dx, dy, GRID_SIZE);
+                dx = snapped.x;
+                dy = snapped.y;
             }
 
             let displayVal = '';
@@ -232,8 +235,9 @@ export function useHand() {
             const currentDist = Math.hypot(currentFlowPos.x - pivot.x, currentFlowPos.y - pivot.y);
 
             const scale = startDist > 0 ? currentDist / startDist : 1;
-            setTransformValue(scale.toFixed(2));
-            applyScale(scale);
+            const appliedScale = (ctrlKey || snap) ? snapScale(scale) : scale;
+            setTransformValue(appliedScale.toFixed(2));
+            applyScale(appliedScale);
 
         } else if (mode === 'ROTATING' && startMousePos.current && centerRef.current) {
             if (transformBuffer !== '') return;
@@ -252,10 +256,11 @@ export function useHand() {
             lastAngleRef.current = currentAngle;
 
             const deg = (accumulatedRotation.current * 180 / Math.PI);
-            setTransformValue(deg.toFixed(1) + '°');
-            applyRotate(accumulatedRotation.current);
+            const appliedDeg = (ctrlKey || snap) ? snapRotation(deg) : deg;
+            setTransformValue(appliedDeg.toFixed(1) + '°');
+            applyRotate(appliedDeg * (Math.PI / 180));
         }
-    }, [mode, project, axisLock, transformBuffer, applyMove, applyScale, applyRotate]);
+    }, [mode, project, axisLock, transformBuffer, applyMove, applyScale, applyRotate, snap]);
 
     // --- Autopan Loop ---
     const autopan = useCallback(function autopanLoop() {
@@ -610,15 +615,21 @@ export function useHand() {
         const tagName = target.tagName.toUpperCase();
         if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'A', 'LABEL'].includes(tagName)) return;
 
-        // Note: React Flow uses button 1 for middle-click and 2 for right-click in panOnDrag
-        // We allow these to pass through unless Ctrl+RightClick is used for cutting
-        if ((e.button === 1 || e.button === 2) && !(e.ctrlKey && e.button === 2)) return;
+        const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+        const mouseAction = resolveMouseDownAction({ button: e.button, ctrlKey: e.ctrlKey, isMac, mode });
 
-        if (e.ctrlKey && e.button === 2) {
+        if (mouseAction === 'CANCEL') {
+            cancelGrab(true);
+            cancelCut();
+            return;
+        }
+        if (mouseAction === 'CUT') {
             setMode('CUTTING');
             startCut({ x: e.clientX, y: e.clientY });
             return;
         }
+        // Note: React Flow uses button 1 for middle-click and 2 for right-click in panOnDrag
+        if (e.button === 1 || e.button === 2) return;
 
         // Panning Guard: If middle-click (1) or space+left-click (0 with specific class)
         // We also check for the flow pane specifically to avoid node-click triggering this.
@@ -646,7 +657,7 @@ export function useHand() {
                 }
             }
         }
-    }, [startCut, getNodes, selectNode]);
+    }, [startCut, cancelCut, cancelGrab, getNodes, selectNode, mode, setMode]);
     // rAF throttle to prevent high-frequency gaming mouse from destroying React Flow performance
     const dragRafRef = useRef<number | null>(null);
     useEffect(() => {
@@ -789,6 +800,7 @@ export function useHand() {
     return {
         mode,
         cutPath,
+        cancelCut,
         transformBuffer,
         startGrab,
         startScale,

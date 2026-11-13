@@ -1,0 +1,13 @@
+{
+    "name": "scale-ctrl",
+    "physics": { "snapGridSize": 20 },
+    "mode": "SCALING",
+    "snap": true,
+    "nodes": [
+        { "id": "n1", "position": { "x": 100, "y": 100 } },
+        { "id": "n2", "position": { "x": 200, "y": 100 } }
+    ],
+    "startMouse": { "x": 130, "y": 100 },
+    "events": [{ "mouse": { "x": 139.6, "y": 100 }, "ctrl": true }],
+    "expect": { "transformValue": "0.50", "n1": { "x": 125, "y": 100 } }
+}

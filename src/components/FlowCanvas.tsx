@@ -18,7 +18,9 @@ import {
 import { RelinkLine, RelinkContext } from './edges/RelinkLine';
 import { useSession } from 'next-auth/react';
 import { Plus } from 'lucide-react';
-import '@xyflow/react/dist/style.css';
+
+// P2-8: '@xyflow/react/dist/style.css' intentionally NOT imported here —
+// src/app/globals.css:2 already loads it once for the whole app.
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { FormulaRenderer } from '../utils/FormulaRenderer';
@@ -53,6 +55,15 @@ import { useHistoryStore } from '../store/useHistoryStore';
 import { useRouter } from 'next/navigation';
 import { getDocInfo } from '@/constants/docRegistry';
 import { FloatingProjectControls } from './ui/FloatingProjectControls';
+
+const EMPTY_NODES: Node[] = [];
+const EMPTY_EDGES: Edge[] = [];
+const NODE_ORIGIN: [number, number] = [0, 0];
+const DEFAULT_EDGE_OPTIONS = Object.freeze({
+    type: 'magnetic',
+    animated: false,
+    data: Object.freeze({ pathType: 'bezier' }),
+});
 
 export interface FlowCanvasProps {
     isReadOnly: boolean;
@@ -97,7 +108,6 @@ export function FlowCanvas({
     const [isSnapping, setIsSnapping] = useState(false);
 
     const manualSnap = useAppStore(s => s.manualSnap);
-    const setManualSnap = useAppStore(s => s.setManualSnap);
     const showDebugStats = useAppStore(s => s.showDebugStats);
     const setShowDebugStats = useAppStore(s => s.setShowDebugStats);
     const layoutAlgorithm = useAppStore(s => s.layoutAlgorithm);
@@ -156,8 +166,18 @@ export function FlowCanvas({
         isResolvingTransform,
         lastCancelTimestamp,
         transformBuffer
-    } = useHand();
+    } = useHand({ snap: effectiveSnap });
 
+    // ── P2-10: Brain vs React Flow ownership ──────────────────────────
+    // Brain owns: nodes Map, edges, selection truth, all mutations (BATCH txs).
+    // React Flow owns: viewport, measured sizes, drag/select transient state.
+    // This handler only translates RF changes into Brain txs; the store still
+    // applies them first (uncontrolled: triggerNodeChanges applies before our
+    // callback), so Brain must treat RF as the position/select source of truth.
+    // Read-only divergence whitelist (accepted, F-04): `position` (RF drags
+    // while nodesDraggable=false blocks them anyway), `selected` (transient
+    // select state, reconciled via Selection Guard below), `measured` (RF
+    // internal layout sizes, never written back to Brain).
     const onNodesChangeSafe = useCallback((changes: NodeChange[]) => {
         if (isReadOnly) {
             const isDestructive = changes.some(c => c.type === 'remove' || c.type === 'position' || c.type === 'dimensions');
@@ -256,7 +276,9 @@ export function FlowCanvas({
         logAction,
     });
 
-    // useBrainSync interceptor logic will be integrated into onNodesChangeSafe
+    // P2-10: no useBrainSync — sync is one-way Brain→RF via useBrainUpdates
+    // below. RF→Brain flows only through onNodesChangeSafe/onEdgesChangeSafe
+    // as transactions (never wholesale setNodes from Brain state).
     // useBrainSync(nodes, edges); // REMOVED
     useBrainUpdates(setNodes, setEdges);
 
@@ -624,10 +646,14 @@ export function FlowCanvas({
                     </div>
                 )}
                 
+                {/* P2-10: uncontrolled <ReactFlow> — defaultNodes/defaultEdges
+                    seed the store once; all later truth lives in Brain.
+                    Do NOT switch to controlled nodes/edges here (would fight
+                    useBrainUpdates); see onNodesChangeSafe ownership note. */}
                 <ReactFlow
                     connectionLineComponent={RelinkLine}
-                    defaultNodes={[]}
-                    defaultEdges={[]}
+                    defaultNodes={EMPTY_NODES}
+                    defaultEdges={EMPTY_EDGES}
                     onNodesChange={onNodesChangeSafe}
                     onEdgesChange={onEdgesChangeSafe}
                     onConnect={isReadOnly ? undefined : onRelinkConnect}
@@ -638,7 +664,6 @@ export function FlowCanvas({
                     nodeTypes={nodeTypes}
                     colorMode="dark"
                     connectionMode={ConnectionMode.Loose}
-                    proOptions={{ hideAttribution: true }}
                     edgesReconnectable={false}
 
                     selectionKeyCode={null}
@@ -646,6 +671,7 @@ export function FlowCanvas({
 
                     onPaneContextMenu={(e) => {
                         e.preventDefault();
+                        if (e.ctrlKey) return;
                         if (Date.now() - lastCancelTimestamp.current < 100) return;
 
                         if (mode !== 'IDLE') {
@@ -664,6 +690,7 @@ export function FlowCanvas({
 
                     onNodeContextMenu={(e, node) => {
                         e.preventDefault();
+                        if (e.ctrlKey) return;
                         if (Date.now() - lastCancelTimestamp.current < 100) return;
 
                         if (mode !== 'IDLE') {
@@ -699,14 +726,9 @@ export function FlowCanvas({
                     connectionLineType={ConnectionLineType.Bezier}
                     connectionLineStyle={{ stroke: 'var(--color-zinc-500)', strokeWidth: 2 }}
                     edgeTypes={edgeTypes}
-                    defaultEdgeOptions={{
-                        type: 'magnetic',
-                        animated: false,
-                        data: { pathType: 'bezier' }
-                    }}
+                    defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
 
-                    nodeOrigin={[0, 0]}
-                    snapGrid={[20, 20]}
+                    nodeOrigin={NODE_ORIGIN}
                     minZoom={0.1}
                     maxZoom={4}
                 >
