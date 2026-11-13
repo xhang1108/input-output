@@ -11,6 +11,7 @@ import type { Node } from '@xyflow/react';
 const mocks = vi.hoisted(() => ({
     applyTransaction: vi.fn<(tx: any) => { success: boolean }>(() => ({ success: true })),
     push: vi.fn<(entry: any) => void>(),
+    replaceLast: vi.fn<(expectedId: string, entry: any) => boolean>(() => true),
     setNodes: vi.fn(),
     updateNodeData: vi.fn(),
 }));
@@ -34,7 +35,7 @@ vi.mock('@/context/BrainContext', () => ({
 }));
 
 vi.mock('@/store/useHistoryStore', () => ({
-    useHistoryStore: (selector: (s: unknown) => unknown) => selector({ push: mocks.push }),
+    useHistoryStore: (selector: (s: unknown) => unknown) => selector({ push: mocks.push, replaceLast: mocks.replaceLast }),
 }));
 
 import { NPanel } from '@/components/ui/NPanel';
@@ -64,6 +65,7 @@ describe('NPanel position editing', () => {
         nodes = [];
         mocks.applyTransaction.mockClear();
         mocks.push.mockClear();
+        mocks.replaceLast.mockClear();
         mocks.setNodes.mockClear();
         mocks.updateNodeData.mockClear();
     });
@@ -123,5 +125,60 @@ describe('NPanel position editing', () => {
             type: 'MOVE_NODE',
             payload: { id: 'root', position: { x: 150, y: 200 } },
         });
+    });
+
+    it('collapses a burst of position edits into one history entry', () => {
+        vi.useFakeTimers();
+        try {
+            vi.setSystemTime(new Date('2026-11-14T00:00:00Z'));
+            nodes = [makeNode('root', 100, 200, { selected: true })];
+            renderPanel();
+
+            const input = screen.getByDisplayValue('100');
+            fireEvent.change(input, { target: { value: '110' } });
+            vi.setSystemTime(new Date('2026-11-14T00:00:00.200Z'));
+            fireEvent.change(input, { target: { value: '120' } });
+
+            expect(mocks.push).toHaveBeenCalledTimes(1);
+            expect(mocks.replaceLast).toHaveBeenCalledTimes(1);
+
+            const entryId = mocks.replaceLast.mock.calls[0][0];
+            const replacement = mocks.replaceLast.mock.calls[0][1] as {
+                id: string;
+                forward: Array<{ payload: any }>;
+                inverse: Array<{ payload: any }>;
+            };
+            expect(replacement.id).toBe(entryId);
+            // Undo goes back to the value before typing started.
+            expect(replacement.inverse).toEqual([{
+                type: 'MOVE_NODE',
+                payload: { id: 'root', position: { x: 100, y: 200 } },
+            }]);
+            expect(replacement.forward[0].payload).toEqual({
+                id: 'root',
+                position: { x: 120, y: 200 },
+            });
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('starts a new history entry when the edit gap exceeds the merge window', () => {
+        vi.useFakeTimers();
+        try {
+            vi.setSystemTime(new Date('2026-11-14T00:00:00Z'));
+            nodes = [makeNode('root', 100, 200, { selected: true })];
+            renderPanel();
+
+            const input = screen.getByDisplayValue('100');
+            fireEvent.change(input, { target: { value: '110' } });
+            vi.setSystemTime(new Date('2026-11-14T00:00:02Z'));
+            fireEvent.change(input, { target: { value: '120' } });
+
+            expect(mocks.replaceLast).not.toHaveBeenCalled();
+            expect(mocks.push).toHaveBeenCalledTimes(2);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

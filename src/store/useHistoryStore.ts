@@ -23,6 +23,12 @@ interface HistoryState {
 
     // Actions
     push: (entry: HistoryEntry) => void;
+    /**
+     * Replaces the most recent entry when its id still matches, so repeated
+     * edits of the same value (typing in a number field) collapse into one
+     * undo step. Returns false when another action landed in between.
+     */
+    replaceLast: (expectedId: string, entry: HistoryEntry) => boolean;
     clear: () => void;
     setIsRestoring: (isRestoring: boolean) => void;
     setInteractionMode: (mode: InteractionMode) => void;
@@ -54,6 +60,18 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
                 future: [], // Reset future on new action
             };
         });
+    },
+
+    replaceLast: (expectedId, entry) => {
+        const past = get().past;
+        const last = past[past.length - 1];
+        if (!last || last.id !== expectedId) return false;
+
+        set((state) => ({
+            past: [...state.past.slice(0, -1), entry],
+            future: [], // Reset future on new action
+        }));
+        return true;
     },
 
     clear: () => set({ past: [], future: [], isRestoring: false, interactionMode: 'IDLE' }),

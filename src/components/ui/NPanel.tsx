@@ -15,6 +15,9 @@ import { Transaction } from '../../engine/types/engineTypes';
 import { useHistoryStore } from '../../store/useHistoryStore';
 import { indexNodes, toAbsolute } from '../../utils/coordinates';
 
+/** Burst window for collapsing repeated position edits into one undo step. */
+const MOVE_HISTORY_MERGE_MS = 800;
+
 // ─── Atomic Field Components ──────────────────────────────────────────────────
 
 function FieldWrapper({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -254,6 +257,17 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
     const { setNodes, updateNodeData } = useReactFlow();
     const brain = useBrain();
     const pushHistory = useHistoryStore(s => s.push);
+    const replaceLastHistory = useHistoryStore(s => s.replaceLast);
+
+    // Consecutive edits of the same position field collapse into one history
+    // entry, so undo returns to the value before typing started instead of
+    // stepping back through every keystroke.
+    const lastMove = useRef<{
+        nodeId: string;
+        entryId: string;
+        at: number;
+        inverse: Transaction;
+    } | null>(null);
 
     // Single selected node (reactive to React Flow store)
     const selectedNode = useStore(s => {
@@ -309,12 +323,31 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         const res = brain.applyTransaction(forward);
         if (!res.success) return;
 
-        pushHistory({
-            id: `npanel_move_${selectedNode.id}_${Date.now()}`,
-            description: `Move ${selectedNode.id}`,
-            forward: [forward],
-            inverse: [inverse]
-        });
+        const now = Date.now();
+        const pending = lastMove.current;
+        const mergeable = !!pending
+            && pending.nodeId === selectedNode.id
+            && now - pending.at < MOVE_HISTORY_MERGE_MS
+            && replaceLastHistory(pending.entryId, {
+                id: pending.entryId,
+                description: `Move ${selectedNode.id}`,
+                forward: [forward],
+                // Keep the inverse from the first edit of the burst.
+                inverse: [pending.inverse],
+            });
+
+        if (!mergeable) {
+            const entryId = `npanel_move_${selectedNode.id}_${now}`;
+            pushHistory({
+                id: entryId,
+                description: `Move ${selectedNode.id}`,
+                forward: [forward],
+                inverse: [inverse],
+            });
+            lastMove.current = { nodeId: selectedNode.id, entryId, at: now, inverse };
+        } else if (pending) {
+            lastMove.current = { ...pending, at: now };
+        }
 
         // Immediate UI feedback; the Brain sync lands on the same local value.
         setNodes(nds => nds.map(n =>
@@ -322,7 +355,7 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                 ? { ...n, position }
                 : n
         ));
-    }, [selectedNode, brain, pushHistory, setNodes]);
+    }, [selectedNode, brain, pushHistory, replaceLastHistory, setNodes]);
 
     if (!isOpen) return null;
 
