@@ -29,6 +29,7 @@ import { getCanvasMenuItems, getNodeMenuItems } from '@/constants/contextMenuIte
 import { useEar } from '../hooks/nerves/useEar';
 import { useHand } from '../hooks/nerves/useHand';
 import { useClipboard } from '../hooks/useClipboard';
+import { useFrameActions } from '../hooks/useFrameActions';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
 import { getEarShortcuts, Platform } from '@/constants/shortcuts';
 
@@ -169,6 +170,7 @@ export function FlowCanvas({
     // Clipboard commands are owned here (not proxied through useHand) so copy,
     // cut and paste all share the same in-memory buffer instance.
     const { duplicateSelected, copyToClipboard, cutSelected, pasteFromClipboard } = useClipboard();
+    const { frameSelected } = useFrameActions();
 
     // ── P2-10: Brain vs React Flow ownership ──────────────────────────
     // Brain owns: nodes Map, edges, selection truth, all mutations (BATCH txs).
@@ -459,6 +461,15 @@ export function FlowCanvas({
                 startRotate(mousePosRef.current);
                 logAction('Start Rotate (R)');
             }),
+            'nodes:bundle': autoConfirm((e) => {
+                if (isReadOnly) return;
+                e.preventDefault();
+                if (frameSelected()) {
+                    logAction('Group / Ungroup (F)');
+                } else {
+                    logAction('Group blocked: select root nodes or one frame\'s children');
+                }
+            }),
             'nodes:duplicate': autoConfirm((e) => {
                 if (isReadOnly) return;
                 e.preventDefault();
@@ -582,7 +593,7 @@ export function FlowCanvas({
                 }
             },
         }),
-        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected,
+        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, frameSelected,
            copyToClipboard, cutSelected, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes]
     });
 

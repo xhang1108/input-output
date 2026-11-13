@@ -1,5 +1,6 @@
 import type { NodeTypes, EdgeTypes } from '@xyflow/react';
 import { BaseNode } from '../components/nodes/BaseNode';
+import { FrameNode } from '../components/nodes/FrameNode';
 import { SolverNode } from '../components/nodes/SolverNode';
 
 import { InputNode } from '../components/nodes/InputNode';
@@ -119,6 +120,7 @@ export const nodeTypes: NodeTypes = {
 
     // ─── Fallback & Special ─────────────────────────────────
     'baseNode': BaseNode,
+    'frame': FrameNode,
 
     'IN-03': ColorNode,     // New Color ID
 };

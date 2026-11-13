@@ -65,7 +65,8 @@ export interface AddNodePayload {
 export interface MoveNodePayload {
     id: string;
     position: { x: number; y: number };
-    parentId?: string;
+    /** `null` explicitly detaches from the current parent. */
+    parentId?: string | null;
 }
 
 export interface UpdateValuePayload {

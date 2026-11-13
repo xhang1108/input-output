@@ -1183,7 +1183,9 @@ export class Brain {
                     position: n.position,
                     data: nodeData,
                     initialValue: initVal,
-                    parentId: parentId
+                    parentId: parentId,
+                    width: n.width,
+                    height: n.height
                 }
             });
         });

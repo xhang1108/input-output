@@ -144,11 +144,12 @@ export class TransactionManager {
                     const dx = Math.abs(node.position.x - p.position.x);
                     const dy = Math.abs(node.position.y - p.position.y);
                     const hasMovedSignificantly = dx > 0.5 || dy > 0.5;
+                    const parentChanged = 'parentId' in p && (node.parentId ?? null) !== (p.parentId ?? null);
 
-                    if (hasMovedSignificantly || node.parentId !== p.parentId) {
+                    if (hasMovedSignificantly || parentChanged) {
                         node.position = { ...p.position };
-                        if (p.parentId !== undefined) {
-                            node.parentId = p.parentId;
+                        if ('parentId' in p) {
+                            node.parentId = p.parentId ?? undefined;
                         }
                         node.lastUpdatedProperty = 'position';
                         hooks.onNodeMoved?.(p.id);

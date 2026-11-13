@@ -4,6 +4,7 @@ import { useHistoryStore, HistoryEntry } from '../store/useHistoryStore';
 import { useBrain } from '../context/BrainContext';
 import { Transaction } from '../engine/types/engineTypes';
 import { reconcileEdgesWithBrain } from '../utils/edgeUtils';
+import { sortParentFirst } from '../utils/coordinates';
 
 /**
  * Focus Defense: If user is typing in an input/textarea,
@@ -49,7 +50,7 @@ export const computeNextState = (
                 nextNodes = nextNodes.map(n => {
                     if (n.id !== p.id) return n;
                     const res = { ...n, position: { ...p.position } };
-                    if (p.parentId !== undefined) res.parentId = p.parentId;
+                    if ('parentId' in p) res.parentId = p.parentId ?? undefined;
                     return res;
                 });
                 break;
@@ -76,7 +77,7 @@ export const computeNextState = (
                         res.measured = { ...res.measured, height: data.height };
                         res.style = { ...res.style, height: data.height };
                     }
-                    if (data.parentId !== undefined) res.parentId = data.parentId;
+                    if ('parentId' in data) res.parentId = (data.parentId as string | null) ?? undefined;
 
                     return res;
                 });
@@ -212,7 +213,7 @@ export function useHistoryExecutor() {
         // Undo/redo is silent: a rejected CONNECT (e.g. occupied single input)
         // would otherwise leave a UI-only ghost edge on the canvas.
         const res = brain.applyTransaction({ type: 'BATCH', payload: txs }, true);
-        setNodes(nextNodes);
+        setNodes(sortParentFirst(nextNodes));
         setEdges(reconcileEdgesWithBrain(nextEdges, brain.getEdges()));
         if (!res.success) {
             console.warn('[History] Partial restore:', res.reason);

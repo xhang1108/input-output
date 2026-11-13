@@ -1133,6 +1133,20 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         params: [
             { id: 'delimiter', label: 'Delimiter', type: 'string', hint: 'Separator between inputs' }
         ]
+    },
+    {
+        id: 'frame',
+        label: 'Frame',
+        category: 'Utility',
+        handles: [],
+        defaultData: {
+            label: 'Frame',
+            width: 300,
+            height: 200
+        },
+        aliases: ['frame', 'group', 'container'],
+        minWidth: 200,
+        minHeight: 120
     }
 ];
 

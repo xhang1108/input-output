@@ -7,6 +7,7 @@ import { Transaction } from '../engine/types/engineTypes';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { HandleConfig } from '../types/nodeDefinitions';
+import { indexNodes, toAbsolute } from '../utils/coordinates';
 
 /**
  * useSelection
@@ -27,26 +28,58 @@ export function useSelection() {
 
         if (selectedIds.size === 0) return;
 
-        const nodesToRemove = selectedNodes.map(node => ({
-            id: node.id,
-            type: node.type,
-            position: { ...node.position },
-            data: { ...node.data },
-            selected: node.selected,
-            // Structure fidelity: without these, undo drops Frame parenting and sizes.
-            parentId: node.parentId,
-            width: node.width,
-            height: node.height,
+        const nodeById = indexNodes(nodes);
+
+        // Frame deletion is an unwrap, not a cascade: unselected direct children
+        // become independent roots and keep their world position.
+        const unwrapped: Array<{ child: Node; frameId: string }> = [];
+        for (const frame of selectedNodes.filter(n => n.type === 'frame')) {
+            for (const child of nodes.filter(n => n.parentId === frame.id && !selectedIds.has(n.id))) {
+                unwrapped.push({ child, frameId: frame.id });
+            }
+        }
+
+        const unwrapForward: Transaction[] = unwrapped.map(({ child }) => ({
+            type: 'MOVE_NODE' as const,
+            payload: {
+                id: child.id,
+                position: toAbsolute(nodeById, child.id),
+                parentId: null,
+            },
         }));
+
+        const nodesToRemove = selectedNodes
+            .slice()
+            .sort((a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0))
+            .map(node => ({
+                id: node.id,
+                type: node.type,
+                position: { ...node.position },
+                data: { ...node.data },
+                selected: node.selected,
+                // Structure fidelity: without these, undo drops Frame parenting and sizes.
+                parentId: node.parentId,
+                width: node.width,
+                height: node.height,
+            }));
 
         const edgesToRemove = edges.filter(e => selectedIds.has(e.source) || selectedIds.has(e.target));
 
         const forward: Transaction[] = [
+            ...unwrapForward,
             ...Array.from(selectedIds).map(id => ({ type: 'REMOVE_NODE' as const, payload: id }))
         ];
 
         const inverse: Transaction[] = [
             ...nodesToRemove.map(n => ({ type: 'ADD_NODE' as const, payload: { ...n, initialValue: n.data?.value } })),
+            ...unwrapped.map(({ child, frameId }) => ({
+                type: 'MOVE_NODE' as const,
+                payload: {
+                    id: child.id,
+                    position: { ...child.position },
+                    parentId: frameId,
+                },
+            })),
             ...edgesToRemove.map(e => ({ type: 'CONNECT' as const, payload: { ...e } }))
         ];
 
