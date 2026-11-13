@@ -5,6 +5,7 @@ import { GraphState, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, Up
 import { NodeRegistry } from './NodeRegistry'; // Static Import
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { getHandleVariant, isProbablyInputHandle } from '../utils/handleUtils';
+import { toAbsolute } from '../utils/coordinates';
 // BrainWorkerProxy is imported DYNAMICALLY in initWorker() to avoid circular dependency
 import type { IncrementalPatch } from './SerializableGraph';
 import { useAppStore } from '../store/useStore';
@@ -1019,28 +1020,12 @@ export class Brain {
     // --- Tree & Coordinate Utilities ---
 
     /**
-     * Calculates the absolute position of a node by traversing its parent tree.
+     * Absolute (world) position of a node, following the top-left contract:
+     * root position = world, child position = parent-local.
+     * Delegates to the single shared implementation in `utils/coordinates`.
      */
     public getAbsolutePosition(nodeId: string): { x: number; y: number } {
-        const node = this.state.nodes.get(nodeId);
-        if (!node) return { x: 0, y: 0 };
-
-        if (!node.parentId) {
-            return { x: node.position.x, y: node.position.y };
-        }
-
-        const parentAbs = this.getAbsolutePosition(node.parentId);
-        const parentNode = this.state.nodes.get(node.parentId);
-
-        // Frames in Input-Output are centered on their position.
-        // Nested children positions are relative to the parent's top-left.
-        const pw = Number(parentNode?.data?.width ?? 0);
-        const ph = Number(parentNode?.data?.height ?? 0);
-
-        return {
-            x: parentAbs.x - pw / 2 + node.position.x,
-            y: parentAbs.y - ph / 2 + node.position.y
-        };
+        return toAbsolute(this.state.nodes, nodeId);
     }
 
     /**

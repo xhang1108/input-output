@@ -16,11 +16,10 @@ import { generateEdgeId, generateNodeId } from './idGenerator';
  *   frames, and `DEFAULT_UI_ORIGIN` is `[0, 0]` (`src/types/nodeDefinitions.ts:57`).
  *
  * Therefore the current truth is: **a node's `position` is its top-left, and a
- * child's `position` is relative to the parent's top-left.** The `- parentW/2`
- * in `Brain.getAbsolutePosition` (`Brain.ts:1035-1043`) reflects an older
- * centered-frame assumption and is NOT what the UI renders. Clipboard math
- * must use React Flow coordinates, so this module deliberately does not subtract
- * half the parent size.
+ * child's `position` is relative to the parent's top-left.** `Brain` now
+ * delegates to the same top-left helper (`src/utils/coordinates.ts`), so UI,
+ * engine and clipboard share one rule. Clipboard math must use React Flow
+ * coordinates, so this module deliberately does not subtract half the parent size.
  */
 
 export const CLIPBOARD_SOURCE = 'io-clipboard/1' as const;

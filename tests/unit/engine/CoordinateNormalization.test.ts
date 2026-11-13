@@ -25,8 +25,7 @@ describe('Coordinate Normalization', () => {
         });
 
         // 2. Add Child Node inside Parent
-        // In the UI, the absolute pos might be {x: 120, y: 120}
-        // Relative to parent (TL = 100-100=0, 100-100=0), it should be {x: 20, y: 20}
+        // Parent top-left is {100, 100}; the child stores a position relative to it.
         brain.applyTransaction({
             type: 'ADD_NODE',
             payload: {
@@ -43,7 +42,7 @@ describe('Coordinate Normalization', () => {
     });
 
     it('should calculate correct absolute position for nested nodes', () => {
-        // Parent at {100, 100}, Size {200, 200} -> Top Left at {0, 0}
+        // Parent position is its top-left: {100, 100}
         brain.applyTransaction({
             type: 'ADD_NODE',
             payload: {
@@ -64,11 +63,9 @@ describe('Coordinate Normalization', () => {
             }
         });
 
-        // AbsPos = Parent.TL + Child.Rel
-        // TL = 100 - (200/2) = 0
-        // Abs = 0 + 50 = 50
+        // AbsPos = Parent.TL + Child.Rel = 100 + 50
         const absPos = brain.getAbsolutePosition('child-1');
-        expect(absPos).toEqual({ x: 50, y: 50 });
+        expect(absPos).toEqual({ x: 150, y: 150 });
 
         // Move Parent
         brain.applyTransaction({
@@ -79,10 +76,9 @@ describe('Coordinate Normalization', () => {
             }
         });
 
-        // New TL = 200 - 100 = 100
-        // New Abs = 100 + 50 = 150
+        // New Abs = 200 + 50
         const newAbsPos = brain.getAbsolutePosition('child-1');
-        expect(newAbsPos).toEqual({ x: 150, y: 150 });
+        expect(newAbsPos).toEqual({ x: 250, y: 250 });
 
         // Child relative position should be unchanged
         expect(brain.getNode('child-1')?.position).toEqual({ x: 50, y: 50 });
@@ -106,7 +102,7 @@ describe('Coordinate Normalization', () => {
             payload: {
                 id: 'p2',
                 type: 'frame',
-                position: { x: 50, y: 50 }, // Relative to P1 (TL=0,0)
+                position: { x: 50, y: 50 }, // parent-local to P1
                 parentId: 'p1',
                 data: { width: 100, height: 100 }
             }
@@ -118,16 +114,16 @@ describe('Coordinate Normalization', () => {
             payload: {
                 id: 'c1',
                 type: 'mathNode',
-                position: { x: 10, y: 10 }, // Relative to P2 (TL = 50 - 50 = 0?)
+                position: { x: 10, y: 10 }, // parent-local to P2
                 parentId: 'p2'
             }
         });
 
-        // P1 TL = 0,0
-        // P2 Pos (Rel to P1) = 50,50. P2 TL (Rel to P1) = 50 - 50 = 0,0
-        // C1 Abs = P1.TL + P2.RelTL + C1.Rel = 0 + 0 + 10 = 10
+        // P1 world = 100,100
+        // P2 world = 100 + 50 = 150,150
+        // C1 world = 150 + 10 = 160,160
         const absPos = brain.getAbsolutePosition('c1');
-        expect(absPos).toEqual({ x: 10, y: 10 });
+        expect(absPos).toEqual({ x: 160, y: 160 });
     });
 });
 
