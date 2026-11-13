@@ -139,7 +139,7 @@ export function useBrainUpdates(
                         const style: Record<string, any> = {};
                         if (width != null) style.width = width;
                         if (height != null) style.height = height;
-                        if (logicNode.type === 'frame') style.zIndex = -100;
+                        if (logicNode.type === 'frame') style.zIndex = 0;
                         else if (logicNode.parentId) style.zIndex = 100;
 
                         let uiOrigin = existingNode?.origin || DEFAULT_UI_ORIGIN;
@@ -237,9 +237,10 @@ export function useBrainUpdates(
                     // their children in the array. Sort: parentless first, then children.
                     if (changed) {
                         nextNodes.sort((a, b) => {
-                            const aIsChild = a.parentId ? 1 : 0;
-                            const bIsChild = b.parentId ? 1 : 0;
-                            return aIsChild - bIsChild;
+                            // Frames first (zIndex 0), then other roots, then children.
+                            // This keeps a frame behind unrelated nodes but above the pane.
+                            const rank = (n: Node) => n.type === 'frame' ? 0 : (n.parentId ? 2 : 1);
+                            return rank(a) - rank(b);
                         });
                     }
 

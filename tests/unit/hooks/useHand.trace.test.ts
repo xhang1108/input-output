@@ -99,14 +99,26 @@ function makeNodes(specs: Array<{
     position: { x: number; y: number };
     parentId?: string;
     selected?: boolean;
+    type?: string;
+    width?: number;
+    height?: number;
 }>): Node[] {
     return specs.map((s) => ({
         id: s.id,
-        type: 'test',
+        type: s.type ?? 'test',
         position: { ...s.position },
         parentId: s.parentId,
         selected: s.selected ?? true,
-        data: {},
+        width: s.width,
+        height: s.height,
+        measured: {
+            width: s.width ?? (s.type === 'frame' ? 200 : undefined),
+            height: s.height ?? (s.type === 'frame' ? 100 : undefined),
+        },
+        data: {
+            width: s.width ?? (s.type === 'frame' ? 200 : undefined),
+            height: s.height ?? (s.type === 'frame' ? 100 : undefined),
+        },
     }));
 }
 
@@ -361,6 +373,70 @@ describe('B3 hand trace: nested transforms', () => {
         for (const tx of inverseMoves) {
             expect(tx.payload.parentId).toBe('parent');
         }
+    });
+
+    it('restores the frame when a child drag is cancelled', () => {
+        nodes = makeNodes([
+            { id: 'f1', type: 'frame', position: { x: 0, y: 0 }, selected: false, width: 200, height: 100 },
+            { id: 'c1', position: { x: 10, y: 10 }, parentId: 'f1', width: 50, height: 50 },
+        ]);
+        const { result } = renderHook(({ snap }) => useHand({ snap }), { initialProps: { snap: false } });
+        act(() => {
+            useAppStore.getState().setMode('GRABBING');
+            result.current.startGrab({ x: 10, y: 10 }, false, undefined, true);
+        });
+        rafQueue.length = 0;
+        act(() => {
+            result.current.handleMouseMove({ clientX: 210, clientY: 210, ctrlKey: false } as unknown as MouseEvent);
+        });
+        act(() => flushDragRaf());
+        act(() => result.current.cancelGrab(true));
+
+        const f = nodes.find((n) => n.id === 'f1')!;
+        const c = nodes.find((n) => n.id === 'c1')!;
+        expect(f.width).toBe(200);
+        expect(f.height).toBe(100);
+        expect(c.position).toEqual({ x: 10, y: 10 });
+    });
+
+    it('expands a frame when a child is dragged outside and persists it on confirm', () => {
+        nodes = makeNodes([
+            { id: 'f1', type: 'frame', position: { x: 0, y: 0 }, selected: false, width: 200, height: 100 },
+            { id: 'c1', position: { x: 10, y: 10 }, parentId: 'f1', width: 50, height: 50 },
+        ]);
+        const { result } = renderHook(({ snap }) => useHand({ snap }), { initialProps: { snap: false } });
+        act(() => {
+            useAppStore.getState().setMode('GRABBING');
+            result.current.startGrab({ x: 10, y: 10 }, false, undefined, true);
+        });
+        rafQueue.length = 0;
+        act(() => {
+            result.current.handleMouseMove({ clientX: 210, clientY: 210, ctrlKey: false } as unknown as MouseEvent);
+        });
+        act(() => flushDragRaf());
+
+        const f = nodes.find((n) => n.id === 'f1')!;
+        const c = nodes.find((n) => n.id === 'c1')!;
+        expect(f.width).toBe(292); // 210 + 50 + 32
+        expect(f.height).toBe(292);
+        expect(c.position).toEqual({ x: 210, y: 210 });
+
+        act(() => result.current.confirmGrab());
+        const entry = globalThis.__historyPush.mock.calls[0]?.[0] as {
+            forward: Array<{ type: string; payload: any }>;
+            inverse: Array<{ type: string; payload: any }>;
+        };
+
+        const resize = entry.forward.find(t => t.type === 'RESIZE_NODE' && t.payload.id === 'f1')!;
+        const childMove = entry.forward.find(t => t.type === 'MOVE_NODE' && t.payload.id === 'c1')!;
+        expect(resize.payload.width).toBe(292);
+        expect(resize.payload.height).toBe(292);
+        expect(childMove.payload.parentId).toBe('f1');
+
+        const restoreResize = entry.inverse.find(t => t.type === 'RESIZE_NODE' && t.payload.id === 'f1')!;
+        const restoreChild = entry.inverse.find(t => t.type === 'MOVE_NODE' && t.payload.id === 'c1')!;
+        expect(restoreResize.payload).toEqual({ id: 'f1', width: 200, height: 100 });
+        expect(restoreChild.payload).toEqual({ id: 'c1', position: { x: 10, y: 10 }, parentId: 'f1' });
     });
 });
 

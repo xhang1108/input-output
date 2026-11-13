@@ -10,6 +10,7 @@ import { useKnife } from '../useKnife';
 import { useAppStore } from '../../store/useStore';
 import { resolveMouseDownAction, snapRotation, snapScale, snapTranslate } from '../../utils/transformSnap';
 import { getEffectiveRoots, toAbsolute, toParentLocal } from '../../utils/coordinates';
+import { expandFrameToFitChildren, getNodeSize } from '../../utils/frameGeometry';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -52,6 +53,8 @@ export function useHand(opts?: { snap?: boolean }) {
     const initialAbsolutePositions = useRef<Map<string, XYPosition>>(new Map());
     const initialDimensions = useRef<Map<string, { w: number, h: number }>>(new Map());
     const initialRotations = useRef<Map<string, number>>(new Map());
+    const frameSnapshots = useRef<Map<string, { position: XYPosition; width: number; height: number }>>(new Map());
+    const childSnapshots = useRef<Map<string, { position: XYPosition; parentId: string }>>(new Map());
 
     const startMousePos = useRef<XYPosition | null>(null);
     const startFlowPos = useRef<XYPosition | null>(null);
@@ -82,6 +85,54 @@ export function useHand(opts?: { snap?: boolean }) {
         return toAbsolute(nodeMap, nodeId);
     }, []);
 
+    const captureFrameSnapshots = useCallback((roots: Node[], allNodes: Node[]) => {
+        frameSnapshots.current.clear();
+        childSnapshots.current.clear();
+
+        const byId = new Map(allNodes.map(n => [n.id, n]));
+        const frameIds = new Set<string>();
+        for (const root of roots) {
+            if (root.parentId && byId.get(root.parentId)?.type === 'frame') {
+                frameIds.add(root.parentId);
+            }
+        }
+
+        for (const frameId of frameIds) {
+            const frame = byId.get(frameId);
+            if (!frame) continue;
+            const size = getNodeSize(frame);
+            frameSnapshots.current.set(frameId, {
+                position: { ...frame.position },
+                width: size.w,
+                height: size.h,
+            });
+            for (const child of allNodes.filter(n => n.parentId === frameId)) {
+                childSnapshots.current.set(child.id, {
+                    position: { ...child.position },
+                    parentId: frameId,
+                });
+            }
+        }
+    }, []);
+
+    const expandParentFrames = useCallback((nextNodes: Node[], currentNodes: Node[]): Node[] => {
+        const currentById = new Map(currentNodes.map(n => [n.id, n]));
+        const frameIds = new Set<string>();
+        for (const id of initialPositions.current.keys()) {
+            const parentId = currentById.get(id)?.parentId;
+            if (parentId && currentById.get(parentId)?.type === 'frame') {
+                frameIds.add(parentId);
+            }
+        }
+
+        let result = nextNodes;
+        for (const frameId of frameIds) {
+            const expanded = expandFrameToFitChildren(result, frameId);
+            if (expanded.changed) result = expanded.nodes;
+        }
+        return result;
+    }, []);
+
     // Sanity check for finite coordinates
     const isFiniteCoord = (pos: XYPosition) => Number.isFinite(pos.x) && Number.isFinite(pos.y);
 
@@ -89,25 +140,34 @@ export function useHand(opts?: { snap?: boolean }) {
 
     const applyMove = useCallback((dx: number, dy: number) => {
         setNodes((currentNodes) => {
+            const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
             let hasChanges = false;
             const nextNodes = currentNodes.map(n => {
+                const initAbs = initialAbsolutePositions.current.get(n.id);
                 const initPos = initialPositions.current.get(n.id);
-                if (initPos) {
-                    const newPos = { x: initPos.x + dx, y: initPos.y + dy };
-                    if (!isFiniteCoord(newPos)) {
-                        console.warn(`[useHand] Aborted MOVE for node ${n.id} due to invalid coordinates:`, newPos);
-                        return n;
-                    }
-                    if (Math.abs(n.position.x - newPos.x) > 0.001 || Math.abs(n.position.y - newPos.y) > 0.001) {
-                        hasChanges = true;
-                        return { ...n, position: newPos };
-                    }
+                if (!initAbs && !initPos) return n;
+
+                const nextAbs = initAbs
+                    ? { x: initAbs.x + dx, y: initAbs.y + dy }
+                    : { x: initPos!.x + dx, y: initPos!.y + dy };
+                if (!isFiniteCoord(nextAbs)) {
+                    console.warn(`[useHand] Aborted MOVE for node ${n.id} due to invalid coordinates:`, nextAbs);
+                    return n;
+                }
+
+                // Frame positions may change while a child is dragged (auto-fit).
+                // Convert the fixed world target back to the current parent-local space.
+                const newPos = toParentLocal(nodeMap, n.id, nextAbs);
+                if (Math.abs(n.position.x - newPos.x) > 0.001 || Math.abs(n.position.y - newPos.y) > 0.001) {
+                    hasChanges = true;
+                    return { ...n, position: newPos };
                 }
                 return n;
             });
-            return hasChanges ? nextNodes : currentNodes;
+            const expanded = expandParentFrames(nextNodes, currentNodes);
+            return hasChanges || expanded !== nextNodes ? expanded : currentNodes;
         });
-    }, [setNodes]);
+    }, [setNodes, expandParentFrames]);
 
     const getPivot = (nodes: Node[], nodeMap: Map<string, Node>): XYPosition => {
         let minX = Infinity, minY = Infinity;
@@ -165,9 +225,10 @@ export function useHand(opts?: { snap?: boolean }) {
                 }
                 return n;
             });
-            return hasChanges ? nextNodes : currentNodes;
+            const expanded = expandParentFrames(nextNodes, currentNodes);
+            return hasChanges || expanded !== nextNodes ? expanded : currentNodes;
         });
-    }, [setNodes, axisLock]);
+    }, [setNodes, axisLock, expandParentFrames]);
 
     const applyRotate = useCallback((angleRad: number) => {
         const center = centerRef.current;
@@ -202,9 +263,10 @@ export function useHand(opts?: { snap?: boolean }) {
                 }
                 return n;
             });
-            return hasChanges ? nextNodes : currentNodes;
+            const expanded = expandParentFrames(nextNodes, currentNodes);
+            return hasChanges || expanded !== nextNodes ? expanded : currentNodes;
         });
-    }, [setNodes]);
+    }, [setNodes, expandParentFrames]);
 
 
     // --- Interaction Core ---
@@ -351,9 +413,15 @@ export function useHand(opts?: { snap?: boolean }) {
         const roots = getEffectiveRoots(nodes, new Set(selected.map(n => n.id)));
         if (roots.length === 0) return;
 
+        captureFrameSnapshots(roots, nodes);
+        const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
         initialPositions.current = new Map(roots.map((n) => [n.id, { ...n.position }]));
         initialParentIds.current = new Map(roots.map((n) => [n.id, n.parentId || null]));
-        initialAbsolutePositions.current.clear();
+        initialAbsolutePositions.current = new Map(roots.map((n) => [
+            n.id,
+            getAbsolutePosition(n.id, nodeMap)
+        ]));
         initialDimensions.current.clear();
         initialRotations.current.clear();
         startMousePos.current = mousePos;
@@ -361,7 +429,7 @@ export function useHand(opts?: { snap?: boolean }) {
         setAxisLock(null);
         brain.setInteracting(true); // Wake up Pulse
         setMode('GRABBING');
-    }, [getNodes, detachSelected, project, setMode, brain]);
+    }, [getNodes, getAbsolutePosition, detachSelected, project, setMode, brain]);
 
     const startScale = useCallback((mousePos: XYPosition) => {
         const nodes = getNodes();
@@ -372,6 +440,7 @@ export function useHand(opts?: { snap?: boolean }) {
         if (roots.length === 0) return;
 
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
+        captureFrameSnapshots(roots, nodes);
 
         // Store RELATIVE positions for restore/undo
         initialPositions.current = new Map(roots.map((n) => [n.id, { ...n.position }]));
@@ -413,6 +482,7 @@ export function useHand(opts?: { snap?: boolean }) {
         if (roots.length === 0) return;
 
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
+        captureFrameSnapshots(roots, nodes);
 
         // Store RELATIVE positions for restore/undo
         initialPositions.current = new Map(roots.map((n) => [n.id, { ...n.position }]));
@@ -464,8 +534,8 @@ export function useHand(opts?: { snap?: boolean }) {
 
         // Helper: get node dimensions safely
         const getSize = (n: Node) => ({
-            w: n.measured?.width ?? n.width ?? (n.data?.width as number) ?? (n.data?._dataWidth as number) ?? 150,
-            h: n.measured?.height ?? n.height ?? (n.data?.height as number) ?? (n.data?._dataHeight as number) ?? 50,
+            w: n.width ?? n.measured?.width ?? (n.data?.width as number) ?? (n.data?._dataWidth as number) ?? 150,
+            h: n.height ?? n.measured?.height ?? (n.data?.height as number) ?? (n.data?._dataHeight as number) ?? 50,
         });
 
         // 1. Identify moved or resized nodes
@@ -491,6 +561,8 @@ export function useHand(opts?: { snap?: boolean }) {
             setMode('IDLE');
             initialPositions.current.clear();
             initialParentIds.current.clear();
+            frameSnapshots.current.clear();
+            childSnapshots.current.clear();
             initialAbsolutePositions.current.clear();
             initialDimensions.current.clear();
             initialRotations.current.clear();
@@ -516,14 +588,73 @@ export function useHand(opts?: { snap?: boolean }) {
             txs.push({ type: 'MOVE_NODE', payload: { id, position: { ...node.position } } });
         });
 
+        // 3. Frame auto-fit: if a child left its frame, the UI was expanded live.
+        // Persist the frame move/resize and every child whose local origin shifted.
+        const frameForward: Transaction[] = [];
+        const frameInverse: Transaction[] = [];
+        const frameChildIds = new Set<string>();
+        let frameChanged = false;
+
+        for (const [frameId, before] of frameSnapshots.current) {
+            const frame = nodeMap.get(frameId);
+            if (!frame) continue;
+            const size = getSize(frame);
+            const moved =
+                Math.abs(frame.position.x - before.position.x) > 0.1 ||
+                Math.abs(frame.position.y - before.position.y) > 0.1;
+            const resized =
+                Math.abs(size.w - before.width) > 0.1 ||
+                Math.abs(size.h - before.height) > 0.1;
+
+            if (moved) {
+                frameForward.push({ type: 'MOVE_NODE', payload: { id: frameId, position: { ...frame.position } } });
+                frameInverse.push({ type: 'MOVE_NODE', payload: { id: frameId, position: { ...before.position } } });
+                frameChanged = true;
+            }
+            if (resized) {
+                frameForward.push({ type: 'RESIZE_NODE', payload: { id: frameId, width: size.w, height: size.h } });
+                frameInverse.push({ type: 'RESIZE_NODE', payload: { id: frameId, width: before.width, height: before.height } });
+                frameChanged = true;
+            }
+        }
+
+        for (const [childId, before] of childSnapshots.current) {
+            const child = nodeMap.get(childId);
+            if (!child) continue;
+            frameChildIds.add(childId);
+
+            const changed =
+                Math.abs(child.position.x - before.position.x) > 0.1 ||
+                Math.abs(child.position.y - before.position.y) > 0.1 ||
+                (child.parentId ?? null) !== before.parentId;
+            if (!changed) continue;
+
+            frameForward.push({
+                type: 'MOVE_NODE',
+                payload: { id: childId, position: { ...child.position }, parentId: before.parentId },
+            });
+            frameInverse.push({
+                type: 'MOVE_NODE',
+                payload: { id: childId, position: { ...before.position }, parentId: before.parentId },
+            });
+        }
+
         if (txs.length > 0) {
-            brain.applyTransaction({ type: 'BATCH', payload: txs });
+            const forward = frameChanged
+                ? [
+                    ...frameForward,
+                    ...txs.filter(tx => !(tx.type === 'MOVE_NODE' && frameChildIds.has((tx.payload as any).id))),
+                ]
+                : txs;
+
+            brain.applyTransaction({ type: 'BATCH', payload: forward });
 
             const invTxs: Transaction[] = [];
             // FIX: Use initialPositions as the source of truth for all transformations (Grab/Scale/Rotate)
             // initialAbsolutePositions is only populated for Scale/Rotate and is used for calculation, not history.
             initialPositions.current.forEach((initPos, id) => {
                 if (!isFiniteCoord(initPos)) return; // History Guard
+                if (frameChildIds.has(id)) return; // frameInverse owns this child
 
                 const initialParentId = initialParentIds.current.get(id);
                 const payload: { id: string; position: XYPosition; parentId?: string } = {
@@ -538,17 +669,19 @@ export function useHand(opts?: { snap?: boolean }) {
             });
 
             initialDimensions.current.forEach((initDim, id) => {
+                if (frameChildIds.has(id)) return;
                 const w = Number.isFinite(initDim.w) ? initDim.w : 150;
                 const h = Number.isFinite(initDim.h) ? initDim.h : 50;
                 invTxs.push({ type: 'UPDATE_NODE_DATA', payload: { id, data: { width: w, height: h } } });
             });
 
-            console.log(`[Hand] Pushing history: Transform ${movedNodeIds.size} items`, { forward: txs, inverse: invTxs });
+            const inverse = frameChanged ? [...frameInverse, ...invTxs] : invTxs;
+            console.log(`[Hand] Pushing history: Transform ${movedNodeIds.size} items`, { forward, inverse });
             pushHistory({
                 id: `transform_${Date.now()}`,
                 description: `Transform ${movedNodeIds.size} items`,
-                forward: txs,
-                inverse: invTxs
+                forward,
+                inverse
             });
         }
 
@@ -558,6 +691,8 @@ export function useHand(opts?: { snap?: boolean }) {
         setMode('IDLE');
         initialPositions.current.clear();
         initialParentIds.current.clear();
+        frameSnapshots.current.clear();
+        childSnapshots.current.clear();
         initialDimensions.current.clear();
         initialRotations.current.clear();
         initialAbsolutePositions.current.clear();
@@ -576,12 +711,19 @@ export function useHand(opts?: { snap?: boolean }) {
         }
 
         const positionsToRestore = new Map(initialPositions.current);
-        const framesToRestore = new Map(); // Empty stub
+        const frameSnapshotsToRestore = frameSnapshots.current;
+        const childSnapshotsToRestore = childSnapshots.current;
 
-        if (positionsToRestore.size === 0 && framesToRestore.size === 0) {
+        if (
+            positionsToRestore.size === 0 &&
+            frameSnapshotsToRestore.size === 0 &&
+            childSnapshotsToRestore.size === 0
+        ) {
             setMode('IDLE');
             initialPositions.current.clear();
             initialParentIds.current.clear();
+            frameSnapshots.current.clear();
+            childSnapshots.current.clear();
             initialAbsolutePositions.current.clear();
             initialDimensions.current.clear();
             initialRotations.current.clear();
@@ -599,12 +741,31 @@ export function useHand(opts?: { snap?: boolean }) {
         setNodes(currentNodes => {
             let hasChanges = false;
             const nextNodes = currentNodes.map(n => {
-                // Restore Frames
-                if (framesToRestore.has(n.id)) {
+                // Restore the frame first; its children are restored below.
+                const frame = frameSnapshotsToRestore.get(n.id);
+                if (frame) {
                     hasChanges = true;
-                    return { ...framesToRestore.get(n.id)! };
+                    return {
+                        ...n,
+                        position: { ...frame.position },
+                        width: frame.width,
+                        height: frame.height,
+                        data: { ...n.data, width: frame.width, height: frame.height },
+                    };
                 }
-                // Restore Nodes (Position Only)
+
+                // Restore every child whose local origin shifted during auto-fit.
+                const child = childSnapshotsToRestore.get(n.id);
+                if (child) {
+                    hasChanges = true;
+                    return {
+                        ...n,
+                        position: { ...child.position },
+                        parentId: child.parentId,
+                    };
+                }
+
+                // Restore root positions.
                 const initPos = positionsToRestore.get(n.id);
                 if (initPos) {
                     // Fast path ref-equality
@@ -638,6 +799,8 @@ export function useHand(opts?: { snap?: boolean }) {
         setMode('IDLE');
         initialPositions.current.clear();
         initialParentIds.current.clear();
+        frameSnapshots.current.clear();
+        childSnapshots.current.clear();
         initialDimensions.current.clear();
         initialRotations.current.clear();
         initialAbsolutePositions.current.clear();

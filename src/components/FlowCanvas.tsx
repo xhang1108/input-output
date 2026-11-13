@@ -32,6 +32,7 @@ import { useClipboard } from '../hooks/useClipboard';
 import { useFrameActions } from '../hooks/useFrameActions';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
 import { getEarShortcuts, Platform } from '@/constants/shortcuts';
+import { getFrameRect, selectionTouchesFrameBorder } from '../utils/frameSelection';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 import { useEye } from '../hooks/nerves/useEye';
@@ -103,9 +104,10 @@ export function FlowCanvas({
     const brain = useBrain();
     const { data: session } = useSession();
 
-    const { fitView, getViewport, setViewport, setNodes, setEdges, getNodes, getEdges } = useReactFlow();
+    const { fitView, getViewport, setViewport, setNodes, setEdges, getNodes, getEdges, screenToFlowPosition } = useReactFlow();
     const router = useRouter();
     const mousePosRef = useRef({ x: 0, y: 0 });
+    const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
     const [isModifierActive, setIsModifierActive] = useState(false);
     const [isSnapping, setIsSnapping] = useState(false);
 
@@ -171,6 +173,46 @@ export function FlowCanvas({
     // cut and paste all share the same in-memory buffer instance.
     const { duplicateSelected, copyToClipboard, cutSelected, pasteFromClipboard } = useClipboard();
     const { frameSelected } = useFrameActions();
+
+    // Marquee rule: frames are selected only when the marquee touches their
+    // border. Selecting children entirely inside a frame must not move the frame.
+    const onSelectionStart = useCallback((e: React.MouseEvent) => {
+        selectionStartRef.current = { x: e.clientX, y: e.clientY };
+    }, []);
+
+    const onSelectionEnd = useCallback((e: React.MouseEvent) => {
+        const start = selectionStartRef.current;
+        selectionStartRef.current = null;
+        if (!start) return;
+
+        const a = screenToFlowPosition(start);
+        const b = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        const rect = {
+            x: Math.min(a.x, b.x),
+            y: Math.min(a.y, b.y),
+            width: Math.abs(a.x - b.x),
+            height: Math.abs(a.y - b.y),
+        };
+        if (rect.width < 2 || rect.height < 2) return;
+
+        const selectedFrames = getNodes().filter(n => n.selected && n.type === 'frame');
+        if (selectedFrames.length === 0) return;
+
+        const toDeselect = selectedFrames.filter(
+            frame => !selectionTouchesFrameBorder(rect, getFrameRect(frame))
+        );
+        if (toDeselect.length === 0) return;
+
+        const ids = new Set(toDeselect.map(f => f.id));
+        setNodes(nds => nds.map(n => (ids.has(n.id) ? { ...n, selected: false } : n)));
+        brain.applyTransaction({
+            type: 'BATCH',
+            payload: toDeselect.map(frame => ({
+                type: 'UPDATE_NODE_DATA',
+                payload: { id: frame.id, data: { selected: false } },
+            })),
+        }, true);
+    }, [screenToFlowPosition, getNodes, setNodes, brain]);
 
     // ── P2-10: Brain vs React Flow ownership ──────────────────────────
     // Brain owns: nodes Map, edges, selection truth, all mutations (BATCH txs).
@@ -735,6 +777,8 @@ export function FlowCanvas({
                     elementsSelectable={true}
                     panOnDrag={[1]}
                     selectionOnDrag={true}
+                    onSelectionStart={onSelectionStart}
+                    onSelectionEnd={onSelectionEnd}
                     panOnScroll={panOnScroll}
                     zoomOnScroll={!panOnScroll}
                     zoomOnPinch={true}
