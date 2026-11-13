@@ -193,5 +193,10 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   // --- 7. Utility Family ---
   "UT-01": { modeProperty: "bgColor", data: ["markdown", "textSize"], auxiliary: ["width", "height"] },
   "UT-02": { ...SINGLE_IN, ...SINGLE_OUT },
-  "UT-03": { inputs: ["in_a"], ...SINGLE_OUT, data: ["delimiter"] }
+  "UT-03": { inputs: ["in_a"], ...SINGLE_OUT, data: ["delimiter"] },
+
+  // --- 8. Structure Family (IOGL 1.1) ---
+  // Frames carry their size as the {W,H} dimension shorthand; children point at
+  // the frame through the reserved `parent` prop (handled by Parser/Encoder).
+  "frame": { auxiliary: ["width", "height"] }
 };

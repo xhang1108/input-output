@@ -17,18 +17,57 @@ export class Encoder {
 
   public static encode(graph: InjectableGraph): string {
     let result = '';
+
+    // 0. Pre-pass: build id -> label for the whole graph first, so a child can
+    // reference a frame that is declared later in the node list.
     const idToLabel = new Map<string, string>();
+    for (const node of graph.nodes) {
+      const def = NODE_DEFINITIONS.find(d => d.id === node.type);
+      idToLabel.set(node.id, (node.data as any)?.label || def?.label || node.id);
+    }
 
     // 1. Encode Nodes
     for (const node of graph.nodes) {
-      const def = NODE_DEFINITIONS.find(d => d.id === node.type);
-      const label = (node.data as any).label || def?.label || node.id;
-      idToLabel.set(node.id, label);
+      const label = idToLabel.get(node.id) || node.id;
+      const isFrame = node.type === 'frame';
+
+      // [P2.1] Frames are single-level: validate the parent before emitting
+      // anything, so a bad hierarchy aborts the export instead of silently
+      // writing local coordinates as world coordinates.
+      let parentLabel: string | undefined;
+      if (node.parentId) {
+        const parent = graph.nodes.find(n => n.id === node.parentId);
+        if (!parent) {
+          throw new Error(
+            `IOGL export aborted: node "${label}" (${node.type}) references missing parent "${node.parentId}".`
+          );
+        }
+        if (parent.type !== 'frame') {
+          throw new Error(
+            `IOGL export aborted: node "${label}" (${node.type}) references parent "${node.parentId}" of type "${parent.type}", which is not a frame.`
+          );
+        }
+        if (isFrame) {
+          throw new Error(
+            `IOGL export aborted: frame "${label}" cannot have a parent (nested frames are not supported).`
+          );
+        }
+        if (parent.parentId) {
+          throw new Error(
+            `IOGL export aborted: parent "${idToLabel.get(parent.id) || parent.id}" is itself a child; nested frames are not supported.`
+          );
+        }
+        parentLabel = idToLabel.get(parent.id) || parent.id;
+      }
 
       const props: string[] = [];
       const positionalData: string[] = [];
       const manifest = IOGL_MANIFEST[node.type];
       const data = node.data as any;
+      // [P2.1] Frame size may live in data.width/height or on the node itself.
+      const sizeData = isFrame
+        ? { ...data, width: data.width ?? (node as any).width, height: data.height ?? (node as any).height }
+        : data;
 
       if (manifest) {
         // Mode - ONLY encode if manifest.modeProperty is defined
@@ -66,13 +105,13 @@ export class Encoder {
 
         // Auxiliary props (with [V1.0] Dimension Shorthand {W, H} support)
         if (manifest.auxiliary) {
-          const hasWidth = data.width !== undefined;
-          const hasHeight = data.height !== undefined;
+          const hasWidth = sizeData.width !== undefined;
+          const hasHeight = sizeData.height !== undefined;
           const useShorthand = hasWidth && hasHeight && manifest.auxiliary.includes('width') && manifest.auxiliary.includes('height');
 
           if (useShorthand) {
-            const w = Math.round(data.width);
-            const h = Math.round(data.height);
+            const w = Math.round(sizeData.width);
+            const h = Math.round(sizeData.height);
             props.push(`${w},${h}`);
           }
 
@@ -80,8 +119,8 @@ export class Encoder {
             // Skip width/height if already handled by shorthand
             if (useShorthand && (key === 'width' || key === 'height')) return;
 
-            if (data[key] !== undefined) {
-              let val = data[key];
+            if (sizeData[key] !== undefined) {
+              let val = sizeData[key];
               // Round size-related auxiliary properties to 1-pixel precision
               if ((key === 'width' || key === 'height') && typeof val === 'number') {
                 val = Math.round(val);
@@ -92,6 +131,12 @@ export class Encoder {
         }
       }
 
+      // [P2.1] Reserved prop: points at the parent frame by its IOGL label.
+      // The position stays parent-local; the frame itself carries the world @x,y.
+      if (parentLabel !== undefined) {
+        props.push(`parent: ${JSON.stringify(parentLabel)}`);
+      }
+
       const positionalStr = positionalData.length > 0 ? ` ${positionalData.join(', ')}` : '';
       const propStr = props.length > 0 ? ` {${props.join(',')}}` : '';
       const x = Math.round(node.position.x);
@@ -99,8 +144,10 @@ export class Encoder {
 
       // IOGL 1.0 Law: All nodes MUST have bracketed labels in output
       const labelStr = `${this.formatLabel(label)} `;
+      // [P2.1] 'frame' is serialized with the uppercase FRAME keyword.
+      const keyword = isFrame ? 'FRAME' : node.type;
 
-      result += `${labelStr}${node.type}${positionalStr}${propStr} @${x},${y}\n`;
+      result += `${labelStr}${keyword}${positionalStr}${propStr} @${x},${y}\n`;
     }
 
     result += '\n';

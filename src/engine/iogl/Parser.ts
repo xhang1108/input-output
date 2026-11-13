@@ -470,6 +470,15 @@ export class Parser {
       const defaultY = 20 + (nodeIndex * 50) % 600;
       nodeIndex++;
 
+      // [P2.1] Frames persist their size on the node as well as in data, so a
+      // parsed FRAME survives Brain injection with the same dimensions.
+      const frameSize = def.id === 'frame'
+        ? {
+          ...(typeof data.width === 'number' ? { width: data.width } : {}),
+          ...(typeof data.height === 'number' ? { height: data.height } : {})
+        }
+        : {};
+
       graph.nodes.push({
         id: finalId,
         type: def.id,
@@ -477,9 +486,84 @@ export class Parser {
           x: raw.x !== undefined ? raw.x : defaultX,
           y: raw.y !== undefined ? raw.y : defaultY
         },
-        data
+        data,
+        ...frameSize
       });
     });
+
+    // Step 1.5: Resolve `parent` props (frame label -> id). This runs after all
+    // nodes exist, so a FRAME may be declared after its children.
+    const finalNodeById = new Map<string, (typeof graph.nodes)[number]>();
+    graph.nodes.forEach(n => finalNodeById.set(n.id, n));
+
+    this.nodes.forEach((raw, tempId) => {
+      if (raw.props.parent === undefined) return;
+
+      const childId = tempToFinal.get(tempId);
+      if (!childId) return; // unknown node type, already reported in Step 1
+
+      const child = finalNodeById.get(childId);
+      if (!child) return;
+
+      const childName = raw.label || raw.id;
+      const parentRef = String(raw.props.parent);
+
+      // Reserved prop: never leak into node.data.
+      if (child.data) delete (child.data as Record<string, any>).parent;
+
+      const parentTempId = this.labelToId.get(parentRef);
+      const parentId = parentTempId ? tempToFinal.get(parentTempId) : undefined;
+      const parent = parentId ? finalNodeById.get(parentId) : undefined;
+
+      if (!parentTempId || !parentId || !parent) {
+        this.diagnostics.push({
+          severity: 'Error',
+          message: `Parent frame '${parentRef}' referenced by '${childName}' was not found.`,
+          source: 'IOGL-Parser',
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+        });
+        return;
+      }
+
+      // Single level: a frame cannot be a child, and a parent frame cannot
+      // itself have a parent.
+      if (child.type === 'frame') {
+        this.diagnostics.push({
+          severity: 'Error',
+          message: `Frame '${childName}' cannot have a parent; nested frames are not supported.`,
+          source: 'IOGL-Parser',
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+        });
+        return;
+      }
+
+      if (parent.type !== 'frame') {
+        this.diagnostics.push({
+          severity: 'Error',
+          message: `Node '${childName}' references parent '${parentRef}' of type '${parent.type}', which is not a frame.`,
+          source: 'IOGL-Parser',
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+        });
+        return;
+      }
+
+      const parentRaw = this.nodes.get(parentTempId);
+      if (parentRaw?.props.parent !== undefined) {
+        this.diagnostics.push({
+          severity: 'Error',
+          message: `Parent '${parentRef}' already has a parent; nested frames are not supported.`,
+          source: 'IOGL-Parser',
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+        });
+        return;
+      }
+
+      child.parentId = parentId;
+    });
+
+    // Step 1.6: Parent-first ordering. Stable sort, so graphs without frames
+    // keep their original declaration order.
+    graph.nodes.sort((a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0));
 
     // Step 2: Create all edges
     this.edges.forEach(raw => {

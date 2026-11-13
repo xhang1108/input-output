@@ -22,7 +22,7 @@ A complete IOGL declaration follows a specific structural pattern:
 - **Label**: A unique name for the node (e.g., `[price]`).
 - **NodeID**: The functional identifier from the catalog (e.g., `IN-01`).
 - **Props**: A JSON object containing properties like `mode` or `data`.
-- **Coordinates (@x,y)**: The absolute position of the node on the canvas.
+- **Coordinates (@x,y)**: The top-left position of the node. Root nodes use world (canvas) coordinates; children of a `FRAME` use parent-local coordinates (see §2.3).
 
 ### 2.1 Handling Spaces & Special Characters (Crucial)
 
@@ -53,6 +53,24 @@ To reduce boilerplate for visual nodes like Sticky Notes, IOGL supports **Shorth
 ```
 - **Syntax**: `{W,H}` inside the property braces.
 - **Precision**: Dimensions are rounded to the nearest pixel during encoding.
+
+### 2.3 Frames & Parenting
+
+A **Frame** groups nodes visually without changing their mathematical meaning. Declare it with the `FRAME` keyword, a `{W,H}` size and a **world** `@x,y` (its top-left corner):
+
+```iogl
+[Group 1] FRAME {400,300} @100,100
+[num] IN-01 42 {parent: "Group 1"} @20,20
+[res] OT-01 {parent: "Group 1"} @20,120
+```
+
+- **`parent` is reserved**: its value is the frame's **label** (not its internal ID). Children keep their own `@x,y` as **parent-local** coordinates, exactly matching the stored node model.
+- **Declaration order is free**: parent links are resolved after every declaration has been read, so the `FRAME` may appear after its children.
+- **Consumed by the parser**: `parent` never leaks into node `data`; it becomes the node's `parentId`.
+- **Single level only**: the parent must be a frame, that frame cannot itself have a `parent`, and a frame cannot be a child.
+- **Invalid parents are rejected**: unknown label, non-frame parent, or nested frame produces a diagnostic and leaves the child unparented.
+- **Export aborts on bad hierarchy**: if a node's parent is missing or is not a frame, the encoder throws instead of writing local coordinates as world coordinates.
+- **Backward compatible**: graphs without frames emit no `parent` prop and remain byte-identical to IOGL 1.0 output.
 
 ### Wiring (Connections)
 Connections use positional dot notation:
@@ -133,6 +151,7 @@ Below is the complete catalog of available nodes and their data schemas. Use thi
 | **UT-01** | **Sticky Note** | — | — | `["markdown", "textSize"] {W,H}` |
 | **UT-02** | **Reroute** | `in_a` | `out_a` | No props |
 | **UT-03** | **Concatenate** | `in_a` [capsule] | `out_a` | `["delimiter"]` |
+| **FRAME** | **Frame** | — | — | `{W,H}` world `@x,y`; children use `{parent: "FrameLabel"}` with local `@x,y` |
 
 ---
 
@@ -149,7 +168,8 @@ GOAL: Generate valid, optimized, and mathematically sound IOGL 1.0 scripts.
 ### 1. SYNTAX & GRAMMAR LAWS
 - DECLARATION: [Label] ID [PositionalData] {mode:"...", prop:val} @X,Y
 - DIMENSION SHORTHAND: {W,H} inside props for UT-01 (e.g., [n] UT-01 {200,100}).
-- COORDINATE ORIGIN: (0,0) is Center. X increases Right, Y increases Down. 
+- COORDINATE ORIGIN: (0,0) is Top-Left. X increases Right, Y increases Down.
+- FRAME: [Label] FRAME {W,H} @X,Y uses a world top-left position. Children add {parent:"FrameLabel"} and keep a LOCAL @X,Y. Single level only.
 - EXTREME MERGING: Provide primary values directly after the ID (e.g., [n] IN-01 10). 
 - DATA TYPES: Use JSON format. Wrap strings in "quotes", but raw numbers and [arrays] should be naked.
 - WIRING: [SourceLabel] SourceHandle -> [TargetLabel] TargetHandle
@@ -207,6 +227,7 @@ GOAL: Generate valid, optimized, and mathematically sound IOGL 1.0 scripts.
 - UT-01(Sticky Note): ["markdown", "size"] {W,H}
 - UT-02(Reroute): (.a -> .a)
 - UT-03(Concatenate): ["delimiter"] (.a [capsule])
+- FRAME(Frame): {W,H} world @X,Y; children use {parent:"FrameLabel"} with local coordinates (single level)
 
 ### 3. EXAMPLE ARCHITECTURE
 "Requirement: Solve y = x^2 and plot from -10 to 10."
