@@ -258,6 +258,35 @@ export function sortParentFirst<T extends CoordinateNode>(nodes: readonly T[]): 
 }
 
 /**
+ * Returns the selected nodes that have no selected ancestor.
+ * Moving/scaling only these roots is enough: React Flow renders children
+ * relative to their parent, so they follow without a second position write.
+ */
+export function getEffectiveRoots<T extends CoordinateNode>(
+    nodes: readonly T[],
+    selectedIds: ReadonlySet<string>
+): T[] {
+    const lookup = new Map(nodes.map(node => [node.id, node]));
+
+    return nodes.filter(node => {
+        if (!selectedIds.has(node.id)) return false;
+
+        let current = node.parentId ? lookup.get(node.parentId) : undefined;
+        const seen = new Set<string>();
+
+        while (current) {
+            if (current.id === node.id) break; // self-parent: treat as root
+            if (selectedIds.has(current.id)) return false;
+            if (seen.has(current.id)) break;
+            seen.add(current.id);
+            current = current.parentId ? lookup.get(current.parentId) : undefined;
+        }
+
+        return true;
+    });
+}
+
+/**
  * Validates hierarchy invariants. Never throws; returns every issue found.
  */
 export function validateHierarchy(

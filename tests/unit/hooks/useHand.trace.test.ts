@@ -29,6 +29,8 @@ declare global {
         endCut: ReturnType<typeof vi.fn>;
         cancelCut: ReturnType<typeof vi.fn>;
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    var __historyPush: any;
 }
 
 vi.mock('@xyflow/react', async (importOriginal) => {
@@ -50,6 +52,7 @@ vi.mock('@/context/BrainContext', () => ({
         }),
         setInteracting: vi.fn(),
         getNodesMap: () => new Map(),
+        applyTransaction: vi.fn(() => ({ success: true })),
     }),
 }));
 
@@ -58,7 +61,7 @@ vi.mock('@/store/useHistoryStore', () => ({
         selector({
             interactionMode: 'IDLE',
             setInteractionMode: vi.fn(),
-            push: vi.fn(),
+            push: (entry: unknown) => globalThis.__historyPush(entry),
             isRestoring: false,
             setIsRestoring: vi.fn(),
         }),
@@ -91,12 +94,18 @@ vi.mock('@/hooks/useKnife', () => ({
 import { useHand } from '@/hooks/nerves/useHand';
 import { useAppStore } from '@/store/useStore';
 
-function makeNodes(specs: Array<{ id: string; position: { x: number; y: number } }>): Node[] {
+function makeNodes(specs: Array<{
+    id: string;
+    position: { x: number; y: number };
+    parentId?: string;
+    selected?: boolean;
+}>): Node[] {
     return specs.map((s) => ({
         id: s.id,
         type: 'test',
         position: { ...s.position },
-        selected: true,
+        parentId: s.parentId,
+        selected: s.selected ?? true,
         data: {},
     }));
 }
@@ -124,6 +133,7 @@ function mouseEvent(button: number, ctrlKey: boolean): MouseEvent {
 
 beforeEach(() => {
     nodes = makeNodes([{ id: 'n1', position: { x: 100, y: 100 } }]);
+    globalThis.__historyPush = vi.fn();
     rafQueue = [];
     globalThis.__rf = {
         getNodes: () => nodes,
@@ -290,6 +300,67 @@ describe('B3 hand trace: SCALING / ROTATING', () => {
         const n1 = nodes.find((n) => n.id === 'n1')!;
         expect(n1.position.x).toBeCloseTo(137.06, 1);
         expect(n1.position.y).toBeCloseTo(51.7, 1);
+    });
+});
+
+describe('B3 hand trace: nested transforms', () => {
+    it('moves only the parent when parent and child are both selected', () => {
+        nodes = makeNodes([
+            { id: 'parent', position: { x: 100, y: 100 } },
+            { id: 'child', position: { x: 10, y: 10 }, parentId: 'parent' },
+        ]);
+        const { result } = renderHook(({ snap }) => useHand({ snap }), { initialProps: { snap: false } });
+        act(() => {
+            useAppStore.getState().setMode('GRABBING');
+            result.current.startGrab({ x: 100, y: 100 }, false, undefined, true);
+        });
+        rafQueue.length = 0;
+        act(() => {
+            result.current.handleMouseMove({ clientX: 137, clientY: 87, ctrlKey: false } as unknown as MouseEvent);
+        });
+        act(() => flushDragRaf());
+
+        const parent = nodes.find((n) => n.id === 'parent')!;
+        const child = nodes.find((n) => n.id === 'child')!;
+        expect(parent.position).toEqual({ x: 137, y: 87 });
+        expect(child.position).toEqual({ x: 10, y: 10 });
+    });
+
+    it('writes a scaled child back to parent-local coordinates', () => {
+        nodes = makeNodes([
+            { id: 'parent', position: { x: 100, y: 100 }, selected: false },
+            { id: 'c1', position: { x: 10, y: 10 }, parentId: 'parent' },
+            { id: 'c2', position: { x: 50, y: 10 }, parentId: 'parent' },
+        ]);
+        const { result } = renderHook(({ snap }) => useHand({ snap }), { initialProps: { snap: false } });
+        act(() => {
+            useAppStore.getState().setMode('SCALING');
+            result.current.startScale({ x: 150, y: 110 });
+        });
+        rafQueue.length = 0;
+        act(() => {
+            result.current.handleMouseMove({ clientX: 170, clientY: 110, ctrlKey: false } as unknown as MouseEvent);
+        });
+        act(() => flushDragRaf());
+
+        const c1 = nodes.find((n) => n.id === 'c1')!;
+        const c2 = nodes.find((n) => n.id === 'c2')!;
+        // World: c1 110 -> 90, c2 150 -> 170; parent stays at 100.
+        expect(c1.position.x).toBeCloseTo(-10, 5);
+        expect(c2.position.x).toBeCloseTo(70, 5);
+        expect(c1.position.y).toBeCloseTo(10, 5);
+        expect(c2.position.y).toBeCloseTo(10, 5);
+
+        // The grab/scale undo payload must keep the children attached.
+        act(() => result.current.confirmGrab());
+        const entry = globalThis.__historyPush.mock.calls[0]?.[0] as {
+            inverse: Array<{ type: string; payload: { id: string; parentId?: string } }>;
+        };
+        const inverseMoves = entry.inverse.filter(t => t.type === 'MOVE_NODE');
+        expect(inverseMoves.map(t => t.payload.id).sort()).toEqual(['c1', 'c2']);
+        for (const tx of inverseMoves) {
+            expect(tx.payload.parentId).toBe('parent');
+        }
     });
 });
 

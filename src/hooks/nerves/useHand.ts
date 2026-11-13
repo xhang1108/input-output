@@ -9,6 +9,7 @@ import { useSelection } from '../useSelection';
 import { useKnife } from '../useKnife';
 import { useAppStore } from '../../store/useStore';
 import { resolveMouseDownAction, snapRotation, snapScale, snapTranslate } from '../../utils/transformSnap';
+import { getEffectiveRoots, toAbsolute, toParentLocal } from '../../utils/coordinates';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -75,10 +76,10 @@ export function useHand(opts?: { snap?: boolean }) {
 
 
     // --- Transform Helpers ---
-    const getAbsolutePosition = useCallback(function getAbs(nodeId: string, nodeMap: Map<string, Node>): XYPosition {
-        const node = nodeMap.get(nodeId);
-        if (!node) return { x: 0, y: 0 };
-        return node.position;
+    // Absolute = world (top-left). Children are parent-local; use the shared
+    // coordinate contract instead of treating `position` as world.
+    const getAbsolutePosition = useCallback((nodeId: string, nodeMap: Map<string, Node>): XYPosition => {
+        return toAbsolute(nodeMap, nodeId);
     }, []);
 
     // Sanity check for finite coordinates
@@ -126,6 +127,11 @@ export function useHand(opts?: { snap?: boolean }) {
         };
     };
 
+    /**
+     * Scale roots in world space, then write back parent-local coordinates.
+     * Children follow their parent's translation; group scale is not a
+     * rigid-body transform (we only move node origins).
+     */
     const applyScale = useCallback((scaleFactor: number) => {
         const center = centerRef.current;
         if (!center) return;
@@ -136,17 +142,21 @@ export function useHand(opts?: { snap?: boolean }) {
         if (axisLock === 'Y') sx = 1;
 
         setNodes((currentNodes) => {
+            const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
             let hasChanges = false;
             const nextNodes = currentNodes.map(n => {
                 const initAbsPos = initialAbsolutePositions.current.get(n.id);
                 if (initAbsPos) {
                     const rx = initAbsPos.x - center.x;
                     const ry = initAbsPos.y - center.y;
-                    const nextPos = {
+                    const nextAbs = {
                         x: center.x + rx * sx,
                         y: center.y + ry * sy
                     };
-                    if (!isFiniteCoord(nextPos)) return n;
+                    if (!isFiniteCoord(nextAbs)) return n;
+
+                    // Store back as parent-local; roots are unchanged by this.
+                    const nextPos = toParentLocal(nodeMap, n.id, nextAbs);
 
                     if (Math.abs(n.position.x - nextPos.x) > 0.001 || Math.abs(n.position.y - nextPos.y) > 0.001) {
                         hasChanges = true;
@@ -167,6 +177,7 @@ export function useHand(opts?: { snap?: boolean }) {
         const sin = Math.sin(angleRad);
 
         setNodes((currentNodes) => {
+            const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
             let hasChanges = false;
             const nextNodes = currentNodes.map(n => {
                 const initAbsPos = initialAbsolutePositions.current.get(n.id);
@@ -174,12 +185,15 @@ export function useHand(opts?: { snap?: boolean }) {
                     const dx = initAbsPos.x - center.x;
                     const dy = initAbsPos.y - center.y;
 
-                    const nextPos = {
+                    const nextAbs = {
                         x: center.x + (dx * cos - dy * sin),
                         y: center.y + (dx * sin + dy * cos)
                     };
 
-                    if (!isFiniteCoord(nextPos)) return n;
+                    if (!isFiniteCoord(nextAbs)) return n;
+
+                    // Store back as parent-local; roots are unchanged by this.
+                    const nextPos = toParentLocal(nodeMap, n.id, nextAbs);
 
                     if (Math.abs(n.position.x - nextPos.x) > 0.001 || Math.abs(n.position.y - nextPos.y) > 0.001) {
                         hasChanges = true;
@@ -331,9 +345,17 @@ export function useHand(opts?: { snap?: boolean }) {
             detachSelected();
         }
 
-        initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
-        initialParentIds.current = new Map(selected.map((n) => [n.id, n.parentId || null]));
+        // Only move the roots of the selection. A selected child whose parent is
+        // also selected follows the parent's transform; writing both would move
+        // it twice (and corrupt local coordinates).
+        const roots = getEffectiveRoots(nodes, new Set(selected.map(n => n.id)));
+        if (roots.length === 0) return;
+
+        initialPositions.current = new Map(roots.map((n) => [n.id, { ...n.position }]));
+        initialParentIds.current = new Map(roots.map((n) => [n.id, n.parentId || null]));
         initialAbsolutePositions.current.clear();
+        initialDimensions.current.clear();
+        initialRotations.current.clear();
         startMousePos.current = mousePos;
         startFlowPos.current = project(mousePos);
         setAxisLock(null);
@@ -346,24 +368,28 @@ export function useHand(opts?: { snap?: boolean }) {
         const selected = nodes.filter(n => n.selected);
         if (selected.length === 0) return;
 
+        const roots = getEffectiveRoots(nodes, new Set(selected.map(n => n.id)));
+        if (roots.length === 0) return;
+
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
         // Store RELATIVE positions for restore/undo
-        initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
+        initialPositions.current = new Map(roots.map((n) => [n.id, { ...n.position }]));
+        initialParentIds.current = new Map(roots.map((n) => [n.id, n.parentId || null]));
 
         // Store ABSOLUTE positions for calculation
-        initialAbsolutePositions.current = new Map(selected.map((n) => [
+        initialAbsolutePositions.current = new Map(roots.map((n) => [
             n.id,
             getAbsolutePosition(n.id, nodeMap)
         ]));
 
-        initialRotations.current = new Map(selected.map((n) => [
+        initialRotations.current = new Map(roots.map((n) => [
             n.id,
             (n.data?.rotation as number) || 0
         ]));
 
         // Store Dimensions for stability
-        initialDimensions.current = new Map(selected.map((n) => [
+        initialDimensions.current = new Map(roots.map((n) => [
             n.id,
             {
                 w: n.measured?.width ?? n.width ?? 150,
@@ -371,7 +397,7 @@ export function useHand(opts?: { snap?: boolean }) {
             }
         ]));
 
-        centerRef.current = getPivot(selected, nodeMap);
+        centerRef.current = getPivot(roots, nodeMap);
         startMousePos.current = mousePos;
         startFlowPos.current = project(mousePos);
         brain.setInteracting(true); // Wake up Pulse
@@ -383,24 +409,28 @@ export function useHand(opts?: { snap?: boolean }) {
         const selected = nodes.filter(n => n.selected);
         if (selected.length === 0) return;
 
+        const roots = getEffectiveRoots(nodes, new Set(selected.map(n => n.id)));
+        if (roots.length === 0) return;
+
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
         // Store RELATIVE positions for restore/undo
-        initialPositions.current = new Map(selected.map((n) => [n.id, { ...n.position }]));
+        initialPositions.current = new Map(roots.map((n) => [n.id, { ...n.position }]));
+        initialParentIds.current = new Map(roots.map((n) => [n.id, n.parentId || null]));
 
         // Store ABSOLUTE positions for calculation
-        initialAbsolutePositions.current = new Map(selected.map((n) => [
+        initialAbsolutePositions.current = new Map(roots.map((n) => [
             n.id,
             getAbsolutePosition(n.id, nodeMap)
         ]));
 
-        initialRotations.current = new Map(selected.map((n) => [
+        initialRotations.current = new Map(roots.map((n) => [
             n.id,
             (n.data?.rotation as number) || 0
         ]));
 
         // Store Dimensions for stability
-        initialDimensions.current = new Map(selected.map((n) => [
+        initialDimensions.current = new Map(roots.map((n) => [
             n.id,
             {
                 w: n.measured?.width ?? n.width ?? 150,
@@ -408,7 +438,7 @@ export function useHand(opts?: { snap?: boolean }) {
             }
         ]));
 
-        centerRef.current = getPivot(selected, nodeMap);
+        centerRef.current = getPivot(roots, nodeMap);
 
         const flowStartMouse = project({ x: mousePos.x, y: mousePos.y });
         accumulatedRotation.current = 0;
@@ -459,7 +489,17 @@ export function useHand(opts?: { snap?: boolean }) {
         if (movedNodeIds.size === 0) {
             console.log(`[Hand] confirmGrab: No nodes moved significantly.`);
             setMode('IDLE');
+            initialPositions.current.clear();
+            initialParentIds.current.clear();
+            initialAbsolutePositions.current.clear();
+            initialDimensions.current.clear();
+            initialRotations.current.clear();
             startMousePos.current = null;
+            startFlowPos.current = null;
+            centerRef.current = null;
+            setAxisLock(null);
+            setTransformBuffer('');
+            setTransformValue('');
             return;
         }
 
@@ -471,14 +511,8 @@ export function useHand(opts?: { snap?: boolean }) {
                 return;
             }
 
-            // NESTING GUARD: If a node has a parent and that parent is also being moved,
-            // we skip the child's MOVE_NODE transaction because its relative position 
-            // hasn't changed in the Brain's coordinate space.
-            if (node.parentId && movedNodeIds.has(node.parentId)) {
-                console.log(`[useHand] Skipping MOVE_NODE for nested child ${id} because parent ${node.parentId} is also moving.`);
-                return;
-            }
-
+            // Roots only: a selected child's parent is never in movedNodeIds,
+            // so every entry here owns its local position change.
             txs.push({ type: 'MOVE_NODE', payload: { id, position: { ...node.position } } });
         });
 
@@ -491,15 +525,16 @@ export function useHand(opts?: { snap?: boolean }) {
             initialPositions.current.forEach((initPos, id) => {
                 if (!isFiniteCoord(initPos)) return; // History Guard
 
-                const initialParentId = initialParentIds.current.get(id) ?? null;
-                invTxs.push({
-                    type: 'MOVE_NODE',
-                    payload: {
-                        id,
-                        position: { ...initPos },
-                        parentId: initialParentId
-                    }
-                });
+                const initialParentId = initialParentIds.current.get(id);
+                const payload: { id: string; position: XYPosition; parentId?: string } = {
+                    id,
+                    position: { ...initPos },
+                };
+                // Only children carry a parentId. Roots must stay roots; writing
+                // `null` here would detach a child on undo.
+                if (initialParentId) payload.parentId = initialParentId;
+
+                invTxs.push({ type: 'MOVE_NODE', payload });
             });
 
             initialDimensions.current.forEach((initDim, id) => {
@@ -522,6 +557,7 @@ export function useHand(opts?: { snap?: boolean }) {
 
         setMode('IDLE');
         initialPositions.current.clear();
+        initialParentIds.current.clear();
         initialDimensions.current.clear();
         initialRotations.current.clear();
         initialAbsolutePositions.current.clear();
@@ -544,6 +580,17 @@ export function useHand(opts?: { snap?: boolean }) {
 
         if (positionsToRestore.size === 0 && framesToRestore.size === 0) {
             setMode('IDLE');
+            initialPositions.current.clear();
+            initialParentIds.current.clear();
+            initialAbsolutePositions.current.clear();
+            initialDimensions.current.clear();
+            initialRotations.current.clear();
+            startMousePos.current = null;
+            startFlowPos.current = null;
+            centerRef.current = null;
+            setAxisLock(null);
+            setTransformBuffer('');
+            setTransformValue('');
             return;
         }
 
@@ -590,6 +637,7 @@ export function useHand(opts?: { snap?: boolean }) {
 
         setMode('IDLE');
         initialPositions.current.clear();
+        initialParentIds.current.clear();
         initialDimensions.current.clear();
         initialRotations.current.clear();
         initialAbsolutePositions.current.clear();

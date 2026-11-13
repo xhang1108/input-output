@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     depthOf,
+    getEffectiveRoots,
     indexNodes,
     isDescendant,
     reparentPosition,
@@ -218,6 +219,48 @@ describe('coordinates.isDescendant', () => {
         expect(typeof isDescendant(nodes, 'b', 'a')).toBe('boolean');
         expect(isDescendant(nodes, 'orphan', 'root')).toBe(false);
         expect(typeof isDescendant(nodes, 'missing', 'root')).toBe('boolean');
+    });
+});
+
+describe('coordinates.getEffectiveRoots', () => {
+    const nodes = [
+        node('root', 0, 0),
+        node('child', 10, 10, 'root'),
+        node('grandchild', 5, 5, 'child'),
+        node('other', 20, 20),
+    ];
+
+    it('drops selected nodes whose ancestor is also selected', () => {
+        const selected = new Set(['root', 'child', 'grandchild']);
+
+        expect(getEffectiveRoots(nodes, selected).map(n => n.id)).toEqual(['root']);
+    });
+
+    it('keeps a selected child when the parent is not selected', () => {
+        const selected = new Set(['child', 'grandchild']);
+
+        expect(getEffectiveRoots(nodes, selected).map(n => n.id)).toEqual(['child']);
+    });
+
+    it('keeps independent roots', () => {
+        const selected = new Set(['root', 'other']);
+
+        expect(getEffectiveRoots(nodes, selected).map(n => n.id)).toEqual(['root', 'other']);
+    });
+
+    it('treats a self-parented node as a movable root', () => {
+        const self = [node('a', 0, 0, 'a')];
+
+        expect(getEffectiveRoots(self, new Set(['a'])).map(n => n.id)).toEqual(['a']);
+    });
+
+    it('terminates on a cycle', () => {
+        const cyclic = [
+            node('a', 0, 0, 'b'),
+            node('b', 0, 0, 'a'),
+        ];
+
+        expect(() => getEffectiveRoots(cyclic, new Set(['a', 'b']))).not.toThrow();
     });
 });
 
