@@ -450,7 +450,7 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 - detach：`parentId: null` 真的寫進 Brain；下一次 graphChanged 不會被還原。
 - Backspace：不會同時 reset data 與觸發 RF 原生 remove（UI/Brain 一致）。
 - depth sort：grandchild 不會排在 parent 前。
-- save/load round-trip：`parentId` / `width` / `height` 保留。
+- save/load round-trip：`parentId` / `width` / `height` 保留（`tests/unit/lifecycle/FramePersistence.test.ts` 已覆蓋 serialize → deserialize → `injectNodes`）。
 - clipboard：選 frame 自動包含 descendants。
 - `RegistryStability`：`frame` 已在白名單。
 
@@ -479,9 +479,9 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 2. **刪 frame**：不 cascade。children 轉 independent（absolute + 清 `parentId`），frame 單獨移除；undo 需還原 frame 與親子關係。
 3. **frame 尺寸**：手動 resize（最小 = 內容外緣）+ **live、expand-only** auto-expand。拖回不自動縮；沒有 `Fit to contents` 按鈕。
 4. **巢狀**：只做單層（root frame + direct children）。frame-in-frame、child 當 parent 一律拒絕。
-5. **IOGL**：建議支援，但不改 block 語法；用 `FRAME` 宣告 + `{parent: "frame label"}` 屬性。詳見 §4 P2.1。**這一點待你確認語法**。
+5. **IOGL**：已用 `FRAME` 宣告 + `{parent: "frame label"}` 屬性實作（`b3aedd9`），不改 block 語法。詳見 §4 P2.1。
 
-尚未決定：IOGL 的 `FRAME` / `parent` 命名是否接受；若否，替代是匯出時攤平 + warn（會失去群組）。
+若不同意 `FRAME` / `parent` 命名，替代方案是匯出時攤平 + warn（會失去群組）；改 alias 即可，不動 parser 結構。
 
 ---
 
