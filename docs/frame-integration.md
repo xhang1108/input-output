@@ -265,7 +265,7 @@ position: {
 | P0-1 | 新增純函式與測試，**不改行為** | `src/utils/coordinates.ts`（新）、`tests/unit/utils/coordinates.test.ts`（新） | 1/2/3 層、負座標、orphan、cycle、self-parent、`toParentLocal(toAbsolute(x)) === x`、reparent 拒絕環 |
 | P0-2 | Brain 改用 `toAbsolute`，刪除 `- parentW/2`；測試改 top-left | `Brain.ts:1024-1044`、`CoordinateNormalization.test.ts:45-131`、`clipboardMath.ts:8-24` | Brain 與 util 對隨機樹結果一致；bbox 不再偏移 |
 | P0-3 | `useHand` 刪本地 `getAbsolutePosition`，改用 RF internals；只移動 roots；scale/rotate 寫回 local | `useHand.ts:50,78-82,89-193,335,430-535` | 拖 parent 只產生 1 筆 `MOVE_NODE`；parent+child 同選不 2×；scale/rotate 後 absolute 不變 |
-| P0-4 | 下游呼叫點清掃：knife / auto-insert / align / NPanel / IO encoder；IOGL docs 座標修正 | `useKnife.ts:58-66`、`useAutoInsert.ts:93-124`、`useSelection.ts:212-236`、`NPanel.tsx:288-304`、`Encoder.ts:97-103`、`src/assets/docs/user/05_IOGL/00_iogl-concept.md` | frame 內操作位置正確；NPanel 會發 `MOVE_NODE`；`parentId` 存在時 IOGL **block 匯出**（P2.1 才支援）；IOGL 文件不再寫 center |
+| P0-4 | 下游呼叫點清掃：knife / auto-insert / align / NPanel / IO encoder；IOGL docs 座標修正 — **已完成 `da4e5a5`**（IO encoder 部分由 `b3aedd9` 完成） | `useKnife.ts:58-66`、`useAutoInsert.ts:93-124`、`useSelection.ts:212-236`、`NPanel.tsx:288-304`、`Encoder.ts:97-103`、`src/assets/docs/user/05_IOGL/00_iogl-concept.md` | frame 內操作位置正確；NPanel 會發 `MOVE_NODE`；`parentId` 存在時 IOGL **block 匯出**（P2.1 才支援）；IOGL 文件不再寫 center |
 | P0-5 | 收尾：`validateHierarchy`、parent-first 排序集中、dev assert、刪 dead code、契約文件 | `coordinates.ts`、`Brain.injectNodes`、`useBrainUpdates.ts`、`docs/coordinates.md` | 壞 parent / cycle 被擋；dev 模式有 assert；grep gate 全過 |
 
 **每個 PR 的 Definition of Done**：
@@ -328,6 +328,8 @@ P0-1 先建立 **flat baseline**（只有 root 的專案，位置不得變），
 
 ### P2 — 下游整合
 
+**狀態**：layout / clipboard 已完成 `0ac3fe8`（只 layout root 非 frame 節點、merge by id 保留 `parentId`；複製 frame 連帶 descendants）；knife / auto-insert / align / NPanel 屬 P0-4，已完成 `da4e5a5`；IOGL 見 P2.1。
+
 | 檔案 | 改動 |
 |---|---|
 | `src/hooks/layoutEngine.ts:56-81` + `useAutoLayout.ts:45-47,189-210` | 方案 A：layout 排除 frame/children；RE-LAYOUT 改 merge-by-id、保留 parentId |
@@ -339,7 +341,7 @@ P0-1 先建立 **flat baseline**（只有 root 的專案，位置不得變），
 | `src/engine/iogl/Encoder.ts:97-103` / `Parser.ts:473-481` | P2.1：`FRAME` + `parent` 語法；encoder pre-pass、parser 兩段解析；docs 更新 |
 | `tests/` | 新增 §6 的案例 |
 
-### P2.1 — IOGL 支援 frame（建議語法）
+### P2.1 — IOGL 支援 frame（建議語法）— **已完成 `b3aedd9`**
 
 **結論**：要支援，否則是資料損壞：目前 encoder 把 child 的 local `position` 寫成 `@x,y`，parser 又當 absolute 讀，round-trip 會位移一個 parent offset。frame 只是讓這個既有 bug 變得常見。
 
