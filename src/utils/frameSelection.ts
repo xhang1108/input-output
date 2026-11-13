@@ -18,6 +18,16 @@ export function getFrameRect(node: Node): FrameRect {
     };
 }
 
+/** True when a flow-space point is inside the frame rectangle. */
+export function pointInFrame(point: { x: number; y: number }, frame: FrameRect): boolean {
+    return (
+        point.x >= frame.x &&
+        point.x <= frame.x + frame.width &&
+        point.y >= frame.y &&
+        point.y <= frame.y + frame.height
+    );
+}
+
 function overlaps(a: SelectionRect, b: SelectionRect): boolean {
     return (
         a.x < b.x + b.width &&

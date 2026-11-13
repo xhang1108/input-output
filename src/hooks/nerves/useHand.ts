@@ -11,6 +11,7 @@ import { useAppStore } from '../../store/useStore';
 import { resolveMouseDownAction, snapRotation, snapScale, snapTranslate } from '../../utils/transformSnap';
 import { getEffectiveRoots, toAbsolute, toParentLocal } from '../../utils/coordinates';
 import { expandFrameToFitChildren, getNodeSize } from '../../utils/frameGeometry';
+import { getFrameRect } from '../../utils/frameSelection';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 
@@ -606,6 +607,38 @@ export function useHand(opts?: { snap?: boolean }) {
         }
 
         // 2. Build transactions (Position Only)
+        // Drop-to-attach: a root whose full rect is inside a frame becomes its child.
+        const attachments = new Map<string, string>();
+        const frames = nodes.filter(n => n.type === 'frame');
+        if (frames.length > 0) {
+            for (const id of movedNodeIds) {
+                const node = nodeMap.get(id);
+                if (!node || node.type === 'frame' || node.parentId) continue;
+
+                const abs = toAbsolute(nodeMap, id);
+                const size = getSize(node);
+                let best: Node | undefined;
+                let bestArea = Infinity;
+
+                for (const frame of frames) {
+                    const rect = getFrameRect(frame);
+                    const contains =
+                        abs.x >= rect.x &&
+                        abs.y >= rect.y &&
+                        abs.x + size.w <= rect.x + rect.width &&
+                        abs.y + size.h <= rect.y + rect.height;
+                    if (!contains) continue;
+                    const area = rect.width * rect.height;
+                    if (area < bestArea) {
+                        best = frame;
+                        bestArea = area;
+                    }
+                }
+
+                if (best) attachments.set(id, best.id);
+            }
+        }
+
         movedNodeIds.forEach(id => {
             const node = nodeMap.get(id);
             if (!node || !isFiniteCoord(node.position)) {
@@ -615,7 +648,19 @@ export function useHand(opts?: { snap?: boolean }) {
 
             // Roots only: a selected child's parent is never in movedNodeIds,
             // so every entry here owns its local position change.
-            txs.push({ type: 'MOVE_NODE', payload: { id, position: { ...node.position } } });
+            const attachFrameId = attachments.get(id);
+            let position = { ...node.position };
+            let parentId: string | undefined;
+            if (attachFrameId) {
+                const frameAbs = toAbsolute(nodeMap, attachFrameId);
+                const abs = toAbsolute(nodeMap, id);
+                position = { x: abs.x - frameAbs.x, y: abs.y - frameAbs.y };
+                parentId = attachFrameId;
+            }
+            txs.push({
+                type: 'MOVE_NODE',
+                payload: { id, position, ...(parentId ? { parentId } : {}) },
+            });
         });
 
         // 3. Frame auto-fit: if a child left its frame, the UI was expanded live.
@@ -687,13 +732,15 @@ export function useHand(opts?: { snap?: boolean }) {
                 if (frameChildIds.has(id)) return; // frameInverse owns this child
 
                 const initialParentId = initialParentIds.current.get(id);
-                const payload: { id: string; position: XYPosition; parentId?: string } = {
+                const payload: { id: string; position: XYPosition; parentId?: string | null } = {
                     id,
                     position: { ...initPos },
                 };
-                // Only children carry a parentId. Roots must stay roots; writing
-                // `null` here would detach a child on undo.
-                if (initialParentId) payload.parentId = initialParentId;
+                // Restore the original parent. null explicitly detaches a node
+                // that was newly attached to a frame during this transform.
+                if (initialParentIds.current.has(id)) {
+                    payload.parentId = initialParentId ?? null;
+                }
 
                 invTxs.push({ type: 'MOVE_NODE', payload });
             });

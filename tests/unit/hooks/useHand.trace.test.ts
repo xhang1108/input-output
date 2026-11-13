@@ -455,6 +455,36 @@ describe('B3 hand trace: nested transforms', () => {
         expect(resize.payload).toEqual({ id: 'f1', width: 292, height: 292 });
     });
 
+    it('attaches a root dropped inside a frame', () => {
+        nodes = makeNodes([
+            { id: 'f1', type: 'frame', position: { x: 0, y: 0 }, selected: false, width: 300, height: 300 },
+            { id: 'n1', position: { x: 50, y: 50 }, width: 50, height: 50 },
+        ]);
+        const { result } = renderHook(({ snap }) => useHand({ snap }), { initialProps: { snap: false } });
+        act(() => {
+            useAppStore.getState().setMode('GRABBING');
+            result.current.startGrab({ x: 50, y: 50 }, false, undefined, true);
+        });
+        rafQueue.length = 0;
+        act(() => {
+            result.current.handleMouseMove({ clientX: 100, clientY: 100, ctrlKey: false } as unknown as MouseEvent);
+        });
+        act(() => flushDragRaf());
+        act(() => result.current.confirmGrab());
+
+        const entry = globalThis.__historyPush.mock.calls[0]?.[0] as {
+            forward: Array<{ type: string; payload: any }>;
+            inverse: Array<{ type: string; payload: any }>;
+        };
+        const move = entry.forward.find(t => t.type === 'MOVE_NODE' && t.payload.id === 'n1')!;
+        expect(move.payload.parentId).toBe('f1');
+        expect(move.payload.position).toEqual({ x: 100, y: 100 });
+
+        const inverse = entry.inverse.find(t => t.type === 'MOVE_NODE' && t.payload.id === 'n1')!;
+        expect(inverse.payload.parentId).toBeNull();
+        expect(inverse.payload.position).toEqual({ x: 50, y: 50 });
+    });
+
     it('expands a frame when a child is dragged outside and persists it on confirm', () => {
         nodes = makeNodes([
             { id: 'f1', type: 'frame', position: { x: 0, y: 0 }, selected: false, width: 200, height: 100 },

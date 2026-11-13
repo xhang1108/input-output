@@ -32,7 +32,7 @@ import { useClipboard } from '../hooks/useClipboard';
 import { useFrameActions } from '../hooks/useFrameActions';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
 import { getEarShortcuts, Platform } from '@/constants/shortcuts';
-import { getFrameRect, selectionTouchesFrameBorder } from '../utils/frameSelection';
+import { getFrameRect, pointInFrame, selectionTouchesFrameBorder } from '../utils/frameSelection';
 
 type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
 import { useEye } from '../hooks/nerves/useEye';
@@ -214,6 +214,22 @@ export function FlowCanvas({
             })),
         }, true);
     }, [screenToFlowPosition, getViewport, getNodes, setNodes, brain]);
+
+    // The frame interior is transparent to the pane so marquee selection can
+    // start inside it. A plain pane click inside the frame therefore selects
+    // the frame explicitly.
+    const onPaneClick = useCallback((e: React.MouseEvent) => {
+        if (isReadOnly) return;
+
+        const point = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        const frames = getNodes().filter(n => n.type === 'frame');
+        const hit = [...frames].reverse().find(frame => pointInFrame(point, getFrameRect(frame)));
+        if (hit) {
+            // RF resets the selection right after onPaneClick returns; defer so
+            // the frame selection survives that reset.
+            setTimeout(() => selectNode(hit.id, true), 0);
+        }
+    }, [isReadOnly, screenToFlowPosition, getNodes, selectNode]);
 
     // ── P2-10: Brain vs React Flow ownership ──────────────────────────
     // Brain owns: nodes Map, edges, selection truth, all mutations (BATCH txs).
@@ -717,6 +733,7 @@ export function FlowCanvas({
                     defaultEdges={EMPTY_EDGES}
                     onNodesChange={onNodesChangeSafe}
                     onEdgesChange={onEdgesChangeSafe}
+                    onPaneClick={onPaneClick}
                     onConnect={isReadOnly ? undefined : onRelinkConnect}
                     onConnectStart={isReadOnly ? undefined : onConnectStart}
                     onConnectEnd={isReadOnly ? undefined : onConnectEnd}

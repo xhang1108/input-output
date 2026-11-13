@@ -146,4 +146,30 @@ describe('useFrameActions', () => {
         expect(grouped).toBe(false);
         expect(mocks.applyTransaction).not.toHaveBeenCalled();
     });
+
+    it('detaches a child to world coordinates with undo', () => {
+        nodes = [
+            makeNode('f1', 50, 50, { type: 'frame', selected: false, width: 300, height: 200 }),
+            makeNode('c1', 10, 10, { parentId: 'f1' }),
+        ];
+
+        const { result } = renderHook(() => useFrameActions());
+        let detached = false;
+        act(() => {
+            detached = result.current.detachNode('c1');
+        });
+
+        expect(detached).toBe(true);
+        const batch = mocks.applyTransaction.mock.calls[0][0] as {
+            payload: Array<{ type: string; payload: any }>;
+        };
+        const move = batch.payload.find(tx => tx.type === 'MOVE_NODE')!;
+        expect(move.payload).toEqual({ id: 'c1', position: { x: 60, y: 60 }, parentId: null });
+
+        const entry = mocks.push.mock.calls[0][0] as {
+            inverse: Array<{ type: string; payload: any }>;
+        };
+        const inverse = entry.inverse.find(tx => tx.type === 'MOVE_NODE')!;
+        expect(inverse.payload).toEqual({ id: 'c1', position: { x: 10, y: 10 }, parentId: 'f1' });
+    });
 });

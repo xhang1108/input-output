@@ -187,5 +187,32 @@ export function useFrameActions() {
         return groupSelection(nodes, selected);
     }, [getNodes, groupSelection, ungroupSelection]);
 
-    return { frameSelected };
+    const detachNode = useCallback((id: string) => {
+        const nodes = getNodes();
+        const node = nodes.find(n => n.id === id);
+        if (!node?.parentId) return false;
+
+        const absolute = toAbsolute(indexNodes(nodes), id);
+        const forward: Transaction[] = [{
+            type: 'MOVE_NODE',
+            payload: { id, position: absolute, parentId: null },
+        }];
+        const inverse: Transaction[] = [{
+            type: 'MOVE_NODE',
+            payload: { id, position: { ...node.position }, parentId: node.parentId },
+        }];
+
+        const result = brain.applyTransaction({ type: 'BATCH', payload: forward });
+        if (!result.success) return false;
+
+        pushHistory({
+            id: `detach_${Date.now()}`,
+            description: 'Detach from frame',
+            forward,
+            inverse,
+        });
+        return true;
+    }, [getNodes, brain, pushHistory]);
+
+    return { frameSelected, detachNode };
 }
