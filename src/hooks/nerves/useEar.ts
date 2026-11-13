@@ -22,9 +22,12 @@ type EarProps = {
  * useEar - The primary keyboard nerve of Input-Output.
  * 
  * Functions:
- * 1. Key Tracking: Use isPressed('key') to check current state.
+ * 1. Key Tracking: Maintains the set of currently held keys; the returned
+ *    isPressed('key') queries that set (no caller yet, kept for future use).
  * 2. Shortcut Dispatching: Provide a mapping to execute commands on key combinations.
  * 3. Biological Input Guard: Automatically ignores shortcuts when typing in inputs.
+ * 4. Shortcut Scope Guard: Ignores keys inside [aria-modal="true"] or
+ *    [data-shortcut-scope="off"] scopes, except Escape.
  */
 export function useEar(props: EarProps = {}) {
     const brain = useBrain();
@@ -44,19 +47,36 @@ export function useEar(props: EarProps = {}) {
             return;
         }
 
-        // 2. State Update (isPressed logic)
+        // 2. Guard: Ignore auto-repeat of modified combos only.
+        // Single-key shortcuts (m/x/g/y/digits/Backspace) rely on repeated
+        // keydown accumulation, so plain repeats must still flow through.
+        if (e.repeat && (e.ctrlKey || e.metaKey || e.altKey)) {
+            return;
+        }
+
+        // 3. Guard: Ignore keys inside modal / opt-out shortcut scopes
+        // (e.target may be document or window, so closest() must be probed).
+        const targetEl = e.target as Element | null;
+        const scopeHost = typeof targetEl?.closest === 'function'
+            ? targetEl.closest('[aria-modal="true"], [data-shortcut-scope="off"]')
+            : null;
+        if (scopeHost && e.key !== 'Escape') {
+            return;
+        }
+
+        // 4. State Update (isPressed logic)
         setKeys(prev => {
             const newKeys = new Set(prev);
             newKeys.add(e.key.toLowerCase());
             return newKeys;
         });
 
-        // 3. Delegate to callback
+        // 5. Delegate to callback
         if (onKeyDown) {
             onKeyDown(e);
         }
 
-        // 4. Shortcut Dispatching (The "Brain" part of the ear)
+        // 6. Shortcut Dispatching (The "Brain" part of the ear)
         if (shortcuts) {
             const key = e.key.toLowerCase();
             const modifiers = [];
@@ -67,6 +87,12 @@ export function useEar(props: EarProps = {}) {
             const comboKey = modifiers.length > 0
                 ? `${modifiers.sort().join('+')}+${key}`
                 : key;
+
+            // Native copy must win when the user has selected text: skip the
+            // shortcut entirely and leave the event (and its default) untouched.
+            if (comboKey === 'ctrl+c' && (window.getSelection()?.toString() ?? '').length > 0) {
+                return;
+            }
 
             const match = shortcuts[comboKey] || (modifiers.length === 0 ? shortcuts[key] : undefined);
 

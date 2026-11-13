@@ -15,6 +15,7 @@ export interface ContextMenuActions {
     rename: () => void;
     duplicateAndGrab: () => void;
     copyToClipboard: () => void;
+    cutSelected: () => void;
     detachSelected: () => void;
     deleteSelected: () => void;
     viewSpecs: () => void;
@@ -46,6 +47,7 @@ export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean 
 
     items.push(
         { label: 'Duplicate', shortcut: 'Shift+D', action: () => actions.duplicateAndGrab() },
+        { label: 'Cut', shortcut: 'Ctrl+X', action: () => actions.cutSelected() },
         { label: 'Copy', shortcut: 'Ctrl+C', action: () => actions.copyToClipboard() },
         { label: 'Detach', shortcut: 'Alt+Drag', action: () => actions.detachSelected() },
         { label: 'Delete', shortcut: 'Del', danger: true, action: () => actions.deleteSelected() },

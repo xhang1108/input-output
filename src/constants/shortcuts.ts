@@ -109,6 +109,12 @@ export const COMMAND_REGISTRY: ShortcutDefinition[] = [
         keys: { default: 'ctrl+c', mac: 'cmd+c' }
     },
     {
+        id: 'clipboard:cut',
+        label: 'Cut',
+        category: 'Clipboard',
+        keys: { default: 'ctrl+x', mac: 'cmd+x' }
+    },
+    {
         id: 'clipboard:paste',
         label: 'Paste',
         category: 'Clipboard',

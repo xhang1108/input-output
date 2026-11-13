@@ -28,6 +28,7 @@ import { nodeTypes, edgeTypes } from '@/constants/nodeTypeMap';
 import { getCanvasMenuItems, getNodeMenuItems } from '@/constants/contextMenuItems';
 import { useEar } from '../hooks/nerves/useEar';
 import { useHand } from '../hooks/nerves/useHand';
+import { useClipboard } from '../hooks/useClipboard';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
 import { getEarShortcuts, Platform } from '@/constants/shortcuts';
 
@@ -147,9 +148,6 @@ export function FlowCanvas({
         startRotate,
         confirmGrab,
         cancelGrab,
-        duplicateSelected,
-        copyToClipboard,
-        pasteFromClipboard,
         deleteSelected,
         resetSelected,
         setAxisLock,
@@ -167,6 +165,10 @@ export function FlowCanvas({
         lastCancelTimestamp,
         transformBuffer
     } = useHand({ snap: effectiveSnap });
+
+    // Clipboard commands are owned here (not proxied through useHand) so copy,
+    // cut and paste all share the same in-memory buffer instance.
+    const { duplicateSelected, copyToClipboard, cutSelected, pasteFromClipboard } = useClipboard();
 
     // ── P2-10: Brain vs React Flow ownership ──────────────────────────
     // Brain owns: nodes Map, edges, selection truth, all mutations (BATCH txs).
@@ -515,6 +517,10 @@ export function FlowCanvas({
             }),
             'y': () => { if (mode === 'GRABBING' || mode === 'SCALING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
             'clipboard:copy': autoConfirm(() => { copyToClipboard(); logAction('Copy'); }),
+            'clipboard:cut': autoConfirm(() => {
+                if (isReadOnly) return;
+                if (cutSelected()) logAction('Cut');
+            }),
             'clipboard:paste': autoConfirm(() => {
                 if (isReadOnly) return;
                 pasteFromClipboard(project(mousePosRef.current));
@@ -576,7 +582,8 @@ export function FlowCanvas({
                 }
             },
         }),
-        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, copyToClipboard, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes]
+        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected,
+           copyToClipboard, cutSelected, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes]
     });
 
     const updateModifier = useCallback((e: React.MouseEvent) => {
@@ -749,6 +756,7 @@ export function FlowCanvas({
                                     rename: handleRename,
                                     duplicateAndGrab: () => { },
                                     copyToClipboard,
+                                    cutSelected: () => { if (isReadOnly) return; cutSelected(); },
                                     detachSelected,
                                     deleteSelected,
                                     viewSpecs: () => { },
@@ -787,6 +795,7 @@ export function FlowCanvas({
                                             if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes);
                                         },
                                         copyToClipboard,
+                                        cutSelected: () => { if (isReadOnly) return; cutSelected(); },
                                         detachSelected,
                                         deleteSelected,
                                         traceUpstream: () => {

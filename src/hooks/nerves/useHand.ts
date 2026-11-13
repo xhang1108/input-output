@@ -5,7 +5,6 @@ import { Brain } from '../../engine/Brain';
 import { useBrain } from '../../context/BrainContext';
 import { Transaction } from '../../engine/types/engineTypes';
 import { useHistoryStore, InteractionMode as HistoryMode } from '../../store/useHistoryStore';
-import { useClipboard } from '../useClipboard';
 import { useSelection } from '../useSelection';
 import { useKnife } from '../useKnife';
 import { useAppStore } from '../../store/useStore';
@@ -38,7 +37,6 @@ export function useHand(opts?: { snap?: boolean }) {
     }, [_setMode, setInteractionMode]);
 
     // --- Composed Hooks ---
-    const { duplicateSelected, copyToClipboard, pasteFromClipboard } = useClipboard();
     const {
         deleteSelected, resetSelected,
         detachSelected, swapConnections,
@@ -807,10 +805,7 @@ export function useHand(opts?: { snap?: boolean }) {
         startRotate,
         confirmGrab,
         cancelGrab,
-        duplicateSelected,
 
-        copyToClipboard,
-        pasteFromClipboard,
         deleteSelected,
         resetSelected,
         swapConnections,

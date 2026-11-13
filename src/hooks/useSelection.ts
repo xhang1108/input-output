@@ -32,7 +32,11 @@ export function useSelection() {
             type: node.type,
             position: { ...node.position },
             data: { ...node.data },
-            selected: node.selected
+            selected: node.selected,
+            // Structure fidelity: without these, undo drops Frame parenting and sizes.
+            parentId: node.parentId,
+            width: node.width,
+            height: node.height,
         }));
 
         const edgesToRemove = edges.filter(e => selectedIds.has(e.source) || selectedIds.has(e.target));
@@ -42,12 +46,13 @@ export function useSelection() {
         ];
 
         const inverse: Transaction[] = [
-            ...nodesToRemove.map(n => ({ type: 'ADD_NODE' as const, payload: { ...n } })),
+            ...nodesToRemove.map(n => ({ type: 'ADD_NODE' as const, payload: { ...n, initialValue: n.data?.value } })),
             ...edgesToRemove.map(e => ({ type: 'CONNECT' as const, payload: { ...e } }))
         ];
 
-        brain.applyTransaction({ type: 'BATCH', payload: forward });
-        
+        const res = brain.applyTransaction({ type: 'BATCH', payload: forward });
+        if (!res.success) return;
+
         pushHistory({
             id: `delete_${Date.now()}`,
             description: `Delete ${selectedIds.size} item(s)`,
@@ -74,7 +79,8 @@ export function useSelection() {
         });
 
         if (forward.length > 0) {
-            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            const res = brain.applyTransaction({ type: 'BATCH', payload: forward });
+            if (!res.success) return;
             // Let useBrainUpdates handle UI sync
 
             pushHistory({
@@ -118,7 +124,8 @@ export function useSelection() {
                 payload: { ...e }
             }));
 
-            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            const res = brain.applyTransaction({ type: 'BATCH', payload: forward });
+            if (!res.success) return;
             // Let useBrainUpdates handle UI sync to avoid duplicate key errors
 
             pushHistory({
@@ -189,7 +196,8 @@ export function useSelection() {
         });
 
         if (forward.length > 0) {
-            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            const res = brain.applyTransaction({ type: 'BATCH', payload: forward });
+            if (!res.success) return;
             // Let useBrainUpdates handle UI sync to avoid duplicate key errors
 
             pushHistory({
@@ -228,7 +236,8 @@ export function useSelection() {
         });
 
         if (forward.length > 0) {
-            brain.applyTransaction({ type: 'BATCH', payload: forward });
+            const res = brain.applyTransaction({ type: 'BATCH', payload: forward });
+            if (!res.success) return;
             // Let useBrainUpdates handle UI sync to avoid duplicate key errors
 
             pushHistory({
