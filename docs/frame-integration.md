@@ -21,7 +21,7 @@
 
 ## 0.1 實作進度（2026-11-14，branch `copy-paste`）
 
-**主線已完成**：P0 座標治根、P0.5 資料/鍵盤、P1 frame 核心、P2 下游整合、P2.1 IOGL。`npx tsc --noEmit` 只剩 4 個既有 `brain.worker.ts` 的 `importScripts`；`npm run test:run` 為 `78 files / 513 tests passed`。
+**主線已完成**：P0 座標治根、P0.5 資料/鍵盤、P1 frame 核心、P2 下游整合、P2.1 IOGL、§6.2 回歸。`npx tsc --noEmit` 只剩 4 個既有 `brain.worker.ts` 的 `importScripts`；`npm run test:run` 為 `83 files / 554 passed / 1 todo`。
 
 | 階段 | 內容 | commit |
 |---|---|---|
@@ -31,7 +31,8 @@
 | P1 | FrameNode、`F` group/ungroup、attach、edge-only 選取、context-menu Detach、manual resize、RO 迴圈修正 | `2bf64ae`…`9dcdf91` |
 | P2 | layout（frame 當 block + 框內 local pass）、clipboard 連帶 descendants、NPanel history 合併 | `0ac3fe8`、`f10252f`、`f45b112` |
 | P2.1 | IOGL `FRAME` + `{parent:"label"}`、parser diagnostics、docs | `b3aedd9` |
-| 測試 | 存檔/載入 round-trip、layout policy、clipboard、IOGL round-trip | `79ba8a0` 等 |
+| 收尾 | hierarchy sanitize + attach 驗證、read-only 選單守衛、parent-first delete/undo、dead CSS 清除 | `85c64b9`、`d866eff`、`102e380`、`bf44960` |
+| 測試 | 存檔/載入、layout policy、clipboard、IOGL、attach/transform/guards | `79ba8a0`、`bf44960` |
 
 **已手動驗證**（使用者確認）：
 
@@ -40,11 +41,13 @@
 - 右鍵 `Detach from Frame`、Undo 可掛回。
 - auto-layout：全域 frame 當 block 一起移動；選 frame 排框內；只選 children 排框內。
 
-**還沒做（明天從這裡開始）**：
+**收尾狀態（同日完成）**：
 
-1. §6.2 尚未自動化的回歸：`useHand` frame 內 SCALE/ROTATE、attach 的 absolute→relative/clamp/最小面積、`Backspace` 不雙重刪除、depth sort、read-only 守衛。
-2. `validateHierarchy` 目前只有 helper + 單元測試，**尚未接進 attach / 載入路徑**；實務上由 `useHand.ts:616`（排除 frame 與已有 parent 的節點）擋住，屬補強而非修 bug。
-3. 明確不做：巢狀 frame、`Fit to contents` 按鈕、拖出框自動 detach。
+1. §6.2 回歸已自動化：`tests/unit/hooks/useHand.frames.test.ts`（attach math、最框選擇、partial overlap、scale/rotate absolute、undo parent）、`tests/unit/hooks/frameGuards.test.ts`（Backspace 所有權、read-only context menu、depth ordering、delete 順序）。`npm run test:run` 為 `83 files / 554 passed / 1 todo`。
+2. `validateHierarchy` 已接進 attach 與載入：`injectNodes` 用 `sanitizeHierarchy` 把孤兒/self-parent/cycle/depth>1 轉 world + 清 `parentId`，回 diagnostic；attach 只接受 root frame 並驗證 proposed hierarchy。commit `85c64b9`。
+3. Read-only 的 context-menu 路徑已補守衛；delete 改 children-first、history restore 後 `sortParentFirst`。commit `d866eff`。
+4. 剩下 1 個 `it.todo`：把 read-only 守衛下移到 `useFrameActions` / `useSelection` 本身（目前靠呼叫端，所有 UI 入口已覆蓋）。
+5. 明確不做：巢狀 frame、`Fit to contents` 按鈕、拖出框自動 detach。
 
 ---
 
@@ -467,6 +470,8 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 15. IOGL 匯出 → 匯入：frame、children、相對位置全部保留（`b3aedd9`；自動測試覆蓋）。
 
 ### 6.2 單元 / 整合測試
+
+> 狀態（2026-11-14）：以下除「read-only 守衛下移到 hook」1 個 `it.todo` 外，均已有自動測試；總數 `83 files / 554 passed / 1 todo`。
 
 - `src/utils/coordinates.ts`：1/2/3 層、負座標、orphan、cycle、self-parent、`toParentLocal(toAbsolute())` round-trip、reparent 拒絕條件、orphan 子樹 parent-first。
 - `Brain.getAbsolutePosition` 與 util 對隨機樹（含巢狀）結果一致。
