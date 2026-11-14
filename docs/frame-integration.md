@@ -44,8 +44,7 @@
 
 1. §6.2 尚未自動化的回歸：`useHand` frame 內 SCALE/ROTATE、attach 的 absolute→relative/clamp/最小面積、`Backspace` 不雙重刪除、depth sort、read-only 守衛。
 2. `validateHierarchy` 目前只有 helper + 單元測試，**尚未接進 attach / 載入路徑**；實務上由 `useHand.ts:616`（排除 frame 與已有 parent 的節點）擋住，屬補強而非修 bug。
-3. `globals.css` 的 `.frame-resize-line` / `.frame-resize-handle` 仍是 dead CSS。
-4. 明確不做：巢狀 frame、`Fit to contents` 按鈕、拖出框自動 detach。
+3. 明確不做：巢狀 frame、`Fit to contents` 按鈕、拖出框自動 detach。
 
 ---
 
@@ -109,7 +108,7 @@ position: {
 | `initialParentIds`、nesting guard、frames stub | `useHand.ts:50,335,474-483,543` |
 | clipboard 已是 parent-aware（DEC-6 B） | `clipboardMath.ts:8-24,120-160` |
 | engine 的 `frame` no-op evaluator | `engine/nodes/utilityNodes.ts:27-30` |
-| frame CSS（`.frame-resize-*` 是 dead CSS） | `app/globals.css:338-407` |
+| frame CSS（`.frame-node` / `.frame-node__*` / `.react-flow__node-frame`；`.frame-resize-*` 已移除） | `app/globals.css:338-423` |
 | `F` 快捷鍵條目、StatusBar 文案（兩者 label 不一致） | `constants/shortcuts.ts:76-82`、`ui/StatusBar.tsx:61` |
 | 測試白名單已含 `frame`（今日 inert，frame 進 `nodeTypes` 後才有意義） | `tests/unit/engine/RegistryStability.test.ts:24` |
 
@@ -209,7 +208,7 @@ position: {
 
 - 新檔 `src/components/nodes/FrameNode.tsx`：
   - 無 Handle；`width/height: 100%`；label；selected 樣式用 `data-selected`。
-  - resize 用**我們既有**的 `ResizeHandle` + `useFlexibleResize`（會走 `RESIZE_NODE`，有 undo），不要用官方 `NodeResizer`（只改 RF store）。注意 `.frame-resize-line` / `.frame-resize-handle`（`globals.css:388-407`）是 dead CSS，`ResizeHandle` 用的是 Tailwind class，不要期待現成樣式。拖曳中只改 `.frame-node` 的 inline `width/height`，放手才 `setNodes` + `RESIZE_NODE`：RF 的 node wrapper 由 `ResizeObserver` 量測，若每一格 pointermove 都改 wrapper 尺寸，瀏覽器會報 `ResizeObserver loop completed with undelivered notifications`。
+  - resize 用**我們既有**的 `ResizeHandle` + `useFlexibleResize`（會走 `RESIZE_NODE`，有 undo），不要用官方 `NodeResizer`（只改 RF store）。注意 `.frame-resize-line` / `.frame-resize-handle` 原本是 dead CSS，已於 2026-11-14 移除；`ResizeHandle` 用的是 Tailwind class，不要期待現成樣式。拖曳中只改 `.frame-node` 的 inline `width/height`，放手才 `setNodes` + `RESIZE_NODE`：RF 的 node wrapper 由 `ResizeObserver` 量測，若每一格 pointermove 都改 wrapper 尺寸，瀏覽器會報 `ResizeObserver loop completed with undelivered notifications`。
   - 手動 resize 的動態最小值 = children 的右/下最外緣（相對 frame 原點，不加 padding）；沒有 children 時用 `minWidth: 200 / minHeight: 120`。這樣 children 不會被 resize 擠出框，也不需要「resize 時反推 children」。`useFlexibleResize` 沒有 min prop，min 要在 `FrameNode` 的 `onResize` / `onResizeEnd` clamp。
   - **auto-fit 是 live、expand-only**：拖曳 child 出框時即時長大（含左上/右下），拖回不自動縮。**不提供** `Fit to contents` toolbar 按鈕。
   - 沒有 `NodeToolbar`；`Detach from Frame` 在 node context menu（僅 `parentId` 存在時顯示）。

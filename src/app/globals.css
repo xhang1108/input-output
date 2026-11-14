@@ -422,28 +422,6 @@ input[type="range"]::-moz-range-thumb:hover {
   width: 20px;
 }
 
-/* Frame resize controls */
-.frame-resize-line {
-  border-color: transparent !important;
-}
-
-.frame-node[data-selected="true"] .frame-resize-line {
-  border-color: hsl(0, 0%, 45%) !important;
-}
-
-.frame-resize-handle {
-  width: 8px !important;
-  height: 8px !important;
-  border-radius: var(--radius-sm) !important;
-  background: hsl(0, 0%, 35%) !important;
-  border: 1px solid hsl(0, 0%, 50%) !important;
-  transition: background 0.15s ease;
-}
-
-.frame-resize-handle:hover {
-  background: hsl(0, 0%, 60%) !important;
-}
-
 /* ───────────────────────────────────────
    § Edge & Connection Styles
    ─────────────────────────────────────── */
