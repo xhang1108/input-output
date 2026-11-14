@@ -543,7 +543,7 @@ export function FlowCanvas({
                 e.preventDefault();
                 const duplicated = duplicateSelected();
                 if (duplicated) {
-                    startGrab(mousePosRef.current, false, duplicated.nodes, true);
+                    startGrab(mousePosRef.current, false, duplicated.nodes, true, undefined, duplicated.entryId);
                     logAction('Duplicate Selected (Shift+D)');
                 }
             }),
@@ -863,7 +863,7 @@ export function FlowCanvas({
                                         duplicateAndGrab: () => {
                                             if (isReadOnly) return;
                                             const duplicated = duplicateSelected();
-                                            if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes);
+                                            if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes, false, undefined, duplicated.entryId);
                                         },
                                         copyToClipboard,
                                         cutSelected: () => { if (isReadOnly) return; cutSelected(); },

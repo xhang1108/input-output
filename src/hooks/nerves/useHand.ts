@@ -63,6 +63,9 @@ export function useHand(opts?: { snap?: boolean; isReadOnly?: boolean }) {
     const centerRef = useRef<XYPosition | null>(null);
     const [axisLock, setAxisLock] = useState<'X' | 'Y' | null>(null);
     const lastCancelTimestamp = useRef<number>(0);
+    // Duplicate (Shift+D) already pushed its own entry; the placement move must
+    // fold into it so one undo returns to the pre-duplicate state.
+    const grabMergeHistoryId = useRef<string | null>(null);
 
     // Numeric Transform Buffer
     const [transformBuffer, setTransformBuffer] = useState<string>('');
@@ -388,7 +391,8 @@ export function useHand(opts?: { snap?: boolean; isReadOnly?: boolean }) {
 
 
     // --- Interaction Triggers ---
-    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[], isExplicit: boolean = false, targetId?: string) => {
+    const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[], isExplicit: boolean = false, targetId?: string, mergeHistoryId?: string) => {
+        grabMergeHistoryId.current = mergeHistoryId ?? null;
         const liveNodes = getNodes();
         // Duplicate (Shift+D) hands us nodes that the React Flow store has not
         // projected yet (the Brain transaction is still in flight). They must be
@@ -601,6 +605,7 @@ export function useHand(opts?: { snap?: boolean; isReadOnly?: boolean }) {
 
         if (movedNodeIds.size === 0 && !frameSnapshotChanged) {
             console.log(`[Hand] confirmGrab: No nodes moved significantly.`);
+            grabMergeHistoryId.current = null;
             setMode('IDLE');
             initialPositions.current.clear();
             initialParentIds.current.clear();
@@ -802,13 +807,36 @@ export function useHand(opts?: { snap?: boolean; isReadOnly?: boolean }) {
             });
 
             const inverse = frameChanged ? [...frameInverse, ...invTxs] : invTxs;
-            console.log(`[Hand] Pushing history: Transform ${forward.length} items`, { forward, inverse });
-            pushHistory({
-                id: `transform_${Date.now()}`,
-                description: `Transform ${forward.length} items`,
-                forward,
-                inverse
-            });
+
+            // Shift+D: the duplicate entry is the gesture's first half. Fold the
+            // placement into it so one undo removes the copies and restores the
+            // frame/selection state from before the duplicate.
+            const mergeId = grabMergeHistoryId.current;
+            grabMergeHistoryId.current = null;
+            let merged = false;
+
+            if (mergeId) {
+                const store = useHistoryStore.getState();
+                const previous = store.past.at(-1);
+                if (previous && previous.id === mergeId) {
+                    store.replaceLast(mergeId, {
+                        ...previous,
+                        forward: [...previous.forward, ...forward],
+                        inverse: [...inverse, ...previous.inverse],
+                    });
+                    merged = true;
+                }
+            }
+
+            if (!merged) {
+                console.log(`[Hand] Pushing history: Transform ${forward.length} items`, { forward, inverse });
+                pushHistory({
+                    id: `transform_${Date.now()}`,
+                    description: `Transform ${forward.length} items`,
+                    forward,
+                    inverse
+                });
+            }
         }
 
         isResolvingRef.current = true;
@@ -835,6 +863,7 @@ export function useHand(opts?: { snap?: boolean; isReadOnly?: boolean }) {
         if (suppressMenu) {
             lastCancelTimestamp.current = Date.now();
         }
+        grabMergeHistoryId.current = null;
 
         const positionsToRestore = new Map(initialPositions.current);
         const frameSnapshotsToRestore = new Map(frameSnapshots.current);

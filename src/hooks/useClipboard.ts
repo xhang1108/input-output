@@ -48,7 +48,7 @@ export function useClipboard() {
     // positions, returns the new nodes so FlowCanvas can startGrab().
     // Uses the same planPaste pipeline as the clipboard so Frame children follow
     // the DEC-6 B rule instead of drifting inside their original frame.
-    const duplicateSelected = useCallback((): { nodes: Node[], edges: Edge[] } | false => {
+    const duplicateSelected = useCallback((): { nodes: Node[], edges: Edge[], entryId: string } | false => {
         const nodes = getNodes();
         // A selected frame brings its children, otherwise the duplicate would be
         // an empty frame and the children would be detached by DEC-6 B.
@@ -79,14 +79,15 @@ export function useClipboard() {
             return false;
         }
 
+        const entryId = `duplicate_${Date.now()}`;
         pushHistory({
-            id: `duplicate_${Date.now()}`,
+            id: entryId,
             description: `Duplicate ${plan.nodes.length} nodes`,
             forward: plan.forward,
             inverse: plan.inverse
         });
 
-        return { nodes: plan.nodes, edges: plan.edges };
+        return { nodes: plan.nodes, edges: plan.edges, entryId };
     }, [getNodes, getEdges, getSelectionWithDescendants, brain, pushHistory]);
 
     // --- Command: Copy to Clipboard ---
