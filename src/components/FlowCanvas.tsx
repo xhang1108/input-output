@@ -172,7 +172,7 @@ export function FlowCanvas({
     // Clipboard commands are owned here (not proxied through useHand) so copy,
     // cut and paste all share the same in-memory buffer instance.
     const { duplicateSelected, copyToClipboard, cutSelected, pasteFromClipboard } = useClipboard();
-    const { frameSelected, detachNode } = useFrameActions();
+    const { frameSelected, detachNode, fitFrame } = useFrameActions();
 
     // Marquee rule: frames are selected only when the marquee touches their
     // border. Selecting children entirely inside a frame must not move the frame.
@@ -857,6 +857,7 @@ export function FlowCanvas({
                                         cutSelected: () => { if (isReadOnly) return; cutSelected(); },
                                         detachSelected: () => { if (isReadOnly) return; detachSelected(); },
                                         detachFromFrame: () => { if (isReadOnly) return; if (node) detachNode(node.id); },
+                                        fitToFrame: () => { if (isReadOnly) return; if (node) fitFrame(node.id); },
                                         deleteSelected: () => { if (isReadOnly) return; deleteSelected(); },
                                         traceUpstream: () => {
                                             const targetId = contextMenu.nodeId || getNodes().find(n => n.selected)?.id;
@@ -879,7 +880,7 @@ export function FlowCanvas({
                                             if (selected.length > 0) logAction(`Toggle Mute [${selected.length}] (Ctx)`);
                                         },
                                         logAction,
-                                    }, hasSpecs, !!node?.data?.muted, !!node?.parentId);
+                                    }, hasSpecs, !!node?.data?.muted, !!node?.parentId, node?.type === 'frame');
                                 })()
                             }
                         />

@@ -47,7 +47,8 @@
 2. `validateHierarchy` 已接進 attach 與載入：`injectNodes` 用 `sanitizeHierarchy` 把孤兒/self-parent/cycle/depth>1 轉 world + 清 `parentId`，回 diagnostic；attach 只接受 root frame 並驗證 proposed hierarchy。commit `85c64b9`。
 3. Read-only 的 context-menu 路徑已補守衛；delete 改 children-first、history restore 後 `sortParentFirst`。commit `d866eff`。
 4. 剩下 1 個 `it.todo`：把 read-only 守衛下移到 `useFrameActions` / `useSelection` 本身（目前靠呼叫端，所有 UI 入口已覆蓋）。
-5. 明確不做：巢狀 frame、`Fit to contents` 按鈕、拖出框自動 detach。
+5. `Fit to contents` 已實作（node context menu）：以 children bbox + padding 重算 frame 位置與尺寸（可放大也可縮小），children 世界座標不變，一次 undo。
+6. 明確不做：巢狀 frame、拖出框自動 detach。
 
 ---
 
@@ -213,7 +214,7 @@ position: {
   - 無 Handle；`width/height: 100%`；label；selected 樣式用 `data-selected`。
   - resize 用**我們既有**的 `ResizeHandle` + `useFlexibleResize`（會走 `RESIZE_NODE`，有 undo），不要用官方 `NodeResizer`（只改 RF store）。注意 `.frame-resize-line` / `.frame-resize-handle` 原本是 dead CSS，已於 2026-11-14 移除；`ResizeHandle` 用的是 Tailwind class，不要期待現成樣式。拖曳中只改 `.frame-node` 的 inline `width/height`，放手才 `setNodes` + `RESIZE_NODE`：RF 的 node wrapper 由 `ResizeObserver` 量測，若每一格 pointermove 都改 wrapper 尺寸，瀏覽器會報 `ResizeObserver loop completed with undelivered notifications`。
   - 手動 resize 的動態最小值 = children 的右/下最外緣（相對 frame 原點，不加 padding）；沒有 children 時用 `minWidth: 200 / minHeight: 120`。這樣 children 不會被 resize 擠出框，也不需要「resize 時反推 children」。`useFlexibleResize` 沒有 min prop，min 要在 `FrameNode` 的 `onResize` / `onResizeEnd` clamp。
-  - **auto-fit 是 live、expand-only**：拖曳 child 出框時即時長大（含左上/右下），拖回不自動縮。**不提供** `Fit to contents` toolbar 按鈕。
+  - **auto-fit 是 live、expand-only**：拖曳 child 出框時即時長大（含左上/右下），拖回不自動縮。要主動貼合內容用 node context menu 的 **Fit to contents**（可放大也可縮小，children 世界座標不變）。沒有 toolbar 按鈕。
   - 沒有 `NodeToolbar`；`Detach from Frame` 在 node context menu（僅 `parentId` 存在時顯示）。
 - `nodeTypes` 加 `frame`（`constants/nodeTypeMap.ts:55-124`）。
 - `NODE_DEFINITIONS` 加 `frame`：`minWidth: 200`、`minHeight: 120`、category Utility、`defaultData.label`。
@@ -434,7 +435,7 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 | # | 犧牲 | 影響 | 嚴重度 | 替代 |
 |---|---|---|---|---|
 | 1 | 拖出框自動 detach | 拖出框不 clamp：frame 會即時擴張；要 detach 得用 context menu / `F` | 中 | context menu + `F` ungroup |
-| 2 | 自動縮小 / `Fit to contents` | 不做；frame 只會在需要時變大，手動 resize 可縮到內容外緣 | 低 | 已拍板不做獨立 Fit 按鈕 |
+| 2 | drag 出框不會自動縮 | live 擴張只在需要時變大；要縮成內容大小需用 context menu `Fit to contents` | 低 | 已提供 Fit（可放大/縮小） |
 | 3 | frame 巢狀 | 已決定單層；frame-in-frame 直接拒絕 | 中 | 未來 depth-aware 全鏈路再開 |
 | 4 | RF 原生拖曳 / `extent` / `expandParent` | 不能直接用官方 `onNodeDrag*`；containment 自己算 | 中 | 保留 `useHand` 的 snap / axis lock / autopan |
 | 5 | 扁平 layout 假設 | 世界 pass 把 frame 當 block；選 children 時走 frame 內 local pass | 中 | 若還要巢狀 frame，再上 ELK hierarchy |
@@ -465,7 +466,7 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 10. Read-only：不能 group/ungroup/detach/delete。
 11. frame + child 一起選取拖曳：child 只位移 1×，放手後 Brain 只更新 frame。
 12. frame 內 child 做 SCALE/ROTATE：視覺位置不跳，absolute 不變。
-13. `Fit to contents`：**不做**（已拍板）；手動 resize 的最小尺寸已等於內容外緣。
+13. `Fit to contents`：右鍵 frame → Fit to contents；frame 貼合 children（可放大/縮小），children 世界座標不變，undo 還原尺寸與位置。
 14. 把 frame 拖進另一個 frame：**已實作拒絕**（attach 只接受 root、非 frame 節點；`useHand.ts:616`）。
 15. IOGL 匯出 → 匯入：frame、children、相對位置全部保留（`b3aedd9`；自動測試覆蓋）。
 
@@ -513,7 +514,7 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 
 1. **拖出框**：不 clamp；frame 即時擴張（expand-only）。Detach 走 node context menu 或 `F`/ungroup。
 2. **刪 frame**：不 cascade。children 轉 independent（absolute + 清 `parentId`），frame 單獨移除；undo 需還原 frame 與親子關係。
-3. **frame 尺寸**：手動 resize（最小 = 內容外緣）+ **live、expand-only** auto-expand。拖回不自動縮；沒有 `Fit to contents` 按鈕。
+3. **frame 尺寸**：手動 resize（最小 = 內容外緣）+ **live、expand-only** auto-expand；要貼合內容用 context menu 的 `Fit to contents`（可放大/縮小）。沒有 toolbar 按鈕。
 4. **巢狀**：只做單層（root frame + direct children）。frame-in-frame、child 當 parent 一律拒絕。
 5. **IOGL**：已用 `FRAME` 宣告 + `{parent: "frame label"}` 屬性實作（`b3aedd9`），不改 block 語法。詳見 §4 P2.1。
 

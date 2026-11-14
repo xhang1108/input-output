@@ -172,4 +172,56 @@ describe('useFrameActions', () => {
         const inverse = entry.inverse.find(tx => tx.type === 'MOVE_NODE')!;
         expect(inverse.payload).toEqual({ id: 'c1', position: { x: 10, y: 10 }, parentId: 'f1' });
     });
+
+    it('fits a frame to its children and keeps their world position', () => {
+        nodes = [
+            makeNode('f1', 100, 100, { type: 'frame', selected: false, width: 600, height: 500 }),
+            makeNode('c1', 200, 200, { parentId: 'f1', width: 100, height: 50 }),
+        ];
+
+        const { result } = renderHook(() => useFrameActions());
+        let fitted = false;
+        act(() => {
+            fitted = result.current.fitFrame('f1');
+        });
+
+        expect(fitted).toBe(true);
+        const batch = mocks.applyTransaction.mock.calls[0][0] as {
+            type: string;
+            payload: Array<{ type: string; payload: any }>;
+        };
+        expect(batch.type).toBe('BATCH');
+        expect(batch.payload).toEqual(expect.arrayContaining([
+            { type: 'MOVE_NODE', payload: { id: 'f1', position: { x: 268, y: 260 } } },
+            { type: 'RESIZE_NODE', payload: { id: 'f1', width: 200, height: 122 } },
+            { type: 'MOVE_NODE', payload: { id: 'c1', position: { x: 32, y: 40 } } },
+        ]));
+
+        const entry = mocks.push.mock.calls[0][0] as {
+            forward: Array<{ type: string; payload: any }>;
+            inverse: Array<{ type: string; payload: any }>;
+        };
+        expect(entry.inverse).toEqual(expect.arrayContaining([
+            { type: 'MOVE_NODE', payload: { id: 'f1', position: { x: 100, y: 100 } } },
+            { type: 'RESIZE_NODE', payload: { id: 'f1', width: 600, height: 500 } },
+            { type: 'MOVE_NODE', payload: { id: 'c1', position: { x: 200, y: 200 } } },
+        ]));
+    });
+
+    it('does not record history when the frame already fits', () => {
+        nodes = [
+            makeNode('f1', 268, 260, { type: 'frame', selected: false, width: 200, height: 122 }),
+            makeNode('c1', 32, 40, { parentId: 'f1', width: 100, height: 50 }),
+        ];
+
+        const { result } = renderHook(() => useFrameActions());
+        let fitted = true;
+        act(() => {
+            fitted = result.current.fitFrame('f1');
+        });
+
+        expect(fitted).toBe(false);
+        expect(mocks.applyTransaction).not.toHaveBeenCalled();
+        expect(mocks.push).not.toHaveBeenCalled();
+    });
 });

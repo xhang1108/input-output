@@ -18,6 +18,7 @@ export interface ContextMenuActions {
     cutSelected: () => void;
     detachSelected: () => void;
     detachFromFrame?: () => void;
+    fitToFrame?: () => void;
     deleteSelected: () => void;
     viewSpecs: () => void;
     traceUpstream: () => void;
@@ -35,7 +36,7 @@ export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: nu
     ];
 }
 
-export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean = false, isMuted: boolean = false, hasParent: boolean = false): ContextMenuItemDef[] {
+export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean = false, isMuted: boolean = false, hasParent: boolean = false, isFrame: boolean = false): ContextMenuItemDef[] {
     const items: ContextMenuItemDef[] = [
         { label: 'Rename', shortcut: 'Enter', action: () => actions.rename() },
         { label: isMuted ? 'Unmute' : 'Mute', shortcut: 'M', action: () => actions.toggleMute() },
@@ -48,6 +49,10 @@ export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean 
 
     if (hasParent && actions.detachFromFrame) {
         items.push({ label: 'Detach from Frame', action: () => actions.detachFromFrame!() });
+    }
+
+    if (isFrame && actions.fitToFrame) {
+        items.push({ label: 'Fit to contents', action: () => actions.fitToFrame!() });
     }
 
     items.push(

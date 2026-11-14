@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@xyflow/react';
-import { expandFrameToFitChildren, getFrameMinSize } from '@/utils/frameGeometry';
+import { expandFrameToFitChildren, fitFrameToContents, getFrameMinSize } from '@/utils/frameGeometry';
 
 function frame(x: number, y: number, width: number, height: number): Node {
     return {
@@ -96,6 +96,46 @@ describe('frameGeometry.expandFrameToFitChildren', () => {
 
         expect(f.width).toBe(252); // 170 + 50 + 32
         expect(f.height).toBe(162); // 80 + 50 + 32
+    });
+});
+
+describe('frameGeometry.fitFrameToContents', () => {
+    it('shrinks and grows around the children, keeping their world positions', () => {
+        const nodes = [
+            frame(100, 100, 600, 500),
+            child('c1', 200, 200),
+        ];
+
+        const result = fitFrameToContents(nodes, 'f1');
+        expect(result.changed).toBe(true);
+
+        const f = result.nodes.find(n => n.id === 'f1')!;
+        const c1 = result.nodes.find(n => n.id === 'c1')!;
+
+        // child world = 300,300; size 50x50.
+        expect(f.position).toEqual({ x: 268, y: 260 }); // 300 - 32 / 300 - 40
+        expect(f.width).toBe(200);   // 50 + 64, clamped to the 200 minimum
+        expect(f.height).toBe(122);  // 50 + 40 + 32
+        expect(c1.position).toEqual({ x: 32, y: 40 });
+
+        // Absolute position is unchanged (world 300,300).
+        expect({ x: f.position.x + c1.position.x, y: f.position.y + c1.position.y })
+            .toEqual({ x: 300, y: 300 });
+    });
+
+    it('is a no-op when the frame already fits its content', () => {
+        const nodes = [
+            frame(268, 260, 200, 122),
+            child('c1', 32, 40),
+        ];
+
+        expect(fitFrameToContents(nodes, 'f1')).toEqual({ nodes, changed: false });
+    });
+
+    it('ignores a frame without children or a missing frame', () => {
+        const empty = [frame(0, 0, 300, 300)];
+        expect(fitFrameToContents(empty, 'f1')).toEqual({ nodes: empty, changed: false });
+        expect(fitFrameToContents([], 'ghost')).toEqual({ nodes: [], changed: false });
     });
 });
 

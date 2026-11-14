@@ -7,6 +7,7 @@ import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
 import { generateNodeId } from '../utils/idGenerator';
 import { getEffectiveRoots, indexNodes, toAbsolute } from '../utils/coordinates';
+import { fitFrameToContents as computeFittedFrame } from '../utils/frameGeometry';
 
 const FRAME_PADDING = 32;
 const FRAME_TOP_PADDING = 40;
@@ -214,5 +215,53 @@ export function useFrameActions() {
         return true;
     }, [getNodes, brain, pushHistory]);
 
-    return { frameSelected, detachNode };
+    /**
+     * Shrink or grow a frame around its children. Children keep their world
+     * position: when the frame origin moves, their parent-local coordinates are
+     * rewritten in the same batch, so this is one undo step.
+     */
+    const fitFrame = useCallback((frameId: string) => {
+        const nodes = getNodes();
+        const result = computeFittedFrame(nodes, frameId);
+        if (!result.changed) return false;
+
+        const beforeById = new Map(nodes.map(n => [n.id, n]));
+        const forward: Transaction[] = [];
+        const inverse: Transaction[] = [];
+
+        for (const after of result.nodes) {
+            const before = beforeById.get(after.id);
+            if (!before || after === before) continue;
+
+            if (Math.abs(after.position.x - before.position.x) > 0.5 ||
+                Math.abs(after.position.y - before.position.y) > 0.5) {
+                forward.push({ type: 'MOVE_NODE', payload: { id: after.id, position: { ...after.position } } });
+                inverse.push({ type: 'MOVE_NODE', payload: { id: before.id, position: { ...before.position } } });
+            }
+
+            const beforeW = before.width ?? (before.data?.width as number);
+            const beforeH = before.height ?? (before.data?.height as number);
+            const afterW = after.width ?? (after.data?.width as number);
+            const afterH = after.height ?? (after.data?.height as number);
+            if ((afterW ?? 0) !== (beforeW ?? 0) || (afterH ?? 0) !== (beforeH ?? 0)) {
+                forward.push({ type: 'RESIZE_NODE', payload: { id: after.id, width: afterW, height: afterH } });
+                inverse.push({ type: 'RESIZE_NODE', payload: { id: before.id, width: beforeW, height: beforeH } });
+            }
+        }
+
+        if (forward.length === 0) return false;
+
+        const apply = brain.applyTransaction({ type: 'BATCH', payload: forward });
+        if (!apply.success) return false;
+
+        pushHistory({
+            id: `fit_frame_${Date.now()}`,
+            description: 'Fit frame to contents',
+            forward,
+            inverse,
+        });
+        return true;
+    }, [getNodes, brain, pushHistory]);
+
+    return { frameSelected, detachNode, fitFrame };
 }
