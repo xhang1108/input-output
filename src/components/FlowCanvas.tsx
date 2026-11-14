@@ -31,6 +31,7 @@ import { useHand } from '../hooks/nerves/useHand';
 import { useClipboard } from '../hooks/useClipboard';
 import { useFrameActions } from '../hooks/useFrameActions';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
+import { useNodeEdit } from '../hooks/useNodeEdit';
 import { clearHistoryForNewProject } from '../utils/historyLifecycle';
 import { getEarShortcuts, Platform } from '@/constants/shortcuts';
 import { getFrameRect, selectionTouchesFrameBorder } from '../utils/frameSelection';
@@ -136,6 +137,7 @@ export function FlowCanvas({
 
     const isRestoring = useHistoryStore(s => s.isRestoring);
     const pushHistory = useHistoryStore(s => s.push);
+    const nodeEdit = useNodeEdit({ isReadOnly });
     const { undo, redo, canUndo, canRedo } = useHistoryExecutor({ isReadOnly });
 
     const { focusOn, resetView } = useEye();
@@ -583,13 +585,10 @@ export function FlowCanvas({
                 if (active === 'INPUT' || active === 'TEXTAREA') return;
 
                 const selected = getNodes().filter(n => n.selected);
-                selected.forEach(node => {
-                    const isMuted = !!node.data?.muted;
-                    brain.applyTransaction({
-                        type: 'UPDATE_NODE_DATA',
-                        payload: { id: node.id, data: { muted: !isMuted } }
-                    });
-                });
+                nodeEdit.editNodesData(
+                    selected.map(n => ({ id: n.id, patch: { muted: !n.data?.muted } })),
+                    { description: 'Toggle Mute' }
+                );
                 if (selected.length > 0) logAction(`Toggle Mute [${selected.length}] (M)`);
             }),
             'y': () => { if (mode === 'GRABBING' || mode === 'SCALING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
@@ -649,7 +648,7 @@ export function FlowCanvas({
             },
         }),
         deps: [handleUndo, handleRedo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, frameSelected,
-           copyToClipboard, cutSelected, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes]
+           copyToClipboard, cutSelected, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes, nodeEdit]
     });
 
     const updateModifier = useCallback((e: React.MouseEvent) => {
@@ -883,13 +882,10 @@ export function FlowCanvas({
                                         toggleMute: () => {
                                             if (isReadOnly) return;
                                             const selected = getNodes().filter(n => n.selected);
-                                            selected.forEach(node => {
-                                                const isMuted = !!node.data?.muted;
-                                                brain.applyTransaction({
-                                                    type: 'UPDATE_NODE_DATA',
-                                                    payload: { id: node.id, data: { muted: !isMuted } }
-                                                });
-                                            });
+                                            nodeEdit.editNodesData(
+                                                selected.map(n => ({ id: n.id, patch: { muted: !n.data?.muted } })),
+                                                { description: 'Toggle Mute' }
+                                            );
                                             if (selected.length > 0) logAction(`Toggle Mute [${selected.length}] (Ctx)`);
                                         },
                                         logAction,

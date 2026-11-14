@@ -149,6 +149,7 @@ export function Body({
             <NPanel
                 isOpen={showNPanel}
                 onClose={() => setShowNPanel(false)}
+                isReadOnly={isReadOnly}
             />
 
             {showPalette && (

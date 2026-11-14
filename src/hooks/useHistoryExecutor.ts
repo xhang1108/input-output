@@ -100,7 +100,13 @@ export const computeNextState = (
                 });
                 break;
             }
-            case 'UPDATE_VALUE':
+            case 'UPDATE_VALUE': {
+                const p = tx.payload as { id: string; value: unknown };
+                nextNodes = nextNodes.map(node => node.id !== p.id
+                    ? node
+                    : { ...node, data: { ...node.data, value: p.value } });
+                break;
+            }
             case 'RESIZE_NODE':
             case 'UPDATE_NODE_DATA': {
                 const p = tx.payload as any;

@@ -11,12 +11,15 @@ import { StringInput } from '../common/StringInput';
 import { NumericInput } from '../common/NumericInput';
 import { CategorizedMenu, CategorizedMenuItem } from './CategorizedMenu';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
+import { useNodeEdit } from '../../hooks/useNodeEdit';
 import { Transaction } from '../../engine/types/engineTypes';
 import { useHistoryStore } from '../../store/useHistoryStore';
 import { indexNodes, toAbsolute } from '../../utils/coordinates';
 
 /** Burst window for collapsing repeated position edits into one undo step. */
 const MOVE_HISTORY_MERGE_MS = 800;
+/** Same burst window for repeated edits of one settings field. */
+const FIELD_HISTORY_MERGE_MS = 800;
 
 // ─── Atomic Field Components ──────────────────────────────────────────────────
 
@@ -253,11 +256,12 @@ function SettingsSection({
 
 // ─── Main N Panel ─────────────────────────────────────────────────────────────
 
-export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function NPanel({ isOpen, onClose, isReadOnly = false }: { isOpen: boolean; onClose: () => void; isReadOnly?: boolean }) {
     const { setNodes, updateNodeData } = useReactFlow();
     const brain = useBrain();
     const pushHistory = useHistoryStore(s => s.push);
     const replaceLastHistory = useHistoryStore(s => s.replaceLast);
+    const nodeEdit = useNodeEdit({ isReadOnly });
 
     // Consecutive edits of the same position field collapse into one history
     // entry, so undo returns to the value before typing started instead of
@@ -283,33 +287,39 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         ? NODE_DEFINITIONS.find(d => d.id === selectedNode.type)
         : null;
 
-    // Unified data change handler — updates React Flow state AND Brain
+    // Unified data change handler — records history AND updates React Flow state.
+    // 'value' is owned by the Brain as a rich Payload, so it goes through
+    // UPDATE_VALUE and is never written back through updateNodeData.
     const handleDataChange = useCallback((key: string, value: unknown) => {
-        if (!selectedNode) return;
+        if (!selectedNode || isReadOnly) return;
 
-        // 1. Update React Flow state immediately
-        // SPECIAL CASE: 'value' is managed strictly by the Brain as a rich Payload object.
-        // We skip updateNodeData for 'value' to match the behavior of on-canvas nodes (e.g. InputNode).
-        // This ensures the structure doesn't flicker between primitive and object.
-        // For other metadata (min, max, label), we update immediately for UI responsiveness.
-        if (key !== 'value') {
-            updateNodeData(selectedNode.id, { [key]: value });
-        }
+        const mergeId = `npanel-${selectedNode.id}-${key}`;
 
-        // 2. Specialized Brain Sync
         if (key === 'value') {
-            brain.applyTransaction({
-                type: 'UPDATE_VALUE',
-                payload: { id: selectedNode.id, value }
+            nodeEdit.editNodeValue(selectedNode.id, value, {
+                description: `Edit ${key}`,
+                mergeId,
+                mergeWindowMs: FIELD_HISTORY_MERGE_MS,
             });
+            return;
         }
-    }, [selectedNode, updateNodeData]);
+
+        const patch = { [key]: value };
+        const recorded = nodeEdit.editNodesData([{ id: selectedNode.id, patch }], {
+            description: `Edit ${key}`,
+            mergeId,
+            mergeWindowMs: FIELD_HISTORY_MERGE_MS,
+        });
+        // Immediate UI feedback for metadata (min, max, label); the Brain sync
+        // lands on the same value, so the follow-up diff is idempotent.
+        if (recorded) updateNodeData(selectedNode.id, patch);
+    }, [selectedNode, isReadOnly, updateNodeData, nodeEdit]);
 
     // Position / Label updates (use setNodes for position which isn't part of data)
     // `node.position` is parent-local (world for roots). The panel always writes
     // that local value back through MOVE_NODE, never an absolute position.
     const handlePositionChange = useCallback((axis: 'x' | 'y', rawValue: string) => {
-        if (!selectedNode) return;
+        if (!selectedNode || isReadOnly) return;
         const num = parseFloat(rawValue);
         if (isNaN(num)) return;
 
@@ -355,7 +365,7 @@ export function NPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                 ? { ...n, position }
                 : n
         ));
-    }, [selectedNode, brain, pushHistory, replaceLastHistory, setNodes]);
+    }, [selectedNode, isReadOnly, brain, pushHistory, replaceLastHistory, setNodes]);
 
     if (!isOpen) return null;
 

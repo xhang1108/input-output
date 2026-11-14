@@ -107,6 +107,8 @@ export const InputNode = memo((props: NodeProps) => {
                     <NumericInput
                         value={Number(unwrappedValue) || 0}
                         onChange={(val) => brain.applyTransaction({ type: 'UPDATE_NODE_DATA', payload: { id, data: { value: val } } })}
+                        onFocus={handleDataFocus}
+                        onBlur={handleDataBlur}
                         className="w-full"
                         inputClassName="w-full h-8 text-sm"
                         hideLabel={true}

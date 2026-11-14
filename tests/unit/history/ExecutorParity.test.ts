@@ -206,4 +206,15 @@ describe('computeNextState size parity', () => {
 
         expect(nextNodes[0].position).toEqual({ x: 100.2, y: 100 });
     });
+
+    it('maps UPDATE_VALUE into data.value without leaking id into data', () => {
+        const { nextNodes } = computeNextState(
+            [{ type: 'UPDATE_VALUE', payload: { id: 'a', value: 42 } }],
+            [uiNode({ data: { label: 'A', value: 1 } })],
+            []
+        );
+
+        expect(nextNodes[0].data.value).toBe(42);
+        expect((nextNodes[0].data as Record<string, unknown>).id).toBeUndefined();
+    });
 });
