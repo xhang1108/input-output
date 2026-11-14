@@ -1,5 +1,27 @@
 # Changelog
 
+## [v1.2.0] - 2026-11-14
+
+Frame grouping and an undo/redo hardening pass. Save format unchanged (schema 1.0.0); existing projects load as-is.
+
+### Added
+
+- Frame nodes (single level): `F` groups the selection / ungroups one frame's children; dropping a root fully inside a frame attaches it; manual resize with the content edge as the minimum; live expand-only auto-fit; right-click `Fit to contents`; `Detach from Frame` in the node menu
+- Frame-aware clipboard (frame + descendants), auto layout (frame as one sized block; selecting a frame lays out its children in place), IOGL `FRAME` export/import, and hierarchy sanitization (orphans, self-parents, cycles and depth > 1 are detached to world space on load)
+- History is cleared whenever the graph identity changes (project load, cloud/local conflict, fork, wipe, replace-graph import) so Ctrl+Z can never replay another project's transactions
+- Read-only permission is enforced inside `useHistoryExecutor` / `useFrameActions` / `useSelection`, not only at the call sites
+- Bottom-left Undo/Redo controls and canvas context-menu entries; `canUndo`/`canRedo` now drive the UI
+- Mute, InputNode numeric values and NPanel field edits are undoable; repeated edits of one field merge into a single step (800 ms)
+- Import success toast offers `Undo import`, restoring the pre-import graph including DOM-measured node sizes
+
+### Fixed
+
+- `Shift+D` duplicates now start a grab immediately, follow the mouse and drop on click; duplicate + placement is a single undo step
+- Knife cuts write their `DISCONNECT` batch to the Brain in the same handler instead of relying on the asynchronous UI diff
+- Undo/redo parity: sub-0.5 px moves are forced through the Brain deadzone, and resize restores follow the Brain's rounding/threshold rules
+- Deleting a node records `CONNECT` inverses for every cascaded edge, so one undo restores the full wiring
+- Undo keeps its entry when the Brain rejects a restore, instead of silently losing the step
+
 ## [v1.1.0] - 2026-11-13
 
 React Flow integration-layer audit + fixes (audit v5.0). Save format unchanged.

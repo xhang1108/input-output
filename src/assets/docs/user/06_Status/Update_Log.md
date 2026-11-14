@@ -6,6 +6,15 @@ order: 1
 # Update Log
 
 > [!LOG]
+> ## 2026-11-14
+> ### V1.2.0 - Frames & History Release
+> - **Save Format**: Unchanged (schema 1.0.0); existing projects load as-is.
+> - **Frames**: Group with `F`, attach on drop, manual resize, live expand-only auto-fit, `Fit to contents`, and `Detach from Frame`; children keep parent-local coordinates.
+> - **Undo / Redo**: History clears on project change, read-only is enforced in the command hooks, node values and mute are undoable, and visible Undo/Redo controls were added.
+> - **Duplicate**: `Shift+D` now follows the mouse and drops on click; the whole gesture is one undo step.
+> - **Import**: `Undo import` restores the previous graph, including measured node sizes.
+
+> [!LOG]
 > ## 2026-11-13
 > ### V1.1.0 - Stability & Performance Release
 > - **Save Format**: Unchanged (schema 1.0.0); existing projects load as-is.
