@@ -49,7 +49,6 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     interactionMode: 'IDLE',
 
     push: (entry: HistoryEntry) => {
-        console.log(`[Store] Pushing history entry: ${entry.description}`, entry);
         set((state) => {
             const newPast = [...state.past, entry];
             if (newPast.length > MAX_HISTORY) {

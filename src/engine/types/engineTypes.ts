@@ -67,6 +67,8 @@ export interface MoveNodePayload {
     position: { x: number; y: number };
     /** `null` explicitly detaches from the current parent. */
     parentId?: string | null;
+    /** Bypasses the deadzone; used by history restores only. */
+    force?: boolean;
 }
 
 export interface UpdateValuePayload {

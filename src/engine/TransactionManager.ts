@@ -143,7 +143,7 @@ export class TransactionManager {
                     // floating point oscillations from triggering unnecessary re-evaluations.
                     const dx = Math.abs(node.position.x - p.position.x);
                     const dy = Math.abs(node.position.y - p.position.y);
-                    const hasMovedSignificantly = dx > 0.5 || dy > 0.5;
+                    const hasMovedSignificantly = p.force === true || dx > 0.5 || dy > 0.5;
                     const parentChanged = 'parentId' in p && (node.parentId ?? null) !== (p.parentId ?? null);
 
                     if (hasMovedSignificantly || parentChanged) {

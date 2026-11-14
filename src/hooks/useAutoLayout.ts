@@ -15,7 +15,6 @@ import { sortParentFirst } from '../utils/coordinates';
 import { FRAME_PADDING, getNodeSize } from '../utils/frameGeometry';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
-import { useHistoryExecutor } from './useHistoryExecutor';
 
 export function useAutoLayout(
     setNodes: (nodes: Node[] | ((original: Node[]) => Node[])) => void,
@@ -28,7 +27,6 @@ export function useAutoLayout(
     const pushHistory = useHistoryStore(s => s.push);
     const interactionMode = useHistoryStore(s => s.interactionMode);
     const isRestoring = useHistoryStore(s => s.isRestoring);
-    const { undo, redo, canUndo, canRedo } = useHistoryExecutor();
 
     // 1. Manual Layout Trigger
     const handleAutoLayout = useCallback(async () => {

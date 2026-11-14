@@ -24,16 +24,30 @@ export interface ContextMenuActions {
     traceUpstream: () => void;
     toggleMute: () => void;
     logAction: (msg: string) => void;
+    undo?: () => void;
+    redo?: () => void;
 }
 
 export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: number): ContextMenuItemDef[] {
-    return [
+    const items: ContextMenuItemDef[] = [];
+
+    // Only present when the canvas reports undo/redo is available and writable.
+    if (actions.undo) {
+        items.push({ label: 'Undo', shortcut: 'Ctrl+Z', action: () => actions.undo!() });
+    }
+    if (actions.redo) {
+        items.push({ label: 'Redo', shortcut: 'Ctrl+Y', action: () => actions.redo!() });
+    }
+
+    items.push(
         { label: 'Command Palette', shortcut: 'Shift+A', action: () => actions.openPalette(x, y) },
         { label: 'Trace Upstream', shortcut: 'Alt+T', action: () => actions.traceUpstream() },
         { label: 'Reset View', action: () => actions.resetView() },
         { label: 'Paste', shortcut: 'Ctrl+V', action: () => actions.pasteFromClipboard() },
         { label: 'Select All', shortcut: 'A', action: () => actions.selectAll() },
-    ];
+    );
+
+    return items;
 }
 
 export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean = false, isMuted: boolean = false, hasParent: boolean = false, isFrame: boolean = false): ContextMenuItemDef[] {

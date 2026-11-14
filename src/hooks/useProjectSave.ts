@@ -7,6 +7,7 @@ import { Brain } from '../engine/Brain';
 import { Serializer } from '../engine/Serializer';
 import { SaveManager } from '../services/SaveManager';
 import { useAppStore } from '../store/useStore';
+import { clearHistoryForNewProject } from '../utils/historyLifecycle';
 
 import { useSession } from "next-auth/react";
 import { useRouter } from 'next/navigation';
@@ -467,6 +468,7 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
                 if (!response.ok) throw new Error("Fork failed");
                 const result = await response.json();
                 toast.success('Project forked to your Cloud!');
+                clearHistoryForNewProject();
                 router.push(`/d/cloud:${result.id.replace(/^(cloud:)+/i, '')}`);
             } catch (e) {
                 toast.error('Failed to fork project');
@@ -478,6 +480,7 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
             toast.success('Project forked to your Local storage!');
             // Small delay to ensure localStorage write/indexing is finished before navigation
             setTimeout(() => {
+                clearHistoryForNewProject();
                 router.push(`/d/${newLocalId}`);
             }, 100);
         }
@@ -546,6 +549,7 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
 
         const graphToInject = (data as any).graph || { nodes: data.nodes, edges: data.edges };
         if (graphToInject.nodes) {
+            clearHistoryForNewProject();
             brain.injectNodes(graphToInject, true).then(() => {
                 toast.success('Project loaded successfully');
                 fitViewToScene({ duration: 400 });
@@ -581,6 +585,7 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
                     });
                 }
 
+                clearHistoryForNewProject();
                 await brain.injectNodes({ nodes: [], edges: [] }, true);
 
                 // Set initial baseline for brand new
@@ -600,6 +605,7 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
 
                 if (graph.nodes) {
                     console.log(`[useProjectSave] Injecting ${sourceTag} graph...`);
+                    clearHistoryForNewProject();
                     await brain.injectNodes(graph, true, true);
 
                     // Step 4 & 5: Baseline and Reveal
@@ -675,6 +681,7 @@ export function useProjectSave(projectId: string, existingVisibility?: 'private'
                 await loadGraphData(localData, 'LOCAL');
             } else {
                 // Completely new ID that hasn't reached cloud OR local yet
+                clearHistoryForNewProject();
                 await brain.injectNodes({ nodes: [], edges: [] }, true);
                 setIsLoaded(true);
             }

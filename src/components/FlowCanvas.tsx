@@ -31,6 +31,7 @@ import { useHand } from '../hooks/nerves/useHand';
 import { useClipboard } from '../hooks/useClipboard';
 import { useFrameActions } from '../hooks/useFrameActions';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
+import { clearHistoryForNewProject } from '../utils/historyLifecycle';
 import { getEarShortcuts, Platform } from '@/constants/shortcuts';
 import { getFrameRect, selectionTouchesFrameBorder } from '../utils/frameSelection';
 
@@ -58,6 +59,7 @@ import { useHistoryStore } from '../store/useHistoryStore';
 import { useRouter } from 'next/navigation';
 import { getDocInfo } from '@/constants/docRegistry';
 import { FloatingProjectControls } from './ui/FloatingProjectControls';
+import { UndoRedoControls } from './ui/UndoRedoControls';
 
 const EMPTY_NODES: Node[] = [];
 const EMPTY_EDGES: Edge[] = [];
@@ -134,7 +136,7 @@ export function FlowCanvas({
 
     const isRestoring = useHistoryStore(s => s.isRestoring);
     const pushHistory = useHistoryStore(s => s.push);
-    const { undo, redo } = useHistoryExecutor();
+    const { undo, redo, canUndo, canRedo } = useHistoryExecutor({ isReadOnly });
 
     const { focusOn, resetView } = useEye();
 
@@ -301,6 +303,7 @@ export function FlowCanvas({
         if (isReadOnly) return;
         if (confirm('Are you sure you want to wipe all memory? This cannot be undone.')) {
             brain.clearAll();
+            clearHistoryForNewProject();
             setNodes([]);
             setEdges([]);
             logAction('Memory Wiped');
@@ -442,6 +445,25 @@ export function FlowCanvas({
 
         clearHighlightedPath();
     }, [mode, cancelGrab, setNodes, showPalette, showNPanel, closePalette, setShowNPanel, logAction, getNodes, clearHighlightedPath]);
+
+    // Single source of truth for undo/redo so keyboard, floating buttons and the
+    // canvas context menu cannot drift apart.
+    const handleUndo = useCallback(() => {
+        autoSave.cancel();
+        if (mode !== 'IDLE') {
+            cancelGrab(true);
+            logAction('Cancel + Undo');
+        } else {
+            logAction('Undo');
+        }
+        undo();
+    }, [autoSave, mode, cancelGrab, logAction, undo]);
+
+    const handleRedo = useCallback(() => {
+        autoSave.cancel();
+        redo();
+        logAction('Redo');
+    }, [autoSave, redo, logAction]);
 
     const autoConfirm = useCallback((fn: (e: any) => void) => (e: any) => {
         if (mode !== 'IDLE') confirmGrab();
@@ -589,26 +611,15 @@ export function FlowCanvas({
             }),
             'system:undo': (e) => {
                 e.preventDefault();
-                autoSave.cancel();
-                if (mode !== 'IDLE') {
-                    cancelGrab(true);
-                    logAction('Cancel + Undo');
-                } else {
-                    logAction('Undo');
-                }
-                undo();
+                handleUndo();
             },
-            'system:redo': (e) => { 
-                e.preventDefault(); 
-                autoSave.cancel(); 
-                redo(); 
-                logAction('Redo'); 
+            'system:redo': (e) => {
+                e.preventDefault();
+                handleRedo();
             },
-            'system:redo-alt': (e) => { 
-                e.preventDefault(); 
-                autoSave.cancel(); 
-                redo(); 
-                logAction('Redo'); 
+            'system:redo-alt': (e) => {
+                e.preventDefault();
+                handleRedo();
             },
             'system:confirm': () => { confirmGrab(); logAction('Confirm (Enter)'); },
             'system:cancel': () => { handleCancel(); },
@@ -637,7 +648,7 @@ export function FlowCanvas({
                 }
             },
         }),
-        deps: [undo, redo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, frameSelected,
+        deps: [handleUndo, handleRedo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, frameSelected,
            copyToClipboard, cutSelected, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes]
     });
 
@@ -827,6 +838,8 @@ export function FlowCanvas({
                                         }
                                     },
                                     toggleMute: () => { },
+                                    ...(canUndo && !isReadOnly ? { undo: handleUndo } : {}),
+                                    ...(canRedo && !isReadOnly ? { redo: handleRedo } : {}),
                                     logAction,
                                 }, contextMenu.x, contextMenu.y)
                                 : (() => {
@@ -886,6 +899,14 @@ export function FlowCanvas({
                         />
                     )}
                 </ReactFlow>
+
+                <UndoRedoControls
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    disabled={isReadOnly}
+                    onUndo={handleUndo}
+                    onRedo={handleRedo}
+                />
 
                 {mode === 'CUTTING' && cutPath.length > 0 && (
                     <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-100 overflow-visible">

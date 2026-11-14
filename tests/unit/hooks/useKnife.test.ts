@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     push: vi.fn<(entry: any) => void>(),
     setEdges: vi.fn<(updater: any) => void>(),
     project: vi.fn((p: { x: number; y: number }) => p),
+    applyTransaction: vi.fn(() => ({ success: true })),
 }));
 
 let nodes: Node[] = [];
@@ -38,6 +39,10 @@ vi.mock('@/store/useHistoryStore', () => ({
     useHistoryStore: {
         getState: () => ({ isRestoring: false, push: mocks.push }),
     },
+}));
+
+vi.mock('@/context/BrainContext', () => ({
+    useBrain: () => ({ applyTransaction: mocks.applyTransaction }),
 }));
 
 import { useKnife } from '@/hooks/useKnife';
@@ -78,6 +83,7 @@ describe('useKnife absolute geometry', () => {
         edges = [];
         mocks.push.mockClear();
         mocks.setEdges.mockClear();
+        mocks.applyTransaction.mockClear();
     });
 
     it('cuts a wire whose child endpoint sits inside a frame', () => {
@@ -100,6 +106,11 @@ describe('useKnife absolute geometry', () => {
         expect(entry.forward).toEqual([{ type: 'DISCONNECT', payload: 'e1' }]);
         expect(entry.inverse).toEqual([{ type: 'CONNECT', payload: edges[0] }]);
         expect(mocks.setEdges).toHaveBeenCalledTimes(1);
+        expect(mocks.applyTransaction).toHaveBeenCalledTimes(1);
+        expect(mocks.applyTransaction).toHaveBeenCalledWith(
+            { type: 'BATCH', payload: [{ type: 'DISCONNECT', payload: 'e1' }] },
+            true
+        );
     });
 
     it('keeps root-only (flat) cut behaviour identical', () => {
@@ -139,5 +150,6 @@ describe('useKnife absolute geometry', () => {
 
         expect(mocks.push).not.toHaveBeenCalled();
         expect(mocks.setEdges).not.toHaveBeenCalled();
+        expect(mocks.applyTransaction).not.toHaveBeenCalled();
     });
 });

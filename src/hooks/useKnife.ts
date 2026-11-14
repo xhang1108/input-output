@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useReactFlow, XYPosition, Edge } from '@xyflow/react';
 import { useCanvasProjection } from './useCanvasProjection';
+import { useBrain } from '../context/BrainContext';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
 import { FALLBACK_SIZE } from '../utils/GeometryUtils';
@@ -13,6 +14,7 @@ import { indexNodes, toAbsolute } from '../utils/coordinates';
 export function useKnife() {
     const { getEdges, getNodes, setEdges } = useReactFlow();
     const { project } = useCanvasProjection();
+    const brain = useBrain();
 
     const cutPathRef = useRef<XYPosition[]>([]);
     const [cutPath, setCutPath] = useState<XYPosition[]>([]);
@@ -104,6 +106,14 @@ export function useKnife() {
                     uiMetadata: { restoredEdgeIndices }
                 });
 
+                // Commit the DISCONNECT batch to the Brain (source of truth) in the
+                // same handler, so the cut is atomic. useBrainSync's UI diff can be
+                // skipped while restoring/reconnecting.
+                const brainResult = brain.applyTransaction({ type: 'BATCH', payload: forward }, true);
+                if (!brainResult.success) {
+                    console.warn('[useKnife] Brain rejected knife cut batch:', brainResult.reason);
+                }
+
                 // Trigger UI update (Brain sync happens silently via useBrainSync)
                 const idsToRemove = edgesToRemoveObjects.map(e => e.id);
                 setEdges(eds => eds.filter(e => !idsToRemove.includes(e.id)));
@@ -111,7 +121,7 @@ export function useKnife() {
         }
 
         cancelCut();
-    }, [getEdges, getNodes, setEdges, project, cancelCut]);
+    }, [getEdges, getNodes, setEdges, project, brain, cancelCut]);
 
     return {
         cutPath,

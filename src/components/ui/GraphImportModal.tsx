@@ -2,10 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { X, Upload, Check, Copy, Calculator as CalcIcon, FileText } from 'lucide-react';
+import { useReactFlow } from '@xyflow/react';
 import { Brain } from '../../engine/Brain';
+import type { InjectableGraph } from '../../engine/types/engineTypes';
 import { parseLatexToGraph } from '../../utils/latex/latexToGraph';
 import { toast } from 'sonner';
 import { useMouth } from '../../hooks/nerves/useMouth';
+import { useBrain } from '../../context/BrainContext';
+import { clearHistoryForNewProject } from '../../utils/historyLifecycle';
+import { captureImportSnapshot, clearImportSnapshot, getImportSnapshot } from '../../utils/importSnapshot';
 
 interface GraphImportModalProps {
     isOpen: boolean;
@@ -26,6 +31,8 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
     const [copied, setCopied] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const { consumeGraph } = useMouth();
+    const { getNodes, getEdges } = useReactFlow();
+    const brain = useBrain();
 
     // Auto-focus on open or mode switch
     useEffect(() => {
@@ -44,6 +51,8 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
         setProgress(null);
 
         try {
+            captureImportSnapshot(getNodes(), getEdges());
+
             const result = await consumeGraph(input, mode, shouldClear, (current, total) => {
                 setProgress({ current, total });
             });
@@ -54,7 +63,23 @@ export function GraphImportModal({ isOpen, onClose }: GraphImportModalProps) {
 
             setDiagnostics(result.diagnostics || []);
             setSuccess(true);
-            toast.success(`${mode} imported successfully!`);
+            toast.success(`${mode} imported successfully!`, {
+                action: {
+                    label: 'Undo import',
+                    onClick: () => {
+                        const snapshot = getImportSnapshot();
+                        if (!snapshot) return;
+
+                        // The canvas Node/Edge shape is a runtime superset of
+                        // InjectableGraph (optional `type`/`sourceHandle` are
+                        // always present on live graph items here).
+                        // skipLayout: the snapshot's positions are authoritative.
+                        void brain.injectNodes(snapshot as unknown as InjectableGraph, true, true);
+                        clearImportSnapshot();
+                        clearHistoryForNewProject();
+                    },
+                },
+            });
 
             setTimeout(() => {
                 setSuccess(false);

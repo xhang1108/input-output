@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useBrain } from '../../context/BrainContext';
 import { GraphCodec } from '../../engine/GraphCodec';
 import { parseLatexToGraph } from '../../utils/latex/latexToGraph';
+import { clearHistoryForNewProject } from '../../utils/historyLifecycle';
 
 /**
  * useMouth (The Mouth/Speech Organ)
@@ -85,6 +86,10 @@ export function useMouth() {
                 const graphData = result.graph;
                 const injectDiagnostics = await brain.injectNodes(graphData, shouldClear, false, onProgress);
 
+                // Replace-graph import: old history targets nodes that no longer exist.
+                // Append imports (shouldClear false) keep their history valid.
+                if (shouldClear) clearHistoryForNewProject();
+
                 return {
                     success: true,
                     diagnostics: [...result.diagnostics, ...injectDiagnostics]
@@ -114,6 +119,9 @@ export function useMouth() {
                 setTimeout(() => {
                     (brain as any).emit('RE-LAYOUT');
                 }, 200);
+
+                // Same as IOGL replace: the cleared graph's history is stale.
+                if (shouldClear) clearHistoryForNewProject();
 
                 return {
                     success: true,
