@@ -1,6 +1,6 @@
 import { BaseEdge, EdgeProps, getBezierPath, useStore } from '@xyflow/react';
 import React, { memo, useContext, useRef } from 'react';
-import { useCapsulePreview } from './capsulePreviewState';
+import { useCapsulePreviewForTarget } from './capsulePreviewState';
 import { calculateSlotOffsetY } from '../../utils/handleUtils';
 import { getEdgeSlotIndex } from '../../utils/edgeSlots';
 import { RelinkContext } from './RelinkLine';
@@ -33,7 +33,7 @@ export const MagneticEdge = memo(function MagneticEdge({
     const highlightedEdgeId = useAppStore(s => s.highlightedEdgeId);
     const highlightedEdgeIds = useAppStore(s => s.highlightedEdgeIds);
     const isHighlighted = id === highlightedEdgeId || highlightedEdgeIds.includes(id);
-    const preview = useCapsulePreview();
+    const preview = useCapsulePreviewForTarget(target, targetHandleId ?? '');
 
     // Selection Tracking: Link edge highlight to connected nodes
     const isSourceSelected = useStore(s => s.nodeLookup.get(source)?.selected);
@@ -73,15 +73,9 @@ export const MagneticEdge = memo(function MagneticEdge({
 
     return (
         <>
-            {/* Glow / Hover Hit Area - Invisible fat line for easier selection */}
-            <BaseEdge
-                path={edgePath}
-                style={{ strokeWidth: 20, stroke: 'transparent' }}
-                className="react-flow__edge-interaction"
-            />
-
-
-            {/* The Actual Edge */}
+            {/* The Actual Edge - BaseEdge also emits its own 20px
+                `react-flow__edge-interaction` hit path (interactionWidth default),
+                so no extra transparent hit-area edge is needed here. */}
             <BaseEdge
                 path={edgePath}
                 markerEnd={markerEnd}

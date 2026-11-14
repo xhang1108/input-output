@@ -153,7 +153,7 @@ export function StatusBarContent({ mode, transformValue, nodeCount, selectionCou
 
 export const StatusBar = React.memo(function StatusBar() {
     const nodeCount = useStore((s) => s.nodes.length);
-    const selectionCount = useStore((s) => s.nodes.filter(n => n.selected).length);
+    const selectionCount = useStore((s) => s.nodes.reduce((count, n) => count + (n.selected ? 1 : 0), 0));
     const mode = useAppStore(s => s.mode);
     const transformValue = useAppStore(s => s.transformValue);
 

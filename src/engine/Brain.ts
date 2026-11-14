@@ -722,6 +722,38 @@ export class Brain {
 
     // --- Transaction Handling ---
 
+    /**
+     * Position-only definition used to gate `graphChanged`.
+     *
+     * - Single `MOVE_NODE`: position-only, no topology or value impact → no sync.
+     * - Single `RESIZE_NODE`: NOT position-only. Historical behaviour is that a resize
+     *   commit emits `graphChanged` (the UI relies on that sync for node sizing), so it
+     *   is covered by the structural branch below.
+     * - `BATCH`: position-only when every child is `MOVE_NODE` or `RESIZE_NODE`
+     *   (nested batches are checked recursively). This is what makes a drag-commit
+     *   batch silent. An empty batch is position-only (it changes nothing).
+     * - Everything else (`ADD_NODE`, `REMOVE_NODE`, `CONNECT`, `DISCONNECT`,
+     *   `UPDATE_NODE_DATA`, `UPDATE_VALUE`, `REORDER_EDGES`, unknown) is structural.
+     */
+    private isPositionOnlyBatchMember(tx: Transaction): boolean {
+        if (tx.type === 'MOVE_NODE' || tx.type === 'RESIZE_NODE') return true;
+        if (tx.type === 'BATCH') {
+            const children = tx.payload as Transaction[];
+            return Array.isArray(children) && children.every(c => this.isPositionOnlyBatchMember(c));
+        }
+        return false;
+    }
+
+    /** True when the transaction needs a topology sync (`graphChanged`). */
+    private needsGraphSync(tx: Transaction): boolean {
+        if (tx.type === 'MOVE_NODE') return false;
+        if (tx.type === 'BATCH') {
+            const children = tx.payload as Transaction[];
+            return !(Array.isArray(children) && children.every(c => this.isPositionOnlyBatchMember(c)));
+        }
+        return true;
+    }
+
     public applyTransaction(tx: Transaction, silent: boolean = false): { success: boolean; reason?: string } {
 
         const res = this.transactionManager.applyTransaction(tx, this.state, {
@@ -785,9 +817,6 @@ export class Brain {
                 this.syncTickerRegistry(id);
             },
             onNodeMoved: (id) => { },
-            onGraphChanged: () => {
-                if (!silent) this.emit('graphChanged', null);
-            },
             onLog: (msg) => this.log(msg),
             validateConnection: (edge) => this.validateConnection(
                 edge.source, edge.sourceHandle, edge.target, edge.targetHandle, this.state.edges
@@ -798,13 +827,9 @@ export class Brain {
             // Emit successful, non-silent transactions for global status tracking (e.g. Dirtying)
             this.emit('transactionApplied', tx);
 
-            // Position-only transactions don't need full UI topology sync.
-            // MOVE_NODE has no effect on computation or structure.
-            const isPositionOnly = tx.type === 'MOVE_NODE' ||
-                (tx.type === 'BATCH' && (tx.payload as Transaction[]).every(
-                    t => t.type === 'MOVE_NODE' || t.type === 'RESIZE_NODE'
-                ));
-            if (!isPositionOnly) {
+            // Single emission point for topology sync. Silent transactions emit nothing;
+            // failed ones are already excluded by `res.success`.
+            if (this.needsGraphSync(tx)) {
                 this.emit('graphChanged', null);
             }
 

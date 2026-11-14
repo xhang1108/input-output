@@ -8,12 +8,189 @@ import { Brain } from '../engine/Brain';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { Transaction } from '../engine/types/engineTypes';
 import { useAppStore } from '../store/useStore';
+import type { CoordinateNode } from '../utils/coordinates';
 import { indexNodes, toAbsolute } from '../utils/coordinates';
 
 interface UseAutoInsertProps {
     mode: string;
     brain: Brain;
     logAction: (msg: string) => void;
+}
+
+/** Axis-aligned box of an edge's endpoints in flow (world) space. */
+export interface Bounds {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+/** Minimal edge shape needed to precompute candidate geometry. */
+export interface AutoInsertEdge {
+    id: string;
+    source: string;
+    target: string;
+}
+
+/**
+ * Node shape needed for edge bounds. Size is optional: React Flow fills
+ * `measured` after layout, and a missing size falls back to the position box.
+ */
+export interface BoundedNode extends CoordinateNode {
+    width?: number | null;
+    height?: number | null;
+    measured?: { width?: number; height?: number } | null;
+}
+
+/** Path-like object used by the per-grab length cache (SVGPathElement fits). */
+export interface PathMeasure {
+    isConnected: boolean;
+    getTotalLength(): number;
+}
+
+export interface PathCacheEntry<T extends PathMeasure> {
+    el: T | null;
+    length: number;
+}
+
+interface GrabbingSession {
+    nodeId: string;
+    /** Parent-local position captured when the grab started. */
+    startPosition: { x: number; y: number };
+    /** World position captured when the grab started. */
+    startAbsolute: { x: number; y: number };
+    nodeHasEdges: boolean;
+    /** Absolute endpoint bounds per edge, computed once per grab. */
+    edgeBounds: Map<string, Bounds>;
+    /** Reused path element + measured length per edge. */
+    pathCache: Map<string, PathCacheEntry<SVGPathElement>>;
+}
+
+const SENSING_OFFSET_X = 60;
+const SENSING_OFFSET_Y = 40;
+const DETECT_RADIUS = 15;
+
+/**
+ * Absolute endpoint bounds for every edge whose endpoints exist.
+ *
+ * Bounds use the node rectangles, not just top-left positions: React Flow puts
+ * edge endpoints on the node border, so a path can sit up to a node half-width
+ * or half-height outside the position box. Bezier control points stay between
+ * those endpoints, so the endpoint enclosures are a conservative edge box.
+ */
+export function buildEdgeBounds(
+    nodesById: ReadonlyMap<string, BoundedNode>,
+    edges: readonly AutoInsertEdge[]
+): Map<string, Bounds> {
+    const bounds = new Map<string, Bounds>();
+
+    const rectOf = (node: BoundedNode) => {
+        const absolute = toAbsolute(nodesById, node.id);
+        const width = node.measured?.width ?? node.width ?? 0;
+        const height = node.measured?.height ?? node.height ?? 0;
+        return {
+            minX: absolute.x,
+            maxX: absolute.x + width,
+            minY: absolute.y,
+            maxY: absolute.y + height,
+        };
+    };
+
+    for (const edge of edges) {
+        const source = nodesById.get(edge.source);
+        const target = nodesById.get(edge.target);
+        if (!source || !target) continue;
+
+        const sourceRect = rectOf(source);
+        const targetRect = rectOf(target);
+
+        bounds.set(edge.id, {
+            minX: Math.min(sourceRect.minX, targetRect.minX),
+            maxX: Math.max(sourceRect.maxX, targetRect.maxX),
+            minY: Math.min(sourceRect.minY, targetRect.minY),
+            maxY: Math.max(sourceRect.maxY, targetRect.maxY),
+        });
+    }
+
+    return bounds;
+}
+
+/**
+ * Edge ids whose endpoint bbox expanded by `radius` contains (x, y).
+ *
+ * A sampled point within `radius` of the center implies the center lies in the
+ * bbox of that point expanded by `radius`, so a larger radius never drops a
+ * true hit. We keep the old 100/110 px reach because a cubic bezier can bow
+ * outside its endpoint box; the win comes from caching, not from narrowing.
+ */
+export function pickCandidateEdgeIds(
+    bounds: ReadonlyMap<string, Bounds>,
+    x: number,
+    y: number,
+    radius: number
+): string[] {
+    const ids: string[] = [];
+
+    for (const [id, box] of bounds) {
+        if (x < box.minX - radius || x > box.maxX + radius) continue;
+        if (y < box.minY - radius || y > box.maxY + radius) continue;
+        ids.push(id);
+    }
+
+    return ids;
+}
+
+/**
+ * Returns the cached path element and length while it is still in the document,
+ * otherwise re-resolves the element and measures it once. `null` entries are
+ * retried on the next call, matching the old query-per-frame behaviour.
+ */
+export function getOrMeasure<T extends PathMeasure>(
+    cache: Map<string, PathCacheEntry<T>>,
+    edgeId: string,
+    resolve: () => T | null
+): { el: T; length: number } | null {
+    const cached = cache.get(edgeId);
+    if (cached?.el && cached.el.isConnected && typeof cached.el.getTotalLength === 'function') {
+        return { el: cached.el, length: cached.length };
+    }
+
+    const el = resolve();
+    if (!el || typeof el.getTotalLength !== 'function') {
+        cache.set(edgeId, { el: null, length: 0 });
+        return null;
+    }
+
+    try {
+        const length = el.getTotalLength();
+        cache.set(edgeId, { el, length });
+        return { el, length };
+    } catch {
+        cache.set(edgeId, { el: null, length: 0 });
+        return null;
+    }
+}
+
+function createGrabbingSession(
+    node: Node,
+    nodes: readonly Node[],
+    edges: readonly Edge[]
+): GrabbingSession {
+    const nodesById = indexNodes(nodes);
+
+    return {
+        nodeId: node.id,
+        startPosition: { x: node.position.x, y: node.position.y },
+        startAbsolute: toAbsolute(nodesById, node.id),
+        nodeHasEdges: edges.some(e => e.source === node.id || e.target === node.id),
+        // Edges touching the dragged node abort the scan, so they are dropped
+        // once here instead of being skipped on every frame.
+        edgeBounds: buildEdgeBounds(
+            nodesById,
+            edges.filter(e => e.source !== node.id && e.target !== node.id)
+        ),
+        pathCache: new Map(),
+    };
 }
 
 /**
@@ -36,19 +213,32 @@ export function useAutoInsert({
     // rAF Orchestration Refs
     const rafId = useRef<number | null>(null);
     const dragStartPosRef = useRef<{ x: number, y: number } | null>(null);
+    // Per-grab cache: graph shape and edge geometry are frozen while one
+    // unconnected node is dragged, so all lookups happen once per gesture.
+    const sessionRef = useRef<GrabbingSession | null>(null);
 
     // Capture Drag Start Position for atomic Undo
     useEffect(() => {
         if (mode === 'GRABBING') {
-            const selectedNodes = getNodes().filter(n => n.selected);
+            const nodes = getNodes();
+            const selectedNodes = nodes.filter(n => n.selected);
             if (selectedNodes.length === 1) {
-                dragStartPosRef.current = { ...selectedNodes[0].position };
+                const node = selectedNodes[0];
+                dragStartPosRef.current = { ...node.position };
+
+                const existing = sessionRef.current;
+                if (!existing || existing.nodeId !== node.id) {
+                    sessionRef.current = createGrabbingSession(node, nodes, getEdges());
+                }
             }
-        } else if (mode === 'IDLE') {
-            // Keep reference for a few ms to allow performAutoInsert to read it
-            setTimeout(() => { dragStartPosRef.current = null; }, 100);
+        } else {
+            sessionRef.current = null;
+            if (mode === 'IDLE') {
+                // Keep reference for a few ms to allow performAutoInsert to read it
+                setTimeout(() => { dragStartPosRef.current = null; }, 100);
+            }
         }
-    }, [mode, getNodes]);
+    }, [mode, getNodes, getEdges]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -61,6 +251,7 @@ export function useAutoInsert({
 
     const detectAutoInsert = useCallback(() => {
         if (mode !== 'GRABBING') {
+            sessionRef.current = null;
             if (highlightedEdgeId) setHighlightedEdgeId(null);
             return;
         }
@@ -72,37 +263,46 @@ export function useAutoInsert({
 
         rafId.current = requestAnimationFrame(() => {
             rafId.current = null;
-            
-            const nodes = getNodes();
-            const edges = getEdges();
-            const selectedNodes = nodes.filter(n => n.selected);
-            if (selectedNodes.length !== 1) {
+
+            // Session is built once per grab (see the mode effect above); this
+            // frame only refreshes the dragged node's position.
+            const session = sessionRef.current;
+            if (!session) {
                 if (highlightedEdgeId) setHighlightedEdgeId(null);
                 return;
             }
 
-            const node = selectedNodes[0];
+            // Single pass over the only getNodes() call of the frame; keeps the
+            // old "exactly one selected node" guard without an array copy.
+            let selectedCount = 0;
+            let node: Node | undefined;
+            for (const candidate of getNodes()) {
+                if (!candidate.selected) continue;
+                selectedCount++;
+                if (candidate.id === session.nodeId) node = candidate;
+            }
 
-            // 0. Check if the node already has connections
-            const nodeHasEdges = edges.some(e => e.source === node.id || e.target === node.id);
-            if (nodeHasEdges) {
+            if (selectedCount !== 1 || !node) {
+                if (highlightedEdgeId) setHighlightedEdgeId(null);
+                return;
+            }
+
+            // 0. Connection guard, decided once at grab start
+            if (session.nodeHasEdges) {
                 if (highlightedEdgeId) setHighlightedEdgeId(null);
                 return;
             }
 
             // 1. Get Sensing Center via Red-Dot Offset (Flow Space)
-            // Edge paths are drawn in flow (world) space, so a nested node's
-            // parent-local position must be resolved before comparing.
-            const SENSING_OFFSET_X = 60; 
-            const SENSING_OFFSET_Y = 40;
-            const nodeById = indexNodes(nodes);
-            const nodeAbsolute = toAbsolute(nodeById, node.id);
-            const cx = nodeAbsolute.x + SENSING_OFFSET_X;
-            const cy = nodeAbsolute.y + SENSING_OFFSET_Y;
+            // Edge paths are drawn in flow (world) space. The absolute position
+            // only moves by the node's local delta while its parent is fixed,
+            // so the grab-start absolute plus that delta replaces toAbsolute.
+            const cx = session.startAbsolute.x + (node.position.x - session.startPosition.x) + SENSING_OFFSET_X;
+            const cy = session.startAbsolute.y + (node.position.y - session.startPosition.y) + SENSING_OFFSET_Y;
 
+            const detRadius = DETECT_RADIUS;
             const currentPadding = highlightedEdgeId ? 110 : 100;
-            const detRadius = 15;
-            
+
             const left = cx - detRadius;
             const top = cy - detRadius;
             const right = cx + detRadius;
@@ -111,34 +311,26 @@ export function useAutoInsert({
             let bestEdge: string | null = null;
             let minCenterDist = Infinity;
 
-            // 2. Optimized Loop
-            for (const edge of edges) {
-                if (edge.source === node.id || edge.target === node.id) continue;
+            // 2. Candidate prefilter (cached endpoint bbox; radius keeps the old
+            //    100/110 px reach so curves that bow outside their endpoints
+            //    are still considered)
+            const candidateIds = pickCandidateEdgeIds(session.edgeBounds, cx, cy, currentPadding);
 
-                const sourceNode = nodeById.get(edge.source);
-                const targetNode = nodeById.get(edge.target);
-                if (!sourceNode || !targetNode) continue;
+            for (const edgeId of candidateIds) {
+                const measured = getOrMeasure(session.pathCache, edgeId, () => {
+                    const edgeContainer = document.querySelector(`[data-id="${edgeId}"]`);
+                    if (!edgeContainer) return null;
 
-                const sourceAbsolute = toAbsolute(nodeById, sourceNode.id);
-                const targetAbsolute = toAbsolute(nodeById, targetNode.id);
+                    return (edgeContainer.querySelector('path.react-flow__edge-interaction') as SVGPathElement ||
+                        edgeContainer.querySelector('path.react-flow__edge-path') as SVGPathElement) || null;
+                });
 
-                const edgeMinX = Math.min(sourceAbsolute.x, targetAbsolute.x) - currentPadding;
-                const edgeMaxX = Math.max(sourceAbsolute.x, targetAbsolute.x) + currentPadding;
-                const edgeMinY = Math.min(sourceAbsolute.y, targetAbsolute.y) - currentPadding;
-                const edgeMaxY = Math.max(sourceAbsolute.y, targetAbsolute.y) + currentPadding;
+                if (!measured) continue;
 
-                if (cx < edgeMinX || cx > edgeMaxX || cy < edgeMinY || cy > edgeMaxY) continue;
-
-                const edgeContainer = document.querySelector(`[data-id="${edge.id}"]`);
-                if (!edgeContainer) continue;
-
-                const pathEl = edgeContainer.querySelector('path.react-flow__edge-interaction') as SVGPathElement ||
-                    edgeContainer.querySelector('path.react-flow__edge-path') as SVGPathElement;
-
-                if (!pathEl || typeof pathEl.getTotalLength !== 'function') continue;
+                const pathEl = measured.el;
 
                 try {
-                    const totalLength = pathEl.getTotalLength();
+                    const totalLength = measured.length;
                     const STEP = 20;
                     const steps = Math.ceil(totalLength / STEP);
 
@@ -156,14 +348,14 @@ export function useAutoInsert({
 
                     if (collided && closestDist < minCenterDist) {
                         minCenterDist = closestDist;
-                        bestEdge = edge.id;
+                        bestEdge = edgeId;
                     }
                 } catch (err) {}
             }
 
             if (bestEdge !== highlightedEdgeId) setHighlightedEdgeId(bestEdge);
         });
-    }, [mode, highlightedEdgeId, getNodes, getEdges, setHighlightedEdgeId]);
+    }, [mode, highlightedEdgeId, getNodes, setHighlightedEdgeId]);
 
     const performAutoInsert = useCallback(() => {
         if (highlightedEdgeId) {

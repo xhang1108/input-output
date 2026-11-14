@@ -1,6 +1,6 @@
 'use client';
 
-import { useStore, useReactFlow } from '@xyflow/react';
+import { useStore, useReactFlow, type Node } from '@xyflow/react';
 import { useBrain } from '../../context/BrainContext';
 import { useCallback, useState, useEffect, useRef } from 'react';
 
@@ -14,7 +14,7 @@ import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { useNodeEdit } from '../../hooks/useNodeEdit';
 import { Transaction } from '../../engine/types/engineTypes';
 import { useHistoryStore } from '../../store/useHistoryStore';
-import { indexNodes, toAbsolute } from '../../utils/coordinates';
+import { indexNodes, toAbsolute, type CoordinateNode } from '../../utils/coordinates';
 
 /** Burst window for collapsing repeated position edits into one undo step. */
 const MOVE_HISTORY_MERGE_MS = 800;
@@ -256,7 +256,47 @@ function SettingsSection({
 
 // ─── Main N Panel ─────────────────────────────────────────────────────────────
 
-export function NPanel({ isOpen, onClose, isReadOnly = false }: { isOpen: boolean; onClose: () => void; isReadOnly?: boolean }) {
+type NPanelProps = { isOpen: boolean; onClose: () => void; isReadOnly?: boolean };
+
+/**
+ * Always-mounted shell. The closed path returns before any hook runs, so a
+ * closed panel holds no React Flow / Zustand subscriptions and cannot be
+ * re-rendered by drag frames. All state lives in NPanelContent (open only).
+ */
+export function NPanel({ isOpen, onClose, isReadOnly = false }: NPanelProps) {
+    if (!isOpen) return null;
+    return <NPanelContent onClose={onClose} isReadOnly={isReadOnly} />;
+}
+
+/** The single selected node, or null when none or several are selected. */
+function selectSelectedNode(state: { nodes: Node[] }): Node | null {
+    let selected: Node | null = null;
+    for (const node of state.nodes) {
+        if (!node.selected) continue;
+        if (selected) return null;
+        selected = node;
+    }
+    return selected;
+}
+
+/**
+ * Selected node's derived world position, formatted for display; null for
+ * roots. Reads `nodeLookup` (ancestors only, no array copy) and returns a
+ * primitive, so a store change re-renders only when the shown value changes.
+ */
+function selectAbsolutePosition(state: {
+    nodes: Node[];
+    nodeLookup?: ReadonlyMap<string, CoordinateNode>;
+}): string | null {
+    const selected = selectSelectedNode(state);
+    if (!selected?.parentId) return null;
+
+    const lookup = state.nodeLookup ?? indexNodes(state.nodes);
+    const absolute = toAbsolute(lookup, selected.id);
+    return `${absolute.x.toFixed(1)}, ${absolute.y.toFixed(1)}`;
+}
+
+function NPanelContent({ onClose, isReadOnly = false }: Omit<NPanelProps, 'isOpen'>) {
     const { setNodes, updateNodeData } = useReactFlow();
     const brain = useBrain();
     const pushHistory = useHistoryStore(s => s.push);
@@ -274,13 +314,11 @@ export function NPanel({ isOpen, onClose, isReadOnly = false }: { isOpen: boolea
     } | null>(null);
 
     // Single selected node (reactive to React Flow store)
-    const selectedNode = useStore(s => {
-        const selected = s.nodes.filter(n => n.selected);
-        return selected.length === 1 ? selected[0] : null;
-    });
+    const selectedNode = useStore(selectSelectedNode);
 
-    // Ancestor lookup for the derived absolute position of nested nodes.
-    const allNodes = useStore(s => s.nodes);
+    // Derived world position of nested nodes; a primitive, so moves that do
+    // not change the displayed value do not re-render the panel.
+    const absolutePosition = useStore(selectAbsolutePosition);
 
     // Look up the node definition to get params schema
     const nodeDef = selectedNode
@@ -367,15 +405,9 @@ export function NPanel({ isOpen, onClose, isReadOnly = false }: { isOpen: boolea
         ));
     }, [selectedNode, isReadOnly, brain, pushHistory, replaceLastHistory, setNodes]);
 
-    if (!isOpen) return null;
-
     const nodeData = (selectedNode?.data ?? {}) as Record<string, unknown>;
     const posX = selectedNode ? selectedNode.position.x.toFixed(1) : '0';
     const posY = selectedNode ? selectedNode.position.y.toFixed(1) : '0';
-    // Derived only: nested nodes also show their world position for reference.
-    const absolutePosition = selectedNode?.parentId
-        ? toAbsolute(indexNodes(allNodes), selectedNode.id)
-        : null;
     const labelVal = typeof nodeData.label === 'string' ? nodeData.label : '';
 
     return (
@@ -452,7 +484,7 @@ export function NPanel({ isOpen, onClose, isReadOnly = false }: { isOpen: boolea
                                 <div className="flex items-center justify-between gap-2 bg-surface-base border border-border-dim/80 rounded-md px-2 py-1.5">
                                     <span className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Absolute</span>
                                     <span className="text-[10px] font-mono text-zinc-400">
-                                        {absolutePosition.x.toFixed(1)}, {absolutePosition.y.toFixed(1)}
+                                        {absolutePosition}
                                     </span>
                                 </div>
                             )}

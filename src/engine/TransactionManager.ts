@@ -10,6 +10,12 @@ export class TransactionManager {
     /**
      * Applies a transaction to the GraphState.
      * Returns true if successful, false if reason provided.
+     *
+     * NOTE: This layer never signals "graph changed". The caller (Brain) owns the
+     * single `graphChanged` emission, decided once per transaction from the final
+     * success flag and the transaction shape. Emitting here as well (the old
+     * DISCONNECT / BATCH hooks) produced duplicate topology syncs and even emitted
+     * for failed batches.
      */
     public applyTransaction(
         tx: Transaction,
@@ -21,7 +27,6 @@ export class TransactionManager {
             onEdgeRemoved?: (edge: Edge) => void;
             onNodeDataUpdated?: (id: string) => void;
             onNodeMoved?: (id: string) => void;
-            onGraphChanged?: () => void;
             onLog?: (msg: string) => void;
             validateConnection: (edge: Edge) => {
                 isValid: boolean,
@@ -124,7 +129,6 @@ export class TransactionManager {
                     const edgeToRemove = state.edges[idx];
                     state.edges.splice(idx, 1);
                     hooks.onEdgeRemoved?.(edgeToRemove);
-                    hooks.onGraphChanged?.();
                 }
                 return { success: true };
             }
@@ -212,8 +216,8 @@ export class TransactionManager {
                 const results = (tx.payload as Transaction[]).map((t: Transaction) => {
                     return this.applyTransaction(t, state, hooks);
                 });
-                hooks.onGraphChanged?.();
-                
+                // No emission here: the caller decides once, after checking success.
+
                 const firstFailure = results.find(r => !r.success);
                 if (firstFailure) return firstFailure;
                 

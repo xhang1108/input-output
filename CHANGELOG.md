@@ -1,5 +1,26 @@
 # Changelog
 
+## [v1.2.1] - 2026-11-14
+
+Performance pass for 500-node graphs. Save format unchanged (schema 1.0.0); existing projects load as-is.
+
+### Changed
+
+- Canvas renders only nodes and edges intersecting the viewport (`onlyRenderVisibleElements`). On the 500-node stress fixture at zoom 1: a 500-node value update went from 0.98–1.21 s to 67–100 ms, single-node drag p95 from 150 ms to 33.4 ms, and long tasks (>50 ms) dropped to zero
+- One visible path plus one interaction path per edge (the duplicated hit area is gone); auto-insert still finds `react-flow__edge-interaction`
+- Capsule preview notifications now reach only the affected handle/node instead of every edge; drag commits keep a per-grab cache for edge bounds and path length
+- The node panel no longer subscribes to React Flow state while closed
+
+### Fixed
+
+- Structural transactions emitted `graphChanged` twice, and position-only drag batches triggered a full topology sync. Exactly one emission now, none for silent or position-only transactions
+- Full topology sync replaced an O(n²) node lookup with an index map
+
+### Internal
+
+- `fast-deep-equal` is a declared dependency instead of a transitive one
+- Stress fixture and its tests live in `tests/fixtures/stress` and `tests/unit/stress`; the measurement harness is not shipped
+
 ## [v1.2.0] - 2026-11-14
 
 Frame grouping and an undo/redo hardening pass. Save format unchanged (schema 1.0.0); existing projects load as-is.

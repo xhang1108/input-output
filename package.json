@@ -1,6 +1,6 @@
 {
   "name": "input-output",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "license": "GPL-3.0-or-later",
   "private": true,
   "scripts": {
@@ -35,6 +35,7 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "elkjs": "^0.11.1",
+    "fast-deep-equal": "^3.1.3",
     "framer-motion": "^12.38.0",
     "gray-matter": "^4.0.3",
     "hast-util-to-text": "^4.0.2",

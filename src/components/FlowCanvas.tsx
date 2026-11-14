@@ -802,6 +802,11 @@ export function FlowCanvas({
                     connectionLineStyle={{ stroke: 'var(--color-zinc-500)', strokeWidth: 2 }}
                     edgeTypes={edgeTypes}
                     defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
+                    // 500-node graphs: only render nodes/edges whose bounds
+                    // intersect the viewport. An edge is kept when its endpoint
+                    // union bbox intersects, so anything the cursor can hit is
+                    // still rendered (auto-insert/relink unaffected).
+                    onlyRenderVisibleElements
 
                     nodeOrigin={NODE_ORIGIN}
                     minZoom={0.1}

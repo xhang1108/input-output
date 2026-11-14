@@ -8,7 +8,7 @@ import { NodeHandle } from './NodeHandle';
 import { HandleConfig } from '../../types/nodeDefinitions';
 import { resolveHandlePosition, assertUniqueHandleIds } from '../../utils/handleUtils';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
-import { useCapsulePreview } from '../edges/capsulePreviewState';
+import { useCapsulePreviewForNode } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
 import { useHistoryStore } from '../../store/useHistoryStore';
 import { getUniqueLabel } from '../../utils/labelUtils';
@@ -39,7 +39,7 @@ export const BaseNode = memo(forwardRef<HTMLDivElement, NodeProps & { children?:
     const targetConnections = useNodeConnections({ handleType: 'target' });
     const sourceConnections = useNodeConnections({ handleType: 'source' });
     const connections = [...targetConnections, ...sourceConnections];
-    const preview = useCapsulePreview();
+    const preview = useCapsulePreviewForNode(id);
     const pushHistory = useHistoryStore(s => s.push);
 
     const definition = NODE_DEFINITIONS.find((d) => d.id === type);

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { NodeHandle } from './NodeHandle';
 import { HandleConfig } from '../../types/nodeDefinitions';
 import { getHandleColorByConfig as getHandleColor, resolveHandlePosition, assertUniqueHandleIds } from '../../utils/handleUtils';
-import { useCapsulePreview } from '../edges/capsulePreviewState';
+import { useCapsulePreviewForTarget } from '../edges/capsulePreviewState';
 import { calculateCapsuleHeight } from '../../utils/handleUtils';
 
 interface CapsuleHandleProps {
@@ -16,7 +16,7 @@ interface CapsuleHandleProps {
 
 export const CapsuleHandle = memo(({ h, id, isConnectable, nodeData }: CapsuleHandleProps) => {
     const connections = useNodeConnections({ handleType: h.type, handleId: h.id });
-    const preview = useCapsulePreview();
+    const preview = useCapsulePreviewForTarget(id, h.id);
     const updateNodeInternals = useUpdateNodeInternals();
 
     const isPreviewing = preview.active && preview.nodeId === id && preview.handleId === h.id;
