@@ -286,6 +286,153 @@ export function getEffectiveRoots<T extends CoordinateNode>(
     });
 }
 
+export interface HierarchySanitizeResult<T extends CoordinateNode> {
+    /** Nodes in input order; repaired nodes have a world position and no parent. */
+    nodes: T[];
+    /** One issue per repaired node, in repair order. */
+    issues: HierarchyIssue[];
+}
+
+/**
+ * Repairs broken parent links so a hierarchy can be loaded safely.
+ *
+ * A node is detached (converted to its world position, `parentId` cleared) when
+ * its link is a self-parent, an orphan (`parentId` not present), part of a
+ * cycle, or deeper than `maxDepth`. Valid nodes are returned untouched.
+ *
+ * World positions come from `toAbsolute`, so this stays the single place that
+ * implements the top-left parent+local math. Never throws.
+ */
+export function sanitizeHierarchy<T extends CoordinateNode>(
+    nodes: readonly T[],
+    options: ValidateHierarchyOptions = {}
+): HierarchySanitizeResult<T> {
+    const rawLookup = new Map<string, CoordinateNode>();
+    for (const node of nodes) {
+        if (!rawLookup.has(node.id)) rawLookup.set(node.id, node);
+    }
+
+    const issues: HierarchyIssue[] = [];
+    const detached = new Set<string>();
+
+    const detach = (
+        node: CoordinateNode,
+        issue: Omit<HierarchyIssue, 'nodeId'>
+    ) => {
+        if (detached.has(node.id)) return;
+        detached.add(node.id);
+        issues.push({ ...issue, nodeId: node.id });
+    };
+
+    for (const node of nodes) {
+        if (!node.parentId) continue;
+
+        if (node.parentId === node.id) {
+            detach(node, {
+                code: 'self-parent',
+                parentId: node.parentId,
+                message: `Node "${node.id}" is its own parent.`,
+            });
+        } else if (!rawLookup.has(node.parentId)) {
+            detach(node, {
+                code: 'missing-parent',
+                parentId: node.parentId,
+                message: `Node "${node.id}" references missing parent "${node.parentId}".`,
+            });
+        }
+    }
+
+    // Cycles: collect each unique loop, then detach every member. Detaching all
+    // of them (rather than one edge) keeps the result cycle-free and flat.
+    const cycles: string[][] = [];
+    const reportedCycles = new Set<string>();
+
+    for (const node of nodes) {
+        if (!node.parentId || node.parentId === node.id) continue;
+
+        const chain: string[] = [];
+        const indexById = new Map<string, number>();
+        let currentId: string | undefined = node.id;
+
+        while (currentId) {
+            const cycleStart = indexById.get(currentId);
+            if (cycleStart !== undefined) {
+                const cycle = chain.slice(cycleStart);
+                const key = JSON.stringify([...cycle].sort());
+                if (!reportedCycles.has(key)) {
+                    reportedCycles.add(key);
+                    cycles.push(cycle);
+                }
+                break;
+            }
+
+            indexById.set(currentId, chain.length);
+            chain.push(currentId);
+            currentId = rawLookup.get(currentId)?.parentId ?? undefined;
+        }
+    }
+
+    for (const cycle of cycles) {
+        const sorted = [...cycle].sort();
+        const message = `Cycle detected: ${[...sorted, sorted[0]].join(' -> ')}.`;
+        for (const id of cycle) {
+            const node = rawLookup.get(id);
+            if (node) {
+                detach(node, {
+                    code: 'cycle',
+                    parentId: node.parentId ?? undefined,
+                    message,
+                });
+            }
+        }
+    }
+
+    if (options.maxDepth !== undefined) {
+        const maxDepth = options.maxDepth;
+        const resolved = new Map<string, CoordinateNode>();
+        for (const node of nodes) {
+            resolved.set(
+                node.id,
+                detached.has(node.id)
+                    ? { id: node.id, position: node.position }
+                    : node
+            );
+        }
+
+        for (const node of nodes) {
+            if (detached.has(node.id)) continue;
+
+            const depth = depthOf(resolved, node.id);
+            if (depth <= maxDepth) continue;
+
+            detach(node, {
+                code: 'max-depth-exceeded',
+                parentId: node.parentId ?? undefined,
+                message: `Node "${node.id}" has depth ${depth}, exceeding maxDepth ${maxDepth}.`,
+            });
+            resolved.set(node.id, { id: node.id, position: node.position });
+        }
+    }
+
+    const repairedPositions = new Map<string, CoordinatePoint>();
+    for (const id of detached) {
+        repairedPositions.set(id, toAbsolute(rawLookup, id));
+    }
+
+    const repaired = nodes.map(node => {
+        const absolute = repairedPositions.get(node.id);
+        if (!absolute) return node;
+
+        return {
+            ...node,
+            position: { x: absolute.x, y: absolute.y },
+            parentId: undefined,
+        } as T;
+    });
+
+    return { nodes: repaired, issues };
+}
+
 /**
  * Validates hierarchy invariants. Never throws; returns every issue found.
  */

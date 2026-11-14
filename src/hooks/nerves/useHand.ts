@@ -9,7 +9,7 @@ import { useSelection } from '../useSelection';
 import { useKnife } from '../useKnife';
 import { useAppStore } from '../../store/useStore';
 import { resolveMouseDownAction, snapRotation, snapScale, snapTranslate } from '../../utils/transformSnap';
-import { getEffectiveRoots, toAbsolute, toParentLocal } from '../../utils/coordinates';
+import { getEffectiveRoots, reparentPosition, toAbsolute, toParentLocal, validateHierarchy } from '../../utils/coordinates';
 import { expandFrameToFitChildren, getNodeSize } from '../../utils/frameGeometry';
 import { getFrameRect } from '../../utils/frameSelection';
 
@@ -609,8 +609,24 @@ export function useHand(opts?: { snap?: boolean }) {
         // 2. Build transactions (Position Only)
         // Drop-to-attach: a root whose full rect is inside a frame becomes its child.
         const attachments = new Map<string, string>();
-        const frames = nodes.filter(n => n.type === 'frame');
+        // Single level: only a root frame may be a parent.
+        const frames = nodes.filter(n => n.type === 'frame' && !n.parentId);
         if (frames.length > 0) {
+            // Hierarchy guard: validate the proposed graph (not just the pair) so
+            // a candidate with descendants cannot create depth > 1. Issues that
+            // already existed before this drag are ignored; only new violations
+            // reject the attach.
+            const hierarchyNodes = nodes.map(n => ({
+                id: n.id,
+                position: n.position,
+                parentId: n.parentId ?? undefined,
+            }));
+            const issueKey = (issue: { code: string; nodeId: string; parentId?: string }) =>
+                `${issue.code}:${issue.nodeId}:${issue.parentId ?? ''}`;
+            const existingIssues = new Set(
+                validateHierarchy(hierarchyNodes, { maxDepth: 1 }).map(issueKey)
+            );
+
             for (const id of movedNodeIds) {
                 const node = nodeMap.get(id);
                 if (!node || node.type === 'frame' || node.parentId) continue;
@@ -635,7 +651,24 @@ export function useHand(opts?: { snap?: boolean }) {
                     }
                 }
 
-                if (best) attachments.set(id, best.id);
+                if (!best) continue;
+
+                const index = hierarchyNodes.findIndex(n => n.id === id);
+                if (index < 0) continue;
+
+                const proposed = hierarchyNodes.map((n, i) =>
+                    i === index ? { ...n, parentId: best!.id } : n
+                );
+                const violations = validateHierarchy(proposed, { maxDepth: 1 })
+                    .filter(issue => !existingIssues.has(issueKey(issue)));
+                if (violations.length > 0) {
+                    console.warn(
+                        `[useHand] Attach rejected: ${id} -> ${best.id}. ${violations.map(v => v.message).join(' ')}`
+                    );
+                    continue;
+                }
+
+                attachments.set(id, best.id);
             }
         }
 
@@ -652,10 +685,14 @@ export function useHand(opts?: { snap?: boolean }) {
             let position = { ...node.position };
             let parentId: string | undefined;
             if (attachFrameId) {
-                const frameAbs = toAbsolute(nodeMap, attachFrameId);
                 const abs = toAbsolute(nodeMap, id);
-                position = { x: abs.x - frameAbs.x, y: abs.y - frameAbs.y };
-                parentId = attachFrameId;
+                const local = reparentPosition(nodeMap, id, attachFrameId, abs);
+                if (local) {
+                    position = local;
+                    parentId = attachFrameId;
+                } else {
+                    console.warn(`[useHand] Aborted attach for node ${id} -> frame ${attachFrameId}: invalid hierarchy.`);
+                }
             }
             txs.push({
                 type: 'MOVE_NODE',

@@ -5,7 +5,7 @@ import { GraphState, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, Up
 import { NodeRegistry } from './NodeRegistry'; // Static Import
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { getHandleVariant, isProbablyInputHandle } from '../utils/handleUtils';
-import { toAbsolute } from '../utils/coordinates';
+import { sanitizeHierarchy, toAbsolute, type CoordinateNode } from '../utils/coordinates';
 // BrainWorkerProxy is imported DYNAMICALLY in initWorker() to avoid circular dependency
 import type { IncrementalPatch } from './SerializableGraph';
 import { useAppStore } from '../store/useStore';
@@ -1125,13 +1125,31 @@ export class Brain {
         const diagnostics: string[] = [];
         const nodeTxs: Transaction[] = [];
 
+        // 0. Sanitize hierarchy before building transactions: orphan, self-parent,
+        // cycle and multi-level links are detached to world coordinates so a
+        // broken save can never poison the graph. Valid graphs are untouched.
+        const injectedHierarchy: CoordinateNode[] = graph.nodes.map(n => ({
+            id: n.id,
+            position: n.position,
+            parentId: n.parentId ?? (n.data?.parentId as string | undefined) ?? undefined,
+        }));
+        const sanitizedHierarchy = sanitizeHierarchy(injectedHierarchy, { maxDepth: 1 });
+        const sanitizedById = new Map(sanitizedHierarchy.nodes.map(n => [n.id, n]));
+        for (const issue of sanitizedHierarchy.issues) {
+            const repaired = sanitizedById.get(issue.nodeId);
+            const location = repaired
+                ? ` Detached to world coordinates (${repaired.position.x}, ${repaired.position.y}).`
+                : ' Detached to world coordinates.';
+            diagnostics.push(`Hierarchy: ${issue.message}${location}`);
+        }
+
         // Phase 5.3: Atomic Clear BEFORE validation
         if (clear) {
             this.silentReset();
         }
 
         // 1. Add Nodes
-        graph.nodes.forEach(n => {
+        graph.nodes.forEach((n, index) => {
             let nodeData = n.data || {};
             const definition = NODE_DEFINITIONS.find(d => d.id === n.type);
 
@@ -1169,18 +1187,17 @@ export class Brain {
                 }
             }
 
-            // Phase 4.1: Migrate legacy data.parentId to top-level parentId
-            let parentId = n.parentId;
-            if (!parentId && n.data && n.data.parentId) {
-                parentId = n.data.parentId as string;
-            }
+            // Hierarchy already sanitized above (legacy data.parentId included);
+            // repaired nodes carry a world position and no parent.
+            const sanitizedNode = sanitizedHierarchy.nodes[index];
+            const parentId = sanitizedNode?.parentId ?? undefined;
 
             nodeTxs.push({
                 type: 'ADD_NODE',
                 payload: {
                     id: n.id,
                     type: n.type,
-                    position: n.position,
+                    position: sanitizedNode?.position ?? n.position,
                     data: nodeData,
                     initialValue: initVal,
                     parentId: parentId,
@@ -1216,14 +1233,15 @@ export class Brain {
             const virtualEdges = clear ? [] : [...this.state.edges];
             const virtualNodes = clear ? new Map<string, NodeLogic>() : new Map(this.state.nodes);
 
-            // Populate virtual nodes
+            // Populate virtual nodes with the sanitized hierarchy
             graph.nodes.forEach(n => {
+                const sanitizedNode = sanitizedById.get(n.id);
                 virtualNodes.set(n.id, {
                     id: n.id,
                     type: n.type,
                     data: n.data || {},
-                    position: n.position,
-                    parentId: n.parentId
+                    position: sanitizedNode?.position ?? n.position,
+                    parentId: sanitizedNode?.parentId
                 } as NodeLogic);
             });
 
