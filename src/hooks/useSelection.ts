@@ -65,9 +65,12 @@ export function useSelection() {
 
         const edgesToRemove = edges.filter(e => selectedIds.has(e.source) || selectedIds.has(e.target));
 
+        // Inverse re-adds are parent-first (frame before children); forward
+        // removals go children-first so a frame never outlives its children in
+        // the same batch, whatever order the selection was made in.
         const forward: Transaction[] = [
             ...unwrapForward,
-            ...Array.from(selectedIds).map(id => ({ type: 'REMOVE_NODE' as const, payload: id }))
+            ...nodesToRemove.slice().reverse().map(n => ({ type: 'REMOVE_NODE' as const, payload: n.id }))
         ];
 
         const inverse: Transaction[] = [

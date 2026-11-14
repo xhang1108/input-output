@@ -815,8 +815,8 @@ export function FlowCanvas({
                                     duplicateAndGrab: () => { },
                                     copyToClipboard,
                                     cutSelected: () => { if (isReadOnly) return; cutSelected(); },
-                                    detachSelected,
-                                    deleteSelected,
+                                    detachSelected: () => { if (isReadOnly) return; detachSelected(); },
+                                    deleteSelected: () => { if (isReadOnly) return; deleteSelected(); },
                                     viewSpecs: () => { },
                                     traceUpstream: () => {
                                         const selected = getNodes().find(n => n.selected);
@@ -849,14 +849,15 @@ export function FlowCanvas({
                                             }
                                         },
                                         duplicateAndGrab: () => {
+                                            if (isReadOnly) return;
                                             const duplicated = duplicateSelected();
                                             if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes);
                                         },
                                         copyToClipboard,
                                         cutSelected: () => { if (isReadOnly) return; cutSelected(); },
-                                        detachSelected,
-                                        detachFromFrame: () => { if (node) detachNode(node.id); },
-                                        deleteSelected,
+                                        detachSelected: () => { if (isReadOnly) return; detachSelected(); },
+                                        detachFromFrame: () => { if (isReadOnly) return; if (node) detachNode(node.id); },
+                                        deleteSelected: () => { if (isReadOnly) return; deleteSelected(); },
                                         traceUpstream: () => {
                                             const targetId = contextMenu.nodeId || getNodes().find(n => n.selected)?.id;
                                             if (targetId) {

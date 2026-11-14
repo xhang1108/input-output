@@ -168,6 +168,12 @@ export const computeNextState = (
     // --- Phase 2: Positional & Structural Transactions ---
     otherTxs.forEach(apply);
 
+    // Hierarchy invariant: whatever index the restored nodes were spliced at,
+    // a parent must never sit after its child. Flat graphs stay untouched.
+    if (nextNodes.some(n => n.parentId)) {
+        nextNodes = sortParentFirst(nextNodes);
+    }
+
     return { nextNodes, nextEdges };
 };
 
