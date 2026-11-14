@@ -12,6 +12,7 @@ import { NumericInput } from '../common/NumericInput';
 import { CategorizedMenu, CategorizedMenuItem } from './CategorizedMenu';
 import { useNodeMenu } from '../../hooks/useNodeMenu';
 import { useNodeEdit } from '../../hooks/useNodeEdit';
+import type { BoundaryPort } from '../../types/groupNode';
 import { Transaction } from '../../engine/types/engineTypes';
 import { useHistoryStore } from '../../store/useHistoryStore';
 import { indexNodes, toAbsolute, type CoordinateNode } from '../../utils/coordinates';
@@ -253,6 +254,56 @@ function SettingsSection({
     );
 }
 
+
+// ─── Group Ports (P3/D10: input port defaults live on the boundary) ──────────
+
+function GroupPortsSection({
+    nodeData,
+    onDataChange,
+}: {
+    nodeData: Record<string, unknown>;
+    onDataChange: (key: string, value: unknown) => void;
+}) {
+    const boundary = (nodeData.boundary ?? {}) as { inputs?: BoundaryPort[]; outputs?: BoundaryPort[] };
+    const inputs = boundary.inputs ?? [];
+    const outputs = boundary.outputs ?? [];
+
+    const setDefault = (portId: string, value: number) => {
+        onDataChange('boundary', {
+            ...boundary,
+            inputs: inputs.map(p => (p.portId === portId ? { ...p, defaultValue: value } : p)),
+        });
+    };
+
+    return (
+        <div className="space-y-3 p-3 bg-cloud/5 border border-cloud/20 rounded-md">
+            <h3 className="text-[10px] font-bold text-text-cloud uppercase tracking-widest">Group Ports</h3>
+            {inputs.length === 0 && outputs.length === 0 && (
+                <p className="text-[10px] text-zinc-600 italic">No boundary ports.</p>
+            )}
+            {inputs.map(port => (
+                <div key={port.portId} className="space-y-1">
+                    <label className="text-[10px] text-zinc-400 font-medium uppercase tracking-wide">
+                        {port.label ?? port.portId}
+                        <span className="ml-1 text-zinc-600 normal-case">→ {port.innerNodeId}.{port.innerHandle}</span>
+                    </label>
+                    <NumericInput
+                        value={typeof port.defaultValue === 'number' ? port.defaultValue : 0}
+                        onChange={(v) => setDefault(port.portId, v)}
+                        hideLabel={true}
+                        inputClassName="w-full py-1.5"
+                    />
+                </div>
+            ))}
+            {outputs.map(port => (
+                <div key={port.portId} className="flex items-center justify-between gap-2 text-[10px] font-mono text-zinc-500">
+                    <span className="truncate">{port.label ?? port.portId}</span>
+                    <span className="truncate">{port.innerNodeId}.{port.innerHandle} →</span>
+                </div>
+            ))}
+        </div>
+    );
+}
 
 // ─── Main N Panel ─────────────────────────────────────────────────────────────
 
@@ -496,6 +547,14 @@ function NPanelContent({ onClose, isReadOnly = false }: Omit<NPanelProps, 'isOpe
                                 params={nodeDef.params}
                                 nodeData={nodeData}
                                 nodeId={selectedNode.id}
+                                onDataChange={handleDataChange}
+                            />
+                        )}
+
+                        {/* ── Group Boundary Ports (P3/D10) ── */}
+                        {selectedNode.type === 'group' && (
+                            <GroupPortsSection
+                                nodeData={nodeData}
                                 onDataChange={handleDataChange}
                             />
                         )}

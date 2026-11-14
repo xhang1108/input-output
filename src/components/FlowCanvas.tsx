@@ -191,6 +191,14 @@ export function FlowCanvas({
     } = useGroupActions({ isReadOnly });
     const isDrilled = drill !== null;
 
+    // Entering drill swaps the canvas to draft nodes; a lingering palette
+    // would spawn into the invisible Brain main graph.
+    const enterGroupAndClosePalette = useCallback((groupId?: string): boolean => {
+        const ok = enterGroup(groupId);
+        if (ok) setShowPalette(false);
+        return ok;
+    }, [enterGroup, setShowPalette]);
+
     // Marquee rule: frames are selected only when the marquee touches their
     // border. Selecting children entirely inside a frame must not move the frame.
     const onSelectionStart = useCallback((e: React.MouseEvent) => {
@@ -412,7 +420,9 @@ export function FlowCanvas({
         setEdges,
         logAction,
         onSmartLinkSearch: (params) => {
-            // No palette inside the scope editor (palette spawns to Brain).
+            // Smart-link search stays exit-first: the pending connection
+            // targets main-graph endpoints (cross-canvas), unlike the plain
+            // palette which now spawns into the drill draft (F2).
             if (drill) {
                 logAction('Exit group to add nodes (Esc)');
                 return;
@@ -509,13 +519,37 @@ export function FlowCanvas({
 
     const platform: Platform = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'win';
 
+    // Tab drill in/out (GROUP_NODE_PLAN §5.4/D6). Declared outside the
+    // shortcuts literal; useEar only needs the reference.
+    const drillHandler = useCallback((e: KeyboardEvent) => {
+        if (isReadOnly) return;
+        e.preventDefault();
+        if (mode !== 'IDLE') {
+            confirmGrab();
+            return;
+        }
+        if (isDrilled) {
+            if (exitGroup(true)) logAction('Exit Group (Tab)');
+            return;
+        }
+        const target = getNodes().find(n => n.selected && n.type === 'group');
+        if (target && enterGroupAndClosePalette(target.id)) {
+            logAction(`Enter Group: ${String(target.data?.label || target.id)} (Tab)`);
+        }
+    }, [isReadOnly, mode, confirmGrab, isDrilled, exitGroup, getNodes, enterGroupAndClosePalette, logAction]);
+
     useEar({
         shortcuts: getEarShortcuts(platform, {
             'palette:open': autoConfirm((e: any) => {
                 e.preventDefault();
-                // Palette spawns to the Brain main graph, invisible in scope.
+                // F2 scope: the palette spawns into the drill draft (routed
+                // in useNodeSpawner), so it stays open while drilled in.
+                // Smart-link search (pendingConnection) still exits first.
                 if (isDrilled) {
-                    logAction('Exit group to add nodes (Esc)');
+                    setPendingConnection(null);
+                    setPalettePosition(mousePosRef.current);
+                    setShowPalette(true);
+                    logAction('Show Palette (in Group)');
                     return;
                 }
                 setPendingConnection(null);
@@ -624,22 +658,7 @@ export function FlowCanvas({
                 }
             }),
             // Tab drill in/out shares the key with Macro (INTERACTION:32).
-            'nodes:drill': (e) => {
-                if (isReadOnly) return;
-                e.preventDefault();
-                if (mode !== 'IDLE') {
-                    confirmGrab();
-                    return;
-                }
-                if (isDrilled) {
-                    if (exitGroup(true)) logAction('Exit Group (Tab)');
-                    return;
-                }
-                const target = getNodes().find(n => n.selected && n.type === 'group');
-                if (target && enterGroup(target.id)) {
-                    logAction(`Enter Group: ${String(target.data?.label || target.id)} (Tab)`);
-                }
-            }),
+            'nodes:drill': drillHandler,
             'nodes:duplicate': autoConfirm((e) => {
                 if (isReadOnly) return;
                 e.preventDefault();
@@ -748,7 +767,7 @@ export function FlowCanvas({
                 // Enter on a selected group drills in (Tab/double-click also work).
                 if (!isDrilled && mode === 'IDLE') {
                     const target = getNodes().find(n => n.selected && n.type === 'group');
-                    if (target && enterGroup(target.id)) {
+                    if (target && enterGroupAndClosePalette(target.id)) {
                         logAction('Enter Group (Enter)');
                         return;
                     }
@@ -783,7 +802,7 @@ export function FlowCanvas({
         }),
         deps: [handleUndo, handleRedo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, frameSelected,
            copyToClipboard, cutSelected, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes, nodeEdit,
-           isDrilled, doGroupSelected, doUngroupSelected, enterGroup, exitGroup, drillDeleteSelected]
+           isDrilled, doGroupSelected, doUngroupSelected, enterGroup, exitGroup, drillDeleteSelected, drillHandler, enterGroupAndClosePalette]
     });
 
     const updateModifier = useCallback((e: React.MouseEvent) => {
@@ -811,10 +830,10 @@ export function FlowCanvas({
 
     const onNodeDoubleClick = useCallback((_e: React.MouseEvent, node: Node) => {
         if (isReadOnly || isDrilled) return;
-        if (node.type === 'group' && enterGroup(node.id)) {
+        if (node.type === 'group' && enterGroupAndClosePalette(node.id)) {
             logAction(`Enter Group: ${String(node.data?.label || node.id)} (Double-click)`);
         }
-    }, [isReadOnly, isDrilled, enterGroup, logAction]);
+    }, [isReadOnly, isDrilled, enterGroupAndClosePalette, logAction]);
 
     const onClick = useCallback((e: React.MouseEvent) => {
         if (paletteGuardRef.current) {
@@ -1033,22 +1052,18 @@ export function FlowCanvas({
                                             }
                                         },
                                         duplicateAndGrab: () => {
-                                            if (isReadOnly || isDrilled) return;
+                                            if (isReadOnly) return;
                                             const duplicated = duplicateSelected();
                                             if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes, false, undefined, duplicated.entryId);
                                         },
                                         copyToClipboard,
-                                        cutSelected: () => { if (isReadOnly || isDrilled) return; cutSelected(); },
-                                        detachSelected: () => { if (isReadOnly || isDrilled) return; detachSelected(); },
-                                        detachFromFrame: () => { if (isReadOnly || isDrilled) return; if (node) detachNode(node.id); },
-                                        fitToFrame: () => { if (isReadOnly || isDrilled) return; if (node) fitFrame(node.id); },
-                                        deleteSelected: () => {
-                                            if (isReadOnly) return;
-                                            if (isDrilled) {
-                                                if (drillDeleteSelected()) logAction('Delete (in Group)');
-                                                return;
-                                            }
-                                            deleteSelected();
+                                        cutSelected: () => { if (isReadOnly) return; cutSelected(); },
+                                        detachSelected: () => { if (isReadOnly) return; detachSelected(); },
+                                        detachFromFrame: () => { if (isReadOnly) return; if (node) detachNode(node.id); },
+                                        fitToFrame: () => { if (isReadOnly) return; if (node) fitFrame(node.id); },
+                                        deleteSelected: () => { if (isReadOnly) return; deleteSelected(); },
+                                        deleteInScope: () => {
+                                            if (drillDeleteSelected()) logAction('Delete (in Group)');
                                         },
                                         traceUpstream: () => {
                                             const targetId = contextMenu.nodeId || getNodes().find(n => n.selected)?.id;
@@ -1078,7 +1093,7 @@ export function FlowCanvas({
                                         enterGroup: () => {
                                             if (isReadOnly || isDrilled) return;
                                             const targetId = contextMenu.nodeId || getNodes().find(n => n.selected)?.id;
-                                            if (targetId && enterGroup(targetId)) logAction('Enter Group (Ctx)');
+                                            if (targetId && enterGroupAndClosePalette(targetId)) logAction('Enter Group (Ctx)');
                                         },
                                         logAction,
                                     }, hasSpecs, !!node?.data?.muted, !!node?.parentId, node?.type === 'frame', { isGroup: node?.type === 'group', inScope: isDrilled });

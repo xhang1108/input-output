@@ -9,6 +9,7 @@ import { getHandleColorByConfig } from '../utils/handleUtils';
 import { useHistoryStore } from '../store/useHistoryStore';
 import { useBrain } from '../context/BrainContext';
 import { Transaction } from '../engine/types/engineTypes';
+import { buildScopeDraftNode, isScopeDrillActive } from './useGroupActions';
 
 export interface PendingConnection {
     nodeId: string;
@@ -60,6 +61,22 @@ export function useNodeSpawner({
 
         const newId = generateNodeId(type);
         const nodeDef = NODE_DEFINITIONS.find(d => d.id === type);
+        // F2 scope: while drilled in, palette spawns land in the drill draft
+        // (view-local LeanNode equivalents, scope-local coords) instead of
+        // the Brain main graph. No Brain transaction, no history — the exit
+        // commit writes them back and its PATCH_SUBGRAPH inverse removes them
+        // on undo. Same assembly as below; D2 rejects frame/group so a
+        // subGraph can never nest.
+        if (isScopeDrillActive()) {
+            const draft = buildScopeDraftNode({ type, label, extraData, position: flowPos });
+            if (!draft) {
+                logAction('Exit group to add groups (Esc)');
+                return null;
+            }
+            setNodes((nds) => [...nds.map(n => ({ ...n, selected: false })), draft as Node]);
+            setPendingConnection(null);
+            return draft as Node;
+        }
         const newNode: Node = {
             id: newId,
             type: type || 'baseNode',

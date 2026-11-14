@@ -31,6 +31,8 @@ export interface ContextMenuActions {
     groupSelected?: () => void;
     ungroupSelected?: () => void;
     enterGroup?: () => void;
+    // Scope-editor draft delete (Delete key is wired separately in FlowCanvas).
+    deleteInScope?: () => void;
 }
 
 export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: number): ContextMenuItemDef[] {
@@ -76,6 +78,16 @@ export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean 
                 items.push({ label: 'Group', shortcut: 'Ctrl+G', action: () => actions.groupSelected!() });
             }
         }
+    }
+
+    // Scope editor: only draft-safe actions (rename/mute/trace/delete);
+    // structural canvas actions would hit the Brain main graph, so the menu
+    // below is skipped entirely while drilled in.
+    if (groupOpts?.inScope) {
+        if (actions.deleteInScope) {
+            items.push({ label: 'Delete', shortcut: 'Del', danger: true, action: () => actions.deleteInScope!() });
+        }
+        return items;
     }
 
     if (hasSpecs) {

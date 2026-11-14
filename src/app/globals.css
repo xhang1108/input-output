@@ -226,6 +226,39 @@ body {
   display: none;
 }
 
+/* GroupNode override (GROUP_NODE_PLAN §10.5): our custom `group` type id
+   collides with React Flow's built-in group node, so the RF default
+   stylesheet paints `.react-flow__node-group` (padding + border + gray
+   group background) onto OUR wrapper div — that gray box behind the card.
+   RF's built-in group is never used in this app; neutralize it. */
+.react-flow__node-group {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  width: auto;
+}
+/* Belt-and-suspenders: beat the RF default regardless of cascade-layer
+   order subtleties (higher specificity, same neutralized values). */
+.react-flow__nodes .react-flow__node-group {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  width: auto;
+  box-shadow: none;
+}
+/* RF's selected/hover/focus rules carry (0,3,0) specificity — outrank with
+   (0,4,0) so no RF ring ever paints on our wrapper. Our own selected border
+   lives on the BaseNode card itself (border-zinc-400). */
+.react-flow__nodes .react-flow__node-group.selectable:hover,
+.react-flow__nodes .react-flow__node-group.selectable.selected,
+.react-flow__nodes .react-flow__node-group.selectable:focus,
+.react-flow__nodes .react-flow__node-group.selectable:focus-visible {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+}
+
 
 /* ───────────────────────────────────────
    § Animations

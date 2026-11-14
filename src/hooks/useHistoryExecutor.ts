@@ -4,6 +4,7 @@ import { useHistoryStore, HistoryEntry } from '../store/useHistoryStore';
 import { useBrain } from '../context/BrainContext';
 import { Transaction } from '../engine/types/engineTypes';
 import type { MoveNodePayload } from '../engine/types/engineTypes';
+import { hydrateGroupPorts } from '../utils/groupPorts';
 import { reconcileEdgesWithBrain } from '../utils/edgeUtils';
 import { sortParentFirst } from '../utils/coordinates';
 
@@ -161,6 +162,58 @@ export const computeNextState = (
             case 'DISCONNECT': {
                 const id = tx.payload as string;
                 nextEdges = nextEdges.filter(e => e.id !== id);
+                break;
+            }
+            case 'PATCH_SUBGRAPH': {
+                // F1 diff-inverse view parity: patch the group shell's
+                // data.subGraph/boundary the way TransactionManager does, so
+                // undo/redo in the main view shows the restored state without
+                // waiting for the next graphChanged sync.
+                const p = tx.payload as {
+                    id: string;
+                    put: Array<{ id: string; [k: string]: unknown }>;
+                    remove: string[];
+                    boundary?: { inputs: unknown[]; outputs: unknown[] };
+                    compiled?: unknown;
+                    edges?: Array<{ id: string; source: string; target: string; [k: string]: unknown }>;
+                };
+                nextNodes = nextNodes.map(node => {
+                    if (node.id !== p.id) return node;
+                    const data = (node.data ?? {}) as Record<string, unknown>;
+                    const sub = (data.subGraph ?? { nodes: [], edges: [] }) as {
+                        nodes: Array<{ id: string; [k: string]: unknown }>;
+                        edges: Array<{ id: string; source: string; target: string; [k: string]: unknown }>;
+                    };
+                    const removeSet = new Set(p.remove ?? []);
+                    const putById = new Map((p.put ?? []).map(n => [n.id, n]));
+                    const nodes: Array<{ id: string; [k: string]: unknown }> = [];
+                    for (const n of sub.nodes ?? []) {
+                        if (removeSet.has(n.id)) continue;
+                        const rep = putById.get(n.id);
+                        if (rep) {
+                            nodes.push({ ...rep });
+                            putById.delete(n.id);
+                        } else {
+                            nodes.push(n);
+                        }
+                    }
+                    for (const n of putById.values()) nodes.push({ ...n });
+                    const edges = p.edges !== undefined
+                        ? p.edges.map(e => ({ ...e }))
+                        : (sub.edges ?? []).filter(e => !removeSet.has(e.source) && !removeSet.has(e.target));
+                    const boundary = (p.boundary !== undefined ? p.boundary : data.boundary) as {
+                        inputs: never[];
+                        outputs: never[];
+                    };
+                    const nextData: Record<string, unknown> = {
+                        ...data,
+                        subGraph: { nodes, edges },
+                        boundary,
+                        handles: hydrateGroupPorts(boundary),
+                    };
+                    if (p.compiled !== undefined) nextData.compiled = p.compiled;
+                    return { ...node, data: nextData };
+                });
                 break;
             }
             case 'REORDER_EDGES': {
