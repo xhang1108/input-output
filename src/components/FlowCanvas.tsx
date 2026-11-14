@@ -30,6 +30,7 @@ import { useEar } from '../hooks/nerves/useEar';
 import { useHand } from '../hooks/nerves/useHand';
 import { useClipboard } from '../hooks/useClipboard';
 import { useFrameActions } from '../hooks/useFrameActions';
+import { useGroupActions } from '../hooks/useGroupActions';
 import { useHistoryExecutor } from '../hooks/useHistoryExecutor';
 import { useNodeEdit } from '../hooks/useNodeEdit';
 import { clearHistoryForNewProject } from '../utils/historyLifecycle';
@@ -177,6 +178,18 @@ export function FlowCanvas({
     // cut and paste all share the same in-memory buffer instance.
     const { duplicateSelected, copyToClipboard, cutSelected, pasteFromClipboard } = useClipboard();
     const { frameSelected, detachNode, fitFrame } = useFrameActions({ isReadOnly });
+    // P3 group (GROUP_NODE_PLAN §5.4/§5.5): drill state swaps the canvas view
+    // to the scope editor; all guards below key off `drill`.
+    const {
+        drill,
+        groupSelected: doGroupSelected,
+        ungroupSelected: doUngroupSelected,
+        enterGroup,
+        exitGroup,
+        drillDeleteSelected,
+        drillConnect,
+    } = useGroupActions({ isReadOnly });
+    const isDrilled = drill !== null;
 
     // Marquee rule: frames are selected only when the marquee touches their
     // border. Selecting children entirely inside a frame must not move the frame.
@@ -273,6 +286,9 @@ export function FlowCanvas({
     }, [isModifierActive, isReadOnly, setNodes, brain, mode]);
 
     const onEdgesChangeSafe = useCallback((changes: EdgeChange[]) => {
+        // Drill scope owns its edges locally (commit on exit); never route
+        // draft removals through the Brain or the history store.
+        if (drill) return;
         const removeChanges = changes.filter(c => c.type === 'remove') as { id: string, type: 'remove' }[];
         if (isReadOnly && removeChanges.length > 0) return;
         if (removeChanges.length === 0) return;
@@ -299,7 +315,7 @@ export function FlowCanvas({
             });
             logAction('Disconnect Edge(s)');
         }
-    }, [isReadOnly, brain, logAction, getEdges, pushHistory]);
+    }, [isReadOnly, brain, logAction, getEdges, pushHistory, drill]);
 
     const clearMemory = useCallback(() => {
         if (isReadOnly) return;
@@ -396,6 +412,11 @@ export function FlowCanvas({
         setEdges,
         logAction,
         onSmartLinkSearch: (params) => {
+            // No palette inside the scope editor (palette spawns to Brain).
+            if (drill) {
+                logAction('Exit group to add nodes (Esc)');
+                return;
+            }
             setPalettePosition(params.position);
             setShowPalette(true);
             paletteGuardRef.current = true;
@@ -415,6 +436,15 @@ export function FlowCanvas({
         onRelinkStart(event, params);
     }, [onRelinkStart]);
 
+    // Drill scope connects draft edges locally; the exit commit persists them.
+    const onGroupAwareConnect = useCallback((connection: Parameters<typeof onRelinkConnect>[0]) => {
+        if (drill) {
+            drillConnect(connection);
+            return;
+        }
+        onRelinkConnect(connection);
+    }, [drill, drillConnect, onRelinkConnect]);
+
     const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: { toNode: { id: string } | null; toHandle: { id?: string | null } | null; isValid: boolean | null } | null) => {
         onRelinkEnd(event, connectionState);
     }, [onRelinkEnd]);
@@ -425,6 +455,11 @@ export function FlowCanvas({
     };
 
     const handleCancel = useCallback(() => {
+        // Esc in scope mode commits the draft (one composite BATCH) and exits.
+        if (isDrilled) {
+            if (exitGroup(true)) logAction('Exit Group (Esc)');
+            return;
+        }
         if (mode !== 'IDLE') {
             cancelGrab(false);
             logAction('Cancel Transform (Esc)');
@@ -446,7 +481,7 @@ export function FlowCanvas({
         }
 
         clearHighlightedPath();
-    }, [mode, cancelGrab, setNodes, showPalette, showNPanel, closePalette, setShowNPanel, logAction, getNodes, clearHighlightedPath]);
+    }, [mode, cancelGrab, setNodes, showPalette, showNPanel, closePalette, setShowNPanel, logAction, getNodes, clearHighlightedPath, isDrilled, exitGroup]);
 
     // Single source of truth for undo/redo so keyboard, floating buttons and the
     // canvas context menu cannot drift apart.
@@ -478,6 +513,11 @@ export function FlowCanvas({
         shortcuts: getEarShortcuts(platform, {
             'palette:open': autoConfirm((e: any) => {
                 e.preventDefault();
+                // Palette spawns to the Brain main graph, invisible in scope.
+                if (isDrilled) {
+                    logAction('Exit group to add nodes (Esc)');
+                    return;
+                }
                 setPendingConnection(null);
                 setPalettePosition(mousePosRef.current);
                 setShowPalette(true);
@@ -532,15 +572,81 @@ export function FlowCanvas({
             'nodes:bundle': autoConfirm((e) => {
                 if (isReadOnly) return;
                 e.preventDefault();
+                if (isDrilled) {
+                    logAction('Exit group before framing (Esc)');
+                    return;
+                }
                 if (frameSelected()) {
                     logAction('Group / Ungroup (F)');
                 } else {
                     logAction('Group blocked: select root nodes or one frame\'s children');
                 }
             }),
+            // P3 group (GROUP_NODE_PLAN §5.4/D6). Ctrl+G needs preventDefault
+            // (browser Find Next) and canvas focus (useEar input guard).
+            'nodes:group': autoConfirm((e) => {
+                if (isReadOnly) return;
+                e.preventDefault();
+                if (isDrilled) {
+                    logAction('Exit group before grouping (Esc)');
+                    return;
+                }
+                if (doGroupSelected()) {
+                    logAction('Group Selected (Ctrl+G)');
+                } else {
+                    logAction('Group blocked: select nodes (no frame/group)');
+                }
+            }),
+            'nodes:ungroup': autoConfirm((e) => {
+                if (isReadOnly) return;
+                e.preventDefault();
+                if (isDrilled) {
+                    logAction('Exit group before ungrouping (Esc)');
+                    return;
+                }
+                if (doUngroupSelected()) {
+                    logAction('Ungroup Selected (Ctrl+Shift+G)');
+                } else {
+                    logAction('Ungroup blocked: select a group node');
+                }
+            }),
+            'nodes:ungroup-alt': autoConfirm((e) => {
+                if (isReadOnly) return;
+                e.preventDefault();
+                if (isDrilled) {
+                    logAction('Exit group before ungrouping (Esc)');
+                    return;
+                }
+                if (doUngroupSelected()) {
+                    logAction('Ungroup Selected (Ctrl+Alt+G)');
+                } else {
+                    logAction('Ungroup blocked: select a group node');
+                }
+            }),
+            // Tab drill in/out shares the key with Macro (INTERACTION:32).
+            'nodes:drill': (e) => {
+                if (isReadOnly) return;
+                e.preventDefault();
+                if (mode !== 'IDLE') {
+                    confirmGrab();
+                    return;
+                }
+                if (isDrilled) {
+                    if (exitGroup(true)) logAction('Exit Group (Tab)');
+                    return;
+                }
+                const target = getNodes().find(n => n.selected && n.type === 'group');
+                if (target && enterGroup(target.id)) {
+                    logAction(`Enter Group: ${String(target.data?.label || target.id)} (Tab)`);
+                }
+            }),
             'nodes:duplicate': autoConfirm((e) => {
                 if (isReadOnly) return;
                 e.preventDefault();
+                if (isDrilled) {
+                    logAction('Exit group before duplicating (Esc)');
+                    return;
+                }
                 const duplicated = duplicateSelected();
                 if (duplicated) {
                     startGrab(mousePosRef.current, false, duplicated.nodes, true, undefined, duplicated.entryId);
@@ -549,6 +655,10 @@ export function FlowCanvas({
             }),
             'nodes:delete': () => {
                 if (isReadOnly) return;
+                if (isDrilled) {
+                    if (drillDeleteSelected()) logAction('Delete (in Group)');
+                    return;
+                }
                 const active = document.activeElement?.tagName;
                 if (active !== 'INPUT' && active !== 'TEXTAREA') {
                     if (mode !== 'IDLE') confirmGrab();
@@ -592,13 +702,27 @@ export function FlowCanvas({
                 if (selected.length > 0) logAction(`Toggle Mute [${selected.length}] (M)`);
             }),
             'y': () => { if (mode === 'GRABBING' || mode === 'SCALING') { setAxisLock('Y'); logAction('Axis Lock Y'); } },
-            'clipboard:copy': autoConfirm(() => { copyToClipboard(); logAction('Copy'); }),
+            'clipboard:copy': autoConfirm(() => {
+                if (isDrilled) {
+                    logAction('Exit group before copying (Esc)');
+                    return;
+                }
+                copyToClipboard(); logAction('Copy');
+            }),
             'clipboard:cut': autoConfirm(() => {
                 if (isReadOnly) return;
+                if (isDrilled) {
+                    logAction('Exit group before cutting (Esc)');
+                    return;
+                }
                 if (cutSelected()) logAction('Cut');
             }),
             'clipboard:paste': autoConfirm(() => {
                 if (isReadOnly) return;
+                if (isDrilled) {
+                    logAction('Exit group before pasting (Esc)');
+                    return;
+                }
                 pasteFromClipboard(project(mousePosRef.current));
                 logAction('Paste');
             }),
@@ -620,7 +744,17 @@ export function FlowCanvas({
                 e.preventDefault();
                 handleRedo();
             },
-            'system:confirm': () => { confirmGrab(); logAction('Confirm (Enter)'); },
+            'system:confirm': () => {
+                // Enter on a selected group drills in (Tab/double-click also work).
+                if (!isDrilled && mode === 'IDLE') {
+                    const target = getNodes().find(n => n.selected && n.type === 'group');
+                    if (target && enterGroup(target.id)) {
+                        logAction('Enter Group (Enter)');
+                        return;
+                    }
+                }
+                confirmGrab(); logAction('Confirm (Enter)');
+            },
             'system:cancel': () => { handleCancel(); },
             '0': () => handleTypeNum('0'),
             '1': () => handleTypeNum('1'),
@@ -648,7 +782,8 @@ export function FlowCanvas({
             },
         }),
         deps: [handleUndo, handleRedo, startGrab, startScale, startRotate, confirmGrab, cancelGrab, duplicateSelected, frameSelected,
-           copyToClipboard, cutSelected, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes, nodeEdit]
+           copyToClipboard, cutSelected, pasteFromClipboard, deleteSelected, resetSelected, focusOn, setNodes, mode, setAxisLock, swapConnections, logAction, mousePosRef, setPalettePosition, setShowPalette, setShowNPanel, handleAutoLayout, handleTypeNum, transformBuffer, saveProject, isReadOnly, triggerDirty, autoSave, resetCloudTimer, getNodes, nodeEdit,
+           isDrilled, doGroupSelected, doUngroupSelected, enterGroup, exitGroup, drillDeleteSelected]
     });
 
     const updateModifier = useCallback((e: React.MouseEvent) => {
@@ -673,6 +808,13 @@ export function FlowCanvas({
         handleMouseUp(e.nativeEvent);
         performAutoInsert();
     }, [handleMouseUp, performAutoInsert, updateModifier]);
+
+    const onNodeDoubleClick = useCallback((_e: React.MouseEvent, node: Node) => {
+        if (isReadOnly || isDrilled) return;
+        if (node.type === 'group' && enterGroup(node.id)) {
+            logAction(`Enter Group: ${String(node.data?.label || node.id)} (Double-click)`);
+        }
+    }, [isReadOnly, isDrilled, enterGroup, logAction]);
 
     const onClick = useCallback((e: React.MouseEvent) => {
         if (paletteGuardRef.current) {
@@ -718,6 +860,30 @@ export function FlowCanvas({
                     </div>
                 )}
                 
+                {/* P3 group breadcrumbs: Main > label. Main exits with a
+                    composite commit; Discard drops the draft (§5.5). */}
+                {drill && (
+                    <div className="absolute top-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/90 px-3 py-1.5 text-xs shadow-lg backdrop-blur">
+                        <button
+                            onClick={() => { if (exitGroup(true)) logAction('Exit Group'); }}
+                            className="font-semibold text-zinc-200 hover:text-white transition-colors"
+                        >
+                            Main
+                        </button>
+                        <span className="text-zinc-600">›</span>
+                        <span className="font-bold text-zinc-100">{drill.label}</span>
+                        <span className="text-[10px] text-zinc-500">
+                            {drill.original.subGraph.nodes.length} nodes · edits commit on exit
+                        </span>
+                        <button
+                            onClick={() => { if (exitGroup(false)) logAction('Discard Group Edits'); }}
+                            className="text-zinc-500 hover:text-red-400 transition-colors font-medium"
+                        >
+                            Discard
+                        </button>
+                    </div>
+                )}
+
                 {/* P2-10: uncontrolled <ReactFlow> — defaultNodes/defaultEdges
                     seed the store once; all later truth lives in Brain.
                     Do NOT switch to controlled nodes/edges here (would fight
@@ -728,7 +894,7 @@ export function FlowCanvas({
                     defaultEdges={EMPTY_EDGES}
                     onNodesChange={onNodesChangeSafe}
                     onEdgesChange={onEdgesChangeSafe}
-                    onConnect={isReadOnly ? undefined : onRelinkConnect}
+                    onConnect={isReadOnly ? undefined : onGroupAwareConnect}
                     onConnectStart={isReadOnly ? undefined : onConnectStart}
                     onConnectEnd={isReadOnly ? undefined : onConnectEnd}
                     isValidConnection={isValidRelinkConnection}
@@ -761,6 +927,7 @@ export function FlowCanvas({
                         clearHighlightedPath();
                     }}
 
+                    onNodeDoubleClick={isReadOnly ? undefined : onNodeDoubleClick}
                     onNodeContextMenu={(e, node) => {
                         e.preventDefault();
                         if (e.ctrlKey) return;
@@ -866,16 +1033,23 @@ export function FlowCanvas({
                                             }
                                         },
                                         duplicateAndGrab: () => {
-                                            if (isReadOnly) return;
+                                            if (isReadOnly || isDrilled) return;
                                             const duplicated = duplicateSelected();
                                             if (duplicated) startGrab({ x: contextMenu.x, y: contextMenu.y }, false, duplicated.nodes, false, undefined, duplicated.entryId);
                                         },
                                         copyToClipboard,
-                                        cutSelected: () => { if (isReadOnly) return; cutSelected(); },
-                                        detachSelected: () => { if (isReadOnly) return; detachSelected(); },
-                                        detachFromFrame: () => { if (isReadOnly) return; if (node) detachNode(node.id); },
-                                        fitToFrame: () => { if (isReadOnly) return; if (node) fitFrame(node.id); },
-                                        deleteSelected: () => { if (isReadOnly) return; deleteSelected(); },
+                                        cutSelected: () => { if (isReadOnly || isDrilled) return; cutSelected(); },
+                                        detachSelected: () => { if (isReadOnly || isDrilled) return; detachSelected(); },
+                                        detachFromFrame: () => { if (isReadOnly || isDrilled) return; if (node) detachNode(node.id); },
+                                        fitToFrame: () => { if (isReadOnly || isDrilled) return; if (node) fitFrame(node.id); },
+                                        deleteSelected: () => {
+                                            if (isReadOnly) return;
+                                            if (isDrilled) {
+                                                if (drillDeleteSelected()) logAction('Delete (in Group)');
+                                                return;
+                                            }
+                                            deleteSelected();
+                                        },
                                         traceUpstream: () => {
                                             const targetId = contextMenu.nodeId || getNodes().find(n => n.selected)?.id;
                                             if (targetId) {
@@ -885,7 +1059,7 @@ export function FlowCanvas({
                                             }
                                         },
                                         toggleMute: () => {
-                                            if (isReadOnly) return;
+                                            if (isReadOnly || isDrilled) return;
                                             const selected = getNodes().filter(n => n.selected);
                                             nodeEdit.editNodesData(
                                                 selected.map(n => ({ id: n.id, patch: { muted: !n.data?.muted } })),
@@ -893,8 +1067,21 @@ export function FlowCanvas({
                                             );
                                             if (selected.length > 0) logAction(`Toggle Mute [${selected.length}] (Ctx)`);
                                         },
+                                        groupSelected: () => {
+                                            if (isReadOnly || isDrilled) return;
+                                            if (doGroupSelected()) logAction('Group Selected (Ctx)');
+                                        },
+                                        ungroupSelected: () => {
+                                            if (isReadOnly || isDrilled) return;
+                                            if (doUngroupSelected()) logAction('Ungroup Selected (Ctx)');
+                                        },
+                                        enterGroup: () => {
+                                            if (isReadOnly || isDrilled) return;
+                                            const targetId = contextMenu.nodeId || getNodes().find(n => n.selected)?.id;
+                                            if (targetId && enterGroup(targetId)) logAction('Enter Group (Ctx)');
+                                        },
                                         logAction,
-                                    }, hasSpecs, !!node?.data?.muted, !!node?.parentId, node?.type === 'frame');
+                                    }, hasSpecs, !!node?.data?.muted, !!node?.parentId, node?.type === 'frame', { isGroup: node?.type === 'group', inScope: isDrilled });
                                 })()
                             }
                         />

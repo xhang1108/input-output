@@ -80,6 +80,36 @@ export const COMMAND_REGISTRY: ShortcutDefinition[] = [
         category: 'Transform',
         keys: { default: 'f' }
     },
+    // --- Group (Blender-style; GROUP_NODE_PLAN §5.4/D6) ---
+    // Ctrl/Cmd+G needs preventDefault() (browser Find Next) and canvas focus only (P3 wiring).
+    {
+        id: 'nodes:group',
+        label: 'Group Selected',
+        category: 'Transform',
+        keys: { default: 'ctrl+g', mac: 'cmd+g' }
+    },
+    // Primary ungroup binding (Figma/Miro convention).
+    {
+        id: 'nodes:ungroup',
+        label: 'Ungroup Selected',
+        category: 'Transform',
+        keys: { default: 'ctrl+shift+g', mac: 'cmd+shift+g' }
+    },
+    // Secondary ungroup binding (= Blender Ctrl+Alt+G).
+    // Key string MUST stay in useEar comboKey sort order (modifiers sorted: alt < ctrl < shift).
+    {
+        id: 'nodes:ungroup-alt',
+        label: 'Ungroup Selected (Alt)',
+        category: 'Transform',
+        keys: { default: 'alt+ctrl+g' }
+    },
+    // Drill in/out shares Tab with Macro (INTERACTION:32); Enter-in + Esc-out are P3 assists.
+    {
+        id: 'nodes:drill',
+        label: 'Drill In/Out (Group)',
+        category: 'Utility',
+        keys: { default: 'tab' }
+    },
 
     // --- Selection & Deletion ---
     {

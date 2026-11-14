@@ -355,6 +355,13 @@ export class Parser {
     this.nodes.forEach((raw, tempId) => {
       let def = NODE_DEFINITIONS.find((d: any) => d.id === raw.id);
       if (!def) {
+        // [E6] Case-insensitive id match so the uppercase GROUP keyword (like
+        // the existing FRAME keyword) resolves to the lowercase `group` def.
+        // nodeDefinitions.ts aliases are intentionally untouched.
+        const lower = raw.id.toLowerCase();
+        def = NODE_DEFINITIONS.find((d: any) => d.id.toLowerCase() === lower);
+      }
+      if (!def) {
         def = NODE_DEFINITIONS.find((d: any) => d.aliases?.includes(raw.id.toLowerCase()));
       }
 
@@ -464,6 +471,65 @@ export class Parser {
             data[key] = raw.props[key];
           }
         });
+      }
+
+      // [E6] Group payload restore: the `subgraph` / `ports` props arrive as
+      // single-line JSON strings (Encoder double-encodes them). Parse back
+      // into `data.subGraph` / `data.boundary`; drop the lowercase duplicates
+      // so they never leak into node.data (mirrors the `parent` handling).
+      if (def.id === 'group') {
+        const parseJsonProp = (val: unknown, propName: string): unknown => {
+          if (val === undefined) return undefined;
+          if (typeof val === 'string') {
+            try {
+              return JSON.parse(val);
+            } catch {
+              this.diagnostics.push({
+                severity: 'Error',
+                message: `Group [${raw.label || raw.id}] has invalid JSON in '${propName}' prop.`,
+                source: 'IOGL-Parser',
+                range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+              });
+              return undefined;
+            }
+          }
+          return val;
+        };
+
+        const byId = (a: any, b: any) => String(a.id).localeCompare(String(b.id));
+        const byPort = (a: any, b: any) => String(a.portId).localeCompare(String(b.portId));
+
+        const sg = parseJsonProp(raw.props.subgraph, 'subgraph') as any;
+        if (sg && typeof sg === 'object') {
+          const nodes = (Array.isArray(sg.nodes) ? [...sg.nodes] : []).sort(byId);
+          const edges = (Array.isArray(sg.edges) ? [...sg.edges] : []).sort(byId);
+          // D2: no nested group/frame inside a subGraph.
+          const nested = nodes.find((n: any) => n.type === 'group' || n.type === 'frame');
+          if (nested) {
+            this.diagnostics.push({
+              severity: 'Error',
+              message: `Group [${raw.label || raw.id}] contains nested '${nested.type}' node '${nested.id}'; nesting is not supported.`,
+              source: 'IOGL-Parser',
+              range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+            });
+          }
+          (data as Record<string, any>).subGraph = { nodes, edges };
+        } else if ((data as Record<string, any>).subGraph === undefined) {
+          (data as Record<string, any>).subGraph = { nodes: [], edges: [] };
+        }
+
+        const ports = parseJsonProp(raw.props.ports, 'ports') as any;
+        if (ports && typeof ports === 'object') {
+          (data as Record<string, any>).boundary = {
+            inputs: (Array.isArray(ports.inputs) ? [...ports.inputs] : []).sort(byPort),
+            outputs: (Array.isArray(ports.outputs) ? [...ports.outputs] : []).sort(byPort)
+          };
+        } else if ((data as Record<string, any>).boundary === undefined) {
+          (data as Record<string, any>).boundary = { inputs: [], outputs: [] };
+        }
+
+        delete (data as Record<string, any>).subgraph;
+        delete (data as Record<string, any>).ports;
       }
 
       const defaultX = 20 + (nodeIndex * 20) % 400;

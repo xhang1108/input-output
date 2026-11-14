@@ -39,7 +39,7 @@ export class NodeRegistry {
         }
     }
 
-    public static async evaluate(node: NodeLogic, inputs: Record<string, NodePayload>): Promise<NodePayload> {
+    public static async evaluate(node: NodeLogic, inputs: Record<string, NodePayload>, opts?: { skipSymbol?: boolean }): Promise<NodePayload> {
 
         // Mute Bypass Logic: If muted, pass through the primary input ONLY
         const data = (node.data || {}) as Record<string, unknown>;
@@ -60,8 +60,10 @@ export class NodeRegistry {
 
         if (!result) return node.value || PayloadUtils.createScalar(0);
 
-        // Auto-attach symbol if not already present
-        if (result && typeof result === 'object' && result.symbol == null) {
+        // Auto-attach symbol if not already present. Group internals pass
+        // skipSymbol: nobody reads inner symbols (the group shell builds its
+        // own AST), and the per-node input unwrap loop is pure overhead.
+        if (!opts?.skipSymbol && result && typeof result === 'object' && result.symbol == null) {
             const inputSymbols: Record<string, ASTNode> = {};
             for (const [key, p] of Object.entries(inputs)) {
                 if (!p) continue;

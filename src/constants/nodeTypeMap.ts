@@ -49,6 +49,7 @@ import { ArrayCalculusNode } from '../components/nodes/ArrayCalculusNode';
 import { DifferentialNode } from '../components/nodes/DifferentialNode';
 import { IntegralNode } from '../components/nodes/IntegralNode';
 import { LimitNode } from '../components/nodes/LimitNode';
+import { GroupNode } from '../components/nodes/GroupNode';
 import { ODESolverNode } from '../components/nodes/ODESolverNode';
 import { SmoothingNode } from '../components/nodes/SmoothingNode';
 import { StatusNode } from '../components/nodes/StatusNode';
@@ -121,6 +122,7 @@ export const nodeTypes: NodeTypes = {
     // ─── Fallback & Special ─────────────────────────────────
     'baseNode': BaseNode,
     'frame': FrameNode,
+    'group': GroupNode,
 
     'IN-03': ColorNode,     // New Color ID
 };

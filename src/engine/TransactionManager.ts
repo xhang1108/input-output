@@ -1,7 +1,9 @@
 import { Edge } from '@xyflow/react';
-import { Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload, ResizeNodePayload, GraphState, NodeLogic } from './types';
+import { Transaction, AddNodePayload, MoveNodePayload, UpdateValuePayload, ResizeNodePayload, GraphState, NodeLogic, PatchSubGraphPayload } from './types';
 import { PayloadUtils } from '../utils/PayloadUtils';
 import { getUniqueLabel } from '../utils/labelUtils';
+import { hydrateGroupPorts } from '../utils/groupPorts';
+import type { LeanEdge, LeanNode } from '../types/groupNode';
 import deepEqual from 'fast-deep-equal';
 
 export class TransactionManager {
@@ -210,6 +212,61 @@ export class TransactionManager {
                     return { success: true };
                 }
                 return { success: false, reason: 'Node not found' };
+            }
+
+            case 'PATCH_SUBGRAPH': {
+                // GROUP_NODE_PLAN F1 (diff-inverse): patch a group node's
+                // subGraph in place-out-of-new-arrays. Never mutates the old
+                // arrays/objects: fresh nodes/edges arrays + fresh data object
+                // keep the planCache object-identity contract intact, same as
+                // the full-replace UPDATE_NODE_DATA commit path.
+                const p = tx.payload as PatchSubGraphPayload;
+                const gNode = state.nodes.get(p.id);
+                if (!gNode) return { success: false, reason: 'Node not found' };
+                const gData = (gNode.data ?? {}) as Record<string, unknown>;
+                const oldSub = (gData.subGraph ?? { nodes: [], edges: [] }) as {
+                    nodes: LeanNode[];
+                    edges: LeanEdge[];
+                };
+                const removeSet = new Set(p.remove ?? []);
+                const putById = new Map<string, LeanNode>((p.put ?? []).map((n) => [n.id, n]));
+                const nextNodes: LeanNode[] = [];
+                for (const n of oldSub.nodes ?? []) {
+                    if (removeSet.has(n.id)) continue;
+                    const rep = putById.get(n.id);
+                    if (rep) {
+                        nextNodes.push(JSON.parse(JSON.stringify(rep)) as LeanNode);
+                        putById.delete(n.id);
+                    } else {
+                        nextNodes.push(n);
+                    }
+                }
+                for (const n of putById.values()) {
+                    nextNodes.push(JSON.parse(JSON.stringify(n)) as LeanNode);
+                }
+                // Edges: full array only when the diff carried one; otherwise
+                // keep old edges minus those incident to removed nodes.
+                const nextEdges: LeanEdge[] = p.edges !== undefined
+                    ? (JSON.parse(JSON.stringify(p.edges)) as LeanEdge[])
+                    : (oldSub.edges ?? []).filter((e) => !removeSet.has(e.source) && !removeSet.has(e.target));
+                const nextData: Record<string, unknown> = {
+                    ...gData,
+                    subGraph: { nodes: nextNodes, edges: nextEdges },
+                };
+                if (p.boundary !== undefined) {
+                    nextData.boundary = JSON.parse(JSON.stringify(p.boundary));
+                }
+                if (p.compiled !== undefined) {
+                    nextData.compiled = JSON.parse(JSON.stringify(p.compiled));
+                }
+                nextData.handles = hydrateGroupPorts(
+                    (nextData.boundary ?? { inputs: [], outputs: [] }) as Parameters<typeof hydrateGroupPorts>[0]
+                );
+                gNode.data = nextData;
+                gNode.isInDirtyChain = true;
+                gNode.lastUpdatedProperty = 'data:subGraph';
+                hooks.onNodeDataUpdated?.(p.id);
+                return { success: true };
             }
 
             case 'BATCH': {

@@ -2,6 +2,7 @@ import { InjectableGraph } from '@/engine/types/engineTypes';
 import { IOGL_MANIFEST } from './manifest';
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { IOGLUtils } from './IOGLUtils';
+import type { SubGraph } from '@/types/groupNode';
 
 /**
  * ️ IOGL 1.0 Encoder
@@ -13,6 +14,44 @@ export class Encoder {
     if (!label) return '';
     // IOGL 1.0 Law: Labels MUST be bracketed at all times for consistency.
     return `[${label}]`;
+  }
+
+  /**
+   * [E6] Recursively sort object keys so the group JSON props are deterministic:
+   * regrouping the same graph (or parsing it back) yields byte-identical text.
+   * Arrays keep their order — callers pre-sort nodes/edges/ports by stable id.
+   */
+  private static canonicalize(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(v => Encoder.canonicalize(v));
+    if (value && typeof value === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const k of Object.keys(value as Record<string, unknown>).sort()) {
+        out[k] = Encoder.canonicalize((value as Record<string, unknown>)[k]);
+      }
+      return out;
+    }
+    return value;
+  }
+
+  /**
+   * [E6] Build the two single-line JSON string props for a group node.
+   * Sorting (nodes/edges by id, ports by portId) + canonicalize make
+   * encode -> parse -> encode byte-equal regardless of input order.
+   * `compiled` (memory-only, E3) is never encoded.
+   */
+  private static encodeGroupPayloads(data: any): { subgraph: string; ports: string } {
+    const sg = (data?.subGraph ?? data?.subgraph ?? { nodes: [], edges: [] }) as Partial<SubGraph>;
+    const boundary = data?.boundary ?? data?.ports ?? { inputs: [], outputs: [] };
+    const byId = (a: any, b: any) => String(a.id).localeCompare(String(b.id));
+    const byPort = (a: any, b: any) => String(a.portId).localeCompare(String(b.portId));
+    const nodes = [...(sg.nodes ?? [])].sort(byId);
+    const edges = [...(sg.edges ?? [])].sort(byId);
+    const inputs = [...(boundary.inputs ?? [])].sort(byPort);
+    const outputs = [...(boundary.outputs ?? [])].sort(byPort);
+    return {
+      subgraph: JSON.stringify(Encoder.canonicalize({ nodes, edges })),
+      ports: JSON.stringify(Encoder.canonicalize({ inputs, outputs }))
+    };
   }
 
   public static encode(graph: InjectableGraph): string {
@@ -30,6 +69,8 @@ export class Encoder {
     for (const node of graph.nodes) {
       const label = idToLabel.get(node.id) || node.id;
       const isFrame = node.type === 'frame';
+      // [E6] Groups serialize as the uppercase GROUP keyword (mirrors FRAME).
+      const isGroup = node.type === 'group';
 
       // [P2.1] Frames are single-level: validate the parent before emitting
       // anything, so a bad hierarchy aborts the export instead of silently
@@ -69,7 +110,14 @@ export class Encoder {
         ? { ...data, width: data.width ?? (node as any).width, height: data.height ?? (node as any).height }
         : data;
 
-      if (manifest) {
+      // [E6] Group payload: two single-line JSON *string* props (double-encoded
+      // so the Lexer sees one quoted value). Generic manifest handling would
+      // emit a bare inline object, which the Parser cannot read back.
+      if (isGroup) {
+        const payloads = Encoder.encodeGroupPayloads(data);
+        props.push(`subgraph: ${JSON.stringify(payloads.subgraph)}`);
+        props.push(`ports: ${JSON.stringify(payloads.ports)}`);
+      } else if (manifest) {
         // Mode - ONLY encode if manifest.modeProperty is defined
         if (manifest.modeProperty && data[manifest.modeProperty] !== undefined) {
           let modeVal = data[manifest.modeProperty];
@@ -145,7 +193,8 @@ export class Encoder {
       // IOGL 1.0 Law: All nodes MUST have bracketed labels in output
       const labelStr = `${this.formatLabel(label)} `;
       // [P2.1] 'frame' is serialized with the uppercase FRAME keyword.
-      const keyword = isFrame ? 'FRAME' : node.type;
+      // [E6] 'group' likewise becomes GROUP.
+      const keyword = isFrame ? 'FRAME' : isGroup ? 'GROUP' : node.type;
 
       result += `${labelStr}${keyword}${positionalStr}${propStr} @${x},${y}\n`;
     }

@@ -52,6 +52,7 @@ export interface NodeDefinition {
     };
     minWidth?: number;       // [0.11.3] Minimum physical width constraint
     minHeight?: number;      // [0.11.3] Minimum physical height constraint
+    hiddenFromPalette?: boolean; // [P0 Group] Hide from Shift+A palette (e.g. empty group has no ports yet)
 }
 
 export const DEFAULT_UI_ORIGIN: [number, number] = [0, 0];
@@ -1144,7 +1145,24 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
             width: 300,
             height: 200
         },
-        aliases: ['frame', 'group', 'container'],
+        aliases: ['frame', 'container'],
+        minWidth: 200,
+        minHeight: 120
+    },
+    // ─── Group (P0: type + palette flag only; evaluator/UI/hydrate land in P1-P3) ──
+    // D2: subGraph must NOT contain frame/group (nesting rejected); runtime check lands in P1.
+    {
+        id: 'group',
+        label: 'Group',
+        category: 'Utility',
+        handles: [], // dynamic: derived from boundary via hydrateGroupPorts (P1); empty until grouped
+        defaultData: {
+            label: 'Group',
+            subGraph: { nodes: [], edges: [] },
+            boundary: { inputs: [], outputs: [] }
+        },
+        aliases: ['macro', 'group node', 'encapsulate'],
+        hiddenFromPalette: true, // empty group has no ports: never show in Shift+A palette
         minWidth: 200,
         minHeight: 120
     }

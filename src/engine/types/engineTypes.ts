@@ -1,5 +1,6 @@
 import { Edge, Node } from '@xyflow/react';
 import { NodePayload } from '@/types/payload';
+import type { GroupNodeData, LeanEdge, LeanNode } from '@/types/groupNode';
 
 
 
@@ -39,6 +40,7 @@ export type TransactionType =
     | 'RESIZE_NODE'
     | 'MOVE_NODE'
     | 'REORDER_EDGES'
+    | 'PATCH_SUBGRAPH'
     | 'BATCH';
 
 export interface Transaction {
@@ -49,6 +51,25 @@ export interface Transaction {
 export interface UpdateNodeDataAction {
     type: 'UPDATE_NODE_DATA';
     payload: { id: string; data: Record<string, unknown> };
+}
+
+// GROUP_NODE_PLAN F1 (diff-inverse): in-place patch of a group node's
+// subGraph. `put` carries full previous LeanNodes for deleted/modified
+// entries, `remove` carries only ids of added entries. `edges` (full array)
+// is present only when the edge set changed; `boundary`/`compiled` carry the
+// previous version when supplied.
+export interface PatchSubGraphPayload {
+    id: string;
+    put: LeanNode[];
+    remove: string[];
+    boundary?: GroupNodeData['boundary'];
+    compiled?: GroupNodeData['compiled'];
+    edges?: LeanEdge[];
+}
+
+export interface PatchSubGraphAction {
+    type: 'PATCH_SUBGRAPH';
+    payload: PatchSubGraphPayload;
 }
 
 export interface AddNodePayload {

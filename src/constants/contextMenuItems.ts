@@ -26,6 +26,11 @@ export interface ContextMenuActions {
     logAction: (msg: string) => void;
     undo?: () => void;
     redo?: () => void;
+    // Group (Blender-style; GROUP_NODE_PLAN §5.4). All optional so existing
+    // canvas/node menus keep working; FlowCanvas wires these when available.
+    groupSelected?: () => void;
+    ungroupSelected?: () => void;
+    enterGroup?: () => void;
 }
 
 export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: number): ContextMenuItemDef[] {
@@ -50,12 +55,28 @@ export function getCanvasMenuItems(actions: ContextMenuActions, x: number, y: nu
     return items;
 }
 
-export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean = false, isMuted: boolean = false, hasParent: boolean = false, isFrame: boolean = false): ContextMenuItemDef[] {
+export function getNodeMenuItems(actions: ContextMenuActions, hasSpecs: boolean = false, isMuted: boolean = false, hasParent: boolean = false, isFrame: boolean = false, groupOpts?: { isGroup?: boolean; inScope?: boolean }): ContextMenuItemDef[] {
     const items: ContextMenuItemDef[] = [
         { label: 'Rename', shortcut: 'Enter', action: () => actions.rename() },
         { label: isMuted ? 'Unmute' : 'Mute', shortcut: 'M', action: () => actions.toggleMute() },
         { label: 'Trace Upstream', shortcut: 'Alt+T', action: () => actions.traceUpstream() },
     ];
+
+    // Group drill wiring (mobile path to Enter Group lives here; §8.7).
+    if (!groupOpts?.inScope) {
+        if (groupOpts?.isGroup) {
+            if (actions.enterGroup) {
+                items.push({ label: 'Enter Group', shortcut: 'Tab', action: () => actions.enterGroup!() });
+            }
+            if (actions.ungroupSelected) {
+                items.push({ label: 'Ungroup', shortcut: 'Ctrl+Shift+G', action: () => actions.ungroupSelected!() });
+            }
+        } else if (!isFrame) {
+            if (actions.groupSelected) {
+                items.push({ label: 'Group', shortcut: 'Ctrl+G', action: () => actions.groupSelected!() });
+            }
+        }
+    }
 
     if (hasSpecs) {
         items.push({ label: 'View Specs', shortcut: 'F1', action: () => actions.viewSpecs() });

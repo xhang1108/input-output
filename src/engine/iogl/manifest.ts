@@ -198,5 +198,10 @@ export const IOGL_MANIFEST: Record<string, IOGLSchema> = {
   // --- 8. Structure Family (IOGL 1.1) ---
   // Frames carry their size as the {W,H} dimension shorthand; children point at
   // the frame through the reserved `parent` prop (handled by Parser/Encoder).
-  "frame": { auxiliary: ["width", "height"] }
+  "frame": { auxiliary: ["width", "height"] },
+
+  // --- 9. Group (E6 spike: single-line JSON string props, no block syntax) ---
+  // `subgraph` = JSON of SubGraph, `ports` = JSON of boundary {inputs, outputs}.
+  // Encoder double-encodes (JSON string prop); Parser JSON.parses back.
+  "group": { auxiliary: ["subgraph", "ports"] }
 };

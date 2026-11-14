@@ -5,6 +5,7 @@ import { GraphState, NodeLogic, Transaction, AddNodePayload, MoveNodePayload, Up
 import { NodeRegistry } from './NodeRegistry'; // Static Import
 import { NODE_DEFINITIONS } from '@/types/nodeDefinitions';
 import { getHandleVariant, isProbablyInputHandle } from '../utils/handleUtils';
+import { hydrateGroupNodeHandles } from '../utils/groupPorts';
 import { sanitizeHierarchy, toAbsolute, type CoordinateNode } from '../utils/coordinates';
 // BrainWorkerProxy is imported DYNAMICALLY in initWorker() to avoid circular dependency
 import type { IncrementalPatch } from './SerializableGraph';
@@ -256,6 +257,7 @@ export class Brain {
                         const startTime = performance.now();
                         const patches = await this.recalculateDirtyChain();
                         this.lastSolveMs = performance.now() - startTime;
+                        useAppStore.getState().setLastEvalMs(this.lastSolveMs);
                         if (patches.size > 0) {
                             this.emit('graphChanged', patches);
                         }
@@ -1201,6 +1203,17 @@ export class Brain {
                 if (!nodeData.handles) {
                     // This case is unlikely given the workflow, but kept for robustness
                     console.warn(`[Brain] No definition found for node type: ${n.type}. Using saved handles.`);
+                }
+            }
+
+            // P1 Group: outer handles derive from boundary (never persisted —
+            // Serializer prune strips handles). Rebuild here so reload / IOGL
+            // import / project restore — all funneled through injectNodes —
+            // restore outer ports 1:1 (GROUP_NODE_PLAN §5.6).
+            if (n.type === 'group') {
+                const hydrated = hydrateGroupNodeHandles(nodeData as Record<string, unknown>);
+                if (hydrated) {
+                    nodeData = { ...nodeData, handles: hydrated };
                 }
             }
 
