@@ -89,4 +89,35 @@ describe('importSnapshot', () => {
         clearImportSnapshot();
         expect(getImportSnapshot()).toBeNull();
     });
+
+    it('fills width/height from measured without mutating the live node', () => {
+        const live = { ...node('a'), measured: { width: 240, height: 120 } } as Node;
+
+        captureImportSnapshot([live], []);
+
+        const captured = getImportSnapshot()!.nodes[0];
+        expect(captured.width).toBe(240);
+        expect(captured.height).toBe(120);
+        expect(captured.measured).toEqual({ width: 240, height: 120 });
+        expect(captured.data).toEqual(live.data);
+        expect(live.width).toBeUndefined();
+        expect(live.height).toBeUndefined();
+        expect(captured).not.toBe(live);
+    });
+
+    it('prefers explicit width/height over measured', () => {
+        const live = {
+            ...node('a'),
+            width: 300,
+            height: 150,
+            measured: { width: 240, height: 120 },
+        } as Node;
+
+        captureImportSnapshot([live], []);
+
+        const captured = getImportSnapshot()!.nodes[0];
+        expect(captured.width).toBe(300);
+        expect(captured.height).toBe(150);
+        expect(captured).toBe(live);
+    });
 });
