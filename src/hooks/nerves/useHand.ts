@@ -389,7 +389,18 @@ export function useHand(opts?: { snap?: boolean; isReadOnly?: boolean }) {
 
     // --- Interaction Triggers ---
     const startGrab = useCallback((mousePos: XYPosition, isAltHeld: boolean = false, overrideNodes?: Node[], isExplicit: boolean = false, targetId?: string) => {
-        const nodes = getNodes();
+        const liveNodes = getNodes();
+        // Duplicate (Shift+D) hands us nodes that the React Flow store has not
+        // projected yet (the Brain transaction is still in flight). They must be
+        // part of the node universe, otherwise `getEffectiveRoots` finds nothing
+        // and the grab never starts — the duplicate would just sit at its paste
+        // offset instead of following the mouse.
+        let nodes = liveNodes;
+        if (overrideNodes && overrideNodes.length > 0) {
+            const byId = new Map(liveNodes.map(n => [n.id, n]));
+            for (const node of overrideNodes) byId.set(node.id, node);
+            nodes = Array.from(byId.values());
+        }
         let selected: Node[] = [];
 
         if (overrideNodes) {
