@@ -224,4 +224,23 @@ describe('useFrameActions', () => {
         expect(mocks.applyTransaction).not.toHaveBeenCalled();
         expect(mocks.push).not.toHaveBeenCalled();
     });
+
+    it('refuses to mutate in read-only mode', () => {
+        nodes = [
+            makeNode('f1', 100, 100, { type: 'frame', selected: true, width: 600, height: 500 }),
+            makeNode('c1', 200, 200, { parentId: 'f1', width: 100, height: 50 }),
+        ];
+
+        const { result } = renderHook(() => useFrameActions({ isReadOnly: true }));
+        const results: boolean[] = [];
+        act(() => {
+            results.push(result.current.frameSelected());
+            results.push(result.current.detachNode('c1'));
+            results.push(result.current.fitFrame('f1'));
+        });
+
+        expect(results).toEqual([false, false, false]);
+        expect(mocks.applyTransaction).not.toHaveBeenCalled();
+        expect(mocks.push).not.toHaveBeenCalled();
+    });
 });

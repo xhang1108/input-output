@@ -60,8 +60,14 @@ Desktop.ini
 # specs
 /specs/
 
+# guide
+/guide/
+
 # verification
 verification_manifest.md
 
 # opennext
 /.open-next/
+
+# openchamber
+/.openchamber/

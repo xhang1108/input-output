@@ -20,8 +20,9 @@ type InteractionMode = 'IDLE' | 'GRABBING' | 'CUTTING' | 'SCALING' | 'ROTATING';
  * Manages grab/scale/rotate transforms, autopan, mouse events,
  * and composes useClipboard, useSelection, useKnife.
  */
-export function useHand(opts?: { snap?: boolean }) {
+export function useHand(opts?: { snap?: boolean; isReadOnly?: boolean }) {
     const snap = opts?.snap ?? false;
+    const isReadOnly = opts?.isReadOnly ?? false;
     const { getNodes, setNodes, getViewport, setViewport } = useReactFlow();
     const brain = useBrain();
     const { project } = useCanvasProjection();
@@ -45,7 +46,7 @@ export function useHand(opts?: { snap?: boolean }) {
         detachSelected, swapConnections,
         alignSelectedNodes,
         clearSelection, selectNode,
-    } = useSelection();
+    } = useSelection({ isReadOnly });
     const { cutPath, startCut, updateCut, endCut, cancelCut } = useKnife();
 
     // --- Transform State ---

@@ -167,12 +167,12 @@ export function FlowCanvas({
         isResolvingTransform,
         lastCancelTimestamp,
         transformBuffer
-    } = useHand({ snap: effectiveSnap });
+    } = useHand({ snap: effectiveSnap, isReadOnly });
 
     // Clipboard commands are owned here (not proxied through useHand) so copy,
     // cut and paste all share the same in-memory buffer instance.
     const { duplicateSelected, copyToClipboard, cutSelected, pasteFromClipboard } = useClipboard();
-    const { frameSelected, detachNode, fitFrame } = useFrameActions();
+    const { frameSelected, detachNode, fitFrame } = useFrameActions({ isReadOnly });
 
     // Marquee rule: frames are selected only when the marquee touches their
     // border. Selecting children entirely inside a frame must not move the frame.

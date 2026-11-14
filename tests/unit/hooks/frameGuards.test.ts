@@ -108,13 +108,36 @@ describe('read-only frame commands (source guards)', () => {
         expect(menu).toMatch(/duplicateAndGrab: \(\) => \{\s*if \(isReadOnly\) return;/);
     });
 
-    /*
-     * Defense in depth only: `useFrameActions` and `useSelection` have no
-     * read-only input, so every command path (keyboard shortcuts, context menu,
-     * palette) must guard at the call site. The tests above cover the menu path
-     * and the shortcut guards cover the keyboard path.
-     */
-    it.todo('move the read-only guard into useFrameActions/useSelection once they can read project permission');
+describe('hook-level read-only guards', () => {
+    beforeEach(() => {
+        nodes = [];
+        mocks.applyTransaction.mockClear();
+        mocks.push.mockClear();
+    });
+
+    it('useSelection refuses every mutating command', () => {
+        nodes = [
+            makeNode('a', 0, 0, { selected: true }),
+            makeNode('b', 100, 0, { selected: true }),
+        ];
+
+        const { result } = renderHook(() => useSelection({ isReadOnly: true }));
+        act(() => {
+            result.current.deleteSelected();
+            result.current.resetSelected();
+            result.current.detachSelected();
+            result.current.swapConnections();
+            result.current.alignSelectedNodes('X');
+        });
+
+        expect(mocks.applyTransaction).not.toHaveBeenCalled();
+        expect(mocks.push).not.toHaveBeenCalled();
+    });
+});
+
+/* ------------------------------------------------------------------ */
+/* Depth ordering                                                      */
+/* ------------------------------------------------------------------ */
 });
 
 /* ------------------------------------------------------------------ */

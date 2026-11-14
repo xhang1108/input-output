@@ -13,7 +13,8 @@ import { indexNodes, toAbsolute, toParentLocal } from '../utils/coordinates';
  * useSelection
  * Handles node selection, deletion, reset, bundle, detach, and swap.
  */
-export function useSelection() {
+export function useSelection(options: { isReadOnly?: boolean } = {}) {
+    const { isReadOnly = false } = options;
     const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
     const brain = useBrain();
     const pushHistory = useHistoryStore(s => s.push);
@@ -21,6 +22,7 @@ export function useSelection() {
 
     // --- Command: Delete Selected ---
     const deleteSelected = useCallback(() => {
+        if (isReadOnly) return;
         const nodes = getNodes();
         const edges = getEdges();
         const selectedNodes = nodes.filter(n => n.selected);
@@ -95,10 +97,11 @@ export function useSelection() {
             forward,
             inverse
         });
-    }, [getNodes, getEdges, brain, pushHistory]);
+    }, [getNodes, getEdges, brain, pushHistory, isReadOnly]);
 
     // --- Command: Reset Selected Data (Backspace) ---
     const resetSelected = useCallback(() => {
+        if (isReadOnly) return;
         const nodes = getNodes();
         const selectedNodes = nodes.filter(n => n.selected);
         if (selectedNodes.length === 0) return;
@@ -126,7 +129,7 @@ export function useSelection() {
                 inverse
             });
         }
-    }, [getNodes, brain, pushHistory]);
+    }, [getNodes, brain, pushHistory, isReadOnly]);
 
 
 
@@ -140,6 +143,7 @@ export function useSelection() {
     // Wait, original 'detachSelected' was: "setEdges(eds => eds.filter...)" -> Disconnects edges.
     // Let's keep that as "Disconnect".
     const detachSelected = useCallback(() => {
+        if (isReadOnly) return;
         const nodes = getNodes();
         const selected = nodes.filter(n => n.selected);
         if (selected.length === 0) return;
@@ -171,10 +175,11 @@ export function useSelection() {
                 inverse
             });
         }
-    }, [getNodes, getEdges, brain, pushHistory]);
+    }, [getNodes, getEdges, brain, pushHistory, isReadOnly]);
 
     // --- Command: Swap Inputs (Alt + S) ---
     const swapConnections = useCallback(() => {
+        if (isReadOnly) return;
         const nodes = getNodes();
         const edges = getEdges();
         const selectedNodes = nodes.filter(n => n.selected);
@@ -243,9 +248,10 @@ export function useSelection() {
                 inverse
             });
         }
-    }, [getNodes, getEdges, brain, pushHistory]);
+    }, [getNodes, getEdges, brain, pushHistory, isReadOnly]);
 
     const alignSelectedNodes = useCallback((axis: 'X' | 'Y') => {
+        if (isReadOnly) return;
         const nodes = getNodes();
         const selected = nodes.filter(n => n.selected);
         if (selected.length < 2) return;
@@ -293,7 +299,7 @@ export function useSelection() {
                 inverse
             });
         }
-    }, [getNodes, brain, pushHistory]);
+    }, [getNodes, brain, pushHistory, isReadOnly]);
 
     // --- Selection Helpers ---
     const clearSelection = useCallback(() => {

@@ -21,7 +21,7 @@
 
 ## 0.1 實作進度（2026-11-14，branch `copy-paste`）
 
-**主線已完成**：P0 座標治根、P0.5 資料/鍵盤、P1 frame 核心、P2 下游整合、P2.1 IOGL、§6.2 回歸。`npx tsc --noEmit` 只剩 4 個既有 `brain.worker.ts` 的 `importScripts`；`npm run test:run` 為 `83 files / 554 passed / 1 todo`。
+**主線已完成**：P0 座標治根、P0.5 資料/鍵盤、P1 frame 核心、P2 下游整合、P2.1 IOGL、§6.2 回歸、hook 層權限。`npx tsc --noEmit` 只剩 4 個既有 `brain.worker.ts` 的 `importScripts`；`npm run test:run` 為 `83 files / 561 passed`。
 
 | 階段 | 內容 | commit |
 |---|---|---|
@@ -43,10 +43,10 @@
 
 **收尾狀態（同日完成）**：
 
-1. §6.2 回歸已自動化：`tests/unit/hooks/useHand.frames.test.ts`（attach math、最框選擇、partial overlap、scale/rotate absolute、undo parent）、`tests/unit/hooks/frameGuards.test.ts`（Backspace 所有權、read-only context menu、depth ordering、delete 順序）。`npm run test:run` 為 `83 files / 554 passed / 1 todo`。
+1. §6.2 回歸已自動化：`tests/unit/hooks/useHand.frames.test.ts`（attach math、最框選擇、partial overlap、scale/rotate absolute、undo parent）、`tests/unit/hooks/frameGuards.test.ts`（Backspace 所有權、read-only context menu、depth ordering、delete 順序）。`npm run test:run` 為 `83 files / 561 passed`。
 2. `validateHierarchy` 已接進 attach 與載入：`injectNodes` 用 `sanitizeHierarchy` 把孤兒/self-parent/cycle/depth>1 轉 world + 清 `parentId`，回 diagnostic；attach 只接受 root frame 並驗證 proposed hierarchy。commit `85c64b9`。
 3. Read-only 的 context-menu 路徑已補守衛；delete 改 children-first、history restore 後 `sortParentFirst`。commit `d866eff`。
-4. 剩下 1 個 `it.todo`：把 read-only 守衛下移到 `useFrameActions` / `useSelection` 本身（目前靠呼叫端，所有 UI 入口已覆蓋）。
+4. Hook 層 read-only 已補：`useFrameActions` / `useSelection` 接受 `isReadOnly` 並在 command 內直接拒絕，FlowCanvas 經 `useHand` 傳入；所有入口（快捷鍵、context menu、palette、未來呼叫端）都無法繞過。
 5. `Fit to contents` 已實作（node context menu）：以 children bbox + padding 重算 frame 位置與尺寸（可放大也可縮小），children 世界座標不變，一次 undo。
 6. 明確不做：巢狀 frame、拖出框自動 detach。
 
@@ -472,7 +472,7 @@ lexer 目前 `{}` 已用於 props 與 `{W,H}`；block 需要處理 NEWLINE 與�
 
 ### 6.2 單元 / 整合測試
 
-> 狀態（2026-11-14）：以下除「read-only 守衛下移到 hook」1 個 `it.todo` 外，均已有自動測試；總數 `83 files / 554 passed / 1 todo`。
+> 狀態（2026-11-14）：以下全部已有自動測試（含 hook 層 read-only）；總數 `83 files / 561 passed`。
 
 - `src/utils/coordinates.ts`：1/2/3 層、負座標、orphan、cycle、self-parent、`toParentLocal(toAbsolute())` round-trip、reparent 拒絕條件、orphan 子樹 parent-first。
 - `Brain.getAbsolutePosition` 與 util 對隨機樹（含巢狀）結果一致。

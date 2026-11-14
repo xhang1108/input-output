@@ -23,7 +23,8 @@ function getSize(node: Node): { w: number; h: number } {
  * F key: group the current selection into a frame, or ungroup direct children
  * of the same frame. Single-level only: a frame cannot become a child.
  */
-export function useFrameActions() {
+export function useFrameActions(options: { isReadOnly?: boolean } = {}) {
+    const { isReadOnly = false } = options;
     const { getNodes } = useReactFlow();
     const brain = useBrain();
     const pushHistory = useHistoryStore(s => s.push);
@@ -173,6 +174,7 @@ export function useFrameActions() {
     }, [brain, pushHistory]);
 
     const frameSelected = useCallback(() => {
+        if (isReadOnly) return false;
         const nodes = getNodes();
         const selected = nodes.filter(n => n.selected && n.type !== 'frame');
         if (selected.length === 0) return false;
@@ -186,9 +188,10 @@ export function useFrameActions() {
             return ungroupSelection(nodes, selected);
         }
         return groupSelection(nodes, selected);
-    }, [getNodes, groupSelection, ungroupSelection]);
+    }, [getNodes, groupSelection, ungroupSelection, isReadOnly]);
 
     const detachNode = useCallback((id: string) => {
+        if (isReadOnly) return false;
         const nodes = getNodes();
         const node = nodes.find(n => n.id === id);
         if (!node?.parentId) return false;
@@ -213,7 +216,7 @@ export function useFrameActions() {
             inverse,
         });
         return true;
-    }, [getNodes, brain, pushHistory]);
+    }, [getNodes, brain, pushHistory, isReadOnly]);
 
     /**
      * Shrink or grow a frame around its children. Children keep their world
@@ -221,6 +224,7 @@ export function useFrameActions() {
      * rewritten in the same batch, so this is one undo step.
      */
     const fitFrame = useCallback((frameId: string) => {
+        if (isReadOnly) return false;
         const nodes = getNodes();
         const result = computeFittedFrame(nodes, frameId);
         if (!result.changed) return false;
@@ -261,7 +265,7 @@ export function useFrameActions() {
             inverse,
         });
         return true;
-    }, [getNodes, brain, pushHistory]);
+    }, [getNodes, brain, pushHistory, isReadOnly]);
 
     return { frameSelected, detachNode, fitFrame };
 }
